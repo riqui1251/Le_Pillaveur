@@ -65,6 +65,23 @@ describe('Écrans communs TV — salle, briefing, victoire', () => {
     expect(html).toContain('lucide-crown')
   })
 
+  it('l’hôte, qui lance au lieu de se dire prêt, est compté et affiché prêt, comme sur les téléphones', () => {
+    const room = fixtures.find((f) => f.id === 'lobby-3')!.steps[0].room!
+    // En vrai, l'hôte crée la salle avec isReady: false et ne le bascule jamais.
+    const members = room.members.map((m) => ({ ...m, isReady: !m.isHost }))
+    const html = renderToStaticMarkup(
+      createElement(
+        NextIntlClientProvider,
+        { locale: 'fr', messages: fr as unknown as AbstractIntlMessages, timeZone: 'Europe/Paris' } as ComponentProps<
+          typeof NextIntlClientProvider
+        >,
+        createElement(TvRoomScreen, { code: room.code, room: { ...room, members }, notFound: false, frame: null })
+      )
+    )
+    expect(html).toContain('3/3 prêts')
+    expect(html).not.toContain('Pas prêt')
+  })
+
   it('le briefing montre les règles que lisent les téléphones', () => {
     const html = render('briefing')
     expect(html).toContain('Enchérir ou douter')

@@ -15,9 +15,11 @@ import {
   reactionDare,
   readSpeechTable,
   remarkOf,
+  seededReactions,
   speechSuspicion,
   standsBy,
   type BotSpeech,
+  type ReactionCandidate,
   type SpeechPlayer,
 } from './bot-speech'
 import { createLGState, lgSuspicion, type LGDebateSpeech, type LGState } from '@/lib/loup-garou/engine'
@@ -410,8 +412,60 @@ describe('speechSuspicion : la part publique du score de soupçon', () => {
   })
 })
 
+describe('seededReactions : les réactions dérivées d’une révélation', () => {
+  const players = [
+    { id: 'h', name: 'Riqui', isBot: false },
+    { id: 'g', name: 'Gépéto', isBot: true }, // bavardage 3 : réagit à coup sûr
+    { id: 'm', name: 'Marcel', isBot: true }, // bavardage 3
+    { id: 'b', name: 'Bernadette', isBot: true }, // bavardage 1
+    { id: 'c', name: 'Kevin_du_93', isBot: true }, // converti, sans persona
+  ]
+  const cand = (playerId: string, targetId: string, aimsHuman: boolean, kind = 'k'): ReactionCandidate<string> => ({
+    speech: { playerId, kind, targetId, round: 3 },
+    aimsHuman,
+  })
+  const run = (candidates: ReactionCandidate<string>[], speech: BotSpeech<string>[] = [], seed = 's', max = 2) =>
+    seededReactions({ candidates, players, speech, round: 3, engineCap: 2, max, seed })
+
+  it('les candidates qui visent un humain passent devant, un tirage par auteur, au plus `max`', () => {
+    for (const seed of ['s', 't', 'u', 'v']) {
+      const out = run([cand('g', 'm', false, 'a'), cand('m', 'g', false), cand('g', 'h', true, 'b'), cand('m', 'h', true)], [], seed, 1)
+      expect(out).toHaveLength(1)
+      expect(out[0].targetId).toBe('h')
+      const two = run([cand('g', 'm', false, 'a'), cand('g', 'h', true, 'b'), cand('m', 'h', true)], [], seed)
+      expect(two.map((sp) => sp.playerId).sort()).toEqual(['g', 'm'])
+      expect(two.find((sp) => sp.playerId === 'g')?.kind).toBe('b')
+    }
+  })
+
+  it('l’ordre des auteurs est tiré de la graine : le premier bavard à table ne monopolise pas la parole', () => {
+    let first = 0
+    for (let n = 0; n < 400; n += 1) {
+      const [out] = run([cand('g', 'h', true), cand('m', 'h', true)], [], `tour-${n}`, 1)
+      if (out.playerId === 'g') first += 1
+    }
+    expect(first / 400).toBeGreaterThan(0.35)
+    expect(first / 400).toBeLessThan(0.65)
+  })
+
+  it('jamais un humain, un converti, une parole à soi, ni un bot au bout de son plafond (manche en cours seulement)', () => {
+    expect(run([cand('h', 'g', false), cand('c', 'h', true), cand('g', 'g', false)])).toEqual([])
+    const full = [1, 2].map(() => ({ playerId: 'g', kind: 'x', targetId: 'h', round: 3 }))
+    expect(run([cand('g', 'h', true), cand('m', 'h', true)], full).map((sp) => sp.playerId)).toEqual(['m'])
+    expect(run([cand('g', 'h', true)], full.map((sp) => ({ ...sp, round: 2 })))).toHaveLength(1)
+  })
+
+  it('déterministe à graine égale, et la chance suit le bavardage (Bernadette : un tiers)', () => {
+    expect(run([cand('b', 'h', true)], [], 'x')).toEqual(run([cand('b', 'h', true)], [], 'x'))
+    let spoke = 0
+    for (let n = 0; n < 900; n += 1) spoke += run([cand('b', 'h', true)], [], `graine-${n}`).length
+    expect(spoke / 900).toBeGreaterThan(0.28)
+    expect(spoke / 900).toBeLessThan(0.39)
+  })
+})
+
 describe('le socle ne dépend d’aucun jeu', () => {
-  it('ni bot-speech.ts ni le fil client n’importent le Loup-Garou, l’Imposteur, le Menteur ou l’Espion', () => {
+  it('ni bot-speech.ts ni le fil client n’importent un jeu (Loup-Garou, Imposteur, Menteur, Espion, Bluff, Sans Filtre, Dilemmes)', () => {
     const src = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
     const files = [
       'lib/online/bot-speech.ts',
@@ -422,7 +476,7 @@ describe('le socle ne dépend d’aucun jeu', () => {
       const source = readFileSync(join(src, file), 'utf8')
       const imports = [...source.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)].map((m) => m[1])
       expect(imports.length, file).toBeGreaterThan(0)
-      expect(imports.filter((spec) => /loup-garou|imposteur|menteur|espion/.test(spec)), file).toEqual([])
+      expect(imports.filter((spec) => /loup-garou|imposteur|menteur|espion|bluff|sans-filtre|dilemmes/.test(spec)), file).toEqual([])
     }
   })
 
@@ -438,7 +492,9 @@ describe('le socle ne dépend d’aucun jeu', () => {
           const source = readFileSync(full, 'utf8')
           if (!/(?:\bfrom\s+|\bimport\(\s*)['"][^'"]*catalogue-spec['"]/.test(source)) continue
           if (entry.name.endsWith('.test.ts')) testImporters += 1
-          else offenders.push(relative(src, full))
+          // Une fabrique dérivée (reaction-catalogue-spec.ts) : son nom finit en
+          // catalogue-spec, ses propres importeurs passent donc au même relevé.
+          else if (!entry.name.endsWith('catalogue-spec.ts')) offenders.push(relative(src, full))
         }
       }
     }

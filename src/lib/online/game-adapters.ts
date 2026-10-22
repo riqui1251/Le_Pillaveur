@@ -789,7 +789,11 @@ const quizAdapter: GameAdapter = {
     const state = rawState as QuizState
     let input: QuizRoomActionInput
     if (body.action === 'answer' && typeof body.choice === 'number') {
-      input = { type: 'answer', choice: body.choice }
+      input = {
+        type: 'answer',
+        choice: body.choice,
+        ...(typeof body.phaseKey === 'string' ? { phaseKey: body.phaseKey } : {}),
+      }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
       input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'continue') {
@@ -1326,7 +1330,8 @@ const crobardAdapter: GameAdapter = {
     } else if (body.action === 'clear') {
       input = { type: 'clear' }
     } else if (body.action === 'undo-stroke') {
-      input = { type: 'undo-stroke' }
+      const undoId = typeof body.undoId === 'string' && body.undoId.length <= 64 ? body.undoId : undefined
+      input = { type: 'undo-stroke', ...(undoId ? { undoId } : {}) }
     } else if (body.action === 'guess' && typeof body.text === 'string') {
       input = { type: 'guess', text: body.text }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {

@@ -15,7 +15,8 @@ import {
   type Game1220SpeechKind,
   type Game1220State,
 } from './engine'
-import { game1220BotSpeech, game1220TalkChance } from './bot-speech'
+import { game1220BotSpeech, GAME_1220_TALK } from './bot-speech'
+import { reactionTalkChance } from '@/lib/online/reaction-speech'
 import { withGame1220BotTalk } from './server-adapter'
 
 const always = (v: number) => () => v
@@ -57,7 +58,7 @@ function rolled(state: Game1220State, d12: number, d20: number): Game1220State {
     }
   })
   const entry = { d12, d20, results }
-  return { ...state, lastRoll: entry, history: [entry, ...state.history], rolls: (state.rolls ?? 0) + 1 }
+  return { ...state, lastRoll: entry, history: [entry, ...state.history], rollCount: state.rollCount + 1 }
 }
 
 const speak = (s: Game1220State, rand: () => number, roller = 'h') => game1220BotSpeech(toGame1220ClientView(s), roller, rand)
@@ -100,7 +101,7 @@ describe('les réactions au lancer', () => {
 describe('plafond, sobriété et anti-triche', () => {
   it(`plafond min(${GAME_1220_SPEECH_CAP}, bavardage) sur ${GAME_1220_SPEECH_WINDOW} lancers : qui l’a atteint se tait`, () => {
     const after = rolled(table(), 3, 4)
-    const round = after.rolls!
+    const round = after.rollCount
     const said = (id: string, n: number, r: number): Game1220Speech[] =>
       Array.from({ length: n }, () => ({ playerId: id, kind: 'jinx' as const, targetId: 'h', round: r }))
     const full = [...said('b1', 2, round - 1), ...said('b2', 2, round - 2), ...said('b3', 1, round - 3)]
@@ -136,20 +137,24 @@ describe('plafond, sobriété et anti-triche', () => {
     expect({ ...talked, speech: undefined, speechBase: undefined }).toEqual({ ...after, speech: undefined, speechBase: undefined })
   })
 
-  it('les chances suivent le bavardage et le trait, jamais systématiques', () => {
-    for (const kind of GAME_1220_SPEECH_KINDS) expect(game1220TalkChance(kind, botTraitsFor('Gépéto'))).toBeLessThan(1)
-    expect(game1220TalkChance('mock', botTraitsFor('Kéké'))).toBeGreaterThan(game1220TalkChance('mock', botTraitsFor('Norbert')) - 0.01)
-    expect(game1220TalkChance('jinx', botTraitsFor('Germaine'))).toBeGreaterThan(game1220TalkChance('jinx', botTraitsFor('Lucien')))
+  it('les chances suivent le bavardage, jamais systématiques', () => {
+    const chance = (kind: Game1220SpeechKind, name: string) => reactionTalkChance(GAME_1220_TALK[kind], botTraitsFor(name))
+    for (const kind of GAME_1220_SPEECH_KINDS) {
+      expect(chance(kind, 'Josiane')).toBeLessThan(1)
+      expect(chance(kind, 'Josiane')).toBeGreaterThan(chance(kind, 'Germaine'))
+    }
   })
 })
 
 describe('moteur : lancers et fil', () => {
-  it('chaque lancer compte : rolls avance ; un état d’avant les paroles repart de 0', () => {
+  it('la « manche » des paroles est le lancer : rollCount, qui avance à chaque lancer', () => {
     const s = table()
-    expect(s.rolls).toBe(0)
-    const once = reduceGame1220(s, { type: 'ROLL', playerId: 'h' })
-    expect(once.rolls).toBe(1)
-    expect(reduceGame1220({ ...once, rolls: undefined }, { type: 'ROLL', playerId: 'b1' }).rolls).toBe(1)
+    expect(s.rollCount).toBe(0)
+    const once = withGame1220Speech(reduceGame1220(s, { type: 'ROLL', playerId: 'h' }), [
+      { playerId: 'b1', kind: 'jinx', targetId: 'h' },
+    ])
+    expect(once.rollCount).toBe(1)
+    expect(once.speech).toEqual([{ playerId: 'b1', kind: 'jinx', targetId: 'h', round: 1 }])
   })
 
   it('withGame1220Speech refuse un humain, un kind inconnu, une cible absente ou soi-même, un plafond atteint', () => {
@@ -164,7 +169,7 @@ describe('moteur : lancers et fil', () => {
 
   it(`le fil garde ${GAME_1220_SPEECH_WINDOW} lancers et compte l’élagué ; la version ne bouge pas`, () => {
     const old: Game1220Speech[] = [1, 2, 3, 4, 5].map((round) => ({ playerId: 'b3', kind: 'jinx', targetId: 'h', round }))
-    const s = { ...rolled(table(), 3, 4), rolls: 6, speech: old, speechBase: 1 }
+    const s = { ...rolled(table(), 3, 4), rollCount: 6, speech: old, speechBase: 1 }
     const next = withGame1220Speech(s, [{ playerId: 'b1', kind: 'mock', targetId: 'h' }])
     expect(next.speech?.map((sp) => sp.round)).toEqual([3, 4, 5, 6])
     expect(next.speechBase).toBe(3)

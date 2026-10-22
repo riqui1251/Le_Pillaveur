@@ -3,6 +3,8 @@ import {
   reduceBluff,
   BLUFF_REVEAL_MIN_MS,
   type BluffPrompt,
+  type BluffSpeech,
+  type BluffSpeechKind,
   type BluffState,
 } from '@/lib/bluff/engine'
 import { getBluffPrompts } from '@/lib/bluff/data'
@@ -159,6 +161,27 @@ export function build(): TvPreviewFixture[] {
     return { members, voting: vote(gone, 9), reveal: vote(gone, 15) }
   })()
 
+  // Les bots parlent (Barnabé, Gépéto, Raoul) : le fil prend sa colonne à droite.
+  const talk = (() => {
+    const { members, state } = table(3, 3, 6)
+    const said = (playerId: string, kind: BluffSpeechKind, targetId: string): BluffSpeech => ({
+      playerId,
+      kind,
+      targetId,
+      round: 0,
+    })
+    const bragging = [said('bot-1', 'proud', 'u2')]
+    const bluster = [...bragging, said('bot-2', 'sure', 'u3')]
+    const submitting = advance(state)
+    const voting = submit(submitting, 6)
+    return {
+      members,
+      submit: { ...submit(submitting, 4), speech: bragging },
+      vote: { ...vote(voting, 5), speech: bluster },
+      reveal: { ...vote(voting, 6), speech: bluster },
+    }
+  })()
+
   return [
     {
       id: 'seize',
@@ -213,6 +236,15 @@ export function build(): TvPreviewFixture[] {
       steps: [
         step('vote 9/15, un joueur parti', leftMax.members, leftMax.voting, 1),
         step('révélation, bandeau toujours là', leftMax.members, leftMax.reveal, 2),
+      ],
+    },
+    {
+      id: 'paroles',
+      label: 'Les bots parlent : 6 joueurs (3 + 3 bots), bluff, vote et réactions',
+      steps: [
+        step('bluff 4/6, un bot se vante', talk.members, talk.submit, 1),
+        step('vote 5/6, du bagout', talk.members, talk.vote, 2),
+        step('révélation, réactions des bots', talk.members, talk.reveal, 3),
       ],
     },
   ]

@@ -11,7 +11,15 @@ import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { rematchCounter } from '@/components/online/end-screen'
+import { TV_FEED_SIZE, speechFeedItems } from '@/components/online/bot-speech/bot-speech-feed'
+import { TabouSpeechFeed } from '@/components/online/tabou/TabouSpeechFeed'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
+
+/**
+ * Le fil ne défile pas sur la TV : calé en bas de la colonne centrale et
+ * rogné en haut s'il déborde, les dernières réactions restent lisibles.
+ */
+const FEED_CLIP = 'flex max-h-[13rem] min-h-0 w-full shrink flex-col justify-end overflow-hidden'
 
 const TEAM_STYLES: Record<TabouTeam, { card: string; active: string; text: string }> = {
   A: { card: 'border-sky-400/25 bg-sky-500/5', active: 'border-sky-300 bg-sky-500/20', text: 'text-sky-300' },
@@ -131,10 +139,23 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
     />
   )
 
+  // Réactions des bots sous la manche ou son bilan ; sans aucune, la colonne
+  // centrale garde toute sa hauteur.
+  const talking =
+    (describing || state.phase === 'roundEnd') &&
+    speechFeedItems(state.speech ?? [], state.round, null, TV_FEED_SIZE).length > 0
+
   return (
     <div className="flex h-full min-h-0 w-full items-stretch gap-8 px-8 py-6">
       {column('A')}
-      <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-5 text-center">{center}</div>
+      <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-5 text-center">
+        {center}
+        {talking && (
+          <div className={FEED_CLIP}>
+            <TabouSpeechFeed view={state} iconOf={iconOf} variant="tv" />
+          </div>
+        )}
+      </div>
       {column('B')}
     </div>
   )

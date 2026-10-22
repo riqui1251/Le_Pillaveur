@@ -277,6 +277,13 @@ describe('TvPetitBuveur — partie en ligne', () => {
     expect(out).not.toContain('Aucun dégât')
   })
 
+  it('duel en attente : « Duel sur la case » et qui décide, la case tirée reste cachée', () => {
+    const s = playUntil((x) => x.pending?.stage === 'duel')
+    const out = html(createElement(TvPetitBuveur, { room: onlineRoom, state: toClientView(s) }))
+    expect(out).toContain('Duel sur la case')
+    expect(out).toContain(`En attente de ${s.players[s.currentPlayer].name}…`)
+  })
+
   it('effets en cours listés avec le joueur et les tours restants', () => {
     const s = playUntil((x) => x.players.some((p) => p.protected && (p.protectionTurnsLeft ?? 0) > 0) && !x.pending)
     const out = html(createElement(TvPetitBuveur, { room: onlineRoom, state: toClientView(s) }))

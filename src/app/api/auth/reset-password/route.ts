@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import {
   hashPassword,
   hashToken,
-  isValidPassword,
+  isValidPassword,
   revokeAllUserSessions,
 } from '@/lib/auth-server'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
@@ -33,7 +33,9 @@ export const POST = withApiRoute('auth/reset-password POST', async (request: Req
   await prisma.$transaction([
     prisma.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash },
+      // Le lien venait de la boîte de l'adresse : elle est prouvée (ce qui
+      // rouvre aussi la liaison Discord / Facebook / Apple, oauth callback).
+      data: { passwordHash, ...(resetToken.user.emailVerified ? {} : { emailVerified: new Date() }) },
     }),
     prisma.passwordResetToken.update({
       where: { id: resetToken.id },

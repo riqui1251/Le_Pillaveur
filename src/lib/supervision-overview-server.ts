@@ -7,6 +7,7 @@ import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
+import { PIONEER_FRAME_KEY } from '@/lib/online/cosmetics'
 import { LOCAL_GAMES_WITHOUT_END_SCREEN } from '@/lib/local-game-beacon'
 import { errorTrace } from '@/lib/error-trace'
 import {
@@ -969,6 +970,14 @@ export function invalidateGrowthStats(): void {
 const JOURNAL_HIDDEN_ACTIONS = ['feedback-ack', 'name-flag-ack']
 const JOURNAL_BAN_EVENT_WHERE = { action: { notIn: JOURNAL_HIDDEN_ACTIONS } }
 
+/**
+ * Le cadre Pionnier GAGNÉ par un joueur (Premiers pas, grantedById nul à la
+ * création : api/online/first-steps) n'est pas un acte de l'équipe : il
+ * s'affichait « — a offert un cosmétique à … » à chaque joueur. Un octroi dont
+ * l'auteur a été supprimé depuis (SetNull) reste, lui, au journal.
+ */
+const JOURNAL_GRANT_WHERE = { NOT: { grantedById: null, cosmeticKey: PIONEER_FRAME_KEY } }
+
 /** Nature d'entrée de journal déduite de l'action stockée sur AccountBanEvent. */
 function journalKindForAction(action: string): JournalKind | null {
   if (JOURNAL_HIDDEN_ACTIONS.includes(action)) return null
@@ -1024,6 +1033,7 @@ async function readJournal(depth: number): Promise<JournalEntry[]> {
       },
     }),
     prisma.cosmeticGrant.findMany({
+      where: JOURNAL_GRANT_WHERE,
       orderBy: JOURNAL_ORDER,
       take: depth,
       include: {
@@ -1113,6 +1123,11 @@ function getJournal(limit = 20): Promise<JournalEntry[]> {
  * la pagination. Le coût croît avec la profondeur de la page — au pire
  * `skip + take` lignes par source —, supportable pour un journal d'équipe lu
  * à la demande, jamais en boucle.
+ *
+ * Le total d'abord : une page au-delà de la fin (`?page=` quelconque, page
+ * relue après des suppressions) ne lit aucune source. Sans ce garde, elle
+ * chargeait tout le journal pour une page vide, et une page démesurée
+ * dépassait l'entier 64 bits que Prisma accepte pour `take` (500).
  */
 export async function getJournalPage({
   skip,
@@ -1121,14 +1136,16 @@ export async function getJournalPage({
   skip: number
   take: number
 }): Promise<{ entries: JournalEntry[]; total: number }> {
-  const [merged, banEvents, grants, featureBans, terms] = await Promise.all([
-    readJournal(skip + take),
+  const [banEvents, grants, featureBans, terms] = await Promise.all([
     prisma.accountBanEvent.count({ where: JOURNAL_BAN_EVENT_WHERE }),
-    prisma.cosmeticGrant.count(),
+    prisma.cosmeticGrant.count({ where: JOURNAL_GRANT_WHERE }),
     prisma.featureBan.count(),
     prisma.moderationTerm.count(),
   ])
-  return { entries: merged.slice(skip, skip + take), total: banEvents + grants + featureBans + terms }
+  const total = banEvents + grants + featureBans + terms
+  if (skip >= total) return { entries: [], total }
+  const merged = await readJournal(skip + take)
+  return { entries: merged.slice(skip, skip + take), total }
 }
 
 async function getQueue(actorRole: string): Promise<QueueItem[]> {

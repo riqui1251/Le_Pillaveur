@@ -84,6 +84,21 @@ describe('TvTabou — écran TV du Tabou Vocal', () => {
     }
   })
 
+  it('le fil des réactions des bots, sous la manche et sous le bilan ; absent sans parole', () => {
+    const rendered = steps.map(render)
+    const talking = rendered.filter(({ view }) => (view.speech ?? []).some((sp) => sp.round === view.round))
+    expect(talking.map(({ view }) => view.phase).sort()).toEqual(['describing', 'roundEnd'])
+    for (const { html, view } of talking) {
+      expect(html).toContain('aria-label="Fil de la table"')
+      const said = (view.speech ?? []).filter((sp) => sp.round === view.round)
+      expect(html.match(/<li/g)?.length ?? 0).toBeGreaterThanOrEqual(said.length)
+      for (const sp of said) expect(html).toContain(view.players.find((p) => p.id === sp.playerId)!.name)
+    }
+    for (const { html, view } of rendered) {
+      if (!(view.speech ?? []).some((sp) => sp.round === view.round)) expect(html).not.toContain('Fil de la table')
+    }
+  })
+
   it('aucune taille interdite à 3 mètres', () => {
     for (const step of steps) {
       const { html } = render(step)

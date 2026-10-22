@@ -22,6 +22,14 @@ export function tvColor(index: number): string {
   return TV_PALETTE[((index % TV_PALETTE.length) + TV_PALETTE.length) % TV_PALETTE.length]
 }
 
+/**
+ * Boîte du fil des paroles des bots sur la TV : il ne défile pas, il est calé
+ * en bas et rogné en haut — les dernières bulles restent lisibles. Rogner la
+ * boîte, jamais le fil lui-même : la variante de chaque phrase suit la
+ * position de sa bulle (même règle que TvMenteur).
+ */
+export const TV_FEED_CLIP = 'flex min-h-0 shrink flex-col justify-end overflow-hidden'
+
 /** Avatar TV : pastille colorée + initiale, lisible à distance. `size` en px de la toile de référence (1rem = 16px), rendu en rem pour suivre l'échelle de l'écran. */
 export function TvAvatar({
   name,

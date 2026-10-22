@@ -8,6 +8,7 @@ import {
   type EngineState,
   type EngineSettings,
   type EngineAction,
+  type EnginePending,
   type InteractionChoice,
 } from './engine'
 import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
@@ -152,13 +153,51 @@ export function applyTimeoutAction(state: EngineState, now: number): RoomActionR
   return applyEngine(next.state, next.action, now)
 }
 
-/** Vue client : tout l'état SAUF `rngState` (secret serveur). */
-export type EngineClientView = Omit<EngineState, 'rngState'>
+/** Vue client : l'état SAUF `rngState` (secret serveur), case cachée masquée. */
+export type EngineClientView = Omit<EngineState, 'rngState' | 'lastEffectiveCase'>
 
+/**
+ * La case tirée reste CACHÉE tant que l'acteur choisit sa cible : comme en
+ * local (« l'effet de la case sera révélé après ton choix »), on vise à
+ * l'aveugle — case à cible (Défi, Question, Double case, case rejouée
+ * comprises) et Pile ou face —, et pendant le duel qui la précède. Échange,
+ * Vote, Défi en chaîne, Téléport, Chance, roue et dé de la honte s'annoncent
+ * avant le choix, comme leurs fenêtres locales.
+ */
+export function hidesDrawnCase(p: EnginePending | null | undefined): boolean {
+  if (!p) return false
+  if (p.stage === 'duel') return true
+  if (p.stage) return false
+  return p.needsTarget || p.caseType === 'pile-face'
+}
+
+/** Journal sans le type des cases tirées (`case:gorgée` → `case:`) : la TV n'y lit que « un lancer ». */
+function withoutDrawnCaseTypes(log: EngineState['log']): EngineState['log'] {
+  return log.map((e) => (e.message.startsWith('case:') && e.message !== 'case:' ? { ...e, message: 'case:' } : e))
+}
+
+/**
+ * Vue envoyée aux téléphones et à la TV. Sans `rngState` (il prédirait dés et
+ * cases) ni `lastEffectiveCase` (cuisine du moteur). Pendant un choix de cible
+ * à l'aveugle, rien ne trahit la case tirée : ni l'encadré en attente (réduit
+ * à « qui choisit une cible »), ni `lastCase`, ni le journal.
+ */
 export function toClientView(state: EngineState): EngineClientView {
-  const view: EngineState = { ...state }
-  delete (view as Partial<EngineState>).rngState
-  return view as EngineClientView
+  const view: Partial<EngineState> = { ...state }
+  delete view.rngState
+  delete view.lastEffectiveCase
+  const p = state.pending
+  if (!p || !hidesDrawnCase(p)) return view as EngineClientView
+  const pending: EnginePending =
+    p.stage === 'duel'
+      ? { caseType: 'normal', playerId: p.playerId, needsTarget: false, hidden: true, stage: 'duel', opponents: p.opponents ?? [] }
+      : { caseType: 'normal', playerId: p.playerId, needsTarget: true, hidden: true }
+  return {
+    ...(view as EngineClientView),
+    pending,
+    lastCase: null,
+    log: withoutDrawnCaseTypes(state.log),
+  }
 }
 
 // ─── Remplacement par bot (départ volontaire / AFK) ─────────────────────────

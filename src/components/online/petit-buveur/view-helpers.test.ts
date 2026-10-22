@@ -10,11 +10,14 @@ import {
   type LastOutcome,
 } from '@/lib/petit-buveur/engine'
 import type { EngineCase } from '@/lib/petit-buveur/types'
+import { toClientView } from '@/lib/petit-buveur/server-adapter'
 import {
+  caseDescription,
   choiceOf,
   deciderIdOf,
   defiTextAt,
   diceStageTargets,
+  duelMessage,
   isNewGame,
   landingIndex,
   noteMessage,
@@ -117,11 +120,25 @@ describe('choiceOf (#5, #17, #26)', () => {
     expect(choiceOf(pend({ type: 'de-honte', effect: 0 })).kind).toBe('confirm')
   })
 
+  it('duel avant la case : sa fenêtre propre (adversaire ou passer)', () => {
+    const masked = { caseType: 'normal', playerId: 'a', needsTarget: false, hidden: true, stage: 'duel', opponents: ['b'] } as const
+    expect(choiceOf({ ...masked, opponents: ['b'] })).toEqual({ kind: 'duel', allowSelf: false })
+  })
+
+  it('cible à l’aveugle (vue masquée) : une fenêtre de cible, « Moi » compris', () => {
+    const masked = { caseType: 'normal', playerId: 'a', needsTarget: true, hidden: true } as const
+    expect(choiceOf(masked)).toEqual({ kind: 'target', allowSelf: true })
+  })
+
   it('chaque fenêtre envoie un choix que le moteur accepte, à toutes les étapes de parties réelles', () => {
-    for (const seed of [11, 12, 13, 14]) {
+    let duels = 0
+    for (const seed of [11, 12, 13, 14, 15, 16]) {
       for (const s of playStates(seed)) {
         if (!s.pending) continue
-        const c = choiceOf(s.pending)
+        // La fenêtre se lit sur la vue que reçoit le téléphone (case cachée comprise).
+        const shown = toClientView(s).pending as EnginePending
+        const c = choiceOf(shown)
+        if (c.kind === 'duel') duels += 1
         const actorId = s.players[s.currentPlayer].id
         const deciderId = deciderIdOf(s) as string
         const choices =
@@ -135,13 +152,16 @@ describe('choiceOf (#5, #17, #26)', () => {
                   ? [{ chanceChoice: 'reroll' as const }, { chanceChoice: 'plus2' as const }]
                   : c.kind === 'teleport'
                     ? [{ option: 'leader' }, { option: 'last' }]
-                    : [{}]
+                    : c.kind === 'duel'
+                      ? [{}, ...(shown.opponents ?? []).map((targetId) => ({ targetId }))]
+                      : [{}]
         expect(choices.length).toBeGreaterThan(0)
         for (const choice of choices) {
           expect(() => reduce(s, { type: 'RESOLVE_INTERACTION', playerId: deciderId, choice })).not.toThrow()
         }
       }
     }
+    expect(duels).toBeGreaterThan(0)
   })
 })
 
@@ -313,6 +333,41 @@ describe('noteMessage', () => {
     expect(noteMessage({ kind: 'safe' }, nameOf, 'c').values).toEqual({ player: 'C' })
     expect(noteMessage({ kind: 'no-effect' }, nameOf, 'a').key).toBe('online.notes.noEffect')
     expect(noteMessage({ kind: 'spared', playerId: 'b' }, nameOf, 'a').key).toBe('game.outcomes.rouletteSafe')
+  })
+})
+
+describe('duelMessage (les phrases du duel local)', () => {
+  it('challenger gagnant, adversaire gagnant, perdant protégé', () => {
+    const duel = { opponentId: 'b', challengerWins: true, loserProtected: false }
+    expect(duelMessage(duel, 'Alice', 'Bob')).toEqual({
+      key: 'game.outcomes.duelChallengerWins',
+      values: { challenger: 'Alice', opponent: 'Bob' },
+    })
+    expect(duelMessage({ ...duel, challengerWins: false }, 'Alice', 'Bob').key).toBe('game.outcomes.duelOpponentWins')
+    expect(duelMessage({ ...duel, challengerWins: false, loserProtected: true }, 'Alice', 'Bob')).toEqual({
+      key: 'game.outcomes.duelLoserProtected',
+      values: { winner: 'Bob', loser: 'Alice' },
+    })
+  })
+})
+
+describe('caseDescription (consigne de la case, comme le jeu local)', () => {
+  const t = (key: string, values?: Record<string, string | number>) =>
+    values ? `${key} ${JSON.stringify(values)}` : key
+  const defis = (i: number | undefined) => (i === 2 ? 'Imite un chat' : null)
+
+  it('défi : le texte résolu par son index, sinon rien', () => {
+    expect(caseDescription({ type: 'defi', effect: 3, defiIndex: 2 }, t, defis)).toBe(
+      'caseDescriptions.defi {"challenge":"Imite un chat","count":3}'
+    )
+    expect(caseDescription({ type: 'defi', effect: 3, defiIndex: 9 }, t, defis)).toBeNull()
+  })
+
+  it('gorgée cul sec : sa consigne à part ; les autres : leur clé et l’effet', () => {
+    expect(caseDescription({ type: 'gorgée', effect: 12, gorgeeCulSec: true }, t, defis)).toBe(
+      'caseDescriptions.gorgéeCulSec'
+    )
+    expect(caseDescription({ type: 'vote', effect: 4 }, t, defis)).toBe('caseDescriptions.vote {"count":4}')
   })
 })
 

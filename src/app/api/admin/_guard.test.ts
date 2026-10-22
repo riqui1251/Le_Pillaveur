@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePaging } from './_guard'
+import { MAX_PAGE, parsePaging } from './_guard'
 
 /**
  * Bornage de la pagination de /api/admin (F40/F75) : une page demandée par le
@@ -20,6 +20,12 @@ describe('parsePaging', () => {
 
   it('plafonne la taille de page réclamée', () => {
     expect(parse('pageSize=100000').pageSize).toBe(100)
+  })
+
+  it('plafonne une page démesurée : le décalage reste un entier sûr', () => {
+    const result = parse('page=400000000000000000&pageSize=100')
+    expect(result.page).toBe(MAX_PAGE)
+    expect(Number.isSafeInteger(result.skip)).toBe(true)
   })
 
   it('refuse les pages et tailles absurdes sans jamais produire un skip négatif', () => {

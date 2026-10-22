@@ -25,7 +25,7 @@ import { readConsentedVisitorId } from '@/lib/auth-cookies'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { checkRateLimit, networkRateLimitKey, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
@@ -33,6 +33,13 @@ import { parseRequestedAmbianceMode } from '@/lib/ambiance-mode'
 
 const REGISTER_LIMIT = 5
 const REGISTER_WINDOW_MS = 60 * 60 * 1000
+/**
+ * Plafond par RÉSEAU, toutes adresses confondues : compté par couple (IP,
+ * e-mail), le quota ci-dessus laissait un script ouvrir des comptes en série
+ * depuis une seule IP en changeant d'adresse à chaque fois. Vingt par heure
+ * laissent s'inscrire une tablée entière sur le Wi-Fi du salon.
+ */
+const REGISTER_NETWORK_LIMIT = 20
 
 export const POST = withApiRoute('auth/register POST', async (request: Request) => {
   try {
@@ -51,6 +58,12 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
 
     const rate = checkRateLimit(rateLimitKey(request, 'register', email), REGISTER_LIMIT, REGISTER_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
+    const network = checkRateLimit(
+      networkRateLimitKey(request, 'register-network'),
+      REGISTER_NETWORK_LIMIT,
+      REGISTER_WINDOW_MS
+    )
+    if (!network.ok) return rateLimitResponse(network.retryAfterSec)
 
     const cookieStore = await cookies()
     const bodyLocale = typeof body.locale === 'string' && isAppLocale(body.locale) ? body.locale : null

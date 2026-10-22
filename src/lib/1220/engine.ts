@@ -85,13 +85,11 @@ export type Game1220State = TimedPhaseState & {
   setupReady: string[]
   configs: Config1220[] | null
   lastRoll: RollEntry1220 | null
+  /** Derniers lancers, bornés à HISTORY_LIMIT : ne pas les compter. */
   history: RollEntry1220[]
+  /** Lancers de toute la partie (le bilan de fin le dit), au-delà de l'historique. */
+  rollCount: number
   rematchVotes: string[]
-  /**
-   * Lancers depuis le début (`history` est borné) : la « manche » des paroles
-   * est le lancer. Optionnel : un état sérialisé avant son arrivée part de 0.
-   */
-  rolls?: number
   /** PUBLIC — paroles des bots des derniers lancers (GAME_1220_SPEECH_WINDOW). */
   speech?: Game1220Speech[]
   /** Paroles déjà élaguées du début du fil : les clés des bulles restent stables. */
@@ -143,8 +141,8 @@ export function createGame1220State(
     configs: null,
     lastRoll: null,
     history: [],
+    rollCount: 0,
     rematchVotes: [],
-    rolls: 0,
     speech: [],
     speechBase: 0,
   }
@@ -160,7 +158,7 @@ export function createGame1220State(
  */
 export function withGame1220Speech(state: Game1220State, says: readonly Game1220Say[]): Game1220State {
   if (says.length === 0) return state
-  const round = state.rolls ?? 0
+  const round = state.rollCount
   const all = state.speech ?? []
   let speech = all.filter((sp) => sp.round > round - GAME_1220_SPEECH_WINDOW)
   const speechBase = (state.speechBase ?? 0) + (all.length - speech.length)
@@ -278,7 +276,7 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
         rngState: rng.getState(),
         lastRoll: entry,
         history: [entry, ...state.history].slice(0, HISTORY_LIMIT),
-        rolls: (state.rolls ?? 0) + 1,
+        rollCount: state.rollCount + 1,
       }
     }
 

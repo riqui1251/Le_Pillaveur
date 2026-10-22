@@ -102,6 +102,19 @@ describe('TvCrobard — écran TV du Crobard', () => {
     for (const { html, view } of blank) expect(html).toContain(view.lastRoundWord!)
   })
 
+  it('le fil des réactions des bots au choix, au dessin et au bilan ; absent sans parole', () => {
+    const rendered = steps.map(render)
+    const live = (view: CrobardClientView) => (view.speech ?? []).filter((sp) => sp.round === view.round)
+    const talking = rendered.filter(({ view }) => live(view).length > 0)
+    expect(talking.map(({ view }) => view.phase).sort()).toEqual(['choosing', 'drawing', 'roundEnd'])
+    for (const { html, view } of talking) {
+      expect(html).toContain('aria-label="Fil de la table"')
+      for (const sp of live(view)) expect(html).toContain(view.players.find((p) => p.id === sp.playerId)!.name)
+      if (view.phase === 'drawing') expect(html.indexOf('Fil de la table')).toBeGreaterThan(html.indexOf('<canvas'))
+    }
+    for (const { html, view } of rendered) if (live(view).length === 0) expect(html).not.toContain('Fil de la table')
+  })
+
   it("n'emploie aucune taille illisible ni opacité inexistante en Tailwind 3.3", () => {
     for (const step of steps) {
       const classes = [...render(step).html.matchAll(/class="([^"]*)"/g)].map((m) => m[1]).join(' ')

@@ -24,6 +24,7 @@ const PLAYERS = [
   { id: 'b1', name: 'Raoul', isBot: true },
   { id: 'b2', name: 'Gépéto', isBot: true },
   { id: 'b3', name: 'Bernadette', isBot: true },
+  { id: 'b4', name: 'Marcel', isBot: true },
 ]
 const sp = (playerId: string, kind: Game1220SpeechKind, round: number, targetId = 'h'): Game1220Speech => ({
   playerId,
@@ -75,6 +76,13 @@ describe('Game1220SpeechFeed', () => {
     expect(bubbles(render(speech, 5))[0]).toContain('Gépéto')
     expect(bubbles(render(speech, 4))[0]).toContain('Raoul')
     expect(bubbles(render(speech.slice(1), 5, { speechBase: 1 }))).toEqual(bubbles(render(speech, 5)))
+  })
+
+  it('« Sans alcool » : le tic qui trinque (Marcel) se tait aussi', () => {
+    const tic = (catalogue('fr') as { games: { '1220': { botTic: Record<string, string> } } }).games['1220'].botTic.marcel
+    const speech = [sp('b4', 'jinx', 1)]
+    expect(bubbles(render(speech, 1))[0]).toContain(tic)
+    expect(bubbles(render(speech, 1, { soft: true }))[0]).not.toContain(tic)
   })
 
   it('« Sans alcool » : les piques qui parlent de boire disparaissent, les autres gardent leur phrase', () => {

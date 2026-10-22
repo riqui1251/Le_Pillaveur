@@ -32,6 +32,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { CrobardSpeechFeed } from './crobard/CrobardSpeechFeed'
 
 /**
  * CROBARD en ligne (serveur-autoritaire). `word`/`wordChoices` ne sont
@@ -46,8 +47,14 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 type StrokeQueueItem =
   | { action: 'draw-stroke'; stroke: Stroke }
-  | { action: 'undo-stroke' }
+  | { action: 'undo-stroke'; undoId: string }
   | { action: 'clear' }
+
+function newUndoId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 /** Seuil d'urgence du chrono : 10 s de choix en tout, 80 s de dessin. */
 const CHOOSING_DANGER_MS = 4_000
@@ -388,7 +395,8 @@ export function CrobardOnline() {
       <PartyCanvasTools
         tool={tool}
         hasStrokes={view.strokes.length > 0}
-        onUndo={() => queueStrokeAction({ action: 'undo-stroke' })}
+        // Un jeton par geste : un renvoi (réponse perdue) ne retire pas un 2e trait.
+        onUndo={() => queueStrokeAction({ action: 'undo-stroke', undoId: newUndoId() })}
         onClear={() => {
           // L'effacement rend caducs les traits encore en file.
           strokeQueueRef.current = [{ action: 'clear' }]
@@ -579,6 +587,14 @@ export function CrobardOnline() {
               )
             })}
           </ul>
+        )}
+
+        {/* Réactions des bots, sous la toile et les joueurs (ou le bilan) :
+            dans le flux, jamais par-dessus le dessin ni sous la barre. À la
+            même place d'une phase à l'autre, monté dès qu'un bot est assis,
+            même vide : la région aria-live existe avant la première bulle. */}
+        {view.players.some((p) => p.isBot) && (
+          <CrobardSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
         )}
       </div>
 

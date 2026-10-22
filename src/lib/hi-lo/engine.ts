@@ -381,9 +381,16 @@ export function upcomingHiLoPlayerId(state: HiLoState): string | null {
   return turn.advanced ? currentHiLoPlayerId(turn.state) : null
 }
 
-/** Cartes déjà jouées (retournées), sur un paquet de 52. */
+/**
+ * Cartes déjà jouées (retournées) du paquet en cours, sur 52 ; la carte
+ * visible n'en fait pas partie. Pendant le retournement qui suit un remélange,
+ * elle vient de l'ancien paquet : le neuf, carte tirée comprise, est encore
+ * entier — zéro jouée, pas « -1 ».
+ */
 export function hiLoCardsPlayed(state: Pick<HiLoState, 'deck' | 'currentCard' | 'nextCard'>): number {
-  return DECK_SIZE - state.deck.length - (state.currentCard ? 1 : 0) - (state.nextCard ? 1 : 0)
+  const unseen = state.deck.length + (state.nextCard ? 1 : 0)
+  const visibleFromThisPack = state.currentCard && unseen < DECK_SIZE ? 1 : 0
+  return DECK_SIZE - unseen - visibleFromThisPack
 }
 
 // ─── Reprise de partie (useResumableLocalGame) ───────────────────────────────

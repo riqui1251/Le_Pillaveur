@@ -1884,7 +1884,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   disabled={!isHost || botsCount <= 0}
                   onClick={() => updateSettings({ botsCount: botsCount - 1 })}
                   className="game-grid-cell flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-lg font-black text-cream transition-colors hover:bg-gold/20 disabled:opacity-30"
-                  aria-label="-1 bot"
+                  aria-label={tOnline('botsFill.remove')}
                 >
                   −
                 </button>
@@ -1896,7 +1896,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   disabled={!isHost || botsCount >= maxBots}
                   onClick={() => updateSettings({ botsCount: botsCount + 1 })}
                   className="game-grid-cell flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-lg font-black text-cream transition-colors hover:bg-gold/20 disabled:opacity-30"
-                  aria-label="+1 bot"
+                  aria-label={tOnline('botsFill.add')}
                 >
                   +
                 </button>

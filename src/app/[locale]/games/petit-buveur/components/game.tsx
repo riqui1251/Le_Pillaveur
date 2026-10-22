@@ -57,9 +57,7 @@ import {
   toStoredCase,
 } from '../case-notification'
 import {
-  outcomeCannotRecul,
   outcomeCaseBase,
-  outcomeChainLinked,
   outcomeCompose,
   outcomeDrinks,
   outcomeI18n,
@@ -88,14 +86,21 @@ import {
   type FreshLinks,
 } from '../local-rules'
 import {
+  applyChainLink,
+  applyChallengeResult,
+  applyChanceAdvance,
   applyDoubleCase,
+  applyPileFace,
+  applyShameDice,
   applyTargetedCase,
+  applyVote,
+  applyWheelDrinks,
   resolveExchange,
   resolveTeleport,
   type ApplyContext,
   type ApplyResult,
 } from '../apply-case'
-import { applyDiceRoll, clampBoardPosition, clonePlayers, detectWinner, hopDurationMs } from '../turn-state'
+import { applyDiceRoll, clonePlayers, detectWinner, hopDurationMs } from '../turn-state'
 import {
   boardHighlightClass,
   boardHighlights,
@@ -1455,20 +1460,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const actor = list[currentPlayerRef.current]
     const voted = list.find(p => p.id === votedId)
     if (!actor || !voted || !pendingCase) return
-    const drinks = pendingCase.effect || 3
-    const updated = clonePlayers(list)
-    if (addPlayerDrinks(votedId, drinks, updated, { sourceId: actor.id })) {
-      const voteOutcome = outcomeProtectedTarget(t, voted.id)
-      recordLastAction(actor, 'vote', voteOutcome, voted)
-      showCaseResultNotification(pendingCase, voteOutcome, voted)
-      setPendingCase(null)
-      setPendingPosition(null)
-      return
-    }
-    commitPlayers(updated)
-    const voteOutcome = outcomeDrinks(voted.id, drinks)
-    recordLastAction(actor, 'vote', voteOutcome, voted)
-    showCaseResultNotification(pendingCase, voteOutcome, voted)
+    const vote = applyVote(pendingCase, list, votedId, applyContext())
+    recordDrinkStats(vote.drinks)
+    commitPlayers(vote.players)
+    recordLastAction(actor, 'vote', vote.outcome, voted)
+    showCaseResultNotification(pendingCase, vote.outcome, voted)
     setPendingCase(null)
     setPendingPosition(null)
   }
@@ -1530,33 +1526,16 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const actor = playersRef.current[actorIndex]
     if (r == null || !actor || !pendingCase) return
 
-    const updated = clonePlayers(playersRef.current)
-    const p = updated[actorIndex]
-    if (!p) return
-
-    const cannotBack = r === 6 && p.position === 0
-    if (r > 2 && r <= 4) {
-      addPlayerDrinks(p.id, 2, updated, { sourceId: p.id })
-    } else if (r === 5) {
-      p.position = clampBoardPosition(p.position + 1, boardSize)
-    } else if (r === 6 && !cannotBack) {
-      p.position -= 1
-    }
+    const shame = applyShameDice(r, playersRef.current, applyContext())
 
     clearDeHonteRollInterval()
     setDeHonteRolling(false)
     setDeHonteResult(null)
     setShowDeHonteDialog(false)
-    if (commitPlayers(updated, { actorIndex })) return
-    let deHonteKey = 'shameDice.outcomeBack'
-    if (r <= 2) deHonteKey = 'shameDice.outcomeSafe'
-    else if (r <= 4) deHonteKey = 'shameDice.outcomeDrink'
-    else if (r === 5) deHonteKey = 'shameDice.outcomeAdvance'
-    const deHonteOutcome = cannotBack
-      ? outcomeCannotRecul(p.id)
-      : outcomeI18n(deHonteKey, { params: { roll: r }, playerRefs: { player: p.id } })
-    recordLastAction(actor, 'de-honte', deHonteOutcome, null)
-    showCaseResultNotification(pendingCase, deHonteOutcome, null)
+    recordDrinkStats(shame.drinks)
+    if (commitPlayers(shame.players, { actorIndex })) return
+    recordLastAction(actor, 'de-honte', shame.outcome, null)
+    showCaseResultNotification(pendingCase, shame.outcome, null)
     setPendingCase(null)
     setPendingPosition(null)
   }
@@ -1586,29 +1565,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const target = targetId ? list.find(p => p.id === targetId) : null
     if (!actor || !target || !pendingCase || !choice || !flip) return
 
-    const wins = choice === flip
-    const drinks = pendingCase.effect || 2
-    const updated = clonePlayers(list)
-    const tp = updated.find(p => p.id === target.id)
-    if (!tp) return
-
-    let pileFaceOutcome: EffectOutcome
-    if (wins) {
-      pileFaceOutcome = outcomeI18n('game.outcomes.pileFaceWin', {
-        playerRefs: { player: tp.id },
-        params: { choice: t(`coinFlip.${choice}`), result: t(`coinFlip.${flip}`) },
-      })
-    } else if (addPlayerDrinks(tp.id, drinks, updated, { sourceId: actor.id })) {
-      pileFaceOutcome = outcomeProtectedTarget(t, tp.id)
-    } else {
-      pileFaceOutcome = outcomeI18n('game.outcomes.pileFaceLose', {
-        playerRefs: { player: tp.id },
-        params: { result: t(`coinFlip.${flip}`), count: drinks },
-      })
-    }
-    commitPlayers(updated)
-    recordLastAction(actor, 'pile-face', pileFaceOutcome, target)
-    showCaseResultNotification(pendingCase, pileFaceOutcome, target)
+    const coin = applyPileFace(pendingCase, list, target.id, choice, flip, applyContext())
+    recordDrinkStats(coin.drinks)
+    commitPlayers(coin.players)
+    recordLastAction(actor, 'pile-face', coin.outcome, target)
+    showCaseResultNotification(pendingCase, coin.outcome, target)
     setPendingCase(null)
     setPendingPosition(null)
   }
@@ -1851,11 +1812,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     if (!pendingChallenge || !caseNotification) return
 
     const { targetId, drinks } = pendingChallenge
-    const actor = playersRef.current[currentPlayerRef.current]
     if (!completed && playersRef.current.some(p => p.id === targetId)) {
-      const updated = clonePlayers(playersRef.current)
-      addPlayerDrinks(targetId, drinks, updated, { sourceId: actor?.id })
-      commitPlayers(updated)
+      const verdict = applyChallengeResult(playersRef.current, targetId, drinks, completed, applyContext())
+      recordDrinkStats(verdict.drinks)
+      commitPlayers(verdict.players)
     }
     setCaseNotification(prev =>
       prev
@@ -2242,34 +2202,19 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     if (targetPlayerObj.id === currentPlayerObj.id) return
     lastTargetIdRef.current = targetPlayerObj.id
 
-    if (isShielded(targetPlayerObj, currentPlayerObj.id)) {
-      const blocked = outcomeProtectedTarget(t, targetPlayerObj.id)
-      showCaseNotification({
-        case: { type: 'defi-chaine', effect: chainTurns },
-        outcome: blocked,
-        targetPlayerId: targetPlayerObj.id,
-        includeEffectsSummary: false,
-      })
-      recordLastAction(currentPlayerObj, 'defi-chaine', blocked, targetPlayerObj)
-      return
+    const chainCase: Case = { type: 'defi-chaine', effect: chainTurns }
+    const chain = applyChainLink(chainCase, list, targetPlayerObj.id, applyContext())
+    if (chain.chainLinked) {
+      freshLinksRef.current.chain = true
+      commitPlayers(chain.players)
     }
-
-    const updatedPlayers = list.map(p =>
-      p.id === currentPlayerObj.id
-        ? { ...p, linkedTo: targetPlayerObj.id, linkedTurns: chainTurns }
-        : { ...p }
-    )
-
-    freshLinksRef.current.chain = true
-    commitPlayers(updatedPlayers)
-    const chainOutcome = outcomeChainLinked(currentPlayerObj.id, targetPlayerObj.id, chainTurns)
     showCaseNotification({
-      case: { type: 'defi-chaine', effect: chainTurns },
-      outcome: chainOutcome,
+      case: chainCase,
+      outcome: chain.outcome,
       targetPlayerId: targetPlayerObj.id,
       includeEffectsSummary: false,
     })
-    recordLastAction(currentPlayerObj, 'defi-chaine', chainOutcome, targetPlayerObj)
+    recordLastAction(currentPlayerObj, 'defi-chaine', chain.outcome, targetPlayerObj)
   }
 
   const renderBoardPawn = (player: GamePlayer, onCase: number) => {
@@ -2451,9 +2396,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       const wheelCase: Case = { type: 'roue-defis', effect: DEFI_WHEEL_DRINKS }
       const label = outcomeI18n('game.outcomes.wheelDefi', { params: { label: result.label } })
       if (kind === 'drink') {
-        const updated = clonePlayers(playersRef.current)
-        addPlayerDrinks(currentPlayerObj.id, DEFI_WHEEL_DRINKS, updated, { sourceId: currentPlayerObj.id })
-        commitPlayers(updated)
+        const wheel = applyWheelDrinks(DEFI_WHEEL_DRINKS, playersRef.current, actorIndex)
+        recordDrinkStats(wheel.drinks)
+        commitPlayers(wheel.players)
         showCaseOutcome(wheelCase, outcomeCompose(label, outcomeDrinks(currentPlayerObj.id, DEFI_WHEEL_DRINKS)), notifyOpts)
       } else if (kind === 'safe') {
         showCaseOutcome(
@@ -2474,9 +2419,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         })
       }
     } else if (result.value > 0) {
-      const updated = clonePlayers(playersRef.current)
-      addPlayerDrinks(currentPlayerObj.id, result.value, updated, { sourceId: currentPlayerObj.id })
-      commitPlayers(updated)
+      const wheel = applyWheelDrinks(result.value, playersRef.current, actorIndex)
+      recordDrinkStats(wheel.drinks)
+      commitPlayers(wheel.players)
       showCaseOutcome(
         { type: 'gorgée', effect: result.value },
         outcomeCompose(
@@ -3363,18 +3308,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   const actorIndex = currentPlayerRef.current;
                   const currentPlayerObj = playersRef.current[actorIndex];
                   if (currentPlayerObj) {
-                    const newPosition = clampBoardPosition(currentPlayerObj.position + 2, boardSize);
-                    const updatedPlayers = playersRef.current.map((p, idx) =>
-                      idx === actorIndex ? { ...p, position: newPosition } : { ...p }
-                    );
-                    if (commitPlayers(updatedPlayers, { actorIndex })) return;
+                    const advance = applyChanceAdvance(playersRef.current, applyContext())
+                    if (commitPlayers(advance.players, { actorIndex })) return;
 
-                    const chanceOutcome = outcomeI18n('game.outcomes.chanceAdvance', {
-                      playerRefs: { player: currentPlayerObj.id },
-                      params: { case: newPosition + 1 },
-                    })
-                    recordLastAction(currentPlayerObj, 'chance', chanceOutcome, null)
-                    castLastAction('chance', chanceOutcome)
+                    recordLastAction(currentPlayerObj, 'chance', advance.outcome, null)
+                    castLastAction('chance', advance.outcome)
                     advanceToNextPlayer()
                   }
                 }}

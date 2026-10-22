@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { startDisplay, stepDisplay, stepDelayMs } from './useSteppedPositions'
-import { outcomeText, type SpectacleLabels } from './InteractionSpectacle'
+import { duelSegment, interactionDrinks, outcomeText, type SpectacleLabels } from './InteractionSpectacle'
 import { drinkIcon } from './drink-feedback'
 
 describe('useSteppedPositions — logique pure', () => {
@@ -56,6 +56,29 @@ describe('InteractionSpectacle — texte du résultat (règle 14)', () => {
 
   it('le 5 avance toujours, même depuis la case 1', () => {
     expect(outcomeText({ ...six, value: 5 }, labels, '', 0)).toBe('avance')
+  })
+})
+
+describe('InteractionSpectacle — duel sur case partagée', () => {
+  const duelLabels: SpectacleLabels = {
+    ...labels,
+    duelWinnerStays: '{winner} reste, {loser} recule',
+    duelOpponentWins: '{winner} gagne, {loser} recule',
+    duelLoserProtected: '{winner} gagne, {loser} protégé',
+  }
+  const duel = { kind: 'duel' as const, actorId: 'a', opponentId: 'b', challengerWins: true, loserProtected: false }
+
+  it('nomme le gagnant et le perdant, protection comprise', () => {
+    expect(outcomeText(duel, duelLabels, 'Bob', undefined, 'Alice')).toBe('Alice reste, Bob recule')
+    expect(outcomeText({ ...duel, challengerWins: false }, duelLabels, 'Bob', undefined, 'Alice')).toBe('Bob gagne, Alice recule')
+    expect(outcomeText({ ...duel, loserProtected: true }, duelLabels, 'Bob', undefined, 'Alice')).toBe('Alice gagne, Bob protégé')
+  })
+
+  it('aucune gorgée ; la roue s’arrête sur un secteur gagnant (pair) ou perdant (impair) du challenger', () => {
+    expect(interactionDrinks(duel)).toBe(0)
+    expect(duelSegment(duel) % 2).toBe(0)
+    expect(duelSegment({ ...duel, challengerWins: false }) % 2).toBe(1)
+    expect(duelSegment({ ...duel, opponentId: 'un-autre-joueur' })).toBeLessThan(12)
   })
 })
 

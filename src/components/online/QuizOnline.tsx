@@ -27,6 +27,7 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { MedalDot } from './MedalDot'
+import { QuizSpeechFeed } from './quiz/QuizSpeechFeed'
 
 /**
  * LE GRAND PILLAVEUR en ligne — le téléphone devient un BUZZER : 4 gros
@@ -234,6 +235,7 @@ export function QuizOnline() {
   const present = view.players.filter((p) => !p.leftAt)
   const answeredCount = present.filter((p) => p.hasAnswered).length
   const isLastQuestion = view.qIdx + 1 >= view.questionCount
+  const hasSpeech = (view.speech ?? []).some((sp) => sp.round === view.qIdx)
 
   const answer = async (idx: number) => {
     if (locked) return
@@ -241,7 +243,9 @@ export function QuizOnline() {
     // Deux touchers dans la même image : la première case gagne, comme
     // l'envoi (le hook ne laisse partir qu'une requête à la fois).
     setPending((cur) => (cur && cur.phaseKey === phaseKey ? cur : { phaseKey, choice: idx }))
-    const res = await sendAction({ action: 'answer', choice: idx })
+    // Sans verrou de version : les bots répondent dans la même seconde et le
+    // refus (409 muet) rouvrait le buzzer. La question visée reste vérifiée.
+    const res = await postAction({ action: 'answer', choice: idx, phaseKey })
     // null : toucher écarté par ce verrou. Refus : la case se rouvre. Succès :
     // la roue tient jusqu'à ce que la vue rapporte le choix.
     if (res && !res.ok) setPending((cur) => (cur?.choice === idx ? null : cur))
@@ -328,6 +332,21 @@ export function QuizOnline() {
           isReveal ? 'min-h-[4rem]' : 'min-h-0'
         )}
       >
+        {/* Paroles des bots en tête de la zone qui défile : ni la question ni
+            les buzzers ne bougent quand un bot fanfaronne. Monté vide dès la
+            question (région live prête avant la première bulle). */}
+        <div className={hasSpeech ? 'mb-2' : undefined}>
+          <QuizSpeechFeed
+            speech={view.speech}
+            qIdx={view.qIdx}
+            players={view.players}
+            iconOf={iconOf}
+            meId={user.id}
+            variant="phone"
+            soft={isSoft}
+          />
+        </div>
+
         {/* Qui a buzzé */}
         {isQuestion && (
           <div>

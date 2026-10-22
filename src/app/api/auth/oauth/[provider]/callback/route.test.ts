@@ -207,6 +207,36 @@ describe('connexion', () => {
     expect(createSessionMock).toHaveBeenCalledWith('compte-kevin')
   })
 
+  it('compte à mot de passe dont l’adresse n’a jamais été prouvée : refus, rien n’est lié ni ouvert', async () => {
+    // Inscription par mot de passe sans confirmation : un tiers a pu la faire
+    // au nom de Kevin, et en garderait le mot de passe une fois le lien posé.
+    database([{ ...kevin, passwordHash: 'hash-du-tiers', emailVerified: null }], [])
+    aller()
+    const { params } = await retour()
+    expect(params.get('authError')).toBe('email_taken')
+    expect(params.get('redirect')).toBe('/jeux?join=ABC123')
+    expect(linkDb.upsert).not.toHaveBeenCalled()
+    expect(userDb.update).not.toHaveBeenCalled()
+    expect(createSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('compte à mot de passe dont l’adresse est prouvée : lié', async () => {
+    database([{ ...kevin, passwordHash: 'hash' }], [])
+    aller()
+    await retour()
+    expect(linkDb.upsert.mock.calls[0][0].create.userId).toBe('compte-kevin')
+    expect(createSessionMock).toHaveBeenCalledWith('compte-kevin')
+  })
+
+  it('compte Google ancien (sans mot de passe, adresse jamais datée) : lié, adresse datée', async () => {
+    database([{ ...kevin, passwordHash: '', emailVerified: null }], [])
+    aller()
+    await retour()
+    expect(linkDb.upsert.mock.calls[0][0].create.userId).toBe('compte-kevin')
+    expect(userDb.update.mock.calls[0][0].data.emailVerified).toBeInstanceOf(Date)
+    expect(createSessionMock).toHaveBeenCalledWith('compte-kevin')
+  })
+
   it('identité déjà liée : le compte est retrouvé même si l’adresse a changé chez Discord', async () => {
     database([kevin], [{ providerAccountId: 'discord-42', userId: 'compte-kevin' }])
     profileMock.mockResolvedValue({ ...discordProfile, email: 'nouvelle@exemple.fr' })
@@ -324,6 +354,15 @@ describe('Apple — retour en POST (form_post)', () => {
     expect(userDb.create.mock.calls[0][0].data.displayName).toBe('Zoé')
   })
 
+  it('corps démesuré : rien n’est lu, rebond sans code ni prénom', async () => {
+    const res = await postBack('apple', { code: 'code-apple', state: STATE, bourrage: 'x'.repeat(64 * 1024) })
+    expect(res.status).toBe(303)
+    const location = new URL(res.headers.get('location') ?? '')
+    expect(location.pathname).toBe('/api/auth/oauth/apple/callback')
+    expect(location.search).toBe('')
+    expect(res.headers.get('set-cookie') ?? '').not.toContain(OAUTH_NAME_COOKIE)
+  })
+
   it('les autres fournisseurs reviennent en GET : POST refusé', async () => {
     const res = await postBack('discord', { code: 'c', state: STATE })
     expect(res.status).toBe(404)
@@ -351,6 +390,15 @@ describe('suppression confirmée par le fournisseur', () => {
     aller({ intent: 'delete', userId: 'compte-kevin' })
     const { params } = await retour()
     expect(params.get('deleteError')).toBe('oauth_not_linked')
+    expect(deleteUserMock).not.toHaveBeenCalled()
+  })
+
+  it('compte à mot de passe : rien n’est supprimé sans le mot de passe', async () => {
+    database([{ ...kevin, passwordHash: 'hash' }], [{ providerAccountId: 'discord-42', userId: 'compte-kevin' }])
+    currentUserMock.mockResolvedValue(session)
+    aller({ intent: 'delete', userId: 'compte-kevin' })
+    const { params } = await retour()
+    expect(params.get('deleteError')).toBe('wrong_password')
     expect(deleteUserMock).not.toHaveBeenCalled()
   })
 

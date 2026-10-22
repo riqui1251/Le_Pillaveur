@@ -96,6 +96,34 @@ describe('onlineScreenModel — rien avant le téléphone', () => {
     expect(landed.pending?.waiting).toEqual({ kind: 'choice', name: s.players[s.currentPlayer].name })
   })
 
+  it('cible choisie à l’aveugle : la TV montre « Qui cibler ? », pas la case (comme la diffusion locale)', () => {
+    const { s } = playUntil((x) => Boolean(x.pending?.needsTarget) && !x.pending?.stage)
+    const model = onlineScreenModel(toClientView(s), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(s) }, null)
+    expect(model.pending).toMatchObject({
+      caseType: 'target',
+      icon: '🎯',
+      title: 'Qui cibler ?',
+      detail: "L'effet de la case sera révélé après ton choix",
+    })
+    expect(JSON.stringify(model)).not.toContain(base(`caseTypes.${s.pending!.case!.type}`))
+  })
+
+  it('duel sur case partagée : « Duel sur la case » sans la case, puis l’issue sur la carte', () => {
+    const { s } = playUntil((x) => x.pending?.stage === 'duel')
+    const waiting = onlineScreenModel(toClientView(s), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(s) }, null)
+    expect(waiting.pending).toMatchObject({ caseType: 'duel', icon: '⚔️', title: 'Duel sur la case', targetId: null })
+    expect(waiting.pending?.detail).toBe(base('game.duel.rules'))
+    const { s: fought } = playUntil((x) => !x.pending && Boolean(x.lastOutcome?.duel) && x.lastOutcome?.caseType === x.lastCase?.type)
+    const model = onlineScreenModel(toClientView(fought), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(fought) }, null)
+    expect(model.card?.lines[0]).toMatch(/^⚔️ Duel terminé/)
+  })
+
+  it('carte de la case jouée : sa consigne, comme au téléphone', () => {
+    const { s } = playUntil((x) => !x.pending && x.lastCase?.type === 'bombe' && Boolean(x.lastOutcome))
+    const model = onlineScreenModel(toClientView(s), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(s) }, null)
+    expect(model.card?.detail).toBe(base('caseDescriptions.bombe'))
+  })
+
   it('roue : sous le spectacle, la carte et les gorgées tirées restent cachées', () => {
     const { s } = playUntil((x) => x.lastInteraction?.kind === 'roue' && x.lastInteraction.drinks > 0)
     const view = toClientView(s)

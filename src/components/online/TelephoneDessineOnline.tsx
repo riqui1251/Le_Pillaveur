@@ -49,6 +49,8 @@ import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { TelephoneSpeechFeed } from './telephone-dessine/TelephoneSpeechFeed'
+import type { FeedPlayer } from './bot-speech/BotSpeechFeed'
 
 /**
  * TÉLÉPHONE DESSINÉ en ligne (serveur-autoritaire). Chaque joueur ne voit
@@ -268,6 +270,8 @@ export function TelephoneDessineOnline() {
           actionError={actionError}
           sendAction={sendAction}
           right={tutorialButton}
+          iconOf={iconOf}
+          soft={user.ambianceMode === 'soft'}
         />
         {tutorialModal}
       </>
@@ -512,6 +516,8 @@ function TelephoneReveal({
   actionError,
   sendAction,
   right,
+  iconOf,
+  soft,
 }: {
   view: TelephoneClientView
   chain: TelephoneRevealChain
@@ -521,6 +527,8 @@ function TelephoneReveal({
   actionError: string | null
   sendAction: SendAction
   right: ReactNode
+  iconOf: (p: FeedPlayer) => string
+  soft: boolean
 }) {
   const t = useTranslations('games.telephone-dessine.game')
   const reduceMotion = useReducedMotion()
@@ -545,6 +553,7 @@ function TelephoneReveal({
   // Le maillon qui arrive est amené à l'écran ; une nouvelle chaîne repart du haut.
   const topRef = useRef<HTMLDivElement>(null)
   const newestRef = useRef<HTMLLIElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
   const chainRef = useRef(view.revealIdx)
   useEffect(() => {
     const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth'
@@ -553,7 +562,9 @@ function TelephoneReveal({
       topRef.current?.scrollIntoView({ block: 'start', behavior })
       return
     }
-    if (shown > 1) newestRef.current?.scrollIntoView({ block: 'nearest', behavior })
+    // La réaction d'un bot arrive avec la chute : on l'amène avec elle.
+    const feed = feedRef.current?.querySelector('li') ? feedRef.current : null
+    if (shown > 1) (feed ?? newestRef.current)?.scrollIntoView({ block: 'nearest', behavior })
   }, [view.revealIdx, shown, reduceMotion])
 
   const nextLabel = !complete ? t('reveal.nextLink') : lastChain ? t('reveal.finish') : t('reveal.nextChain')
@@ -613,6 +624,12 @@ function TelephoneReveal({
             />
           ))}
         </ol>
+
+        {/* Sous la chaîne, là où l'on regarde à la chute ; la marge basse
+            garde la bulle au-dessus de la barre d'action quand on l'amène. */}
+        <div ref={feedRef} className="scroll-mb-32">
+          <TelephoneSpeechFeed view={view} iconOf={iconOf} meId={userId} variant="phone" soft={soft} />
+        </div>
       </div>
 
       <OnlineActionBar

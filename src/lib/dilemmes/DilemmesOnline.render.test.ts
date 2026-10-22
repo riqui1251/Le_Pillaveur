@@ -188,3 +188,43 @@ describe('DilemmesOnline — révélation d’un « Tu préfères »', () => {
     expect(html).not.toContain('Terminer')
   })
 })
+
+describe('DilemmesOnline — paroles des bots', () => {
+  const FEED = 'aria-label="Fil de la table"'
+  function withGepeto(card: DilCard): DilState {
+    const start = createDilState([...PLAYERS, { id: 'g', name: 'Gépéto', isBot: true }], [card], 'seed', T0, 1)
+    return reduceDil(start, {
+      type: 'ADVANCE',
+      claimedKey: toDilClientView(start, 'h').phaseKey,
+      now: start.phaseEndsAt!,
+    })
+  }
+
+  it('sous les cartes à voter, jamais au-dessus : une bulle qui arrive ne déplace pas le choix sous le doigt', () => {
+    const state = reduceDil(withGepeto({ kind: 'prefer', a: 'Option chat', b: 'Option chien' }), {
+      type: 'VOTE',
+      playerId: 'g',
+      choice: 'A',
+      now: T0 + 6_000,
+      say: { kind: 'tough', targetId: 'h' },
+    })
+    const html = render(state)
+    const feedAt = html.indexOf(FEED)
+    expect(feedAt).toBeGreaterThan(html.lastIndexOf('aria-pressed'))
+    expect(html.slice(feedAt)).toContain('Gépéto')
+    // La bulle me vise : surlignée.
+    expect(html.slice(feedAt)).toContain('bg-gold/20')
+  })
+
+  it('« Qui de la table » révélé : la réaction se lit entre le verdict et le classement', () => {
+    let state = withGepeto(WHO)
+    for (const [id, aim] of [['l', 'h'], ['m', 'h'], ['z', 'h'], ['h', 'l'], ['g', 'h']]) state = vote(state, id, aim)
+    expect(state.phase).toBe('reveal')
+    const html = render(state)
+    const feedAt = html.indexOf(FEED)
+    expect(feedAt).toBeGreaterThan(html.indexOf('id="dil-verdict"'))
+    expect(feedAt).toBeLessThan(html.indexOf('id="dil-ranking"'))
+    // Gépéto (3 de bavardage) rit de Riqui, le plus désigné.
+    expect(html.slice(feedAt, html.indexOf('id="dil-ranking"'))).toContain('Gépéto')
+  })
+})

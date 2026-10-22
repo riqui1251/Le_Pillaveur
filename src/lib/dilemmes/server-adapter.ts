@@ -10,14 +10,16 @@ import {
   DIL_DEFAULT_ROUNDS,
   DIL_MIN_PLAYERS,
   DIL_MAX_PLAYERS,
+  DIL_SAY_ERRORS,
   type DilCard,
   type DilPlayer,
   type DilState,
 } from './engine'
+import { dilBotSay } from './bot-speech'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { dilContentFor } from './data'
 import { createRng, randomSeed } from '@/lib/petit-buveur/rng'
-import { botDisplayName, personaForBotName, pickBotPersonas } from '@/lib/online/bot-personas'
+import { botDisplayName, botTraitsFor, personaForBotName, pickBotPersonas } from '@/lib/online/bot-personas'
 
 /**
  * Adaptateur serveur de Dilemmes : sérialisation, mapping HTTP → actions
@@ -66,7 +68,7 @@ export function parseDilState(json: string | null): DilState | null {
   try {
     const raw = JSON.parse(json) as DilState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, votes: raw.votes ?? {}, rematchVotes: raw.rematchVotes ?? [] }
+    return { ...raw, votes: raw.votes ?? {}, rematchVotes: raw.rematchVotes ?? [], speech: raw.speech ?? [] }
   } catch {
     return null
   }
@@ -233,12 +235,17 @@ export function dilBotChoice(
 
 /**
  * Tick bot : fait voter UN SEUL bot en attente (les votes s'étalent dans la
- * manche au tempo des personas) ; au reveal, le bot meneur continue. La fin
- * anticipée « tout le monde a voté » arrive naturellement au dernier tick.
+ * manche au tempo des personas), avec la parole qu'il y joint (bot-speech.ts,
+ * tirée sur SA vue client, qui ne connaît pas son choix) ; au reveal, le bot
+ * meneur continue. La fin anticipée « tout le monde a voté » arrive
+ * naturellement au dernier tick. `sayRand` tire les paroles (un test peut lui
+ * donner son propre flux) ; une parole refusée par le moteur ne coûte jamais
+ * le vote : il est rejoué sans elle.
  */
 export function applyDilBotAction(
   state: DilState,
-  rand: () => number = Math.random
+  rand: () => number = Math.random,
+  sayRand: () => number = rand
 ): DilRoomActionResult {
   try {
     if (state.phase === 'vote') {
@@ -247,9 +254,14 @@ export function applyDilBotAction(
       if (!bot || !card) return { ok: false, error: 'NOT_BOT_TURN' }
       const choice = dilBotChoice(state, bot, card, rand)
       if (choice === null) return { ok: false, error: 'NOT_BOT_TURN' }
-      return {
-        ok: true,
-        state: reduceDil(state, { type: 'VOTE', playerId: bot.id, choice, now: Date.now() }),
+      const said = dilBotSay(toDilClientView(state, bot.id), bot.id, botTraitsFor(bot.name), sayRand)
+      const vote = { type: 'VOTE' as const, playerId: bot.id, choice, now: Date.now() }
+      if (!said?.targetId) return { ok: true, state: reduceDil(state, vote) }
+      try {
+        return { ok: true, state: reduceDil(state, { ...vote, say: { kind: said.kind, targetId: said.targetId } }) }
+      } catch (e) {
+        if (!(e instanceof DilEngineError) || !DIL_SAY_ERRORS.includes(e.message)) throw e
+        return { ok: true, state: reduceDil(state, vote) }
       }
     }
     if (state.phase === 'reveal') {

@@ -533,10 +533,12 @@ export type Game1220SyncedState = {
   setupReady: string[]
   configs: Serialized1220Config[] | null
   lastRoll: Serialized1220History | null
+  /** Derniers lancers seulement (bornés) : le total est `rollCount`. */
   history: Serialized1220History[]
+  /** Lancers de toute la partie ; absent d'une partie lancée avant lui. */
+  rollCount?: number
   rematchVotes?: string[]
-  /** Lancers depuis le début (la « manche » des paroles) ; absent d'un état d'avant les paroles. */
-  rolls?: number
+  /** Paroles des bots, la « manche » étant le lancer (`round` = rollCount du lancer). */
   speech?: Game1220SyncedSpeech[]
   speechBase?: number
 }

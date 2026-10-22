@@ -322,11 +322,14 @@ export function MenteurOnline() {
                 <span className="w-6 text-center text-lg font-black tabular-nums text-cream/80">{idx + 1}</span>
                 <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
                 <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate font-bold" />
-                <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-cream/80">
-                  {/* Derrière la chope : les GORGÉES bues (1+2+3…), pas le nombre de dés
-                      perdus — à 3 dés perdus on a bu 6 gorgées, pas 3 (F35). */}
-                  <Beer aria-hidden className="h-4 w-4 text-gold" /> {p.sipsTotal}
-                </span>
+                {/* Derrière la chope : les GORGÉES bues (1+2+3…), pas le nombre de dés
+                    perdus — à 3 dés perdus on a bu 6 gorgées, pas 3 (F35). En Soft,
+                    aucune gorgée : la révélation n'en annonce pas non plus. */}
+                {!isSoft && (
+                  <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-cream/80">
+                    <Beer aria-hidden className="h-4 w-4 text-gold" /> {p.sipsTotal}
+                  </span>
+                )}
               </li>
             ))}
           </ol>
@@ -502,7 +505,7 @@ export function MenteurOnline() {
             )}
             {reveal.eliminatedId && (
               <p className="text-center text-sm font-bold text-gold">
-                {t('reveal.eliminatedMsg', {
+                {t(isSoft ? 'reveal.eliminatedMsgSoft' : 'reveal.eliminatedMsg', {
                   name: nameOf(reveal.eliminatedId),
                   genre: genreOfId(view.players, reveal.eliminatedId),
                 })}
@@ -593,7 +596,7 @@ export function MenteurOnline() {
                     </>
                   )}
                   {/* Même échelle que le classement : gorgées bues, pas dés perdus (F35). */}
-                  {p.sipsTotal > 0 && !dead && ` · 🍺 ${p.sipsTotal}`}
+                  {!isSoft && p.sipsTotal > 0 && !dead && ` · 🍺 ${p.sipsTotal}`}
                 </p>
               </div>
               {isActive && <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-gold motion-safe:animate-pulse" />}

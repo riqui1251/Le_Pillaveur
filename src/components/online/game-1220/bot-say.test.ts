@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { IntlMessageFormat } from 'intl-messageformat'
 import { GAME_1220_DRINK_SPEECH_KINDS, GAME_1220_SPEECH_KINDS } from '@/lib/1220/engine'
 import {
+  DRINK_WORDS,
   SPEECH_LOCALES,
   describeSpeechCatalogue,
   flattenSpeechCatalogue,
@@ -28,12 +29,6 @@ describeSpeechCatalogue({
   maxChars: 70,
 })
 
-const DRINK: Record<string, RegExp> = {
-  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|sant[ée]|tchin|trinqu|ap[ée]ro/i,
-  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass/i,
-  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind/i,
-  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind/i,
-}
 const NEXT_ROLL: Record<string, RegExp> = {
   fr: /prochain (lancer|coup) sera|va sortir|sortira|le prochain sera/i,
   en: /next roll will|will come up|is coming up|next one will/i,
@@ -60,7 +55,7 @@ describe.each(SPEECH_LOCALES)('1220/%s', (locale) => {
       for (const genre of GENRES) {
         const line = String(format.format({ name: 'Mauricette', speaker: genre, target: genre }))
         expect(line, `${key} : ${line}`).not.toMatch(NEXT_ROLL[locale])
-        if (!DRINK_KINDS.includes(kindOf(key))) expect(line, `${key} : ${line}`).not.toMatch(DRINK[locale])
+        if (!DRINK_KINDS.includes(kindOf(key))) expect(line, `${key} : ${line}`).not.toMatch(DRINK_WORDS[locale])
       }
     }
   })

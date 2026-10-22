@@ -1,4 +1,5 @@
 import {
+  addMCSpeech,
   createMCState,
   mcSpymasterOf,
   reduceMC,
@@ -210,6 +211,38 @@ function longWords(): TvPreviewFixture {
   }
 }
 
+/** Réactions des bots (remplaçants) : bien vu, cadeau à l'adversaire, l'assassin. */
+function botChatter(): TvPreviewFixture {
+  const list = members(4)
+  const players = [
+    ...list.map((m, i) => ({ id: m.userId, name: m.displayName, team: (i % 2 === 0 ? 'gold' : 'red') as MCTeam })),
+    { id: 'bot-1', name: 'Paulette', team: 'gold' as MCTeam, isBot: true },
+    { id: 'bot-2', name: 'Kéké', team: 'red' as MCTeam, isBot: true },
+  ]
+  const s1 = startNow(createMCState(players, MC_WORDS_IT.slice(0, 40), 'tv-mc-paroles'))
+  const team = s1.activeTeam
+  const mateBot = team === 'gold' ? 'bot-1' : 'bot-2'
+  const rivalBot = team === 'gold' ? 'bot-2' : 'bot-1'
+  let s2 = guess(clue(s1, 'Cantiere', 2), team)
+  const finder = guesserOf(s2, team)
+  s2 = addMCSpeech(s2, { playerId: mateBot, kind: 'nice', targetId: finder })
+  let s3 = guess(s2, other(team))
+  s3 = addMCSpeech(s3, { playerId: rivalBot, kind: 'thanks', targetId: finder })
+  s3 = addMCSpeech(s3, { playerId: mateBot, kind: 'oops', targetId: finder })
+  const victim = guesserOf(s3, s3.activeTeam)
+  let s4 = guess(clue(s3, 'Ufficio', 1), 'assassin')
+  s4 = addMCSpeech(s4, { playerId: s3.activeTeam === 'gold' ? 'bot-1' : 'bot-2', kind: 'assassin', targetId: victim })
+  return {
+    id: 'paroles-bots',
+    label: 'Réactions des bots, 4 joueurs + 2 bots',
+    steps: [
+      step('bien vu', list, s2),
+      step('tuile adverse : merci du cadeau', list, s3),
+      step('assassin, réaction', list, s4),
+    ],
+  }
+}
+
 export function build(): TvPreviewFixture[] {
-  return [maxTable(), lopsided(), smallAssassin(), longWords()]
+  return [maxTable(), lopsided(), smallAssassin(), longWords(), botChatter()]
 }

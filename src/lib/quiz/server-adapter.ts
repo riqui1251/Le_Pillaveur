@@ -7,8 +7,11 @@ import {
   QUIZ_DEFAULT_COUNT,
   QUIZ_MIN_PLAYERS,
   QUIZ_MAX_PLAYERS,
+  type QuizSayMove,
   type QuizState,
 } from './engine'
+import { quizAnswerSay, quizRevealSay } from './bot-speech'
+import { phaseKey } from '@/lib/online/phase-clock'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getQuizQuestions } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -66,14 +69,25 @@ export function parseQuizState(json: string | null): QuizState | null {
   try {
     const raw = JSON.parse(json) as QuizState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [], answers: raw.answers ?? {} }
+    return {
+      ...raw,
+      rematchVotes: raw.rematchVotes ?? [],
+      answers: raw.answers ?? {},
+      // Arrivé après coup : une partie sérialisée avant les paroles se joue telle quelle.
+      speech: Array.isArray(raw.speech) ? raw.speech : [],
+    }
   } catch {
     return null
   }
 }
 
 export type QuizRoomActionInput =
-  | { type: 'answer'; choice: number }
+  /**
+   * `phaseKey` : la question à laquelle répond le joueur. La réponse part sans
+   * verrou de version — les bots qui répondent en même temps la faisaient
+   * refuser (409 muet, buzzer rouvert) — mais jamais sur une autre question.
+   */
+  | { type: 'answer'; choice: number; phaseKey?: string }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue' }
   | { type: 'bot' }
@@ -81,14 +95,33 @@ export type QuizRoomActionInput =
 
 export type QuizRoomActionResult = { ok: true; state: QuizState } | { ok: false; error: string }
 
+/**
+ * `sayRand` tire les paroles des bots (la simulation et les tests lui
+ * donnent un flux à part) : la réaction à la révélation naît dans la même
+ * écriture que la réponse ou l'échéance qui ferme la question.
+ */
 export function applyQuizRoomAction(
   state: QuizState,
   userId: string,
-  input: QuizRoomActionInput
+  input: QuizRoomActionInput,
+  sayRand: () => number = Math.random
+): QuizRoomActionResult {
+  const result = reduceQuizRoomAction(state, userId, input, sayRand)
+  return result.ok ? { ok: true, state: withQuizRevealSay(state, result.state, sayRand) } : result
+}
+
+function reduceQuizRoomAction(
+  state: QuizState,
+  userId: string,
+  input: QuizRoomActionInput,
+  sayRand: () => number
 ): QuizRoomActionResult {
   try {
     switch (input.type) {
       case 'answer':
+        if (input.phaseKey !== undefined && input.phaseKey !== phaseKey(state)) {
+          return { ok: false, error: 'PHASE_CHANGED' }
+        }
         return {
           ok: true,
           state: reduceQuiz(state, {
@@ -113,7 +146,7 @@ export function applyQuizRoomAction(
           state: reduceQuiz(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
         }
       case 'bot':
-        return applyQuizBotAction(state)
+        return applyQuizBotAction(state, sayRand)
       case 'replace-left':
         return {
           ok: true,
@@ -128,6 +161,28 @@ export function applyQuizRoomAction(
     if (e instanceof QuizEngineError) return { ok: false, error: e.message }
     throw e
   }
+}
+
+/**
+ * Les paroles jointes à un coup. Le planificateur ne propose que des paroles
+ * recevables (les tests le vérifient) ; si le moteur en refusait une
+ * quand même, le coup passe sans elle : une phrase ne coûte jamais une
+ * réponse ni une révélation.
+ */
+function withQuizSay(state: QuizState, moves: QuizSayMove[]): QuizState {
+  if (moves.length === 0) return state
+  try {
+    return reduceQuiz(state, { type: 'SAY', moves })
+  } catch (e) {
+    if (e instanceof QuizEngineError) return state
+    throw e
+  }
+}
+
+/** La question vient de se fermer : la table réagit, sur la vue publique de la révélation. */
+export function withQuizRevealSay(prev: QuizState, next: QuizState, sayRand: () => number): QuizState {
+  if (prev.phase !== 'question' || next.phase !== 'reveal') return next
+  return withQuizSay(next, quizRevealSay(toQuizSpectatorView(next), sayRand))
 }
 
 export function markQuizPlayerLeft(
@@ -175,14 +230,23 @@ const BOT_CORRECT_PROBA: Record<1 | 2 | 3, number> = { 1: 0.7, 2: 0.5, 3: 0.35 }
  * Un tick fait répondre TOUS les bots retardataires (délai piloté par le
  * client arbitre — 3 à 8 s après la question, pour un rythme naturel).
  * Le hasard des réponses utilise Math.random (entrée « joueur »).
+ *
+ * La fanfaronnade de l'un d'eux (bot-speech.ts) est tirée AVANT les
+ * réponses, sur la vue spectateur — sans la bonne réponse —, avec son
+ * propre flux `sayRand` : elle ne déplace aucun tirage de réponse.
  */
-export function applyQuizBotAction(state: QuizState): QuizRoomActionResult {
+export function applyQuizBotAction(state: QuizState, sayRand: () => number = Math.random): QuizRoomActionResult {
   try {
     if (state.phase !== 'question') return { ok: false, error: 'NOT_BOT_TURN' }
     const pending = state.players.filter((p) => p.isBot && !p.leftAt && !state.answers[p.id])
     if (pending.length === 0) return { ok: false, error: 'NOT_BOT_TURN' }
     const question = state.questions[state.qIdx]
-    let next = state
+    const said = quizAnswerSay(
+      toQuizSpectatorView(state),
+      pending.map((p) => p.id),
+      sayRand
+    )
+    let next = withQuizSay(state, said)
     for (const bot of pending) {
       if (next.phase !== 'question') break
       const correct = Math.random() < BOT_CORRECT_PROBA[question.diff]

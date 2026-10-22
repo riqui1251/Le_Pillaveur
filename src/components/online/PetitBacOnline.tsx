@@ -46,6 +46,7 @@ import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { PetitBacSpeechFeed } from './petit-bac/PetitBacSpeechFeed'
 
 /**
  * PETIT BAC en ligne (serveur-autoritaire). Chacun tape ses cinq réponses en
@@ -340,6 +341,7 @@ export function PetitBacOnline() {
   }
 
   const writing = view.phase === 'write' || view.phase === 'flush'
+  const hasSpeech = (view.speech ?? []).some((sp) => sp.round === view.round)
   // STOP : MÊMES conditions que le serveur (moteur = source de vérité), sinon
   // le bouton promet une action que la route refusera — cinq cases réellement
   // remplies (bonne lettre, 2 caractères au moins) ET un délai d'écriture
@@ -483,6 +485,20 @@ export function PetitBacOnline() {
           {t('leftTable', { name: leftPlayer.name })}
         </div>
       )}
+
+      {/* Paroles des bots (au STOP, puis sur la grille) : sous l'en-tête,
+          au-dessus des cases — rien ne s'écrit pendant l'écriture, la
+          bulle n'arrive qu'une fois la table gelée. Montée dès l'écriture
+          (région live prête), sans écart tant qu'elle est vide. */}
+      <div className={hasSpeech ? undefined : '-mt-3'}>
+        <PetitBacSpeechFeed
+          view={view}
+          iconOf={iconOf}
+          meId={user.id}
+          variant="phone"
+          soft={user.ambianceMode === 'soft'}
+        />
+      </div>
 
       {/* ── Écriture ── */}
       {writing && (

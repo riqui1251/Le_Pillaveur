@@ -9,13 +9,15 @@ import {
   SF_DEFAULT_ROUNDS,
   SF_MIN_PLAYERS,
   SF_MAX_PLAYERS,
+  SF_SAY_ERRORS,
   type SFPlayer,
   type SFState,
 } from './engine'
+import { sfBotSay } from './bot-speech'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { sfContentFor } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
-import { botDisplayName, personaForBotName, pickBotPersonas } from '@/lib/online/bot-personas'
+import { botDisplayName, botTraitsFor, personaForBotName, pickBotPersonas } from '@/lib/online/bot-personas'
 
 /**
  * Adaptateur serveur de Sans Filtre : sérialisation, mapping HTTP → actions
@@ -82,6 +84,7 @@ export function parseSFState(json: string | null): SFState | null {
       submissions: raw.submissions ?? [],
       rematchVotes: raw.rematchVotes ?? [],
       whiteDeck: raw.whiteDeck ?? [],
+      speech: raw.speech ?? [],
     }
   } catch {
     return null
@@ -244,12 +247,16 @@ function sfWeightedCrownPick(
  * Tick bot (action `bot` envoyée par le client « arbitre ») : fait soumettre
  * UN SEUL bot en attente par tick (le premier de la liste) — jamais tous
  * d'un coup, pour que les pastilles « a joué » s'allument au rythme des
- * personas —, couronne quand le juge est un bot (pondéré 3:1 pro-humains),
- * mène le « continuer » du reveal. `rand` : stub de test, Math.random sinon.
+ * personas —, avec la parole qu'il y joint (bot-speech.ts, tirée sur SA vue
+ * client) ; couronne quand le juge est un bot (pondéré 3:1 pro-humains),
+ * mène le « continuer » du reveal. `rand` : stub de test, Math.random sinon ;
+ * `sayRand` tire les paroles (un test peut lui donner son propre flux). Une
+ * parole refusée par le moteur ne coûte jamais la carte : rejouée sans elle.
  */
 export function applySFBotAction(
   state: SFState,
-  rand: () => number = Math.random
+  rand: () => number = Math.random,
+  sayRand: () => number = rand
 ): SFRoomActionResult {
   try {
     if (state.phase === 'submit') {
@@ -262,9 +269,14 @@ export function applySFBotAction(
       )
       if (!bot) return { ok: false, error: 'NOT_BOT_TURN' }
       const card = sfBotCardChoice(state, bot, rand)
-      return {
-        ok: true,
-        state: reduceSF(state, { type: 'PLAY_CARD', playerId: bot.id, card, now: Date.now() }),
+      const said = sfBotSay(toSFClientView(state, bot.id), bot.id, botTraitsFor(bot.name), sayRand)
+      const play = { type: 'PLAY_CARD' as const, playerId: bot.id, card, now: Date.now() }
+      if (!said?.targetId) return { ok: true, state: reduceSF(state, play) }
+      try {
+        return { ok: true, state: reduceSF(state, { ...play, say: { kind: said.kind, targetId: said.targetId } }) }
+      } catch (e) {
+        if (!(e instanceof SFEngineError) || !SF_SAY_ERRORS.includes(e.message)) throw e
+        return { ok: true, state: reduceSF(state, play) }
       }
     }
 

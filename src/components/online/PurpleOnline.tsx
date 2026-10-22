@@ -86,19 +86,24 @@ export function PurpleOnline() {
 
   // Flash « nouveau paquet mélangé » : le serveur reboucle le paquet quand il
   // est épuisé — détecté ici quand le nombre de cartes restantes REMONTE.
+  // La détection n'émet qu'un jeton : la minuterie vit dans son propre effet,
+  // sinon un nouveau tirage dans les 4 s l'annulait et le flash restait affiché.
   const prevDeckLenRef = useRef<number | null>(null)
-  const [newDeckFlash, setNewDeckFlash] = useState(false)
+  const [flashKey, setFlashKey] = useState(0)
   const deckLen = view?.deck.length ?? null
   useEffect(() => {
     if (deckLen === null) return
     const prev = prevDeckLenRef.current
     prevDeckLenRef.current = deckLen
-    if (prev !== null && deckLen > prev) {
-      setNewDeckFlash(true)
-      const timer = setTimeout(() => setNewDeckFlash(false), 4000)
-      return () => clearTimeout(timer)
-    }
+    if (prev !== null && deckLen > prev) setFlashKey((k) => k + 1)
   }, [deckLen])
+  const [newDeckFlash, setNewDeckFlash] = useState(false)
+  useEffect(() => {
+    if (flashKey === 0) return
+    setNewDeckFlash(true)
+    const timer = setTimeout(() => setNewDeckFlash(false), 4000)
+    return () => clearTimeout(timer)
+  }, [flashKey])
 
   // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) : tour d'un
   // bot → un coup ; joueur parti depuis 3 min → remplacement. expectedVersion

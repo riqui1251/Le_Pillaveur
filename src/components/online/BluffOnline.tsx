@@ -30,6 +30,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { BluffSpeechFeed } from './bluff/BluffSpeechFeed'
 
 /**
  * LE GRAND BLUFF en ligne (serveur-autoritaire). Vue déjà filtrée : les
@@ -374,6 +375,13 @@ export function BluffOnline() {
           })}
         </ul>
       )}
+
+      {/* Paroles des bots : SOUS les réponses à voter, jamais au-dessus — une
+          bulle qui arrive ne déplace pas la réponse sous le doigt. À la
+          révélation, les réponses parties, les réactions se lisent juste avant
+          le verdict. Toujours monté : sa région live doit exister avant la
+          première bulle. */}
+      <BluffSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
 
       {/* Révélation */}
       <AnimatePresence>

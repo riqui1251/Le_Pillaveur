@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * TABOU VOCAL (mime/description en équipes) — moteur PUR, serveur-autoritaire.
@@ -50,6 +51,58 @@ export type TabouRoundStats = { found: number; passed: number; taboo: number }
 
 export type TabouPhase = 'countdown' | 'describing' | 'roundEnd' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.tabou.game) : une
+ * RÉACTION à ce que toute la table vient de voir, écrite par l'adaptateur
+ * dans la même réduction que le coup auquel elle répond (aucun tick de plus).
+ * Le kind est le seul message, calculé sur la vue spectateur : jamais le mot
+ * en cours ni ses tabous.
+ *   • début de manche : go (un coéquipier encourage le décrivant), jinx (un
+ *     adversaire le chambre), skip (un bot décrivant passe son tour) ;
+ *   • mot trouvé : found (bravo au trouveur), lead (son équipe passe
+ *     devant), grumble (un adversaire râle contre le décrivant) ;
+ *   • tabou buzzé : buzz (l'équipe qui buzze chambre le décrivant), protest
+ *     (un coéquipier du décrivant conteste le buzz) ;
+ *   • mot passé : tease (un adversaire chambre le décrivant) ;
+ *   • bilan : proud (belle manche), console (manche ratée).
+ */
+export type TabouSpeechKind =
+  | 'go'
+  | 'jinx'
+  | 'skip'
+  | 'found'
+  | 'lead'
+  | 'grumble'
+  | 'buzz'
+  | 'protest'
+  | 'tease'
+  | 'proud'
+  | 'console'
+export type TabouSpeech = BotSpeech<TabouSpeechKind>
+/** Une parole à écrire : le bot qui parle, son kind, le joueur qu'il nomme. */
+export type TabouSay = SpeechMove<TabouSpeechKind>
+
+/** La phase où chaque kind peut naître : la manche en cours, ou son bilan. */
+const TABOU_SPEECH_PHASE: Record<TabouSpeechKind, TabouPhase> = {
+  go: 'describing',
+  jinx: 'describing',
+  skip: 'describing',
+  found: 'describing',
+  lead: 'describing',
+  grumble: 'describing',
+  buzz: 'describing',
+  protest: 'describing',
+  tease: 'describing',
+  proud: 'roundEnd',
+  console: 'roundEnd',
+}
+
+export const TABOU_SPEECH_KINDS = Object.keys(TABOU_SPEECH_PHASE) as TabouSpeechKind[]
+/** Paroles max par bot et par manche ; le bavardage du persona borne en dessous. */
+export const TABOU_SPEECH_CAP = 2
+/** Bulles max de toute la table par manche : une minute de description n'est pas un débat. */
+export const TABOU_ROUND_SPEECH_MAX = 4
+
 export type TabouState = TimedPhaseState & {
   version: number
   phase: TabouPhase
@@ -74,6 +127,12 @@ export type TabouState = TimedPhaseState & {
   rematchVotes: string[]
   /** SECRET serveur. */
   rngState: number
+  /**
+   * PUBLIC — paroles des bots, celles de la manche en cours et de la
+   * précédente au plus (le CONTINUE ne garde que la manche qui s'achève).
+   * Optionnel : un état sérialisé avant son arrivée n'en a pas.
+   */
+  speech?: TabouSpeech[]
 }
 
 export type TabouAction =
@@ -182,6 +241,7 @@ export function createTabouState(
     winnerTeam: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -277,9 +337,12 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       if (!state.players.some((p) => p.id === action.playerId)) {
         throw new TabouEngineError('UNKNOWN_PLAYER')
       }
+      // Le fil ne garde que la manche qui s'achève : jamais plus de deux manches.
+      const speech = (state.speech ?? []).filter((sp) => sp.round === state.round)
       if (state.scores.A >= state.targetScore || state.scores.B >= state.targetScore) {
         return {
           ...state,
+          speech,
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
@@ -293,6 +356,7 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       const describerId = state.describerOrder[describerIdx]
       return {
         ...state,
+        speech,
         describerIdx,
         describerId,
         currentWord: word,
@@ -356,6 +420,34 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
         `UNKNOWN_ACTION_${String((exhaustive as { type?: string }).type)}`
       )
     }
+  }
+}
+
+// ─── Paroles des bots ────────────────────────────────────────────────────────
+
+/**
+ * Le fil après la parole `say`, écrite à la manche courante. La réaction
+ * accompagne le coup qui l'a fait naître : même version d'état. Refusée
+ * (TabouEngineError) hors de sa phase, d'un orateur qui n'est pas un bot
+ * assis, vers un joueur absent ou vers soi, au-delà du plafond du bot ou de
+ * la table — l'adaptateur garde alors le coup sans la parole.
+ */
+export function addTabouSpeech(state: TabouState, say: TabouSay): TabouState {
+  if (!TABOU_SPEECH_KINDS.includes(say.kind)) throw new TabouEngineError('INVALID_KIND')
+  if (state.phase !== TABOU_SPEECH_PHASE[say.kind]) throw new TabouEngineError('SPEECH_OUT_OF_PHASE')
+  const speaker = state.players.find((p) => p.id === say.playerId)
+  if (!speaker || !speaker.isBot || speaker.leftAt) throw new TabouEngineError('INVALID_SPEAKER')
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.leftAt || target.id === speaker.id) throw new TabouEngineError('INVALID_TARGET')
+  const speech = state.speech ?? []
+  const round = speech.filter((sp) => sp.round === state.round)
+  if (round.length >= TABOU_ROUND_SPEECH_MAX) throw new TabouEngineError('TABLE_TALK_FULL')
+  if (round.filter((sp) => sp.playerId === speaker.id).length >= TABOU_SPEECH_CAP) {
+    throw new TabouEngineError('ALREADY_SPOKE')
+  }
+  return {
+    ...state,
+    speech: [...speech, { playerId: speaker.id, kind: say.kind, targetId: target.id, round: state.round }],
   }
 }
 

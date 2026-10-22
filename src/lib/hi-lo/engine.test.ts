@@ -236,6 +236,38 @@ describe('fin de paquet', () => {
     expect(outcome.drawn.deck).toHaveLength(51)
   })
 
+  it('compteur de cartes jouées : jamais négatif, le paquet neuf repart de zéro', () => {
+    const state = standard({ deck: [card('9', '♥')] })
+    expect(hiLoCardsPlayed(state)).toBe(DECK_SIZE - 2)
+    const outcome = resolveHiLoGuess(state, 'higher', createRng('paquet-neuf').next)!
+    // Pendant le retournement, la carte visible vient de l'ancien paquet : le neuf est entier.
+    expect(hiLoCardsPlayed(outcome.drawn)).toBe(0)
+    expect(hiLoCardsPlayed(outcome.resolved)).toBe(0)
+    const advanced = advanceHiLoTurn(acknowledgeHiLoMiss(outcome.resolved)).state
+    expect(hiLoCardsPlayed(advanced)).toBe(0)
+    // Le tirage suivant, dans le paquet neuf : sa première carte n'est pas encore « jouée ».
+    const next = resolveHiLoGuess(advanced, 'higher')!
+    expect(hiLoCardsPlayed(next.drawn)).toBe(0)
+    expect(hiLoCardsPlayed(advanceHiLoTurn(acknowledgeHiLoMiss(next.resolved)).state)).toBe(1)
+  })
+
+  it('compteur de cartes jouées : jouées + restantes = le paquet moins la carte visible', () => {
+    let state = startHiLoGame({ mode: 'standard', playerIds: TABLE, random: createRng('compte').next })
+    const random = createRng('suite').next
+    for (let i = 0; i < 120; i += 1) {
+      const outcome = resolveHiLoGuess(state, 'higher', random)
+      if (!outcome || outcome.resolved.gameOver) break
+      for (const s of [outcome.drawn, advanceHiLoTurn(acknowledgeHiLoMiss(outcome.resolved)).state]) {
+        const left = s.deck.length + (s.nextCard ? 1 : 0)
+        const played = hiLoCardsPlayed(s)
+        expect(played).toBeGreaterThanOrEqual(0)
+        expect(played).toBeLessThan(DECK_SIZE)
+        expect(played + left).toBe(left === DECK_SIZE ? DECK_SIZE : DECK_SIZE - 1)
+      }
+      state = advanceHiLoTurn(acknowledgeHiLoMiss(outcome.resolved)).state
+    }
+  })
+
   it('paquet vide : même chose', () => {
     const outcome = resolveHiLoGuess(standard({ deck: [] }), 'higher', createRng(1).next)!
     expect(outcome.drawn.deck).toHaveLength(51)

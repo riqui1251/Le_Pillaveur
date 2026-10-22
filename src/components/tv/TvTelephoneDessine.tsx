@@ -6,6 +6,7 @@ import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import {
+  telephoneSpeechRound,
   TELEPHONE_DRAW_MS,
   TELEPHONE_WRITE_MS,
   type TelephoneClientView,
@@ -15,6 +16,8 @@ import { PartyCanvas } from '@/components/online/PartyCanvas'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { TelephoneSpeechFeed } from '@/components/online/telephone-dessine/TelephoneSpeechFeed'
 import { cn } from '@/lib/utils'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -98,6 +101,7 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
   const tLobby = useTranslations('onlineLobby')
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
+  const { mode } = useAmbianceMode()
 
   if (state.phase === 'finished') {
     const counter = rematchCounter(room.members, state.rematchVotes ?? [], null)
@@ -130,6 +134,7 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
   if (state.phase === 'reveal' && state.revealChain) {
     const layout = revealLayout(state.revealChain.linkCount)
     const leaderName = state.players.find((p) => p.id === room.currentTurnUserId)?.name ?? ''
+    const hasSpeech = (state.speech ?? []).some((sp) => sp.round === telephoneSpeechRound(state))
     return (
       <div className="flex h-full w-full flex-col gap-4 px-6 py-4">
         <div className="flex shrink-0 items-center gap-6">
@@ -148,10 +153,25 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
             ))}
           </div>
         </div>
-        {leaderName && (
-          <p className="shrink-0 truncate text-center text-xl font-semibold text-white/80">
-            {t('reveal.waitingLeader', { name: leaderName })}
-          </p>
+        {hasSpeech ? (
+          // La réaction d'un bot à la chute, à côté du meneur attendu : une
+          // bulle par chaîne, la grille calibrée garde sa hauteur.
+          <div className="flex shrink-0 items-end gap-6">
+            <div className="min-w-0 flex-1">
+              <TelephoneSpeechFeed view={state} iconOf={iconOf} variant="tv" soft={mode === 'soft'} />
+            </div>
+            {leaderName && (
+              <p className="max-w-[24rem] shrink-0 truncate text-xl font-semibold text-white/80">
+                {t('reveal.waitingLeader', { name: leaderName })}
+              </p>
+            )}
+          </div>
+        ) : (
+          leaderName && (
+            <p className="shrink-0 truncate text-center text-xl font-semibold text-white/80">
+              {t('reveal.waitingLeader', { name: leaderName })}
+            </p>
+          )
         )}
       </div>
     )

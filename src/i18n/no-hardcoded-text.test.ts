@@ -5,7 +5,8 @@ import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Textes français écrits EN DUR dans les écrans locaux.
+ * Textes français écrits EN DUR dans les écrans locaux et dans les composants
+ * partagés (écrans en ligne, TV, hub, briques de jeu).
  *
  * Un libellé tapé directement dans le JSX ne passe pas par next-intl : la
  * tablée anglaise, espagnole ou italienne lit « À qui ? » ou « Paramètres de
@@ -16,10 +17,13 @@ import { describe, expect, it } from 'vitest'
  * régulières sur le source : un `a > b && c < d` n'est pas du texte). Il
  * signale :
  * - tout texte littéral entre deux balises (`<p>À qui ?</p>`) ;
- * - tout attribut `placeholder`, `title` ou `aria-label` littéral (chaîne ou
- *   gabarit sans traduction) ;
+ * - tout attribut `placeholder`, `title`, `aria-label` ou `alt` littéral
+ *   (chaîne ou gabarit sans traduction) ;
  * dès qu'il contient une lettre accentuée du français ou un mot français
- * courant de MOTS_FRANCAIS.
+ * courant de MOTS_FRANCAIS. Un nom accessible (`aria-label`, `alt`) est plus
+ * strict : personne ne le voit passer à l'écran, et le lecteur d'écran le lit
+ * tel quel dans les quatre langues — tout mot y est signalé, français ou non
+ * (« +1 bot », « Capture 2 »).
  *
  * Exceptions de principe, sans entrée à tenir : les commentaires (JSX ou non)
  * ne sont pas du texte rendu, les expressions (`{t('…')}`, `{player.name}`)
@@ -31,11 +35,35 @@ import { describe, expect, it } from 'vitest'
 const SRC_DIR = resolve(fileURLToPath(new URL('../', import.meta.url)))
 const GAMES_DIR = join(SRC_DIR, 'app', '[locale]', 'games')
 
-/** Écrans relevés, hors pages de jeu : la gestion des joueurs locaux et la fiche compte. */
-const EXTRA_FILES = ['components/PlayerManager.tsx', 'components/ui/AccountInfo.tsx']
+/**
+ * Écrans relevés, hors pages de jeu : la gestion des joueurs locaux, la fiche
+ * compte et la fenêtre « Donner son avis ».
+ */
+const EXTRA_FILES = [
+  'components/PlayerManager.tsx',
+  'components/ui/AccountInfo.tsx',
+  'components/feedback/FeedbackDialog.tsx',
+]
+
+/**
+ * Composants partagés, relevés en entier (sous-dossiers compris) : les écrans
+ * en ligne et TV de chaque jeu, le hub, les briques communes des jeux et
+ * celles du Petit Buveur, partagées par le local, l'en ligne et la TV.
+ */
+const SHARED_DIRS = [
+  'components/online',
+  'components/game',
+  'components/hub',
+  'components/tv',
+  'components/petit-buveur',
+]
 
 /** Attributs lus par le joueur ou par son lecteur d'écran. */
-const TEXT_ATTRIBUTES = new Set(['placeholder', 'title', 'aria-label'])
+const TEXT_ATTRIBUTES = new Set(['placeholder', 'title', 'aria-label', 'alt'])
+
+/** Noms accessibles : signalés dès qu'ils portent un mot, quelle qu'en soit la langue. */
+const ACCESSIBLE_NAMES = new Set(['aria-label', 'alt'])
+const ANY_WORD = /\p{L}{2,}/u
 
 /** Lettres accentuées du français (et ligatures). */
 const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüÿœæ]/i
@@ -76,6 +104,17 @@ const LISTE_D_ATTENTE: Record<string, { depuis: string; raison: string; textes: 
 
 type Finding = { line: number; text: string }
 
+/** Les composants `.tsx` d'un dossier et de ses sous-dossiers, en ordre stable. */
+function tsxFilesUnder(dir: string): string[] {
+  const files: string[] = []
+  for (const entry of readdirSync(dir).sort()) {
+    const path = join(dir, entry)
+    if (statSync(path).isDirectory()) files.push(...tsxFilesUnder(path))
+    else if (entry.endsWith('.tsx') && !entry.endsWith('.test.tsx')) files.push(path)
+  }
+  return files
+}
+
 /** Fichiers relevés, en chemin relatif à src/ (séparateur « / »). */
 function scannedFiles(): string[] {
   const files: string[] = []
@@ -92,6 +131,7 @@ function scannedFiles(): string[] {
     }
   }
   for (const extra of EXTRA_FILES) files.push(join(SRC_DIR, extra))
+  for (const dir of SHARED_DIRS) files.push(...tsxFilesUnder(join(SRC_DIR, dir)))
   return files.map((file) => relative(SRC_DIR, file).replace(/\\/g, '/'))
 }
 
@@ -117,13 +157,13 @@ function literalAttributeValue(initializer: ts.JsxAttribute['initializer']): str
   return null
 }
 
-/** Textes français en dur d'un source TSX. */
-function findHardcodedFrench(source: string, fileName = 'fichier.tsx'): Finding[] {
+/** Textes en dur d'un source TSX : français partout, toute langue dans un nom accessible. */
+function findHardcodedText(source: string, fileName = 'fichier.tsx'): Finding[] {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const findings: Finding[] = []
-  const report = (node: ts.Node, raw: string) => {
+  const report = (node: ts.Node, raw: string, accessibleName = false) => {
     const text = normalize(raw)
-    if (!text || !looksFrench(text)) return
+    if (!text || !(looksFrench(text) || (accessibleName && ANY_WORD.test(text)))) return
     const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
     findings.push({ line: line + 1, text })
   }
@@ -132,7 +172,7 @@ function findHardcodedFrench(source: string, fileName = 'fichier.tsx'): Finding[
       report(node, node.text)
     } else if (ts.isJsxAttribute(node) && TEXT_ATTRIBUTES.has(node.name.getText(sourceFile))) {
       const value = literalAttributeValue(node.initializer)
-      if (value !== null) report(node, value)
+      if (value !== null) report(node, value, ACCESSIBLE_NAMES.has(node.name.getText(sourceFile)))
     }
     ts.forEachChild(node, visit)
   }
@@ -141,12 +181,12 @@ function findHardcodedFrench(source: string, fileName = 'fichier.tsx'): Finding[
 }
 
 function findingsOf(relativePath: string): Finding[] {
-  return findHardcodedFrench(readFileSync(join(SRC_DIR, relativePath), 'utf8'), relativePath)
+  return findHardcodedText(readFileSync(join(SRC_DIR, relativePath), 'utf8'), relativePath)
 }
 
 const FILES = scannedFiles()
 
-describe('détecteur de texte français en dur', () => {
+describe('détecteur de texte en dur', () => {
   it('signale le texte entre balises et les attributs lus', () => {
     const source = [
       'export function Demo() {',
@@ -160,13 +200,31 @@ describe('détecteur de texte français en dur', () => {
       '  )',
       '}',
     ].join('\n')
-    expect(findHardcodedFrench(source).map((f) => f.text)).toEqual([
+    expect(findHardcodedText(source).map((f) => f.text)).toEqual([
       'Paramètres',
       'À qui ?',
       'Tous les joueurs sont gagnants.',
       'Ton pseudo online',
       'joueurs',
     ])
+  })
+
+  it('un nom accessible (aria-label, alt) est signalé dès qu’il porte un mot, même pas français', () => {
+    const source = [
+      'export function Demo({ i }: { i: number }) {',
+      '  return (',
+      '    <div title="Score">',
+      '      <button aria-label="-1 bot">−</button>',
+      '      <button aria-label="+1">+</button>',
+      '      <img src={src} alt={`Capture ${i + 1}`} />',
+      '      <img src={src} alt="" />',
+      '      <img src={src} alt={t("screenshotAlt", { index: i + 1 })} />',
+      '    </div>',
+      '  )',
+      '}',
+    ].join('\n')
+    // « Score » en title n'est pas un nom accessible : seul le français y est relevé.
+    expect(findHardcodedText(source).map((f) => f.text)).toEqual(['-1 bot', 'Capture'])
   })
 
   it('laisse passer traductions, expressions, commentaires, emoji et code', () => {
@@ -185,15 +243,23 @@ describe('détecteur de texte français en dur', () => {
       '  )',
       '}',
     ].join('\n')
-    expect(findHardcodedFrench(source)).toEqual([])
+    expect(findHardcodedText(source)).toEqual([])
   })
 })
 
-describe('écrans locaux sans texte français en dur', () => {
+describe('écrans sans texte français en dur', () => {
   it('relève bien les pages et composants des jeux, la gestion des joueurs et le compte', () => {
     expect(FILES.some((f) => /^app\/\[locale\]\/games\/[^/]+\/page\.tsx$/.test(f))).toBe(true)
     expect(FILES.some((f) => /^app\/\[locale\]\/games\/[^/]+\/components\/[^/]+\.tsx$/.test(f))).toBe(true)
     for (const extra of EXTRA_FILES) expect(FILES).toContain(extra)
+  })
+
+  it('relève les composants partagés, sous-dossiers compris, sans les tests', () => {
+    for (const dir of SHARED_DIRS) expect(FILES.some((f) => f.startsWith(`${dir}/`)), dir).toBe(true)
+    expect(FILES).toContain('components/online/GameOnlineLobby.tsx')
+    expect(FILES).toContain('components/tv/TvMenteur.tsx')
+    expect(FILES.some((f) => /^components\/(online|tv)\/[^/]+\/[^/]+\.tsx$/.test(f))).toBe(true)
+    expect(FILES.filter((f) => !f.endsWith('.tsx'))).toEqual([])
   })
 
   for (const file of FILES) {

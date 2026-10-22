@@ -34,6 +34,8 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayingCardBack } from '@/components/ui/PlayingCard'
+import { playerIcon, speechFeedItems } from './bot-speech/bot-speech-feed'
+import { MotsCodesSpeechFeed } from './mots-codes/MotsCodesSpeechFeed'
 
 /**
  * MOTS CODÉS en ligne (serveur-autoritaire). Vue déjà filtrée : seuls les
@@ -235,6 +237,8 @@ export function MotsCodesOnline() {
 
   const totalPhaseMs = view.phase === 'clue' ? MC_CLUE_MS : MC_GUESS_MS
   const teamName = (team: MCTeam) => (team === 'gold' ? t('teamGold') : t('teamRed'))
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) => playerIcon(p, room.members)
+  const hasBots = view.players.some((p) => p.isBot)
   const tileSrLabel = (tile: TileLike) => {
     if (!tile.kind) return null
     const kind =
@@ -273,31 +277,37 @@ export function MotsCodesOnline() {
           </motion.div>
         }
         ranking={
-          // Grille résolue : la clé en aplat, les tuiles jouées atténuées et barrées.
-          <div className="grid w-full max-w-sm grid-cols-5 gap-1">
-            {view.tiles.map((tile, i) =>
-              tile.kind === 'assassin' ? (
-                <div key={i} className="relative aspect-[5/4]">
-                  <PlayingCardBack className="h-full w-full rounded-md" />
-                  <span className="sr-only">{`${tile.word}, ${t('tileAssassin')}`}</span>
-                </div>
-              ) : (
-                <div
-                  key={i}
-                  className={cn(
-                    'relative flex aspect-[5/4] items-center justify-center rounded-md border px-1 text-center font-bold uppercase hyphens-auto [overflow-wrap:anywhere]',
-                    // leading APRÈS la taille : tailwind-merge retire un leading posé avant un text-<taille>.
-                    mcTileTextClass(tile.word),
-                    'leading-tight',
-                    tileFace(tile)
-                  )}
-                >
-                  <TileMark tile={tile} />
-                  <span className={cn(tile.revealed && 'line-through decoration-2')}>{tile.word}</span>
-                  <span className="sr-only">{`, ${tileSrLabel(tile) ?? ''}`}</span>
-                </div>
-              )
+          <div className="flex w-full max-w-sm flex-col gap-3">
+            {/* La réaction au coup final (l'assassin, le dernier mot), au-dessus de la grille. */}
+            {speechFeedItems(view.speech ?? [], view.turn ?? 0, user.id).length > 0 && (
+              <MotsCodesSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
             )}
+            {/* Grille résolue : la clé en aplat, les tuiles jouées atténuées et barrées. */}
+            <div className="grid w-full grid-cols-5 gap-1">
+              {view.tiles.map((tile, i) =>
+                tile.kind === 'assassin' ? (
+                  <div key={i} className="relative aspect-[5/4]">
+                    <PlayingCardBack className="h-full w-full rounded-md" />
+                    <span className="sr-only">{`${tile.word}, ${t('tileAssassin')}`}</span>
+                  </div>
+                ) : (
+                  <div
+                    key={i}
+                    className={cn(
+                      'relative flex aspect-[5/4] items-center justify-center rounded-md border px-1 text-center font-bold uppercase hyphens-auto [overflow-wrap:anywhere]',
+                      // leading APRÈS la taille : tailwind-merge retire un leading posé avant un text-<taille>.
+                      mcTileTextClass(tile.word),
+                      'leading-tight',
+                      tileFace(tile)
+                    )}
+                  >
+                    <TileMark tile={tile} />
+                    <span className={cn(tile.revealed && 'line-through decoration-2')}>{tile.word}</span>
+                    <span className="sr-only">{`, ${tileSrLabel(tile) ?? ''}`}</span>
+                  </div>
+                )
+              )}
+            </div>
           </div>
         }
         xp={<XpGainBanner won={Boolean(won)} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
@@ -567,6 +577,12 @@ export function MotsCodesOnline() {
           </ul>
         </section>
       )}
+
+      {/* Réactions des bots aux tuiles retournées, sous la grille (et la clé du
+          maître-mot) : dans le flux, jamais par-dessus une tuile ni sous la
+          barre. Monté dès qu'un bot est assis, même vide, pour que la région
+          aria-live existe avant la première bulle. */}
+      {hasBots && <MotsCodesSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />}
 
       {/* Joueurs, rangés par équipe */}
       <section className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">

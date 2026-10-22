@@ -19,9 +19,10 @@ import { MenteurOnline } from '../MenteurOnline'
  */
 
 const room = vi.hoisted(() => ({ current: null as unknown }))
+const ambiance = vi.hoisted(() => ({ mode: 'normal' }))
 
 vi.mock('@/components/providers/AuthProvider', () => ({
-  useAuth: () => ({ user: { id: 'h', ambianceMode: 'normal' } }),
+  useAuth: () => ({ user: { id: 'h', ambianceMode: ambiance.mode } }),
 }))
 vi.mock('@/hooks/useOnlineRoom', () => ({
   useOnlineRoom: () => ({ room: room.current, voteRematch: () => {}, leaveRoom: () => {} }),
@@ -37,7 +38,14 @@ vi.mock('@/components/online/GameTutorialModal', () => ({
   TutorialReopenButton: () => null,
 }))
 vi.mock('@/components/online/GameOnlineLobby', () => ({ GameOnlineLobby: () => null }))
-vi.mock('@/components/online/OnlineEndScreen', () => ({ OnlineEndScreen: () => null }))
+// L'écran de fin partagé ne rend ici que ce que le jeu lui passe : son titre et son classement.
+vi.mock('@/components/online/OnlineEndScreen', async () => {
+  const { createElement: h } = await import('react')
+  return {
+    OnlineEndScreen: ({ header, ranking }: { header?: unknown; ranking?: unknown }) =>
+      h('div', { 'data-end-screen': '' }, header as never, ranking as never),
+  }
+})
 vi.mock('@/components/online/XpGainBanner', () => ({ XpGainBanner: () => null }))
 
 const messages = JSON.parse(
@@ -175,5 +183,69 @@ describe('MenteurOnline : ergonomie à 375 px', () => {
     expect(html.match(/opacity-30 grayscale/g)).toHaveLength(12)
     expect(html).not.toContain('opacity-35')
     expect(barOf(html)).toContain(game.reveal.continue)
+  })
+})
+
+describe('MenteurOnline : ambiance Sans alcool', () => {
+  /** Gépéto a perdu deux dés (1 + 2 = 3 gorgées) ; la partie est en cours. */
+  const sipped = (): MenteurState => {
+    const state = bidding()
+    return { ...state, players: state.players.map((p) => (p.id === 'g' ? { ...p, lostCount: 2 } : p)) }
+  }
+  /** Riqui gagne : Gépéto et Suzette ont perdu leurs cinq dés (15 gorgées chacun). */
+  const finished = (): MenteurState => ({
+    ...bidding(),
+    phase: 'finished',
+    winnerId: 'h',
+    currentBid: null,
+    bids: [],
+    players: [
+      seat('h', 'Riqui', false),
+      { ...seat('g', 'Gépéto', true), dice: [], lostCount: 5 },
+      { ...seat('s', 'Suzette', true), dice: [], lostCount: 5 },
+    ],
+  })
+  const inMode = (mode: string, state: MenteurState) => {
+    ambiance.mode = mode
+    try {
+      return render(state)
+    } finally {
+      ambiance.mode = 'normal'
+    }
+  }
+
+  it('Apéro : les gorgées bues se lisent sous le joueur et au classement final', () => {
+    expect(inMode('normal', sipped())).toContain('🍺 3')
+    const end = inMode('normal', finished())
+    expect(end).toContain('data-end-screen')
+    expect(end).toContain('lucide-beer')
+  })
+
+  /** Gépéto, sur son dernier dé, est démasqué : il sort de la table. */
+  const lastDie = (): MenteurState =>
+    reduceMenteur(
+      {
+        ...bidding(),
+        players: bidding().players.map((p) => (p.id === 'g' ? { ...p, dice: [4], lostCount: 4 } : p)),
+      },
+      { type: 'DUDO', playerId: 'h', now: 1_000_000 }
+    )
+
+  it('la sortie d’un joueur ne fait boire cul sec qu’en Apéro', () => {
+    expect(lastDie().lastReveal?.eliminatedId).toBe('g')
+    const apero = inMode('normal', lastDie())
+    expect(apero).toContain('Gépéto n’a plus de dés')
+    expect(apero).toContain('cul sec')
+    const soft = inMode('soft', lastDie())
+    expect(soft).toContain('Gépéto n’a plus de dés')
+    expect(soft).not.toContain('cul sec')
+  })
+
+  it('Soft : ni chope ni gorgées, ni sous le joueur ni au classement final', () => {
+    expect(inMode('soft', sipped())).not.toContain('🍺')
+    const end = inMode('soft', finished())
+    expect(end).toContain('data-end-screen')
+    expect(end).not.toContain('lucide-beer')
+    expect(end).not.toContain('🍺')
   })
 })

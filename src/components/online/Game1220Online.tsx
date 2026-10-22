@@ -233,7 +233,7 @@ export function Game1220Online() {
           >
             <Dices className="h-14 w-14 text-gold" aria-hidden />
             <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
-            <p className="text-sm text-cream/80">{t('online.totalRolls', { count: view.history.length })}</p>
+            <p className="text-sm text-cream/80">{t('online.totalRolls', { count: view.rollCount ?? view.history.length })}</p>
           </motion.div>
         }
         // Aucune progression n'existait sur ce jeu : XP de participation.
@@ -383,11 +383,10 @@ export function Game1220Online() {
             du lancer précédent — les nouvelles trahiraient le résultat. */}
         <Game1220SpeechFeed
           view={view}
-          roll={(view.rolls ?? 0) - (rolling ? 1 : 0)}
+          roll={(view.rollCount ?? view.history.length) - (rolling ? 1 : 0)}
           iconOf={iconOf}
           meId={user.id}
           variant="phone"
-          soft={user.ambianceMode === 'soft'}
         />
 
         <TableBets

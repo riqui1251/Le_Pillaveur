@@ -178,7 +178,8 @@ export function BotSpeechFeed<K extends string>({
         {bubbles.map(({ key, author, authorName, line, badge }) => (
           <motion.li
             key={key}
-            initial={reduced ? false : { opacity: 0, y: 6 }}
+            // En rem : la TV met le rem à l'échelle de l'écran, un px resterait minuscule.
+            initial={reduced ? false : { opacity: 0, y: '0.375rem' }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.18 }}
             className="flex items-start gap-3"

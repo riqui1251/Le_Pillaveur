@@ -1,4 +1,4 @@
-import { createHmac, createPrivateKey, randomBytes, sign, type KeyObject } from 'node:crypto'
+import { createHash, createHmac, createPrivateKey, randomBytes, sign, timingSafeEqual, type KeyObject } from 'node:crypto'
 import type { AppLocale } from '@/i18n/routing'
 import { appBaseUrl } from '@/lib/email'
 import { isAppLocale } from '@/lib/locale-utils'
@@ -289,6 +289,16 @@ export type OAuthState = {
 
 export function newOAuthStateToken(): string {
   return randomBytes(32).toString('base64url')
+}
+
+/**
+ * `state` renvoyé par le fournisseur = celui de l'aller ? Comparaison en temps
+ * constant, sur les empreintes (longueurs égales quel que soit le texte reçu).
+ */
+export function sameOAuthState(expected: string, received: string | null): boolean {
+  if (!received) return false
+  const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest()
+  return timingSafeEqual(digest(expected), digest(received))
 }
 
 export function encodeOAuthState(state: OAuthState): string {

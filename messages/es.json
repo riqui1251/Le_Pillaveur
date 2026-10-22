@@ -482,7 +482,9 @@
       "title": "Añadir bots",
       "hint": "Cuentan para el mínimo de {min} jugadores y ocupan los asientos vacíos.",
       "on": "Activado",
-      "off": "Desactivado"
+      "off": "Desactivado",
+      "remove": "Quitar un bot",
+      "add": "Añadir un bot"
     },
     "top5Badge": "Top {rank} de este juego",
     "back": "Volver",
@@ -2899,6 +2901,7 @@
           "calzaLost": "{name} intentó Calza y falló: pierde un dado y bebe {sips} trago{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} intentó Calza y falló: pierde un dado",
           "eliminatedMsg": "💀 {name} se queda sin dados — ¡de un trago, {genre, select, f {eliminada} m {eliminado} other {fuera del juego}}!",
+          "eliminatedMsgSoft": "💀 {name} se queda sin dados — ¡{genre, select, f {eliminada} m {eliminado} other {fuera del juego}}!",
           "continue": "Siguiente ronda"
         },
         "victoryTitle": "¡{name} gana la mesa!",
@@ -3299,7 +3302,85 @@
         "yourVote": "Tu voto",
         "yourFake": "Tu farol",
         "myFakeLabel": "Tu farol se ha enviado",
-        "quoted": "«{text}»"
+        "quoted": "«{text}»",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "proud": "Mi farol ya está listo. Vas a picar, {name}.",
+          "proud_2": "{name}, acabo de escribir una obra maestra de la mentira 😏",
+          "proud_3": "El mío es tan creíble que hasta yo me lo creo, {name}.",
+          "chase": "Disfruta del primer puesto mientras dure, {name}.",
+          "chase_2": "¿{name} en cabeza? No por mucho tiempo 😈",
+          "chase_3": "Voy a por ti, {name}. Mira por el retrovisor 👀",
+          "sure": "Fácil. Esta me la sé de memoria, {name}.",
+          "sure_2": "{name}, he pillado la buena en dos segundos 😎",
+          "sure_3": "Ni me lo he pensado. ¿Y tú, {name}, en blanco?",
+          "unsure": "Voto a ciegas… No me juzgues, {name}.",
+          "unsure_2": "{name}, todas parecen verdad. ¿Es normal? 😵",
+          "unsure_3": "Dudo entre tres… {name}, ¡sóplame la buena!",
+          "sniff": "{name}, reconozco tu estilo en una de estas respuestas 😏",
+          "sniff_2": "Aquí hay un farol que huele a {name} de lejos…",
+          "sniff_3": "Tu mentira la huelo desde aquí, {name}.",
+          "fooled": "{speaker, select, f {Me la has colado} m {Me la has colado} other {Bien jugado}}, {name}. ¡Qué crack!",
+          "fooled_2": "Me lo tragué enterito, {name}. Chapó 🎩",
+          "fooled_3": "{name}, y yo que confiaba en ti… 😤",
+          "gotYou": "Y zas, de cabeza a la trampa, {name} 😏",
+          "gotYou_2": "¿Has votado MI farol, {name}? Qué halago 😇",
+          "gotYou_3": "{name}, ¿te gustó mi mentira? Es casera 😋",
+          "found": "La buena la tenía yo. ¿Y tú, {name}? 😏",
+          "found_2": "{name}, ¡haber votado como yo!",
+          "found_3": "Demasiado fácil. ¿A que sí, {name}?",
+          "bravo": "¡Menudo farol, {name}! Ha picado toda la mesa 👏",
+          "bravo_2": "{name}, mientes demasiado bien. Da miedo 😅",
+          "bravo_3": "Chapó, {name}. Ese farol lo enmarco 🖼️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "proud": "He medido cada palabra de mi farol, {name}.",
+            "proud_2": "Un farol discretito… No lo verás venir, {name}.",
+            "fooled": "{speaker, select, f {Me la colaron como a una novata} m {Me la colaron como a un novato} other {Me la colaron sin piedad}}, {name}.",
+            "fooled_2": "Tendría que haber desconfiado de ti, {name}…"
+          },
+          "farceur": {
+            "proud": "¿Mi farol? Basado en hechos reales, {name} 🤥",
+            "proud_2": "{name}, prepárate para reírte… de ti 😜",
+            "fooled": "Bravo, {name}, mientes casi tan bien como yo 😜",
+            "fooled_2": "{name}, te he dejado ganar. Obviamente 😇"
+          },
+          "suiveur": {
+            "proud": "He hecho lo que todos: un farol, {name}.",
+            "proud_2": "{name}, mi farol se parece a los vuestros. Adrede 😊",
+            "fooled": "Seguí mi instinto, {name}… y tu farol 🙈",
+            "fooled_2": "{name}, tu farol parecía tan seguro de sí mismo…"
+          },
+          "agressif": {
+            "proud": "Mi farol te va a devorar, {name}.",
+            "proud_2": "{name}, vas a picar. Garantizado 😈",
+            "fooled": "Grr… {name}, me las vas a pagar.",
+            "fooled_2": "{name}, una vez, vale. Dos, jamás 😤"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
@@ -3765,7 +3846,94 @@
         "yourTeam": "Tu equipo",
         "you": "(tú)",
         "describerTag": "describe",
-        "leftTag": "sin conexión"
+        "leftTag": "sin conexión",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "go": "¡Te toca, {name}! Somos todo oídos 👂",
+          "go_2": "¡Vamos, {name}, haznos brillar!",
+          "go_3": "{name}, antenas arriba, te escuchamos 📡",
+          "jinx": "Suerte, {name}… vigilamos el más mínimo desliz 👀",
+          "jinx_2": "{name}, a la primera palabra prohibida, ¡pitamos!",
+          "jinx_3": "Respira, {name}. Hoy los tabúes los vigilamos nosotros 😈",
+          "skip": "{name}, describo como una ostra: ¡paso turno!",
+          "skip_2": "{speaker, select, f {Perdona} m {Perdona} other {Lo siento}}, {name}, no tengo micro. ¡Paso!",
+          "skip_3": "Paso, {name}. Os animo desde aquí 📣",
+          "found": "¡Acertado! Bien visto, {name} 🎯",
+          "found_2": "¡Qué oído, {name}!",
+          "found_3": "{name}, ¡estás que te sales! ¡La siguiente!",
+          "lead": "¡Vamos ganando gracias a ti, {name}! 🔥",
+          "lead_2": "{name}, ¡vamos delante! ¡No aflojéis!",
+          "lead_3": "¡Y zas, por delante! Gracias, {name} 🚀",
+          "grumble": "Tranqui, {name}, ¡déjanos alguna palabra!",
+          "grumble_2": "Demasiado rápido, {name}… ¿tienes chuleta? 🤨",
+          "grumble_3": "{name}, deja de describir tan bien, que ya cansa 😤",
+          "buzz": "¡Tabú! Te hemos cazado, {name} 🚨",
+          "buzz_2": "{name}, ¡te {target, select, f {hemos oído} m {hemos oído} other {hemos oído clarito}}! ¡Palabra prohibida!",
+          "buzz_3": "¡Pi, pi, pi! Aquí eso no se dice, {name} 😏",
+          "protest": "¿¡Qué!? ¡Si no era palabra prohibida, {name}!",
+          "protest_2": "{name}, tienes el oído demasiado fino, ¿no? 🙄",
+          "protest_3": "¡Arbitraje escandaloso, {name}! Pido revisión 📢",
+          "tease": "¿Te has quedado en blanco, {name}? 😏",
+          "tease_2": "¿Pasas ya? Venga, {name}, ¡un esfuercito!",
+          "tease_3": "{name} pasa… apuntado, apuntado 📝",
+          "proud": "¡Menuda ronda, {name}! Me quito el sombrero 🎩",
+          "proud_2": "{name}, ¡describes como un diccionario! 📚",
+          "proud_3": "Buena racha, {name}. ¡Repítelo cuando quieras!",
+          "console": "No pasa nada, {name}, ¡ya remontaremos!",
+          "console_2": "{name}, guardamos fuerzas para la próxima 💪",
+          "console_3": "Venga, {name}, ¡la próxima es la buena!"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "found": "Bien jugado, {name}. Acertado con método.",
+            "found_2": "{name}, bonito. Sin prisas, como a mí me gusta.",
+            "jinx": "Tómate tu tiempo, {name}… escuchamos con atención.",
+            "jinx_2": "{name}, vigilo cada palabra. Con educación, pero vigilo."
+          },
+          "farceur": {
+            "found": "¡{name} lo ha pillado! ¿Alguien ha visto su chuleta? 😜",
+            "found_2": "¡Acertado! {name}, ¿tienes un don o un micro escondido? 🕵️",
+            "jinx": "{name}, si dices algo prohibido, lo sabré… 👻",
+            "jinx_2": "Suerte, {name}. Esta noche el tabú anda suelto 🌙"
+          },
+          "suiveur": {
+            "found": "¡Bravo, {name}! Todos aplauden, así que yo también 👏",
+            "found_2": "¿{name} lo ha acertado? ¡Pues estoy {speaker, select, f {contenta} m {contento} other {feliz}}!",
+            "jinx": "Digo como los demás: suerte, {name} 😬",
+            "jinx_2": "{name}, te vigilamos. Bueno, ellos vigilan, yo los sigo."
+          },
+          "agressif": {
+            "found": "¡Por fin! ¡Ya era hora, {name}!",
+            "found_2": "Acertado. ¡Siguiente! Sin dormirse, {name}.",
+            "jinx": "{name}, un desliz y pito sin piedad 😈",
+            "jinx_2": "Tiembla, {name}. El silbato soy yo."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        },
+        "botTicAlt": {
+          "gaston": "¡Un momentito!"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3846,6 +4014,87 @@
           "drawing": "dibuja",
           "found": "ha acertado",
           "away": "sin conexión"
+        },
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "go": "¡Lápices listos, {name}! Qué ganas 🎨",
+          "go_2": "{name}, ¡dibújanos una obra maestra!",
+          "go_3": "Venga, {name}, enséñanos ese trazo mágico ✏️",
+          "skip": "{name}, dibujo como un niño pequeño: ¡paso!",
+          "skip_2": "{speaker, select, f {Perdona} m {Perdona} other {Lo siento}}, {name}, mis dibujos asustan. ¡Paso turno!",
+          "skip_3": "Paso, {name}. Hasta mis monigotes salen mal 😅",
+          "puzzled": "Eh… ¿qué es eso, {name}? 🤔",
+          "puzzled_2": "{name}, giro la cabeza para todos lados… nada 🙃",
+          "puzzled_3": "Bonito garabato, {name}. ¿Pero de qué? 😅",
+          "admire": "¡Oh, qué buen trazo, {name}!",
+          "admire_2": "{name}, esto va tomando forma, lo noto ✨",
+          "admire_3": "Qué pulso tan firme, {name} 👏",
+          "erase": "¿Borrón y cuenta nueva, {name}? 😅",
+          "erase_2": "{name}, ¿vuelta a empezar? ¡Ánimo!",
+          "erase_3": "Hoja en blanco, {name}… qué suspense 😬",
+          "first": "¿¡Ya!? Bien visto, {name} ⚡",
+          "first_2": "¿¡Cómo lo has pillado tan rápido, {name}!?",
+          "first_3": "{name} adivina más rápido que su sombra 🤠",
+          "found": "¡Bravo, {name}! 👏",
+          "found_2": "¡{name} lo ha pillado! Yo, todavía nada…",
+          "found_3": "Bien visto, {name}. Yo sigo buscando 🤔",
+          "bravo": "¡Bien dibujado, {name}! 🎨",
+          "bravo_2": "{name}, ¡esto merece una exposición! 🖼️",
+          "bravo_3": "Buen trabajo, {name}. Hasta yo podría… no, mejor no 😅",
+          "stumped": "¿¡Era ESO!? Perdona, {name} 🙈",
+          "stumped_2": "{name}, te juro que lo intentaba con todas mis fuerzas 😅",
+          "stumped_3": "¿Nadie? Digamos que es arte abstracto, {name} 🖌️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "go": "Tómate tu tiempo, {name}. Miramos con calma.",
+            "go_2": "{name}, trazo a trazo, y todo saldrá bien.",
+            "found": "Bien visto, {name}. Adivinado con limpieza.",
+            "found_2": "{name}, bonito. Yo sigo pensándolo."
+          },
+          "farceur": {
+            "go": "{name}, si queda feo, diremos que es a propósito 😜",
+            "go_2": "Te toca, {name}. Nada de monigotes, ¿eh? 😏",
+            "found": "¡{name} lo ha pillado! ¿Trampa o vidente? 🔮",
+            "found_2": "¿Acertado? {name}, tienes un don oculto 🕵️"
+          },
+          "suiveur": {
+            "go": "¡Todos te animan, así que yo también, {name}!",
+            "go_2": "{name}, todos cruzamos los dedos por ti. Yo también 🤞",
+            "found": "¡Bravo, {name}! Todos aplauden, así que aplaudo 👏",
+            "found_2": "¿{name} lo ha pillado? ¡Pues estoy {speaker, select, f {encantada} m {encantado} other {feliz}}!"
+          },
+          "agressif": {
+            "go": "{name}, dibuja rápido, ¡no tenemos toda la noche!",
+            "go_2": "Venga, {name}, nada de garabatos, que juzgo 😈",
+            "found": "¡Ya era hora, {name}!",
+            "found_2": "{name} lo ha pillado. Vale. ¡Siguiente!"
+          }
+        },
+        "botTicAlt": {
+          "gaston": "¡Un momentito!"
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {
@@ -3933,6 +4182,61 @@
           "done": "ya ha enviado",
           "pending": "aún no ha enviado",
           "left": "ha salido de la partida"
+        },
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "laugh": "¿¡Pero qué ha pasado aquí!? {name}, mira esto 😂",
+          "laugh_2": "{name}, estoy llorando. ¿¡Quién ha dibujado eso!? 😂",
+          "laugh_3": "¿¡Empezamos ahí y acabamos AQUÍ!? Socorro, {name} 😂",
+          "mine": "¿¡Esa era MI frase!? {name}, tú has tenido algo que ver 😂",
+          "mine_2": "{name}, devuélveme mi frase, está irreconocible 😭",
+          "mine_3": "Mi pobre frase… ¿¡Qué le habéis hecho, {name}!?",
+          "intact": "¡Intacta de principio a fin! Chapó, {name} 🎯",
+          "intact_2": "{name}, la misma frase al principio y al final: ¡nunca visto!",
+          "intact_3": "¡Transmisión perfecta! Somos unos cracks, {name} 🤝",
+          "encore": "¿Otra partida, {name}? Me duelen las costillas 😂",
+          "encore_2": "{name}, ¿repetimos? ¡Ha sido genial!",
+          "encore_3": "¡Quiero la revancha, {name}! ¿Una más?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Vaya… no me esperaba eso, {name} 😅",
+            "laugh_2": "Es… interesante, {name}. Muy interesante 🧐"
+          },
+          "farceur": {
+            "laugh": "Lo enmarco y lo vendo, {name} 🖼️😂",
+            "laugh_2": "{name}, esto es arte moderno 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "Si todos se ríen, me río, {name} 😂",
+            "laugh_2": "{name}, no entiendo nada, pero es buenísimo 😂"
+          },
+          "agressif": {
+            "laugh": "¡Panda de aficionados! {name}, ¿has visto qué desastre? 😂",
+            "laugh_2": "¡Es un escándalo, {name}! Me encanta 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {
@@ -4071,9 +4375,6 @@
         "rollDice": "Lanzar el dado",
         "continueCase": "Continuar",
         "chooseTarget": "Elige un objetivo para {case}",
-        "teleportPrompt": "Teletransporte — intercambia tu posición con…",
-        "teleportLeader": "El líder",
-        "teleportLast": "El último",
         "you": "(tú)",
         "waitingFor": "Esperando a {name}…",
         "winner": "¡{name} ganó!",
@@ -4089,8 +4390,8 @@
           "wheelDrinks": "¡{count} trago(s)!",
           "pfWin": "Apuesta ganada — nadie bebe",
           "pfLose": "¡{name} bebe {count} trago(s)!",
-          "pile": "CARA",
-          "face": "CRUZ",
+          "pile": "CRUZ",
+          "face": "CARA",
           "deHonteSafe": "¡Salvado!",
           "deHonteDrink": "¡2 tragos!",
           "deHonteForward": "¡Avanza una casilla!",
@@ -4341,8 +4642,8 @@
         "grappinLeader": "🪝 {actor} ya está a la cabeza, no es posible luchar.",
         "grappinJoin": "🪝 ¡Lucha! {actor} se une a {target} (cuadro {case}).",
         "pont": "🌉 ¡Puente ({side})! {count} jugador(es) en el cuadrado {case} {direction} de un cuadrado.",
-        "pontPile": "pila",
-        "pontFace": "rostro",
+        "pontPile": "cruz",
+        "pontFace": "cara",
         "pontAdvance": "avance",
         "pontBack": "da un paso atrás",
         "loterieCancelled": "🎰 Lotería cancelada (no hay suficientes jugadores).",
@@ -4363,10 +4664,10 @@
         "diceLabel": "Dado: {value}"
       },
       "coinFlip": {
-        "pile": "Pila",
-        "face": "Rostro",
-        "won": "Sorteo: {result} — ¡el objetivo gana!",
-        "lost": "Empate: {result}: el objetivo pierde y bebe."
+        "pile": "Cruz",
+        "face": "Cara",
+        "won": "Tirada: {result} — ¡el objetivo gana!",
+        "lost": "Tirada: {result} — el objetivo pierde y bebe."
       },
       "game": {
         "rollDice": "Tira el dado",
@@ -4627,7 +4928,7 @@
           },
           {
             "title": "En tu turno",
-            "body": "Tira el dado en tu turno, descubre el efecto de tu casilla y a veces elige un objetivo para un efecto que afecta a otro jugador."
+            "body": "Tira el dado en tu turno. A menudo eliges un objetivo a ciegas: el efecto de tu casilla solo se revela después de tu elección. En una casilla ocupada, puedes retar a un jugador a un duelo."
           },
           {
             "title": "¿Y los tragos?",
@@ -4668,7 +4969,7 @@
           "outcomeDrink": "🎲 Dado de la vergüenza ({roll}): ¡{player} toma 2 prendas!"
         },
         "coinFlip": {
-          "lost": "Sorteo: {result} — el objetivo pierde y toma una prenda."
+          "lost": "Tirada: {result} — el objetivo pierde y toma una prenda."
         },
         "wheel": {
           "sips": "{count, plural, one {# prenda} other {# prendas}}"
@@ -4815,7 +5116,82 @@
         "missed": "respuesta incorrecta",
         "noAnswer": "sin respuesta",
         "liveRanking": "Clasificación",
-        "skipToPodium": "Ver el podio"
+        "skipToPodium": "Ver el podio",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "sure": "¡Demasiado fácil, {name}!",
+          "sure_2": "Esta la tengo. Suerte, {name} 😏",
+          "sure_3": "{name}, esta la contesto con los ojos cerrados.",
+          "unsure": "Ni idea… voy a lo loco, {name}.",
+          "unsure_2": "{name}, respondo al azar, no me juzgues 🙈",
+          "unsure_3": "Cruzo los dedos con esta, {name} 🤞",
+          "knewIt": "¡Lo sabía, {name}!",
+          "knewIt_2": "Venga, que era facilita, {name} 😏",
+          "knewIt_3": "{name}, haberme preguntado, ¡yo la tenía!",
+          "lucky": "A lo loco… ¡y acierto! Lo siento, {name} 😇",
+          "lucky_2": "{name}, respondí al azar y acerté. Con estilo, ¿eh?",
+          "lucky_3": "¿Suerte? No, {name}, puro talento 😎",
+          "missed": "Ni idea de eso. ¿Cómo lo sabías, {name}?",
+          "missed_2": "Bien hecho, {name}… yo estaba en la luna.",
+          "missed_3": "{name}, ¿haces trampa o lees enciclopedias? 🤓",
+          "oops": "{speaker, select, f {Tan segura de mí} m {Tan seguro de mí} other {Tanta confianza}}… y fallo. Ni una palabra, {name} 🙈",
+          "oops_2": "¿«Demasiado fácil»? ¿Yo dije eso? Chis, {name}.",
+          "oops_3": "{name}, olvida lo que dije antes 😅",
+          "asleep": "{name}, ¿te has dormido? 😴",
+          "asleep_2": "Oye, {name}, ¡el pulsador es para pulsarlo!",
+          "asleep_3": "¿Sigues ahí, {name}? Se acabó el tiempo ⏰",
+          "tease": "¿{name} en cabeza? Disfrútalo, que dura poco 😏",
+          "tease_2": "¡Todos contra {name}!",
+          "tease_3": "{name}, voy a por tu corona 👑"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "Esta me la sé bien, {name}.",
+            "sure_2": "Por una vez, lo tengo claro, {name}.",
+            "knewIt": "Lo había leído en algún sitio, {name}.",
+            "knewIt_2": "¿Ves, {name}? Repasar tiene premio."
+          },
+          "farceur": {
+            "sure": "Lo vi en mi horóscopo, {name} 🔮",
+            "sure_2": "Fácil: he sobornado al presentador, {name} 😉",
+            "knewIt": "Lo sabía, {name}: lo sé todo menos la hora 😜",
+            "knewIt_2": "{name}, me lo contó un pajarito 🐦"
+          },
+          "suiveur": {
+            "sure": "Me dejo llevar, {name}, parece fácil.",
+            "sure_2": "¡Si para vosotros es fácil, para mí también, {name}!",
+            "knewIt": "¡Menos mal que seguí mi instinto, {name}!",
+            "knewIt_2": "Como todos, ¿no? Ah, tú no, {name} 😬"
+          },
+          "agressif": {
+            "sure": "Demasiado fácil. Agárrate, {name} 😈",
+            "sure_2": "¡Siguiente! Esta es para niños, {name}.",
+            "knewIt": "Obviamente, {name}. ¿A qué estamos jugando?",
+            "knewIt_2": "Haber atendido en clase, {name} 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
@@ -5160,7 +5536,85 @@
         "playCard": "Jugar esta carta",
         "pickCard": "Elige una carta",
         "crownCard": "Coronar esta respuesta",
-        "pickAnswer": "Elige una respuesta"
+        "pickAnswer": "Elige una respuesta",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "pitch": "{name}, mi carta te va a hacer llorar de risa.",
+          "pitch_2": "Lee bien la mía, {name}. Te va a encantar 😏",
+          "pitch_3": "{name}, guárdame la corona calentita 👑",
+          "bribe": "{name}, te invito a un cruasán si me coronas 🥐",
+          "bribe_2": "Coróname, {name}, y friego los platos 🧽",
+          "bribe_3": "{name}, ¿cinco euros y la corona es mía? 💸",
+          "chase": "{name}, tu corona se tambalea un poco, ¿no? 👑",
+          "chase_2": "Disfruta de tus coronas, {name}. Voy a por ellas.",
+          "chase_3": "El trono tiembla, {name} 😈",
+          "rival": "Tu carta no tiene nada que hacer contra la mía, {name}.",
+          "rival_2": "{name}, que gane el mejor chiste 😏",
+          "rival_3": "{speaker, select, f {Lo siento} m {Lo siento} other {Perdona}} de antemano, {name}, la mía es imbatible.",
+          "crown": "Esa me ha {speaker, select, f {matado} m {matado} other {hecho llorar de risa}}, {name}. ¡Corona!",
+          "crown_2": "No he dudado ni un segundo, {name}. Bravo 👑",
+          "crown_3": "{name}, te has ganado mi corazón y la corona 😂",
+          "thanks": "Gracias, {name}, tienes un gusto excelente 😎",
+          "thanks_2": "{name}, sabía que tenías sentido del humor 👑",
+          "thanks_3": "Te debo una, {name} 😇",
+          "won": "{speaker, select, f {Lo siento} m {Lo siento} other {Perdona}}, {name}, la corona es mía 😎",
+          "won_2": "{name}, admira la corona. Me queda bien, ¿eh? 👑",
+          "won_3": "¡Otra corona más! ¿Me sigues, {name}?",
+          "bravo": "Bien jugado, {name}, esa ha sido brutal 😂",
+          "bravo_2": "{name}, yo no me habría atrevido. Respeto 🙌",
+          "bravo_3": "Bravo, {name}. El humor más retorcido de la mesa 😅",
+          "robbed": "{name}, no tienes ningún gusto. La mía era mejor.",
+          "robbed_2": "¿En serio, {name}? Exijo un recuento 🙄",
+          "robbed_3": "{name}, me lo apunto para la próxima 😤"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "pitch": "{name}, he elegido mi carta con cuidado. Nada más.",
+            "pitch_2": "Sin presión, {name}, pero la mía no está mal.",
+            "robbed": "No era mi mejor carta, {name}. Lo entiendo.",
+            "robbed_2": "Bueno… {name}, seguro que tienes razón 😔"
+          },
+          "farceur": {
+            "pitch": "{name}, la mía es arte puro. O casi 🤡",
+            "pitch_2": "Si no te ríes con la mía, {name}, hago el pino 🙃",
+            "robbed": "{name}, el humor no se aprende. Una pena 😜",
+            "robbed_2": "{name} acaba de hundir mi carrera de humorista 🤡"
+          },
+          "suiveur": {
+            "pitch": "{name}, he jugado como los demás, debe de estar bien 😊",
+            "pitch_2": "Todos parecen contentos con su carta, {name}, ¡yo también!",
+            "robbed": "Si tú lo dices, {name}… pero la mía también tenía gracia.",
+            "robbed_2": "{name}, la próxima vez juego a tu gusto 😅"
+          },
+          "agressif": {
+            "pitch": "{name}, coróname o atente a las consecuencias 😈",
+            "pitch_2": "Mi carta es la mejor, {name}. Punto.",
+            "robbed": "¡Escándalo! {name}, devuélveme mi corona 😤",
+            "robbed_2": "{name}, te vas a arrepentir de esta."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
@@ -5264,7 +5718,85 @@
         },
         "tileNeutral": "neutra",
         "tileAssassin": "asesino",
-        "tileRevealed": "revelada"
+        "tileRevealed": "revelada",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "nice": "¡Bien visto, {name}! Uno más 🎯",
+          "nice_2": "{name}, ¡qué ojo! ¿Seguimos?",
+          "nice_3": "¡En el clavo, {name}!",
+          "lead": "¡Vamos por delante, {name}! 🔥",
+          "lead_2": "{name}, ¡gracias a ti vamos ganando! ¡No aflojéis!",
+          "lead_3": "¡Y zas, en cabeza! Gracias, {name} 🚀",
+          "miss": "Nada por aquí, {name}… ¡pero casi!",
+          "miss_2": "Fallo, {name}. No pasa nada, ocurre 🤷",
+          "miss_3": "{name}, ¡un transeúnte inocente! Se acabó nuestro turno…",
+          "oops": "Uy, {name}… esa era de ellos 😬",
+          "oops_2": "{name}, les acabas de hacer un regalo 🎁",
+          "oops_3": "¡Vaya! Hemos jugado para el otro equipo, {name} 🙈",
+          "thanks": "Gracias por el regalo, {name} 😘",
+          "thanks_2": "{name}, ¡te debemos una! 😇",
+          "thanks_3": "Qué amable, {name}. ¿Ahora juegas con nosotros? 😏",
+          "assassin": "{name}… era el asesino 💀",
+          "assassin_2": "¡Nooo, {name}! ¡Esa no! 😱",
+          "assassin_3": "{name}, estábamos tan cerca… Descanse en paz la partida 🪦",
+          "saved": "¡Gracias, {name}, nos regalas la victoria! 🏆",
+          "saved_2": "{name}, nunca lo olvidaremos 🙏",
+          "saved_3": "Victoria por incomparecencia gracias a ti, {name} 😂",
+          "win": "¡Hemos ganado gracias a ti, {name}! 🏆",
+          "win_2": "{name}, ¡la última palabra! ¡Menudo equipo! 🎉",
+          "win_3": "¡Campeones! Gracias, {name} 🥳",
+          "tease": "¿Ya sin ideas, {name}? 😏",
+          "tease_2": "{name} pasa… ¿miedo al asesino? 🐔",
+          "tease_3": "Gracias por dejarnos jugar, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Bien visto, {name}. Con cuidado, seguimos.",
+            "nice_2": "{name}, bonito. No tentemos a la suerte.",
+            "thanks": "Gracias, {name}. Muy amable.",
+            "thanks_2": "{name}, qué detalle… no voy a decir que no."
+          },
+          "farceur": {
+            "nice": "{name}, ¿tienes un don o has hecho trampa? 😜",
+            "nice_2": "¡Bingo, {name}! ¿Lees mentes? 🔮",
+            "thanks": "{name}, ¿hoy es mi cumpleaños? 🎁",
+            "thanks_2": "¡Gracias, {name}! Te mandaré una postal 💌"
+          },
+          "suiveur": {
+            "nice": "¡Bravo, {name}! Todos contentos, yo también 😊",
+            "nice_2": "¿{name} lo ha pillado? ¡Pues estoy {speaker, select, f {encantada} m {encantado} other {feliz}}!",
+            "thanks": "Como dice mi equipo: gracias, {name} 😇",
+            "thanks_2": "{name}, toda la mesa te da las gracias. ¡Yo también!"
+          },
+          "agressif": {
+            "nice": "¡Por fin uno bueno, {name}! ¡Sigue!",
+            "nice_2": "{name}, ¡otra! ¡Vamos a aplastarlos!",
+            "thanks": "¡Gracias, {name}! Repite cuando quieras 😈",
+            "thanks_2": "{name}, ¿en qué equipo juegas, exactamente? 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
@@ -5357,6 +5889,84 @@
           "nobody": "Nadie recibió votos",
           "rankingTitle": "Los votos de la mesa",
           "by": "de {names}"
+        },
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "easy": "Fácil, esta. ¿Verdad, {name}?",
+          "easy_2": "Ni lo he dudado. ¿Y tú, {name}?",
+          "easy_3": "¡Respuesta obvia! {name}, ¿te lo sigues pensando? 😏",
+          "tough": "Uf, qué difícil elegir… ¿Y tú, {name}?",
+          "tough_2": "{name}, ¿quién ha escrito esta carta? Es cruel 😩",
+          "tough_3": "He votado, pero no estoy {speaker, select, f {orgullosa} m {orgulloso} other {en paz}}, {name}.",
+          "confess": "{name}, te veo sonrojarte desde aquí 😏",
+          "confess_2": "Confiesa, {name}, ¡tú lo has hecho!",
+          "confess_3": "Esa, {name}, apuesto a que la conoces 😇",
+          "outvoted": "Os equivocáis todos. Sobre todo tú, {name}.",
+          "outvoted_2": "Somos pocos, pero tenemos razón, {name} 😤",
+          "outvoted_3": "¿En serio, {name}? No os entiendo 🙄",
+          "teaseMinority": "Así que, {name}, ¿te gusta llamar la atención? 😏",
+          "teaseMinority_2": "{name}, la mayoría ha hablado. {speaker, select, f {Lo siento} m {Lo siento} other {Perdona}} 😇",
+          "teaseMinority_3": "{name}, ¿lo tienes claro con esa elección? 😂",
+          "twin": "{name}, estamos en la misma onda 🤝",
+          "twin_2": "Tú y yo, {name}, ¡el mismo bando!",
+          "twin_3": "Por fin alguien con criterio: ¡{name}!",
+          "spill": "{name}… ¿en serio? ¡Queremos detalles! 😳",
+          "spill_2": "¿Tú, {name}? No me lo esperaba 😮",
+          "spill_3": "{name}, ¿nos lo cuentas? Tenemos tiempo 🍿",
+          "designated": "¿¡Yo!? Es un complot, {name}.",
+          "designated_2": "{name}, tomo nota, tomo nota… 📝",
+          "designated_3": "Gracias por el voto, {name}. No lo olvidaré 😤",
+          "called": "El pueblo ha hablado, {name} 😂",
+          "called_2": "{name}, toda la mesa ha pensado en ti 😂",
+          "called_3": "Ninguna sorpresa, {name} 😏"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "outvoted": "Quizá me equivoque, {name}… pero lo mantengo.",
+            "outvoted_2": "{name}, para gustos, los colores 😅",
+            "teaseMinority": "Cada uno tiene su opinión, {name}, y está bien.",
+            "teaseMinority_2": "{name}, qué elección tan valiente 🙂"
+          },
+          "farceur": {
+            "outvoted": "Minoría, pero con estilo, {name} 😎",
+            "outvoted_2": "{name}, la historia me dará la razón 📜",
+            "teaseMinority": "{name}, rebelde hasta el final 🤘",
+            "teaseMinority_2": "¿Vas por libre, {name}? 😜"
+          },
+          "suiveur": {
+            "outvoted": "Vaya… tendría que haber votado como vosotros, {name} 😅",
+            "outvoted_2": "{name}, ¡la próxima vez te sigo!",
+            "teaseMinority": "Hago lo que hacen todos, {name}. Tú no 😄",
+            "teaseMinority_2": "{name}, no es fácil ir a contracorriente, ¿eh?"
+          },
+          "agressif": {
+            "outvoted": "Tonterías, {name}. Os equivocáis todos.",
+            "outvoted_2": "{name}, impugno este resultado 😤",
+            "teaseMinority": "{name}, ¡perdiste! La mayoría te aplasta 😈",
+            "teaseMinority_2": "¡Ja! {name}, la próxima vez únete al bando bueno."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {
@@ -5458,7 +6068,70 @@
         "pointsSr": "{count, plural, one {# punto} other {# puntos}}",
         "handedIn": "hoja entregada",
         "playerLeft": "dejó la mesa",
-        "contestTargetSr": "la respuesta «{answer}» de {name}"
+        "contestTargetSr": "la respuesta «{answer}» de {name}",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "stop": "¿¡Ya!? Eres una máquina, {name}.",
+          "stop_2": "¡Eh! Que no había terminado, {name} 😤",
+          "stop_3": "{name}, ¿no podías esperar dos segundos?",
+          "contest": "¿«{answer}»? ¿Eso existe, {name}? 🤨",
+          "contest_2": "{name}, «{answer}»… te lo has inventado, confiesa.",
+          "contest_3": "Mmm. «{answer}», {name}. ¿Votamos?",
+          "twin": "«{answer}» repetido… {name}, ¿has copiado? 👀",
+          "twin_2": "{name}, ¿«{answer}»? Alguien tuvo la misma idea 👀",
+          "twin_3": "¡«{answer}», dos veces! {name}, ¿lo teníais pactado?",
+          "tease": "{name} se lo lleva todo… qué sospechoso 🤨",
+          "tease_2": "¿Alguien puede parar a {name}?",
+          "tease_3": "{name}, ¿escondes un diccionario debajo de la mesa?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "stop": "¿Ya? Me faltaba un minuto, {name}.",
+            "stop_2": "Despacio, {name}… algunos aún estamos pensando.",
+            "contest": "Sin ánimo de discutir, pero «{answer}», {name}… ¿en serio?",
+            "contest_2": "Tengo mis dudas con «{answer}», {name}."
+          },
+          "farceur": {
+            "stop": "¿STOP? ¡Estaba escribiendo una obra maestra, {name}!",
+            "stop_2": "{name} gritó STOP y yo grité ¡mamá! 😱",
+            "contest": "¿«{answer}»? Qué imaginación, {name} 😜",
+            "contest_2": "{name}, ¿en qué diccionario sale «{answer}»? ¿En el tuyo? 📖"
+          },
+          "suiveur": {
+            "stop": "Si {name} dice STOP, es STOP.",
+            "stop_2": "Vale, {name}… ¡bolis abajo todo el mundo!",
+            "contest": "Si los demás impugnan «{answer}», yo también, {name}.",
+            "contest_2": "«{answer}»… a ver qué dice la mesa, {name}."
+          },
+          "agressif": {
+            "stop": "¿¡STOP!? Me las vas a pagar, {name} 😤",
+            "stop_2": "{name}, ese STOP huele a pánico.",
+            "contest": "¿«{answer}»? Hay que tener valor, {name} 😈",
+            "contest_2": "{name}, ¿«{answer}»? Ni en sueños 🙅"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
@@ -5785,6 +6458,7 @@
     "screenshots": "Capturas de pantalla (opcional, máx. {max})",
     "addScreenshot": "Agregar",
     "removeScreenshot": "Eliminar captura",
+    "screenshotAlt": "Captura {index}",
     "contactEmail": "Correo electrónico de contacto (opcional)",
     "emptyMessage": "Por favor describa su devolución.",
     "imageError": "No se puede procesar una o más imágenes.",

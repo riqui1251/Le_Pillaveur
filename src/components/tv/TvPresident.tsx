@@ -53,6 +53,7 @@ function isRed(card: number): boolean {
 }
 
 function BigCard({ card }: { card: number }) {
+  const t = useTranslations('games.president.game')
   const joker = preIsJoker(card)
   const ink = isRed(card) ? 'text-suit-red' : 'text-[#24201A]'
   return (
@@ -63,7 +64,7 @@ function BigCard({ card }: { card: number }) {
       )}
     >
       {joker ? (
-        <span className="text-7xl leading-none" aria-label="Joker">
+        <span role="img" className="text-7xl leading-none" aria-label={t('joker')}>
           🃏
         </span>
       ) : (

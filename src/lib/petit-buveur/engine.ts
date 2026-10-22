@@ -25,11 +25,15 @@ import { generateCase } from './case-generator'
  *    dernière case ; à égalité, l'acteur, puis l'ordre de jeu après lui ;
  *  - la protection bloque les effets négatifs imposés par la case d'un AUTRE
  *    joueur (gorgées, reculs, échanges, liens, statuts), jamais les positifs ;
- *  - Défi / Question : le joueur au tour arbitre (réussi / raté) ;
+ *  - Défi / Question : le joueur au tour arbitre (réussi / raté), sauf cible
+ *    protégée par un autre : bloqué d'office, comme en local ;
  *  - Pile ou face : la CIBLE choisit son côté (étape `side`) ;
  *  - Chance : « Relancer » (nouveau lancer complet) ou « +2 cases » ;
  *  - Répétition / Rewind rejouent la dernière case effective ; Double case
- *    applique deux cases simples à la même cible dans le même tour.
+ *    applique deux cases simples à la même cible dans le même tour ;
+ *  - Duel : arrivé au dé sur une case occupée (hors départ), l'acteur peut
+ *    défier un joueur présent avant la case ; pile ou face, le perdant recule
+ *    d'une case, sauf s'il est protégé (même règle que applyDuelResult).
  */
 
 export interface EnginePlayer {
@@ -89,6 +93,16 @@ export type LastInteraction =
     }
   | { kind: 'roue'; actorId: string; segment: number; drinks: number }
   | { kind: 'roue-defis'; actorId: string; drinks: number }
+  | ({ kind: 'duel'; actorId: string } & DuelNote)
+
+/** Duel sur case partagée : l'acteur (challenger) contre `opponentId`. */
+export type DuelNote = {
+  opponentId: string
+  /** Le challenger gagne : son adversaire recule d'une case. */
+  challengerWins: boolean
+  /** Le perdant était protégé : il ne recule pas. */
+  loserProtected: boolean
+}
 
 /** Ce qu'un joueur a subi lors de la dernière case résolue (gorgées, déplacement). */
 export type LastOutcomeChange = { playerId: string; drinks: number; from: number; to: number }
@@ -146,6 +160,8 @@ export type LastOutcome = {
   /** Défi / Question : verdict de l'arbitre. */
   succeeded?: boolean
   chanceChoice?: ChanceChoice
+  /** Duel joué juste avant cette case, sur la case d'arrivée. */
+  duel?: DuelNote
 }
 
 /** Entrée d'historique : un effet résolu, daté par tour et dé. */
@@ -168,6 +184,8 @@ export interface LogEntry {
  * Case en attente. Sans `stage`, l'acteur résout la case (cible et/ou choix).
  * `stage: 'verdict'` : l'acteur arbitre le défi de `targetId` (`succeeded`).
  * `stage: 'side'` : `targetId` choisit pile ou face (`side`), avant `deadlineAt`.
+ * `stage: 'duel'` : avant la case tirée (`case`), l'acteur défie un joueur de
+ * `opponents` (`targetId`) ou passe (sans `targetId`).
  */
 export interface EnginePending {
   /** Type de la case à résoudre : la case REJOUÉE pour Répétition / Rewind, 'double-case' sinon. */
@@ -182,10 +200,18 @@ export interface EnginePending {
   via?: 'repetition' | 'rewind'
   /** Double case : les deux cases simples à appliquer à la même cible. */
   cases?: EngineCase[]
-  stage?: 'verdict' | 'side'
+  stage?: 'verdict' | 'side' | 'duel'
   targetId?: string
+  /** Étape `duel` : adversaires présents sur la case d'arrivée. */
+  opponents?: string[]
   /** Étape `side` : échéance (epoch ms, horloge serveur) avant tirage au hasard. */
   deadlineAt?: number
+  /**
+   * VUE CLIENT seulement (jamais dans l'état du moteur) : case tirée cachée
+   * pendant un choix de cible à l'aveugle — `caseType` n'y vaut rien, voir
+   * hidesDrawnCase (server-adapter.ts).
+   */
+  hidden?: boolean
 }
 
 export interface EngineState {
@@ -213,6 +239,8 @@ export interface EngineState {
   lastOutcome?: LastOutcome | null
   /** Historique public des effets résolus (borné, absent sur les états anciens). */
   outcomeHistory?: OutcomeEntry[]
+  /** Duel joué ce tour, rattaché au prochain effet enregistré (la case peut attendre une cible). */
+  duelNote?: DuelNote | null
   phase: EnginePhase
   /** Id du joueur gagnant, ou null. */
   winner: string | null
@@ -402,6 +430,7 @@ type Work = {
   lastInteraction: LastInteraction | null
   pending: EnginePending | null
   winner: string | null
+  duelNote: DuelNote | null
 }
 
 /** États d'avant le champ : la dernière case tirée, si elle est rejouable, en tient lieu. */
@@ -425,6 +454,7 @@ function startWork(state: EngineState): Work {
     lastInteraction: null,
     pending: null,
     winner: null,
+    duelNote: state.duelNote ?? null,
   }
 }
 
@@ -466,6 +496,10 @@ function recordOutcome(
     outcome.diceFrom = roll.from
     outcome.diceLanding = roll.landing
     if (roll.rerolled) outcome.rerolled = true
+  }
+  if (w.duelNote) {
+    outcome.duel = w.duelNote
+    w.duelNote = null
   }
   w.outcomes.push(outcome)
 }
@@ -715,7 +749,14 @@ function rollDice(w: Work): Roll {
   return { from, landing: me.position }
 }
 
-/** Tire la case d'arrivée et la joue (en attente si elle demande un choix). */
+/** Adversaires d'un duel : les joueurs présents sur la case d'arrivée de l'acteur (jamais au départ). */
+function duelOpponents(w: Work): EnginePlayer[] {
+  const actor = actorOf(w)
+  if (actor.position <= 0) return []
+  return w.players.filter((p) => p.id !== actor.id && !p.leftAt && p.position === actor.position)
+}
+
+/** Tire la case d'arrivée et la joue (en attente si elle demande un choix, ou après le duel proposé). */
 function drawAndPlay(w: Work, roll: Roll): void {
   const c = generateCase(w.rng, {
     difficulty: w.state.settings.difficulty,
@@ -723,6 +764,18 @@ function drawAndPlay(w: Work, roll: Roll): void {
     defiAllowed: w.state.settings.defiAllowed,
   })
   w.lastCase = c
+  const opponents = duelOpponents(w)
+  if (opponents.length > 0) {
+    w.pending = {
+      caseType: c.type,
+      playerId: actorOf(w).id,
+      needsTarget: false,
+      case: c,
+      stage: 'duel',
+      opponents: opponents.map((p) => p.id),
+    }
+    return
+  }
   playDrawnCase(w, c, roll)
 }
 
@@ -831,7 +884,7 @@ function reduceRoll(state: EngineState, playerId: string): EngineState {
   if (!actor || actor.id !== playerId) throw new EngineError('NOT_YOUR_TURN')
 
   // Nouveau tour de dé : le spectacle et l'effet du tour précédent sont terminés.
-  const w = startWork({ ...state, lastInteraction: null, lastOutcome: null })
+  const w = startWork({ ...state, lastInteraction: null, lastOutcome: null, duelNote: null })
   w.turnDiceTotal = 0
   const roll = rollDice(w)
   if (checkWin(w)) w.lastCase = null
@@ -858,6 +911,11 @@ function reduceResolve(
   const effectiveExtra = { effectiveCase: p.via ? effective : undefined }
   const message = () => `resolved:${p.caseType}`
 
+  if (p.stage === 'duel') {
+    resolveDuel(w, p, effective, choice.targetId)
+    // Pas le type de la case tirée dans le journal : elle peut rester cachée (cible à choisir).
+    return commit(w, playerId, () => 'resolved:duel')
+  }
   if (p.stage === 'side') {
     resolvePileFace(w, p, effective, choice.side)
     return commit(w, playerId, message)
@@ -898,6 +956,13 @@ function reduceResolve(
       if (choice.succeeded !== undefined && typeof choice.succeeded !== 'boolean') {
         throw new EngineError(INVALID_CHOICE)
       }
+      // Cible protégée : le défi d'un autre ne la touche pas, rien à arbitrer (comme en local).
+      if (shielded(target, actorOf(w))) {
+        const fx = newFx(w)
+        note(fx, { kind: 'protected', playerId: target.id })
+        recordOutcome(w, snapshot(w.players), label, { ...effectiveExtra, targetId: target.id, notes: fx.notes }, null)
+        return commit(w, playerId, message)
+      }
       const staged: EnginePending = { ...p, stage: 'verdict', targetId: target.id, needsTarget: false }
       if (typeof choice.succeeded === 'boolean') applyVerdict(w, staged, effective, choice.succeeded)
       else w.pending = staged
@@ -929,6 +994,31 @@ function applyVerdict(w: Work, p: EnginePending, effective: EngineCase, succeede
     { effectiveCase: p.via ? effective : undefined, targetId: target.id, succeeded, notes: fx.notes },
     null
   )
+}
+
+/**
+ * Duel sur case partagée, puis la case tirée. Sans `opponentId`, l'acteur
+ * passe le duel. Sinon pile ou face : le perdant recule d'une case, sauf
+ * protégé (sa protection compte, même contre son propre duel — comme
+ * applyDuelResult en local).
+ */
+function resolveDuel(w: Work, p: EnginePending, drawn: EngineCase, opponentId: unknown): void {
+  if (opponentId !== undefined) {
+    const actor = actorOf(w)
+    const opponent =
+      typeof opponentId === 'string'
+        ? w.players.find((x) => x.id === opponentId && x.id !== actor.id && x.position === actor.position)
+        : undefined
+    if (!opponent) throw new EngineError(INVALID_TARGET)
+    const challengerWins = w.rng.chance(0.5)
+    const loser = challengerWins ? opponent : actor
+    const loserProtected = isProtected(loser)
+    if (!loserProtected) loser.position = clampPos(loser.position - 1)
+    const duel: DuelNote = { opponentId: opponent.id, challengerWins, loserProtected }
+    w.lastInteraction = { kind: 'duel', actorId: actor.id, ...duel }
+    w.duelNote = duel
+  }
+  playDrawnCase(w, p.case ?? drawn, null)
 }
 
 /** Pile ou face, étape `side` : la cible a choisi, la pièce tombe, perdu → elle boit. */
@@ -1075,6 +1165,7 @@ function commit(w: Work, playerId: string, message: () => string): EngineState {
     lastInteraction: w.lastInteraction,
     lastOutcome: w.outcomes.length > 0 ? w.outcomes[w.outcomes.length - 1] : (s.lastOutcome ?? null),
     outcomeHistory: outcomeHistory ?? [],
+    ...(w.duelNote || s.duelNote ? { duelNote: w.duelNote } : {}),
   }
   if (w.winner) {
     return {
@@ -1197,7 +1288,11 @@ export function autoAction(state: EngineState): { state: EngineState; action: En
   const choice: InteractionChoice = {}
   if (p.stage === 'side') choice.side = rng.chance(0.5) ? 'pile' : 'face'
   else if (p.stage === 'verdict') choice.succeeded = rng.chance(0.5)
-  else {
+  else if (p.stage === 'duel') {
+    // Une fois sur deux, duel contre un adversaire de la case au hasard ; sinon il passe.
+    const opponents = (p.opponents ?? []).filter((id) => state.players.some((x) => x.id === id))
+    if (opponents.length > 0 && rng.chance(0.5)) choice.targetId = rng.pick(opponents)
+  } else {
     const wantsTarget =
       p.needsTarget || CASES_INTERACTIVE_TARGET.has(p.caseType) || p.caseType === 'double-case'
     if (wantsTarget) choice.targetId = pickRandomTarget(state, rng, !CASES_NO_SELF_TARGET.has(p.caseType))

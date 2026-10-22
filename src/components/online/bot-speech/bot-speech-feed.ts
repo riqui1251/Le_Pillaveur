@@ -190,6 +190,25 @@ export type LineTranslator = {
   format: (key: string, values?: Record<string, string>) => string
 }
 
+/**
+ * Tics qui trinquent (« …tchin ! », « …cheers! », « …¡salud! », « …cin
+ * cin! ») : tus en ambiance Sans alcool. Les phrases, elles, ne parlent
+ * jamais de boire (testé avec le catalogue) ; seuls ces tics, copies
+ * conformes d'un jeu à l'autre, lèvent un verre.
+ */
+export const DRINK_TIC_KEYS: readonly string[] = ['marcel']
+
+/**
+ * Le traducteur d'un fil selon l'ambiance : en Sans alcool, le catalogue
+ * « ignore » les tics qui trinquent — botLine habille alors la phrase sans
+ * tic, comme pour un converti. Le reste est inchangé.
+ */
+export function ambianceLineTranslator(tr: LineTranslator, soft: boolean): LineTranslator {
+  if (!soft) return tr
+  const muted = new Set(DRINK_TIC_KEYS.map((key) => `botTic.${key}`))
+  return { has: (key) => !muted.has(key) && tr.has(key), format: tr.format }
+}
+
 export type LineOptions = {
   /** Habiller la phrase du tic de l'auteur : sa première parole de la manche. */
   withTic?: boolean

@@ -6,8 +6,10 @@ import {
   toClientView,
   applyRoomAction,
   applyBotAction,
+  hidesDrawnCase,
 } from './server-adapter'
-import { currentPlayerId } from './engine'
+import { currentPlayerId, type EnginePending, type EngineState } from './engine'
+import { needsTarget, type EngineCase } from './types'
 import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
 import { personaForBotName } from '@/lib/online/bot-personas'
 
@@ -54,6 +56,81 @@ describe('server-adapter Petit Buveur', () => {
     expect(view.players).toHaveLength(2)
     expect(view.currentPlayer).toBe(0)
     expect(view.phase).toBe('playing')
+  })
+})
+
+describe('cible choisie à l’aveugle, comme en local : la vue ne trahit pas la case', () => {
+  const pendingWith = (c: EngineCase, extra: Partial<EnginePending> = {}): EngineState => {
+    const s = buildPetitBuveurEngineState(MEMBERS, 'normal', 'seed-blind')
+    return {
+      ...s,
+      phase: 'awaiting-interaction',
+      lastCase: c,
+      lastEffectiveCase: c,
+      log: [{ turn: 1, playerId: 'u1', message: `case:${c.type}` }],
+      pending: { caseType: c.type, playerId: 'u1', needsTarget: needsTarget(c.type), case: c, ...extra },
+    }
+  }
+
+  it('case à cible, Défi, Double case, case rejouée, Pile ou face : ni type, ni effet, ni défi, ni journal', () => {
+    const hiddenOnes = [
+      pendingWith({ type: 'gorgée', effect: 6 }),
+      pendingWith({ type: 'defi', effect: 2, defiIndex: 3 }),
+      pendingWith({ type: 'gorgée', effect: 2 }, { via: 'repetition' }),
+      pendingWith({ type: 'double-case', effect: 0 }, { needsTarget: true, cases: [{ type: 'recul', effect: -1 }, { type: 'solo', effect: 1 }] }),
+      pendingWith({ type: 'pile-face', effect: 2 }),
+    ]
+    for (const s of hiddenOnes) {
+      expect(hidesDrawnCase(s.pending)).toBe(true)
+      const view = toClientView(s)
+      expect(view.pending).toEqual({ caseType: 'normal', playerId: 'u1', needsTarget: true, hidden: true })
+      expect(view.lastCase).toBeNull()
+      expect('lastEffectiveCase' in view).toBe(false)
+      expect(view.log.map((e) => e.message)).toEqual(['case:'])
+      // Le moteur, lui, garde tout : la cible choisie, la case s'applique.
+      expect(applyRoomAction(s, 'u1', { type: 'resolve', choice: { targetId: 'u2' } }).ok).toBe(true)
+    }
+  })
+
+  it('duel avant la case : adversaires et décideur visibles, la case tirée non', () => {
+    const s = pendingWith({ type: 'piege', effect: 0 }, { stage: 'duel', opponents: ['u2'], needsTarget: false })
+    expect(hidesDrawnCase(s.pending)).toBe(true)
+    const view = toClientView(s)
+    expect(view.pending).toEqual({
+      caseType: 'normal',
+      playerId: 'u1',
+      needsTarget: false,
+      hidden: true,
+      stage: 'duel',
+      opponents: ['u2'],
+    })
+    expect(view.lastCase).toBeNull()
+    expect(JSON.stringify(view)).not.toContain('piege')
+    // Passer le duel (aucun adversaire) : la case se joue — ici une cible encore à choisir, toujours cachée.
+    const passed = applyRoomAction(s, 'u1', { type: 'resolve', choice: {} })
+    if (!passed.ok) throw new Error(passed.error)
+    expect(toClientView(passed.state).pending).toEqual({ caseType: 'normal', playerId: 'u1', needsTarget: true, hidden: true })
+    expect(JSON.stringify(toClientView(passed.state))).not.toContain('piege')
+  })
+
+  it('Vote, Échange, Défi en chaîne, Téléport, roue, Chance, verdict et côté : annoncés comme en local', () => {
+    const visible = [
+      pendingWith({ type: 'vote', effect: 3 }),
+      pendingWith({ type: 'echange', effect: 0 }),
+      pendingWith({ type: 'defi-chaine', effect: 5 }),
+      pendingWith({ type: 'teleport', effect: 0 }),
+      pendingWith({ type: 'roue', effect: 0 }),
+      pendingWith({ type: 'chance', effect: 0 }),
+      pendingWith({ type: 'defi', effect: 2, defiIndex: 3 }, { stage: 'verdict', targetId: 'u2', needsTarget: false }),
+      pendingWith({ type: 'pile-face', effect: 2 }, { stage: 'side', targetId: 'u2', needsTarget: false }),
+    ]
+    for (const s of visible) {
+      expect(hidesDrawnCase(s.pending)).toBe(false)
+      const view = toClientView(s)
+      expect(view.pending).toEqual(s.pending)
+      expect(view.lastCase).toEqual(s.lastCase)
+      expect(view.log).toEqual(s.log)
+    }
   })
 })
 

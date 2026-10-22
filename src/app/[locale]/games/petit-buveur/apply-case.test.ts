@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { Case, PetitBuveurT } from './case-config'
 import type { GamePlayer } from './case-types'
-import { applyDoubleCase, applyTargetedCase, resolveExchange, resolveTeleport, type ApplyContext } from './apply-case'
+import {
+  applyChainLink,
+  applyChanceAdvance,
+  applyDoubleCase,
+  applyPileFace,
+  applyShameDice,
+  applyTargetedCase,
+  applyVote,
+  applyWheelDrinks,
+  resolveExchange,
+  resolveTeleport,
+  type ApplyContext,
+} from './apply-case'
 
 const t = Object.assign((key: string) => key, { raw: () => [], has: () => false }) as unknown as PetitBuveurT
 
@@ -160,5 +172,61 @@ describe('resolveExchange / resolveTeleport (règles 2 et 16)', () => {
   it('téléport vers le 1er : échange de positions', () => {
     const r = resolveTeleport([mk('a', 2), mk('b', 15), mk('c', 7)], 0, 'leader', t)
     expect(r.players.map(p => p.position)).toEqual([15, 2, 7])
+  })
+})
+
+describe('cases à fenêtre : effet et message, une fois le choix fait', () => {
+  it('vote : le désigné boit ; protégé par la case d’un autre, rien ne passe', () => {
+    const players = [mk('a', 3), mk('b', 5), mk('c', 7, shielded)]
+    const hit = applyVote({ type: 'vote', effect: 0 }, players, 'b', ctx())
+    expect(hit.players[1].drinks).toBe(3)
+    expect(hit.drinks).toEqual([{ playerId: 'b', count: 3 }])
+    const blocked = applyVote({ type: 'vote', effect: 4 }, players, 'c', ctx())
+    expect(blocked.players[2].drinks).toBe(0)
+    expect(blocked.drinks).toEqual([])
+  })
+
+  it('dé de la honte : chaque face, et le 6 sur la case de départ ne recule pas', () => {
+    const at = (position: number, roll: number) => applyShameDice(roll, [mk('a', position), mk('b', 4)], ctx())
+    expect(at(5, 2).players[0]).toMatchObject({ position: 5, drinks: 0 })
+    expect(at(5, 3).players[0]).toMatchObject({ position: 5, drinks: 2 })
+    expect(at(5, 5).players[0].position).toBe(6)
+    expect(at(5, 6).players[0].position).toBe(4)
+    expect(at(0, 6).players[0].position).toBe(0)
+    expect(at(0, 6).outcome).toMatchObject({ key: 'game.outcomes.cannotRecul' })
+    expect(at(5, 4).outcome).toMatchObject({ key: 'shameDice.outcomeDrink', params: { roll: 4 } })
+  })
+
+  it('pile ou face : gagné, personne ne boit ; perdu, la cible boit (sa propre case n’est jamais bloquée)', () => {
+    const players = [mk('a', 3, shielded), mk('b', 5)]
+    const win = applyPileFace({ type: 'pile-face', effect: 2 }, players, 'b', 'pile', 'pile', ctx())
+    expect(win.players[1].drinks).toBe(0)
+    expect(win.outcome).toMatchObject({ key: 'game.outcomes.pileFaceWin' })
+    const lose = applyPileFace({ type: 'pile-face', effect: 2 }, players, 'b', 'pile', 'face', ctx())
+    expect(lose.players[1].drinks).toBe(2)
+    const self = applyPileFace({ type: 'pile-face', effect: 2 }, players, 'a', 'face', 'pile', ctx())
+    expect(self.players[0].drinks).toBe(2)
+  })
+
+  it('défi en chaîne : lien de N tours posé « frais », jamais soi, refusé sur un protégé', () => {
+    const players = [mk('a', 3), mk('b', 5), mk('c', 7, shielded)]
+    const linked = applyChainLink({ type: 'defi-chaine', effect: 5 }, players, 'b', ctx())
+    expect(linked.players[0]).toMatchObject({ linkedTo: 'b', linkedTurns: 5 })
+    expect(linked.chainLinked).toBe(true)
+    expect(applyChainLink({ type: 'defi-chaine', effect: 5 }, players, 'a', ctx()).chainLinked).toBeUndefined()
+    const blocked = applyChainLink({ type: 'defi-chaine', effect: 5 }, players, 'c', ctx())
+    expect(blocked.players[0].linkedTo).toBeUndefined()
+    expect(blocked.chainLinked).toBeUndefined()
+  })
+
+  it('chance « +2 cases » : bornée à la dernière case', () => {
+    expect(applyChanceAdvance([mk('a', 28), mk('b', 1)], ctx()).players[0].position).toBe(29)
+    expect(applyChanceAdvance([mk('a', 4), mk('b', 1)], ctx()).outcome).toMatchObject({ params: { case: 7 } })
+  })
+
+  it('roue : l’acteur boit le secteur tiré, même protégé (sa propre case)', () => {
+    const r = applyWheelDrinks(7, [mk('a', 3, shielded), mk('b', 5)], 0)
+    expect(r.players[0].drinks).toBe(7)
+    expect(applyWheelDrinks(0, [mk('a', 3), mk('b', 5)], 0).drinks).toEqual([])
   })
 })

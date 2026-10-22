@@ -164,8 +164,19 @@ export function VerdictPanel({ d12, d20, children }: { d12: number; d20: number;
   )
 }
 
-/** Lancers précédents (le dernier est déjà affiché par les dés). */
-export function RollHistory({ rolls }: { rolls: readonly { d12: number; d20: number }[] }) {
+/**
+ * Lancers précédents (le dernier est déjà affiché par les dés), du plus récent
+ * au plus ancien. `newestNumber` : numéro du premier de la liste, tiré du
+ * compteur de lancers — l'historique est plafonné, sa longueur ne numérote
+ * plus rien passé le plafond. Sans lui, la liste est supposée complète.
+ */
+export function RollHistory({
+  rolls,
+  newestNumber = rolls.length,
+}: {
+  rolls: readonly { d12: number; d20: number }[]
+  newestNumber?: number
+}) {
   const t = useTranslations("games.1220")
   if (rolls.length === 0) return null
   return (
@@ -177,7 +188,7 @@ export function RollHistory({ rolls }: { rolls: readonly { d12: number; d20: num
       <ol className="max-h-[14rem] overflow-y-auto border-t border-gold/20 px-4 pb-3 pt-2">
         {rolls.map((h, idx) => (
           <li key={idx} className="flex items-center gap-3 border-b border-gold/10 py-1.5 last:border-0">
-            <span className="w-6 font-mono text-xs text-cream/70">{rolls.length - idx}.</span>
+            <span className="w-6 font-mono text-xs text-cream/70">{newestNumber - idx}.</span>
             <span className="rounded border border-gold/40 bg-gold/10 px-2 py-0.5 font-mono text-xs font-bold text-gold">{h.d12}</span>
             <span className="text-xs text-cream/60" aria-hidden>+</span>
             <span className="rounded border border-cream/30 bg-black/20 px-2 py-0.5 font-mono text-xs font-bold text-cream">{h.d20}</span>

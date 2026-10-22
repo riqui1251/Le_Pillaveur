@@ -1,15 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { createInitialState, reduce, type EnginePlayer, type EngineState } from '@/lib/petit-buveur/engine'
+import {
+  createInitialState,
+  reduce,
+  type EnginePlayer,
+  type EngineState,
+  type InteractionChoice,
+} from '@/lib/petit-buveur/engine'
+import { rngFromState } from '@/lib/petit-buveur/rng'
 import type { Case, CaseType, PetitBuveurT } from './case-config'
 import type { GamePlayer } from './case-types'
-import { applyTargetedCase } from './apply-case'
-import { addDrinks, tickTurnEnd } from './local-rules'
+import {
+  applyChainLink,
+  applyChallengeResult,
+  applyChanceAdvance,
+  applyDoubleCase,
+  applyPileFace,
+  applyShameDice,
+  applyTargetedCase,
+  applyVote,
+  applyWheelDrinks,
+  resolveExchange,
+  resolveTeleport,
+} from './apply-case'
+import { addDrinks, applyDuelResult, isShielded, tickTurnEnd, type FreshLinks } from './local-rules'
 import { resolveNoTargetCase } from './resolve-case'
 
 /**
  * Contrat de règles : le jeu local et le moteur en ligne appliquent chaque
- * case déterministe à l'identique (positions, gorgées, statuts, liens), puis
- * passent la main de la même façon (protection, liens, malédiction, passe-tour).
+ * case à l'identique (positions, gorgées, statuts, liens), puis passent la
+ * main de la même façon (protection, liens, malédiction, passe-tour). Toutes
+ * les cases y passent : déterministes, à fenêtre (le choix fait, ou le tirage
+ * du serveur rejoué en local) et au hasard (même générateur, même résultat).
+ * Seule la roue des défis manque : jamais tirée en ligne.
  */
 
 const t = Object.assign((key: string) => key, { raw: () => [], has: () => false }) as unknown as PetitBuveurT
@@ -90,11 +112,11 @@ function localPlayers(seats: Seat[]): GamePlayer[] {
   }))
 }
 
-function engineState(seats: Seat[], c: Case, needsTarget: boolean): EngineState {
+function engineState(seats: Seat[], c: Case, needsTarget: boolean, seed: string | number = 'parity'): EngineState {
   const base = createInitialState(
     seats.map(s => ({ id: s.id, name: s.id })),
     { difficulty: 'normal', defiDrinks: [] },
-    'parity'
+    seed
   )
   const players: EnginePlayer[] = base.players.map((p, i) => {
     const s = seats[i]
@@ -123,9 +145,9 @@ function engineState(seats: Seat[], c: Case, needsTarget: boolean): EngineState 
 }
 
 /** Passage de main local, tel que game.tsx l'enchaîne (endTurn puis rollDice des suivants). */
-function localPassTurn(players: GamePlayer[], freshMirror: boolean): GamePlayer[] {
+function localPassTurn(players: GamePlayer[], fresh: Partial<FreshLinks> = {}): GamePlayer[] {
   const list = players.map(p => ({ ...p }))
-  tickTurnEnd(list, 0, { fresh: { mirror: freshMirror, chain: false } })
+  tickTurnEnd(list, 0, { fresh: { mirror: Boolean(fresh.mirror), chain: Boolean(fresh.chain) } })
   for (let i = 1; i < list.length; i++) {
     const p = list[i]
     if (p.cursed > 0) {
@@ -167,7 +189,7 @@ describe('Parité local / en ligne : cases déterministes', () => {
             turnDiceTotal: TURN_DICE,
             t,
           })
-          const localAfter = localPassTurn(local.players, Boolean(local.mirrorLinked))
+          const localAfter = localPassTurn(local.players, { mirror: Boolean(local.mirrorLinked) })
           const online = reduce(engineState(seats, c, true), {
             type: 'RESOLVE_INTERACTION',
             playerId: 'a',
@@ -185,7 +207,7 @@ describe('Parité local / en ligne : cases déterministes', () => {
           { boardSize: 30, actorIndex: 0, lastMoveDelta: TURN_DICE, lastCase: null },
           t
         )
-        const localAfter = localPassTurn(local.players, false)
+        const localAfter = localPassTurn(local.players)
         const online = reduce(engineState(seats, c, false), {
           type: 'RESOLVE_INTERACTION',
           playerId: 'a',
@@ -215,7 +237,7 @@ describe('Parité local / en ligne : durée des liens sur plusieurs tours', () =
       turnDiceTotal: 0,
       t,
     })
-    let localList = localPassTurn(local.players, Boolean(local.mirrorLinked))
+    let localList = localPassTurn(local.players, { mirror: Boolean(local.mirrorLinked) })
     let online = reduce(engineState(seats, c, true), {
       type: 'RESOLVE_INTERACTION',
       playerId: 'a',
@@ -250,4 +272,228 @@ describe('Parité local / en ligne : durée des liens sur plusieurs tours', () =
       expect(byId(online.players)).toEqual(byId(localList))
     }
   })
+})
+
+// ─── Cases à fenêtre et tirages : même effet une fois le choix fait ─────────
+
+const CTX = { actorIndex: 0, boardSize: 30, turnDiceTotal: TURN_DICE, t }
+
+/** Résolution en ligne d'une case en attente (choix de l'acteur `a`). */
+function online(seats: Seat[], c: Case, choice: InteractionChoice, needsTarget = false, seed: string | number = 'parity'): EngineState {
+  return reduce(engineState(seats, c, needsTarget, seed), { type: 'RESOLVE_INTERACTION', playerId: 'a', choice })
+}
+
+/** Tables d'un seul usage : départ (recul impossible), case partagée (pont). */
+const START_TABLE: Seat[] = [
+  { id: 'a', position: 0 },
+  { id: 'b', position: 4 },
+  { id: 'c', position: 9, protectedTurns: 2 },
+]
+const SHARED_TABLE: Seat[] = [
+  { id: 'a', position: 6 },
+  { id: 'b', position: 6 },
+  { id: 'c', position: 6, protectedTurns: 3 },
+  { id: 'd', position: 2 },
+]
+
+const DOUBLE_CASES: Case[][] = [
+  [{ type: 'gorgée', effect: 3 }, { type: 'recul', effect: -1 }],
+  [{ type: 'avance', effect: 1 }, { type: 'protection', effect: 0 }],
+  [{ type: 'malediction', effect: 3 }, { type: 'solo', effect: 1 }],
+  [{ type: 'miroir-inverse', effect: 1 }, { type: 'gorgée', effect: 2 }],
+  [{ type: 'copie', effect: 0 }, { type: 'passe-tour', effect: 0 }],
+  [{ type: 'case-bonus', effect: 1 }, { type: 'recul-groupe', effect: -1 }],
+]
+
+describe('Parité local / en ligne : cases à fenêtre, le choix fait', () => {
+  for (const [table, seats] of Object.entries(TABLES)) {
+    const ids = seats.map(s => s.id)
+    const others = ids.filter(id => id !== 'a')
+
+    for (const target of ids) {
+      it(`${table} · vote → ${target}`, () => {
+        const c: Case = { type: 'vote', effect: 4 }
+        const local = applyVote(c, localPlayers(seats), target, CTX)
+        expect(byId(online(seats, c, { targetId: target }).players)).toEqual(byId(localPassTurn(local.players)))
+      })
+    }
+
+    for (const target of others) {
+      it(`${table} · echange → ${target}`, () => {
+        const local = resolveExchange(localPlayers(seats), 0, target, t)
+        const after = online(seats, { type: 'echange', effect: 0 }, { targetId: target })
+        expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+      })
+
+      it(`${table} · defi-chaine → ${target}`, () => {
+        const c: Case = { type: 'defi-chaine', effect: 5 }
+        const local = applyChainLink(c, localPlayers(seats), target, CTX)
+        const after = online(seats, c, { targetId: target })
+        expect(byId(after.players)).toEqual(byId(localPassTurn(local.players, { chain: Boolean(local.chainLinked) })))
+      })
+    }
+
+    for (const which of ['leader', 'last'] as const) {
+      it(`${table} · teleport ${which}`, () => {
+        const local = resolveTeleport(localPlayers(seats), 0, which, t)
+        const after = online(seats, { type: 'teleport', effect: 0 }, { option: which })
+        expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+      })
+    }
+
+    it(`${table} · chance « +2 cases »`, () => {
+      const local = applyChanceAdvance(localPlayers(seats), CTX)
+      const after = online(seats, { type: 'chance', effect: 0 }, { chanceChoice: 'plus2' })
+      expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+    })
+
+    it(`${table} · roue : la valeur tirée par le serveur, bue comme en local`, () => {
+      const seen = new Set<boolean>()
+      for (let seed = 0; seed < 40; seed++) {
+        const after = online(seats, { type: 'roue', effect: 0 }, {}, false, `roue-${seed}`)
+        const inter = after.lastInteraction
+        if (inter?.kind !== 'roue') throw new Error('roue sans tirage')
+        seen.add(inter.drinks > 0)
+        const local = applyWheelDrinks(inter.drinks, localPlayers(seats), 0)
+        expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+      }
+      expect(seen).toEqual(new Set([true, false]))
+    })
+
+    for (const target of ids) {
+      it(`${table} · pile ou face → ${target}, gagné et perdu`, () => {
+        const c: Case = { type: 'pile-face', effect: 2 }
+        const outcomes = new Set<boolean>()
+        for (let seed = 0; seed < 30; seed++) {
+          for (const side of ['pile', 'face'] as const) {
+            const staged = online(seats, c, { targetId: target }, false, `pf-${seed}`)
+            const after = reduce(staged, { type: 'RESOLVE_INTERACTION', playerId: target, choice: { side } })
+            const inter = after.lastInteraction
+            if (inter?.kind !== 'pile-face') throw new Error('pièce sans tirage')
+            outcomes.add(inter.side === inter.flip)
+            const local = applyPileFace(c, localPlayers(seats), target, side, inter.flip, CTX)
+            expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+          }
+        }
+        expect(outcomes).toEqual(new Set([true, false]))
+      })
+    }
+
+    for (const type of ['defi', 'question'] as const) {
+      for (const target of ids) {
+        for (const completed of [true, false]) {
+          it(`${table} · ${type} → ${target}, ${completed ? 'réussi' : 'raté'}`, () => {
+            const c: Case = { type, effect: 2 }
+            const players = localPlayers(seats)
+            // En local, une cible protégée par un autre est annoncée protégée, sans arbitrage.
+            const local = isShielded(players.find(p => p.id === target)!, 'a')
+              ? { players }
+              : applyChallengeResult(players, target, c.effect, completed, CTX)
+            const after = online(seats, c, { targetId: target, succeeded: completed }, true)
+            expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+          })
+        }
+      }
+    }
+
+    for (const cases of DOUBLE_CASES) {
+      for (const target of ids) {
+        it(`${table} · double-case ${cases.map(c => c.type).join(' + ')} → ${target}`, () => {
+          const local = applyDoubleCase(cases, localPlayers(seats), target, CTX)
+          const state = engineState(seats, { type: 'double-case', effect: 0 }, true)
+          const after = reduce(
+            { ...state, pending: { ...state.pending!, cases: cases.map(c => ({ type: c.type, effect: c.effect })) } },
+            { type: 'RESOLVE_INTERACTION', playerId: 'a', choice: { targetId: target } }
+          )
+          expect(byId(after.players)).toEqual(byId(localPassTurn(local.players, { mirror: Boolean(local.mirrorLinked) })))
+        })
+      }
+    }
+  }
+
+  for (const [table, seats] of Object.entries({ ...TABLES, depart: START_TABLE })) {
+    it(`${table} · dé de la honte, chaque face`, () => {
+      const faces = new Set<number>()
+      for (let seed = 0; faces.size < 6 && seed < 400; seed++) {
+        const after = online(seats, { type: 'de-honte', effect: 0 }, {}, false, `honte-${seed}`)
+        const inter = after.lastInteraction
+        if (inter?.kind !== 'de-honte') throw new Error('dé sans tirage')
+        faces.add(inter.value)
+        const local = applyShameDice(inter.value, localPlayers(seats), CTX)
+        expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+      }
+      expect(faces.size).toBe(6)
+    })
+  }
+})
+
+describe('Parité local / en ligne : tirages au hasard, même générateur, même résultat', () => {
+  /** Le générateur du moteur, rejoué côté local : mêmes tirages dans le même ordre. */
+  const sameRng = (state: EngineState) => {
+    const g = rngFromState(state.rngState)
+    return () => g.next()
+  }
+
+  for (const [table, seats] of Object.entries({ ...TABLES, partagee: SHARED_TABLE })) {
+    for (const type of ['pont', 'loterie'] as const) {
+      it(`${table} · ${type} (sans cible)`, () => {
+        for (let seed = 0; seed < 25; seed++) {
+          const c: Case = { type, effect: 0 }
+          const state = engineState(seats, c, false, `${type}-${seed}`)
+          const local = resolveNoTargetCase(
+            c,
+            localPlayers(seats),
+            { boardSize: 30, actorIndex: 0, lastMoveDelta: TURN_DICE, lastCase: null, rng: sameRng(state) },
+            t
+          )
+          const after = reduce(state, { type: 'RESOLVE_INTERACTION', playerId: 'a', choice: {} })
+          expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+        }
+      })
+    }
+
+    for (const type of ['roulette-russe', 'melange'] as const) {
+      for (const target of seats.map(s => s.id)) {
+        it(`${table} · ${type} → ${target}`, () => {
+          for (let seed = 0; seed < 25; seed++) {
+            const c: Case = { type, effect: type === 'roulette-russe' ? 6 : 0 }
+            const state = engineState(seats, c, true, `${type}-${seed}`)
+            const local = applyTargetedCase(c, localPlayers(seats), target, { ...CTX, rng: sameRng(state) })
+            const after = reduce(state, { type: 'RESOLVE_INTERACTION', playerId: 'a', choice: { targetId: target } })
+            expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+          }
+        })
+      }
+    }
+  }
+})
+
+describe('Parité local / en ligne : duel sur case partagée', () => {
+  const PROTECTED_ACTOR: Seat[] = [
+    { id: 'a', position: 6, protectedTurns: 3 },
+    { id: 'b', position: 6 },
+    { id: 'c', position: 1 },
+  ]
+  for (const [table, seats] of Object.entries({ partagee: SHARED_TABLE, acteurProtege: PROTECTED_ACTOR })) {
+    const opponents = seats.filter(s => s.id !== 'a' && s.position === seats[0].position).map(s => s.id)
+    for (const opponent of opponents) {
+      it(`${table} · duel contre ${opponent}, gagné et perdu`, () => {
+        const issues = new Set<boolean>()
+        for (let seed = 0; seed < 30; seed++) {
+          const state = engineState(seats, { type: 'normal', effect: 0 }, false, `duel-${seed}`)
+          const after = reduce(
+            { ...state, pending: { ...state.pending!, stage: 'duel', opponents } },
+            { type: 'RESOLVE_INTERACTION', playerId: 'a', choice: { targetId: opponent } }
+          )
+          const inter = after.lastInteraction
+          if (inter?.kind !== 'duel') throw new Error('duel sans tirage')
+          issues.add(inter.challengerWins)
+          const local = applyDuelResult(localPlayers(seats), 'a', opponent, inter.challengerWins)
+          expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+          expect(inter.loserProtected).toBe(local.loserProtected)
+        }
+        expect(issues).toEqual(new Set([true, false]))
+      })
+    }
+  }
 })

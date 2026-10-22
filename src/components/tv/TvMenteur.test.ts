@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createElement, type ComponentProps, type FunctionComponent } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { TvRoomDto } from '@/lib/online-room'
 import { DEFAULT_ONLINE_PREFERENCES } from '@/lib/online-preferences'
 import {
@@ -18,6 +18,11 @@ import { TvMenteur, hiddenBluffCount, tvLadderLimit, tvRevealLadderRows } from '
  * paroles — et la réaction du bot qu'il porte — passe dans le panneau de
  * révélation, avec le résultat, comme sur les téléphones.
  */
+
+const ambiance = vi.hoisted(() => ({ mode: 'alcool' }))
+vi.mock('@/components/providers/AmbianceAttribute', () => ({
+  useAmbianceMode: () => ({ mode: ambiance.mode, setMode: () => {} }),
+}))
 
 const catalogue = JSON.parse(readFileSync(new URL('../../../messages/fr.json', import.meta.url), 'utf8'))
 const messages = catalogue as AbstractIntlMessages
@@ -153,6 +158,55 @@ describe('podium', () => {
     expect(render(finished(['h']), room)).toContain('Revanche en cours…')
     expect(render(finished(['h']), room)).toMatch(/>1\/2</)
     expect(render(finished([]), room)).not.toContain('Revanche en cours…')
+  })
+})
+
+describe('ambiance Sans alcool', () => {
+  /** Gépéto a déjà perdu deux dés (1 + 2 = 3 gorgées). */
+  const sipped = (state: MenteurState): MenteurState => ({
+    ...state,
+    players: state.players.map((p) => (p.id === 'g' ? { ...p, lostCount: 2 } : p)),
+  })
+  const screens = (): MenteurState[] => [
+    sipped(bidding()),
+    sipped(reduceMenteur(bidding(), { type: 'DUDO', playerId: 'h', now: 1_000_000 })),
+    sipped({ ...bidding(), phase: 'finished', winnerId: 'h', currentBid: null }),
+  ]
+  const inMode = (mode: string, state: MenteurState) => {
+    ambiance.mode = mode
+    try {
+      return render(state)
+    } finally {
+      ambiance.mode = 'alcool'
+    }
+  }
+
+  it('Apéro : la chope et les gorgées bues, en jeu, à la révélation et au podium', () => {
+    for (const state of screens()) expect(inMode('alcool', state)).toContain('lucide-beer')
+  })
+
+  it('Soft : aucune chope, nulle part', () => {
+    for (const state of screens()) expect(inMode('soft', state)).not.toContain('lucide-beer')
+  })
+
+  /** Gépéto, sur son dernier dé, est démasqué : il sort de la table. */
+  const lastDie = (): MenteurState =>
+    reduceMenteur(
+      {
+        ...bidding(),
+        players: bidding().players.map((p) => (p.id === 'g' ? { ...p, dice: [4], lostCount: 4 } : p)),
+      },
+      { type: 'DUDO', playerId: 'h', now: 1_000_000 }
+    )
+
+  it('la sortie d’un joueur ne fait boire cul sec qu’en Apéro', () => {
+    expect(lastDie().lastReveal?.eliminatedId).toBe('g')
+    const apero = inMode('alcool', lastDie())
+    expect(apero).toContain('Gépéto n’a plus de dés')
+    expect(apero).toContain('cul sec')
+    const soft = inMode('soft', lastDie())
+    expect(soft).toContain('Gépéto n’a plus de dés')
+    expect(soft).not.toContain('cul sec')
   })
 })
 
