@@ -6,8 +6,10 @@ import {
   GAME_1220_MIN_PLAYERS,
   GAME_1220_MAX_PLAYERS,
   toGame1220ClientView,
+  withGame1220Speech,
   type Game1220State,
 } from './engine'
+import { game1220BotSpeech } from './bot-speech'
 import type { Choices1220 } from '@/lib/game-1220'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -67,6 +69,8 @@ export function parseGame1220State(json: string | null): Game1220State | null {
       rematchVotes: raw.rematchVotes ?? [],
       phaseSeq: raw.phaseSeq ?? 0,
       phaseEndsAt: raw.phaseEndsAt ?? null,
+      rolls: raw.rolls ?? 0,
+      speech: raw.speech ?? [],
     }
   } catch {
     return null
@@ -85,6 +89,27 @@ export type Game1220RoomActionInput =
 export type Game1220RoomActionResult =
   | { ok: true; state: Game1220State }
   | { ok: false; error: string }
+
+/**
+ * Les réactions des bots au lancer de `rollerId` (bot-speech.ts), lues sur la
+ * vue client qui en sort — sans la graine : rien ne dit le lancer suivant.
+ * Écrites dans l'état du lancer, même écriture. Une parole refusée par le
+ * moteur ne coûte jamais le lancer.
+ */
+export function withGame1220BotTalk(
+  after: Game1220State,
+  rollerId: string,
+  sayRand: () => number = Math.random
+): Game1220State {
+  const says = game1220BotSpeech(toGame1220ClientView(after), rollerId, sayRand)
+  if (says.length === 0) return after
+  try {
+    return withGame1220Speech(after, says)
+  } catch (e) {
+    if (e instanceof Game1220EngineError) return after
+    throw e
+  }
+}
 
 export function applyGame1220RoomAction(
   state: Game1220State,
@@ -109,7 +134,7 @@ export function applyGame1220RoomAction(
           }),
         }
       case 'roll':
-        return { ok: true, state: reduceGame1220(state, { type: 'ROLL', playerId: userId }) }
+        return { ok: true, state: withGame1220BotTalk(reduceGame1220(state, { type: 'ROLL', playerId: userId }), userId) }
       case 'end':
         return { ok: true, state: reduceGame1220(state, { type: 'END', playerId: userId }) }
       case 'bot':

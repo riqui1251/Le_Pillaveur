@@ -522,6 +522,9 @@ export type Serialized1220History = {
 
 export type Game1220Player = { id: string; name: string; isBot: boolean; leftAt: number | null }
 
+/** Parole publique d'un bot (kind de GAME_1220_SPEECH_KINDS), forme jumelle de BotSpeech. */
+export type Game1220SyncedSpeech = { playerId: string; kind: string; targetId: string | null; round: number }
+
 export type Game1220SyncedState = {
   version: number
   players: Game1220Player[]
@@ -532,6 +535,10 @@ export type Game1220SyncedState = {
   lastRoll: Serialized1220History | null
   history: Serialized1220History[]
   rematchVotes?: string[]
+  /** Lancers depuis le début (la « manche » des paroles) ; absent d'un état d'avant les paroles. */
+  rolls?: number
+  speech?: Game1220SyncedSpeech[]
+  speechBase?: number
 }
 
 export function parse1220State(json: string | null | undefined): Game1220SyncedState | null {

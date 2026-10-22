@@ -1,6 +1,7 @@
 import { evaluatePlayerRoll1220, type Choices1220 } from '@/lib/game-1220'
 import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * Moteur pur du 1220 en ligne — SERVEUR-AUTORITAIRE.
@@ -43,6 +44,38 @@ export type RollEntry1220 = { d12: number; d20: number; results: RollResult1220[
 
 export type Config1220 = Choices1220 & { playerId: string; name: string }
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.1220), née dans la même
+ * écriture que le lancer qui la provoque (bot-speech.ts) — les bots ne
+ * lancent jamais, ils réagissent :
+ *   • son résultat : jinx (son chiffre « boire » est sorti), bullseye (son
+ *     chiffre « donner » est sorti), gift (il distribue large), almost (un de
+ *     ses chiffres sur un dé, pas en somme) ;
+ *   • celui d'un autre : mock (un bot chambre celui qui boit).
+ * Le kind ne dit que ce que le lancer a montré : rien sur le suivant.
+ */
+export type Game1220SpeechKind = 'jinx' | 'bullseye' | 'gift' | 'almost' | 'mock'
+export type Game1220Speech = BotSpeech<Game1220SpeechKind>
+
+export const GAME_1220_SPEECH_KINDS = [
+  'jinx',
+  'bullseye',
+  'gift',
+  'almost',
+  'mock',
+] as const satisfies readonly Game1220SpeechKind[]
+
+/** Les kinds dont les phrases parlent de boire : masqués pour qui joue « Sans alcool ». */
+export const GAME_1220_DRINK_SPEECH_KINDS = ['gift', 'mock'] as const satisfies readonly Game1220SpeechKind[]
+
+/** Paroles max par bot sur une fenêtre de GAME_1220_SPEECH_WINDOW lancers ; le bavardage borne en dessous. */
+export const GAME_1220_SPEECH_CAP = 2
+/** Lancers d'une fenêtre de paroles : le plafond s'y compte, le fil n'en garde pas plus. */
+export const GAME_1220_SPEECH_WINDOW = 4
+
+/** Une parole à écrire : son auteur (un bot), son kind, le joueur qu'elle nomme. */
+export type Game1220Say = { playerId: string; kind: Game1220SpeechKind; targetId: string }
+
 export type Game1220State = TimedPhaseState & {
   version: number
   rngState: RngState
@@ -54,6 +87,15 @@ export type Game1220State = TimedPhaseState & {
   lastRoll: RollEntry1220 | null
   history: RollEntry1220[]
   rematchVotes: string[]
+  /**
+   * Lancers depuis le début (`history` est borné) : la « manche » des paroles
+   * est le lancer. Optionnel : un état sérialisé avant son arrivée part de 0.
+   */
+  rolls?: number
+  /** PUBLIC — paroles des bots des derniers lancers (GAME_1220_SPEECH_WINDOW). */
+  speech?: Game1220Speech[]
+  /** Paroles déjà élaguées du début du fil : les clés des bulles restent stables. */
+  speechBase?: number
 }
 
 export type Game1220Action =
@@ -102,7 +144,38 @@ export function createGame1220State(
     lastRoll: null,
     history: [],
     rematchVotes: [],
+    rolls: 0,
+    speech: [],
+    speechBase: 0,
   }
+}
+
+/**
+ * Les paroles `says` ajoutées au fil, sur le lancer courant. Appelé sur l'état
+ * qui SORT d'un lancer, dans la même écriture : pas de version de plus.
+ * Refuse (INVALID_SPEECH, ALREADY_SPOKE) un kind inconnu, un auteur qui n'est
+ * pas un bot à table, une cible absente ou soi-même, un plafond atteint sur la
+ * fenêtre de lancers. Le fil ne garde que cette fenêtre ; `speechBase` compte
+ * ce qui en est sorti, pour des clés de bulles stables à l'écran.
+ */
+export function withGame1220Speech(state: Game1220State, says: readonly Game1220Say[]): Game1220State {
+  if (says.length === 0) return state
+  const round = state.rolls ?? 0
+  const all = state.speech ?? []
+  let speech = all.filter((sp) => sp.round > round - GAME_1220_SPEECH_WINDOW)
+  const speechBase = (state.speechBase ?? 0) + (all.length - speech.length)
+  for (const say of says) {
+    if (!(GAME_1220_SPEECH_KINDS as readonly string[]).includes(say.kind)) throw new Game1220EngineError('INVALID_SPEECH')
+    const author = state.players.find((p) => p.id === say.playerId)
+    if (!author || !author.isBot || author.leftAt) throw new Game1220EngineError('INVALID_SPEECH')
+    const target = state.players.find((p) => p.id === say.targetId)
+    if (!target || target.id === author.id) throw new Game1220EngineError('INVALID_SPEECH')
+    if (speech.filter((sp) => sp.playerId === author.id).length >= GAME_1220_SPEECH_CAP) {
+      throw new Game1220EngineError('ALREADY_SPOKE')
+    }
+    speech = [...speech, { playerId: author.id, kind: say.kind, targetId: target.id, round }]
+  }
+  return { ...state, speech, speechBase }
 }
 
 function activePlayerIds(state: Game1220State): string[] {
@@ -205,6 +278,7 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
         rngState: rng.getState(),
         lastRoll: entry,
         history: [entry, ...state.history].slice(0, HISTORY_LIMIT),
+        rolls: (state.rolls ?? 0) + 1,
       }
     }
 

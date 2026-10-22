@@ -1339,6 +1339,72 @@
         "description": "Después verás el resumen de tragos de cada jugador.",
         "confirm": "Terminar",
         "cancel": "Seguir jugando"
+      },
+      "feedAria": "Charla de la mesa",
+      "botSay": {
+        "jinx": "¿Tú tiras y yo lo pago, {name}?",
+        "jinx_2": "{name}, tus dados {speaker, select, f {me han gafado} m {me han gafado} other {me dan mala suerte}} 😩",
+        "jinx_3": "Otra vez mi número… ¿Lo haces adrede, {name}?",
+        "bullseye": "¡Mi número! Gracias por la tirada, {name} 🎯",
+        "bullseye_2": "¡En el clavo! Tienes manos de oro, {name}.",
+        "bullseye_3": "{name}, te quiero. ¡Tira otra vez!",
+        "gift": "¡Barra libre! Acerca el vaso, {name} 🎁",
+        "gift_2": "{name}, es un regalo, con cariño 😇",
+        "gift_3": "¡Gracias, dados! {name}, a tu salud 🍻",
+        "almost": "Por un dado, {name}… qué rabia 😅",
+        "almost_2": "¡Casi! {name}, ¿lo has visto?",
+        "almost_3": "Salió mi número… a medias, {name} 🙃",
+        "mock": "¡Salud, {name}! Los dados han hablado 🍻",
+        "mock_2": "{name}, esta ronda te toca a ti 😏",
+        "mock_3": "¡A tu salud, {name}! 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "jinx": "¡Tira mejor que eso, {name}!",
+          "jinx_2": "{name}, devuélveme mis dados ya.",
+          "mock": "Bebe, {name}, ¡y rapidito!",
+          "mock_2": "De un trago, {name}. Contamos 👀"
+        },
+        "farceur": {
+          "jinx": "Los dados y yo… es complicado, {name} 🙃",
+          "jinx_2": "{name}, ¿les soplaste al revés?",
+          "mock": "¡Chin chin, {name}! Los dados te quieren 🥂",
+          "mock_2": "{name}, glu glu glu 🍻"
+        },
+        "prudent": {
+          "jinx": "A alguien le tenía que tocar, {name}.",
+          "jinx_2": "Ya me lo esperaba, {name}.",
+          "mock": "Despacio, {name}, a sorbitos.",
+          "mock_2": "Salud, {name}. Los dados no perdonan."
+        },
+        "suiveur": {
+          "jinx": "¿Por qué siempre yo, {name}? 🥺",
+          "jinx_2": "{name}, ¿tiras tú por mí?",
+          "mock": "¡Salud, {name}! Brindamos contigo 🍻",
+          "mock_2": "{name}, ¡a tu salud! (no a la mía 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Si me permiten,",
+        "gepeto": "…¡palabrita!",
+        "raoul": "Sin ánimo de ofender,",
+        "suzette": "Yo igual,",
+        "marcel": "…¡salud!",
+        "gaston": "¡Un momentito!",
+        "bernadette": "…cariño.",
+        "norbert": "Estadísticamente,",
+        "ginette": "¡Pero bueno!",
+        "roger": "…como dicen por ahí.",
+        "paulette": "…es broma. O no.",
+        "dede": "¡Me la juego!",
+        "huguette": "En mis tiempos,",
+        "keke": "…fijo.",
+        "mauricette": "Ay, ay, ay,",
+        "firmin": "…lo digo por decir.",
+        "josiane": "Entre nosotros,",
+        "lucien": "…tranqui.",
+        "germaine": "…¡y rapidito!",
+        "bricole": "…eso debería aguantar."
       }
     },
     "meta": {

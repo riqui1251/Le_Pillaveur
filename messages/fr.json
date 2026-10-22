@@ -1339,6 +1339,72 @@
         "description": "Le bilan des gorgées de chaque joueur s'affiche ensuite.",
         "confirm": "Terminer",
         "cancel": "Continuer à jouer"
+      },
+      "feedAria": "Fil de la table",
+      "botSay": {
+        "jinx": "C’est toi qui lances et c’est moi qui prends, {name} ?!",
+        "jinx_2": "{name}, tes dés {speaker, select, f {m’ont maudite} m {m’ont maudit} other {me portent la poisse}} 😩",
+        "jinx_3": "Encore mon chiffre… Tu le fais exprès, {name} ?",
+        "bullseye": "Mon chiffre ! Merci pour le lancer, {name} 🎯",
+        "bullseye_2": "Pile dessus ! T’as la main en or, {name}.",
+        "bullseye_3": "{name}, je t’adore. Relance-moi ça !",
+        "gift": "Distribution générale ! Tends ton verre, {name} 🎁",
+        "gift_2": "{name}, c’est cadeau, ça me fait plaisir 😇",
+        "gift_3": "Merci les dés ! {name}, à ta santé 🍻",
+        "almost": "À un dé près, {name}… la loose 😅",
+        "almost_2": "Presque ! {name}, t’as vu ça ?",
+        "almost_3": "Mon chiffre est sorti… mais pas en entier, {name} 🙃",
+        "mock": "Santé, {name} ! Les dés ont parlé 🍻",
+        "mock_2": "{name}, c’est ta tournée… de gorgées 😏",
+        "mock_3": "À la tienne, {name} ! 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "jinx": "Lance mieux que ça, {name} !",
+          "jinx_2": "{name}, rends-moi mes dés tout de suite.",
+          "mock": "Bois, {name}, et plus vite que ça !",
+          "mock_2": "Cul sec, {name}. On compte 👀"
+        },
+        "farceur": {
+          "jinx": "Les dés et moi, c’est compliqué, {name} 🙃",
+          "jinx_2": "{name}, t’as soufflé dessus à l’envers ?",
+          "mock": "Tchin, {name} ! Les dés t’aiment bien 🥂",
+          "mock_2": "{name}, glou glou glou 🍻"
+        },
+        "prudent": {
+          "jinx": "Ça devait tomber sur quelqu’un, {name}.",
+          "jinx_2": "Je m’y attendais un peu, {name}.",
+          "mock": "Doucement, {name}, à petites gorgées.",
+          "mock_2": "Santé, {name}. Les dés sont sans pitié."
+        },
+        "suiveur": {
+          "jinx": "Pourquoi toujours moi, {name} ? 🥺",
+          "jinx_2": "{name}, tu veux bien lancer pour moi ?",
+          "mock": "Santé, {name} ! On trinque avec toi 🍻",
+          "mock_2": "{name}, à ta santé ! (pas à la mienne 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Si je puis me permettre,",
+        "gepeto": "…véridique !",
+        "raoul": "Sans vouloir te vexer,",
+        "suzette": "Moi pareil,",
+        "marcel": "…tchin !",
+        "gaston": "Minute, papillon !",
+        "bernadette": "…mon petit.",
+        "norbert": "Statistiquement,",
+        "ginette": "Non mais oh !",
+        "roger": "…comme dirait l’autre.",
+        "paulette": "…je plaisante. Ou pas.",
+        "dede": "Banco !",
+        "huguette": "De mon temps,",
+        "keke": "…c’est carré.",
+        "mauricette": "Oh là là là là,",
+        "firmin": "…je dis ça, je dis rien.",
+        "josiane": "Entre nous,",
+        "lucien": "…tranquille.",
+        "germaine": "…et que ça saute !",
+        "bricole": "…ça devrait tenir."
       }
     },
     "meta": {

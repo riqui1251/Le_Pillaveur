@@ -1339,6 +1339,72 @@
         "description": "Each player's drink tally is shown next.",
         "confirm": "End game",
         "cancel": "Keep playing"
+      },
+      "feedAria": "Table chatter",
+      "botSay": {
+        "jinx": "You roll and I pay for it, {name}?!",
+        "jinx_2": "{name}, your dice {speaker, select, f {cursed me} m {cursed me} other {jinxed me}} 😩",
+        "jinx_3": "My number again… Doing it on purpose, {name}?",
+        "bullseye": "My number! Thanks for the roll, {name} 🎯",
+        "bullseye_2": "Spot on! You’ve got golden hands, {name}.",
+        "bullseye_3": "{name}, I love you. Roll again!",
+        "gift": "Free rounds for all! Hold out your glass, {name} 🎁",
+        "gift_2": "{name}, it’s a gift, my pleasure 😇",
+        "gift_3": "Thanks, dice! {name}, to your health 🍻",
+        "almost": "One die off, {name}… so close 😅",
+        "almost_2": "Almost! {name}, did you see that?",
+        "almost_3": "My number came up… only halfway, {name} 🙃",
+        "mock": "Cheers, {name}! The dice have spoken 🍻",
+        "mock_2": "{name}, this round’s on you 😏",
+        "mock_3": "Bottoms up, {name}! 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "jinx": "Roll better than that, {name}!",
+          "jinx_2": "{name}, give me back my dice right now.",
+          "mock": "Drink, {name}, and make it quick!",
+          "mock_2": "Bottoms up, {name}. We’re counting 👀"
+        },
+        "farceur": {
+          "jinx": "The dice and I… it’s complicated, {name} 🙃",
+          "jinx_2": "{name}, did you blow on them backwards?",
+          "mock": "Clink, {name}! The dice like you 🥂",
+          "mock_2": "{name}, glug glug glug 🍻"
+        },
+        "prudent": {
+          "jinx": "It had to land on someone, {name}.",
+          "jinx_2": "I half expected that, {name}.",
+          "mock": "Gently, {name}, small sips.",
+          "mock_2": "Cheers, {name}. The dice show no mercy."
+        },
+        "suiveur": {
+          "jinx": "Why always me, {name}? 🥺",
+          "jinx_2": "{name}, could you roll for me instead?",
+          "mock": "Cheers, {name}! We’re toasting you 🍻",
+          "mock_2": "{name}, to your health! (not mine 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "With all due respect,",
+        "gepeto": "…true story!",
+        "raoul": "No offence,",
+        "suzette": "Same here,",
+        "marcel": "…cheers!",
+        "gaston": "Hold your horses!",
+        "bernadette": "…dearie.",
+        "norbert": "Statistically,",
+        "ginette": "Excuse me?!",
+        "roger": "…as they say.",
+        "paulette": "…just kidding. Or not.",
+        "dede": "All in!",
+        "huguette": "Back in my day,",
+        "keke": "…no cap.",
+        "mauricette": "Oh dear, oh dear,",
+        "firmin": "…just saying.",
+        "josiane": "Between us,",
+        "lucien": "…no stress.",
+        "germaine": "…chop-chop!",
+        "bricole": "…that should hold."
       }
     },
     "meta": {

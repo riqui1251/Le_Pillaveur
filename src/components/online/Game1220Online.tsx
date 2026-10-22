@@ -28,6 +28,7 @@ import { OnlineEndScreen } from './OnlineEndScreen'
 import { DiceBoard } from '@/app/[locale]/games/1220/components/dice'
 import { BetsEditor, TableBets } from '@/app/[locale]/games/1220/components/bets'
 import { RollHistory, VerdictPanel, VerdictRow } from '@/app/[locale]/games/1220/components/verdict'
+import { Game1220SpeechFeed } from './game-1220/Game1220SpeechFeed'
 
 /** 1220 en ligne : jeu simultané (pas de tour). Chaque joueur règle ses
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
@@ -376,6 +377,18 @@ export function Game1220Online() {
             </VerdictPanel>
           </div>
         )}
+
+        {/* Réactions des bots au lancer affiché : sous le verdict, la barre
+            « Lancer les dés » ne bouge pas. Pendant que les dés roulent, celles
+            du lancer précédent — les nouvelles trahiraient le résultat. */}
+        <Game1220SpeechFeed
+          view={view}
+          roll={(view.rolls ?? 0) - (rolling ? 1 : 0)}
+          iconOf={iconOf}
+          meId={user.id}
+          variant="phone"
+          soft={user.ambianceMode === 'soft'}
+        />
 
         <TableBets
           open={betsOpen}

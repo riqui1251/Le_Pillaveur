@@ -12,6 +12,8 @@ import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { Game1220SpeechFeed } from '@/components/online/game-1220/Game1220SpeechFeed'
 
 /**
  * 1220 sur grand écran : jeu de paris simultané, sans tour. La vue spectateur
@@ -94,6 +96,7 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
   const tTv = useTranslations('tv')
   const format = useFormatter()
   const reduced = useReducedMotion()
+  const { mode: ambiance } = useAmbianceMode()
 
   const iconOf = (userId: string) => {
     const player = state.players.find((p) => p.id === userId)
@@ -308,6 +311,17 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
             <p className="text-4xl font-black text-cream">{t('online.anyoneRolls')}</p>
           </div>
         )}
+
+        {/* Réactions des bots au dernier lancer, entre les dés et l'historique. */}
+        <div className="flex max-h-[7rem] min-w-0 flex-1 flex-col justify-end self-stretch overflow-hidden">
+          <Game1220SpeechFeed
+            view={state}
+            roll={state.rolls ?? 0}
+            iconOf={(p) => iconOf(p.id)}
+            variant="tv"
+            soft={ambiance === 'soft'}
+          />
+        </div>
 
         <div className="ml-auto flex min-w-0 flex-col items-end gap-1.5 text-right">
           {previous.length > 0 && (

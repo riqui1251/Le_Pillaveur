@@ -1339,6 +1339,72 @@
         "description": "Poi compare il bilancio dei sorsi di ogni giocatore.",
         "confirm": "Termina",
         "cancel": "Continua a giocare"
+      },
+      "feedAria": "Chiacchiere al tavolo",
+      "botSay": {
+        "jinx": "Tu tiri e io pago, {name}?!",
+        "jinx_2": "{name}, i tuoi dadi mi {speaker, select, f {hanno stregata} m {hanno stregato} other {portano sfiga}} 😩",
+        "jinx_3": "Ancora il mio numero… Lo fai apposta, {name}?",
+        "bullseye": "Il mio numero! Grazie del lancio, {name} 🎯",
+        "bullseye_2": "Centro! Hai le mani d’oro, {name}.",
+        "bullseye_3": "{name}, ti adoro. Rilancia!",
+        "gift": "Si offre da bere! Avvicina il bicchiere, {name} 🎁",
+        "gift_2": "{name}, è un regalo, col cuore 😇",
+        "gift_3": "Grazie, dadi! {name}, alla salute 🍻",
+        "almost": "Per un dado, {name}… che rabbia 😅",
+        "almost_2": "Quasi! {name}, hai visto?",
+        "almost_3": "È uscito il mio numero… a metà, {name} 🙃",
+        "mock": "Salute, {name}! I dadi hanno parlato 🍻",
+        "mock_2": "{name}, questo giro tocca a te 😏",
+        "mock_3": "Alla tua, {name}! 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "jinx": "Tira meglio di così, {name}!",
+          "jinx_2": "{name}, ridammi subito i miei dadi.",
+          "mock": "Bevi, {name}, e alla svelta!",
+          "mock_2": "Tutto d’un fiato, {name}. Contiamo 👀"
+        },
+        "farceur": {
+          "jinx": "Io e i dadi… è complicato, {name} 🙃",
+          "jinx_2": "{name}, ci hai soffiato al contrario?",
+          "mock": "Cin cin, {name}! I dadi ti vogliono bene 🥂",
+          "mock_2": "{name}, glu glu glu 🍻"
+        },
+        "prudent": {
+          "jinx": "Doveva toccare a qualcuno, {name}.",
+          "jinx_2": "Un po’ me lo aspettavo, {name}.",
+          "mock": "Piano, {name}, a piccoli sorsi.",
+          "mock_2": "Salute, {name}. I dadi non perdonano."
+        },
+        "suiveur": {
+          "jinx": "Perché sempre io, {name}? 🥺",
+          "jinx_2": "{name}, tiri tu per me?",
+          "mock": "Salute, {name}! Brindiamo con te 🍻",
+          "mock_2": "{name}, alla tua salute! (non alla mia 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Se posso permettermi,",
+        "gepeto": "…giuro!",
+        "raoul": "Senza offesa,",
+        "suzette": "Anch’io,",
+        "marcel": "…cin cin!",
+        "gaston": "Piano, piano!",
+        "bernadette": "…tesoro.",
+        "norbert": "Statisticamente,",
+        "ginette": "Ma insomma!",
+        "roger": "…come si suol dire.",
+        "paulette": "…scherzo. O forse no.",
+        "dede": "Punto tutto!",
+        "huguette": "Ai miei tempi,",
+        "keke": "…fidati, bro.",
+        "mauricette": "Mamma mia,",
+        "firmin": "…dico così per dire.",
+        "josiane": "Detto tra noi,",
+        "lucien": "…tranquillo.",
+        "germaine": "…e sbrigatevi!",
+        "bricole": "…dovrebbe reggere."
       }
     },
     "meta": {
