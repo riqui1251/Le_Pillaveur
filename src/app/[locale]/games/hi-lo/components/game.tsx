@@ -274,6 +274,12 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     }
   }
 
+  // Quitter l'écran pendant le retournement : le minuteur appelait encore
+  // endGame après le démontage (statistiques créditées, sauvegarde effacée).
+  useEffect(() => () => {
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current)
+  }, [])
+
   // Initialiser le jeu
   const initializeGame = () => {
     // Nouvelle partie : elle a le droit d'être comptée à son tour.
