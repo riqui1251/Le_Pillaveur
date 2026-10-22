@@ -8,6 +8,7 @@ import {
   reduceTC,
   toTCClientView,
   toTCSpectatorView,
+  withTCSpeech,
   TCEngineError,
   TC_MODES,
   type TCClientView,
@@ -16,6 +17,7 @@ import {
   type TCState,
   type TeamId,
 } from './engine'
+import { tcBotSpeech } from './bot-speech'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { rngFromState } from '@/lib/petit-buveur/rng'
 
@@ -118,6 +120,24 @@ export type TCRoomActionInput =
 export type TCRoomActionResult = { ok: true; state: TCState } | { ok: false; error: string }
 
 /**
+ * Les paroles des bots jointes à un tir (bot-speech.ts), lues sur la vue
+ * SPECTATEUR qui en sort : aucun navire intact n'y figure. Écrites dans
+ * l'état du tir, même écriture. `sayRand` est à part du RNG de la partie :
+ * les paroles ne déplacent aucun tirage du jeu. Une parole refusée par le
+ * moteur ne coûte jamais le tir.
+ */
+export function withTCBotTalk(after: TCState, sayRand: () => number = Math.random): TCState {
+  const says = tcBotSpeech(toTCSpectatorView(after), sayRand)
+  if (says.length === 0) return after
+  try {
+    return withTCSpeech(after, says)
+  } catch (e) {
+    if (e instanceof TCEngineError) return after
+    throw e
+  }
+}
+
+/**
  * Applique une action de salle. Les bots ne jouent qu'UN tir à la fois via le
  * tick `bot` (déclenché par un client quand c'est le tour d'un bot) : chaque
  * tir de bot est donc un état diffusé séparément, visible par tous.
@@ -147,13 +167,13 @@ export function applyTCRoomAction(
         cell,
         bomb,
       })
-      return { ok: true, state: next }
+      return { ok: true, state: withTCBotTalk(next) }
     }
-    const next =
-      input.type === 'place'
-        ? reduceTC(state, { type: 'PLACE', playerId: userId, ships: input.ships })
-        : reduceTC(state, { type: 'FIRE', playerId: userId, cell: input.cell, bomb: input.bomb })
-    return { ok: true, state: next }
+    if (input.type === 'place') {
+      return { ok: true, state: reduceTC(state, { type: 'PLACE', playerId: userId, ships: input.ships }) }
+    }
+    const next = reduceTC(state, { type: 'FIRE', playerId: userId, cell: input.cell, bomb: input.bomb })
+    return { ok: true, state: withTCBotTalk(next) }
   } catch (e) {
     return { ok: false, error: e instanceof TCEngineError ? e.message : 'ENGINE_ERROR' }
   }

@@ -2623,7 +2623,79 @@
         "legendMine": "Tu barco",
         "playerReadySr": "flota lista",
         "playerPlacingSr": "aún coloca su flota",
-        "playerLeftSr": "salió de la partida"
+        "playerLeftSr": "salió de la partida",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "sunk": "¡Hundido! Adiós, {name} 🚢",
+          "sunk_2": "¡Un barco a pique! Lo siento, {name}.",
+          "sunk_3": "{name}, tu barco duerme con los peces 🐟",
+          "bomb": "¡Bomba! A cubierto, {name} 💣",
+          "bomb_2": "Cuidado, {name}, ¡que esto va a temblar!",
+          "bomb_3": "{name}, un regalito explosivo 🎁",
+          "hit": "¡Tocado! Agárrate, {name}.",
+          "hit_2": "¡Bum! Esto se calienta, {name} 💥",
+          "hit_3": "{name}, he encontrado algo…",
+          "miss": "Chof… Te toca, {name}.",
+          "miss_2": "¡Agua! Aprovecha, {name}.",
+          "miss_3": "Solo agua… Hazlo mejor, {name} 😤",
+          "lost": "¡Mi barco! {name}, no tienes corazón 😭",
+          "lost_2": "{name}, acabas de hundir mi favorito…",
+          "lost_3": "Adiós, mi precioso barco. Gracias, {name} 😤",
+          "ouch": "¡Uy! Me las vas a pagar, {name}.",
+          "ouch_2": "Auch… {name}, ¡podrías avisar!",
+          "ouch_3": "{name}, ¡eso escuece! 🩹",
+          "taunt": "¡Agua, {name}! ¿Disparas a las gaviotas? 🐦",
+          "taunt_2": "¡Chof! Gracias por el espectáculo, {name}.",
+          "taunt_3": "{name}, el mar es grande, ¿eh? 😏"
+        },
+        "botSayTrait": {
+          "agressif": {
+            "sunk": "¡A pique! Siguiente, {name}.",
+            "sunk_2": "Hundido limpio, {name}. Sin prisioneros.",
+            "taunt": "Lamentable, {name}. De verdad.",
+            "taunt_2": "{name}, ¿apuntas con los pies?"
+          },
+          "farceur": {
+            "sunk": "Glu glu glu… Hola, {name} 🐠",
+            "sunk_2": "¿Hola, {name}? Tu barco no contesta 📞",
+            "taunt": "¡Chof! ¿Pescando, {name}? 🎣",
+            "taunt_2": "{name}, le diste a un delfín, ¡bravo! 🐬"
+          },
+          "prudent": {
+            "sunk": "Hundido. Nada personal, {name}.",
+            "sunk_2": "Lo siento, {name}, tenía que hundirse.",
+            "taunt": "Esta vez no, {name}.",
+            "taunt_2": "Tendrás que apuntar mejor, {name}."
+          },
+          "suiveur": {
+            "sunk": "¡Hundido! ¿Lo hice bien, {name}? 😊",
+            "sunk_2": "{name}, ¡he hundido algo! 🎉",
+            "taunt": "¡Agua! Como yo antes, {name}.",
+            "taunt_2": "¡Chof! Le pasa a cualquiera, {name}."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [

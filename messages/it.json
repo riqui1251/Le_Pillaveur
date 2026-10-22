@@ -2623,7 +2623,79 @@
         "legendMine": "La tua nave",
         "playerReadySr": "flotta pronta",
         "playerPlacingSr": "sta ancora schierando la flotta",
-        "playerLeftSr": "ha lasciato la partita"
+        "playerLeftSr": "ha lasciato la partita",
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "sunk": "Affondato! Ciao ciao, {name} 🚢",
+          "sunk_2": "Una nave a picco! Scusa, {name}.",
+          "sunk_3": "{name}, la tua nave dorme coi pesci 🐟",
+          "bomb": "Bomba! Al riparo, {name} 💣",
+          "bomb_2": "Occhio, {name}, qui si trema!",
+          "bomb_3": "{name}, un regalino esplosivo 🎁",
+          "hit": "Colpito! Tieniti forte, {name}.",
+          "hit_2": "Bum! Qui si scalda, {name} 💥",
+          "hit_3": "{name}, ho trovato qualcosa…",
+          "miss": "Splash… Tocca a te, {name}.",
+          "miss_2": "Acqua! Approfittane, {name}.",
+          "miss_3": "Solo acqua… Fai di meglio, {name} 😤",
+          "lost": "La mia nave! {name}, sei senza cuore 😭",
+          "lost_2": "{name}, hai appena affondato la mia preferita…",
+          "lost_3": "Addio, mia bella nave. Grazie, {name} 😤",
+          "ouch": "Ahi! Me la pagherai, {name}.",
+          "ouch_2": "Ahia… {name}, potevi avvisare!",
+          "ouch_3": "{name}, che male! 🩹",
+          "taunt": "Acqua, {name}! Spari ai gabbiani? 🐦",
+          "taunt_2": "Splash! Grazie per lo spettacolo, {name}.",
+          "taunt_3": "{name}, il mare è grande, eh? 😏"
+        },
+        "botSayTrait": {
+          "agressif": {
+            "sunk": "A picco! Avanti il prossimo, {name}.",
+            "sunk_2": "Affondato secco, {name}. Niente prigionieri.",
+            "taunt": "Penoso, {name}. Davvero.",
+            "taunt_2": "{name}, miri con i piedi?"
+          },
+          "farceur": {
+            "sunk": "Glu glu glu… Ciao, {name} 🐠",
+            "sunk_2": "Pronto, {name}? La tua nave non risponde 📞",
+            "taunt": "Splash! Si pesca, {name}? 🎣",
+            "taunt_2": "{name}, hai colpito un delfino, complimenti 🐬"
+          },
+          "prudent": {
+            "sunk": "Affondato. Niente di personale, {name}.",
+            "sunk_2": "Mi spiace, {name}, doveva affondare.",
+            "taunt": "Non stavolta, {name}.",
+            "taunt_2": "Dovrai mirare meglio, {name}."
+          },
+          "suiveur": {
+            "sunk": "Affondato! Ho fatto bene, {name}? 😊",
+            "sunk_2": "{name}, ho affondato qualcosa! 🎉",
+            "taunt": "Acqua! Come me prima, {name}.",
+            "taunt_2": "Splash! Capita a tutti, {name}."
+          }
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
+        }
       },
       "tutorial": {
         "steps": [

@@ -2623,7 +2623,79 @@
         "legendMine": "Your ship",
         "playerReadySr": "fleet ready",
         "playerPlacingSr": "still placing their fleet",
-        "playerLeftSr": "left the game"
+        "playerLeftSr": "left the game",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "sunk": "Sunk! Bye bye, {name} 🚢",
+          "sunk_2": "One ship down! Sorry, {name}.",
+          "sunk_3": "{name}, your ship sleeps with the fishes 🐟",
+          "bomb": "Bomb! Take cover, {name} 💣",
+          "bomb_2": "Brace yourself, {name}, it’s gonna shake!",
+          "bomb_3": "{name}, a little explosive gift 🎁",
+          "hit": "Hit! Hold on tight, {name}.",
+          "hit_2": "Boom! Things are heating up, {name} 💥",
+          "hit_3": "{name}, I found something…",
+          "miss": "Splash… Your go, {name}.",
+          "miss_2": "Missed! Make the most of it, {name}.",
+          "miss_3": "Nothing but water… Do better, {name} 😤",
+          "lost": "My ship! {name}, you’re heartless 😭",
+          "lost_2": "{name}, you just sank my favourite…",
+          "lost_3": "Farewell, my lovely ship. Thanks, {name} 😤",
+          "ouch": "Ouch! You’ll pay for that, {name}.",
+          "ouch_2": "Ow… {name}, you could have warned me!",
+          "ouch_3": "{name}, that stings! 🩹",
+          "taunt": "Missed, {name}! Aiming at seagulls? 🐦",
+          "taunt_2": "Splash! Thanks for the show, {name}.",
+          "taunt_3": "{name}, the sea is big, huh? 😏"
+        },
+        "botSayTrait": {
+          "agressif": {
+            "sunk": "Down she goes! Next, {name}.",
+            "sunk_2": "Sunk clean, {name}. No prisoners.",
+            "taunt": "Pathetic, {name}. Truly.",
+            "taunt_2": "{name}, are you aiming with your feet?"
+          },
+          "farceur": {
+            "sunk": "Glug glug glug… Hello, {name} 🐠",
+            "sunk_2": "Hello {name}? Your ship isn’t answering 📞",
+            "taunt": "Splash! Gone fishing, {name}? 🎣",
+            "taunt_2": "{name}, you hit a dolphin, well done 🐬"
+          },
+          "prudent": {
+            "sunk": "Sunk. Nothing personal, {name}.",
+            "sunk_2": "Sorry, {name}, it had to go down.",
+            "taunt": "Not this time, {name}.",
+            "taunt_2": "You’ll need better aim, {name}."
+          },
+          "suiveur": {
+            "sunk": "Sunk! Did I do good, {name}? 😊",
+            "sunk_2": "{name}, I sank something! 🎉",
+            "taunt": "Missed! Like me earlier, {name}.",
+            "taunt_2": "Splash! Happens to everyone, {name}."
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

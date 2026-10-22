@@ -40,23 +40,43 @@ export type SpeechFeedItem<K extends string> = {
 /** Paroles gardées à l'écran de la TV : le début de la manche sort du champ. */
 export const TV_FEED_SIZE = 4
 
+/**
+ * Fenêtre d'un fil sans manches (Touché-Coulé, Purple, 12-20), où `round`
+ * est une fenêtre de tours ou un lancer, et où le moteur élague le début du
+ * fil en cours de partie.
+ */
+export type FeedWindow = {
+  /** Première fenêtre affichée, incluse ; par défaut `round` seule. */
+  since?: number
+  /**
+   * Paroles déjà élaguées avant `speeches[0]` : la clé d'un item reste sa
+   * position dans le fil COMPLET de la partie, donc la même bulle (et la même
+   * variante de phrase) quand le moteur retire le début du fil.
+   */
+  indexBase?: number
+}
+
 export function speechFeedItems<K extends string>(
   speeches: readonly BotSpeech<K>[],
   round: number,
   meId: string | null | undefined,
-  limit?: number
+  limit?: number,
+  { since = round, indexBase = 0 }: FeedWindow = {}
 ): SpeechFeedItem<K>[] {
   const items: SpeechFeedItem<K>[] = []
+  // Le tic se compte par manche de la parole : une fenêtre qui glisse ne le
+  // fait jamais apparaître après coup sur une bulle déjà à l'écran.
   const spoken = new Set<string>()
   speeches.forEach((speech, index) => {
-    if (speech.round !== round) return
+    if (speech.round < since || speech.round > round) return
+    const author = `${speech.round}:${speech.playerId}`
     items.push({
-      key: `${speech.playerId}-${index}`,
+      key: `${speech.playerId}-${indexBase + index}`,
       speech,
       aimsAtMe: Boolean(meId) && speech.targetId === meId,
-      firstOfAuthor: !spoken.has(speech.playerId),
+      firstOfAuthor: !spoken.has(author),
     })
-    spoken.add(speech.playerId)
+    spoken.add(author)
   })
   return limit !== undefined && items.length > limit ? items.slice(items.length - limit) : items
 }

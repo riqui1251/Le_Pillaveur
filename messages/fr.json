@@ -2623,7 +2623,79 @@
         "legendMine": "Ton bateau",
         "playerReadySr": "flotte en place",
         "playerPlacingSr": "place encore sa flotte",
-        "playerLeftSr": "a quitté la partie"
+        "playerLeftSr": "a quitté la partie",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "sunk": "Coulé ! Bye bye, {name} 🚢",
+          "sunk_2": "Et un bateau par le fond ! Désolé, {name}.",
+          "sunk_3": "{name}, ton navire dort avec les poissons 🐟",
+          "bomb": "Bombe ! Planquez-vous, {name} 💣",
+          "bomb_2": "Attention, {name}, ça va secouer !",
+          "bomb_3": "{name}, petit cadeau explosif 🎁",
+          "hit": "Touché ! Accroche-toi, {name}.",
+          "hit_2": "Boum ! Ça chauffe chez toi, {name} 💥",
+          "hit_3": "{name}, j’ai trouvé quelque chose…",
+          "miss": "Plouf… À toi, {name}.",
+          "miss_2": "Raté ! Profites-en, {name}.",
+          "miss_3": "Que de l’eau… Fais mieux, {name} 😤",
+          "lost": "Mon bateau ! {name}, t’as pas de cœur 😭",
+          "lost_2": "{name}, tu viens de couler mon chouchou…",
+          "lost_3": "Adieu, mon beau navire. Merci, {name} 😤",
+          "ouch": "Aïe ! Tu vas me le payer, {name}.",
+          "ouch_2": "Ouille… {name}, t’aurais pu prévenir !",
+          "ouch_3": "{name}, ça pique ! 🩹",
+          "taunt": "Raté, {name} ! Tu tires sur les mouettes ? 🐦",
+          "taunt_2": "Plouf ! Merci pour le spectacle, {name}.",
+          "taunt_3": "{name}, la mer est grande, hein ? 😏"
+        },
+        "botSayTrait": {
+          "agressif": {
+            "sunk": "Par le fond ! Au suivant, {name}.",
+            "sunk_2": "Coulé net, {name}. Pas de prisonniers.",
+            "taunt": "Lamentable, {name}. Vraiment.",
+            "taunt_2": "{name}, tu vises avec les pieds ?"
+          },
+          "farceur": {
+            "sunk": "Glou glou glou… Coucou, {name} 🐠",
+            "sunk_2": "Allô {name} ? Ton bateau ne répond plus 📞",
+            "taunt": "Splash ! Tu pêches, {name} ? 🎣",
+            "taunt_2": "{name}, tu as touché un dauphin, bravo 🐬"
+          },
+          "prudent": {
+            "sunk": "Coulé. Rien de personnel, {name}.",
+            "sunk_2": "Navré, {name}, il fallait bien qu’il coule.",
+            "taunt": "Pas cette fois, {name}.",
+            "taunt_2": "Il faudra mieux viser, {name}."
+          },
+          "suiveur": {
+            "sunk": "Coulé ! J’ai bien fait, {name} ? 😊",
+            "sunk_2": "{name}, j’ai coulé quelque chose ! 🎉",
+            "taunt": "Raté ! Comme moi tout à l’heure, {name}.",
+            "taunt_2": "Plouf ! Ça arrive à tout le monde, {name}."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
