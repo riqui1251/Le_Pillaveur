@@ -89,7 +89,7 @@ export type CrobardRoomActionInput =
   | { type: 'choose-word'; index: number }
   | { type: 'draw-stroke'; stroke: Stroke }
   | { type: 'clear' }
-  | { type: 'undo-stroke' }
+  | { type: 'undo-stroke'; undoId?: string }
   | { type: 'guess'; text: string }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue' }
@@ -138,7 +138,7 @@ function reduceCrobardInput(
     case 'clear':
       return reduceCrobard(state, { type: 'CLEAR', playerId: userId })
     case 'undo-stroke':
-      return reduceCrobard(state, { type: 'UNDO_STROKE', playerId: userId })
+      return reduceCrobard(state, { type: 'UNDO_STROKE', playerId: userId, undoId: input.undoId })
     case 'guess':
       return reduceCrobard(state, { type: 'GUESS', playerId: userId, text: input.text, now })
     case 'advance':

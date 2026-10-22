@@ -131,6 +131,17 @@ describe('UNDO_STROKE', () => {
     expect(undone.version).toBe(ab.version + 1)
   })
 
+  it('un renvoi du même annuler (réponse perdue) ne retire pas un deuxième trait', () => {
+    const s = make(4)
+    const a = reduceCrobard(s, { type: 'DRAW_STROKE', playerId: s.drawerId, stroke: stroke(0.1) })
+    const ab = reduceCrobard(a, { type: 'DRAW_STROKE', playerId: s.drawerId, stroke: stroke(0.2) })
+    const once = reduceCrobard(ab, { type: 'UNDO_STROKE', playerId: s.drawerId, undoId: 'geste-1' })
+    const twice = reduceCrobard(once, { type: 'UNDO_STROKE', playerId: s.drawerId, undoId: 'geste-1' })
+    expect(twice.strokes).toEqual(a.strokes)
+    const next = reduceCrobard(twice, { type: 'UNDO_STROKE', playerId: s.drawerId, undoId: 'geste-2' })
+    expect(next.strokes).toEqual([])
+  })
+
   it('réservé au dessinateur, en phase de dessin, sur une toile non vide', () => {
     const s = make(4)
     const guesser = s.players.find((p) => p.id !== s.drawerId)!.id
