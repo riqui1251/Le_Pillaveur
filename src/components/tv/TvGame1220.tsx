@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Check, Dices, Hourglass } from 'lucide-react'
@@ -17,14 +18,61 @@ import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
  * 1220 sur grand écran : jeu de paris simultané, sans tour. La vue spectateur
  * porte aussi les brouillons de la mise en place, que les téléphones ne
  * montrent qu'à leur auteur : la TV n'affiche que qui est prêt. En jeu, les
- * paris verrouillés et le dernier lancer sont publics (le téléphone les
- * affiche sans mise en scène, la TV aussi).
+ * paris verrouillés et le dernier lancer sont publics ; un lancer reçu roule
+ * d'abord, comme sur les téléphones.
  */
 
 type Game1220TvState = Game1220SyncedState & { phaseEndsAt?: number | null }
 
 type Config = NonNullable<Game1220SyncedState['configs']>[number]
 type RollResult = NonNullable<Game1220SyncedState['lastRoll']>['results'][number]
+
+/**
+ * Les téléphones font rouler les dés 700 ms avant d'afficher un lancer reçu
+ * (ROLL_MS de Game1220Online) : la TV tient le lancer précédent au moins
+ * autant, quel que soit son réglage d'animation, pour ne pas le devancer.
+ */
+export const TV_1220_ROLL_MS = 700
+
+export type Game1220RollShow = { sig: string | null; rolling: boolean }
+
+/** Signature des lancers (celle des téléphones) en phase de jeu ; null hors de cette phase. */
+export function game1220RollSig(state: Pick<Game1220SyncedState, 'phase' | 'history'>): string | null {
+  return state.phase === 'play' ? (state.history ?? []).map((h) => `${h.d12}-${h.d20}`).join(',') : null
+}
+
+/** Seul un lancer arrivé en cours de jeu roule : au montage ou au retour en jeu, le dernier tel quel. */
+export function game1220RollOnSig(show: Game1220RollShow, sig: string | null): Game1220RollShow {
+  if (sig === show.sig) return show
+  if (sig === null || show.sig === null) return { sig, rolling: false }
+  return { sig, rolling: true }
+}
+
+/** Lancer affiché et lancers précédents : tant que les dés roulent, encore ceux d'avant. */
+export function game1220ShownRolls<T>(
+  lastRoll: T | null,
+  history: readonly T[],
+  rolling: boolean
+): { roll: T | null; previous: T[]; previousCount: number } {
+  if (!rolling) return { roll: lastRoll, previous: history.slice(1, 4), previousCount: history.length - 1 }
+  return { roll: history[1] ?? null, previous: history.slice(2, 5), previousCount: Math.max(0, history.length - 2) }
+}
+
+function useGame1220Rolling(sig: string | null): boolean {
+  const [show, setShow] = useState<Game1220RollShow>({ sig, rolling: false })
+  const current = game1220RollOnSig(show, sig)
+  if (current !== show) setShow(current)
+  const { sig: currentSig, rolling } = current
+  useEffect(() => {
+    if (!rolling) return
+    const timer = setTimeout(
+      () => setShow((s) => (s.sig === currentSig ? { ...s, rolling: false } : s)),
+      TV_1220_ROLL_MS
+    )
+    return () => clearTimeout(timer)
+  }, [currentSig, rolling])
+  return rolling
+}
 
 /** Gabarit selon le nombre de joueurs : 16 au plus doivent tenir sur la toile 80×39 rem. */
 function playTier(n: number) {
@@ -102,6 +150,7 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
   }
   const parityLabel = (even: boolean) => (even ? t('pair') : t('impair'))
   const lastRoll = state.lastRoll
+  const rolling = useGame1220Rolling(game1220RollSig(state))
 
   if (state.phase === 'finished') {
     const counter = rematchCounter(room.members, state.rematchVotes ?? [], null)
@@ -179,10 +228,10 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
   const configs = state.configs ?? []
   const tier = playTier(configs.length)
   const rows = Math.max(1, Math.ceil(configs.length / tier.cols))
-  const total = lastRoll ? lastRoll.d12 + lastRoll.d20 : null
-  const totalBand = total !== null ? bandOf(total) : null
   // Trois lancers précédents : au-delà, le bandeau grandit et serre la grille des 16 joueurs.
-  const previous = state.history.slice(1, 4)
+  const { roll: shownRoll, previous, previousCount } = game1220ShownRolls(lastRoll, state.history, rolling)
+  const total = shownRoll ? shownRoll.d12 + shownRoll.d20 : null
+  const totalBand = total !== null ? bandOf(total) : null
   const leftPlayer = state.players.find((p) => !p.isBot && p.leftAt)
 
   // Emojis porteurs de sens (boit, donne, ⚡) en text-3xl minimum, le texte garde sa taille de gabarit.
@@ -217,7 +266,7 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
   }
 
   const card = (cfg: Config) => {
-    const r = lastRoll?.results.find((x) => x.playerId === cfg.playerId)
+    const r = shownRoll?.results.find((x) => x.playerId === cfg.playerId)
     const reasons = r?.giveReasons ?? []
     const partial = r?.partialNumbers ?? []
     const drinks = Boolean(r && r.drinkSips > 0)
@@ -283,7 +332,12 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-3 p-4">
       <div className="flex shrink-0 items-center gap-8 rounded-3xl border-2 border-white/10 bg-black/20 px-8 py-3">
-        {lastRoll && total !== null ? (
+        {rolling ? (
+          <div className="flex min-w-0 items-center gap-5 py-2">
+            <Dices aria-hidden className={cn('h-16 w-16 shrink-0 text-gold', !reduced && 'animate-spin')} />
+            <p className="text-4xl font-black text-cream">{t('rolling')}</p>
+          </div>
+        ) : shownRoll && total !== null ? (
           <motion.div
             // Le moteur garde 15 lancers : passé ce cap, la longueur ne bouge plus, le contenu si.
             key={state.history.map((h) => `${h.d12}-${h.d20}`).join('|')}
@@ -292,9 +346,9 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
             transition={{ duration: 0.3 }}
             className="flex shrink-0 items-center gap-5 font-black tabular-nums"
           >
-            <span className={cn('rounded-2xl border-2 border-amber-300/60 bg-amber-500/20 leading-none text-amber-100', tier.dice)}>{lastRoll.d12}</span>
+            <span className={cn('rounded-2xl border-2 border-amber-300/60 bg-amber-500/20 leading-none text-amber-100', tier.dice)}>{shownRoll.d12}</span>
             <span className="text-5xl text-white/70">+</span>
-            <span className={cn('rounded-2xl border-2 border-teal-300/60 bg-teal-500/20 leading-none text-teal-100', tier.dice)}>{lastRoll.d20}</span>
+            <span className={cn('rounded-2xl border-2 border-teal-300/60 bg-teal-500/20 leading-none text-teal-100', tier.dice)}>{shownRoll.d20}</span>
             <span className="text-5xl text-white/70">=</span>
             <span className={cn('leading-none text-white', tier.total)}>{total}</span>
             <span className="ml-2 flex flex-col gap-1 text-2xl font-bold text-gold">
@@ -313,11 +367,11 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
           {previous.length > 0 && (
             <>
               <p className="text-base font-semibold uppercase tracking-widest text-white/70">
-                {t('history', { count: state.history.length - 1 })}
+                {t('history', { count: previousCount })}
               </p>
               <div className="flex flex-wrap justify-end gap-2">
                 {previous.map((h, i) => (
-                  <span key={state.history.length - 1 - i} className="rounded-lg border-2 border-white/20 bg-white/5 px-2 text-lg font-bold tabular-nums text-white/80">
+                  <span key={previousCount - i} className="rounded-lg border-2 border-white/20 bg-white/5 px-2 text-lg font-bold tabular-nums text-white/80">
                     <span className="text-amber-200">{h.d12}</span> + <span className="text-teal-200">{h.d20}</span> ={' '}
                     <span className="text-white">{h.d12 + h.d20}</span>
                   </span>
@@ -338,7 +392,7 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
       )}
 
       <div
-        className="grid min-h-0 flex-1 gap-2"
+        className={cn('grid min-h-0 flex-1 gap-2 transition-opacity', rolling && 'opacity-50')}
         style={{
           gridTemplateColumns: `repeat(${tier.cols}, minmax(0, 1fr))`,
           gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
