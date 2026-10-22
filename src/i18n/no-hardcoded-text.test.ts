@@ -17,10 +17,13 @@ import { describe, expect, it } from 'vitest'
  * régulières sur le source : un `a > b && c < d` n'est pas du texte). Il
  * signale :
  * - tout texte littéral entre deux balises (`<p>À qui ?</p>`) ;
- * - tout attribut `placeholder`, `title` ou `aria-label` littéral (chaîne ou
- *   gabarit sans traduction) ;
+ * - tout attribut `placeholder`, `title`, `aria-label` ou `alt` littéral
+ *   (chaîne ou gabarit sans traduction) ;
  * dès qu'il contient une lettre accentuée du français ou un mot français
- * courant de MOTS_FRANCAIS.
+ * courant de MOTS_FRANCAIS. Un nom accessible (`aria-label`, `alt`) est plus
+ * strict : personne ne le voit passer à l'écran, et le lecteur d'écran le lit
+ * tel quel dans les quatre langues — tout mot y est signalé, français ou non
+ * (« +1 bot », « Capture 2 »).
  *
  * Exceptions de principe, sans entrée à tenir : les commentaires (JSX ou non)
  * ne sont pas du texte rendu, les expressions (`{t('…')}`, `{player.name}`)
@@ -32,8 +35,15 @@ import { describe, expect, it } from 'vitest'
 const SRC_DIR = resolve(fileURLToPath(new URL('../', import.meta.url)))
 const GAMES_DIR = join(SRC_DIR, 'app', '[locale]', 'games')
 
-/** Écrans relevés, hors pages de jeu : la gestion des joueurs locaux et la fiche compte. */
-const EXTRA_FILES = ['components/PlayerManager.tsx', 'components/ui/AccountInfo.tsx']
+/**
+ * Écrans relevés, hors pages de jeu : la gestion des joueurs locaux, la fiche
+ * compte et la fenêtre « Donner son avis ».
+ */
+const EXTRA_FILES = [
+  'components/PlayerManager.tsx',
+  'components/ui/AccountInfo.tsx',
+  'components/feedback/FeedbackDialog.tsx',
+]
 
 /**
  * Composants partagés, relevés en entier (sous-dossiers compris) : les écrans
@@ -42,7 +52,11 @@ const EXTRA_FILES = ['components/PlayerManager.tsx', 'components/ui/AccountInfo.
 const SHARED_DIRS = ['components/online', 'components/game', 'components/hub', 'components/tv']
 
 /** Attributs lus par le joueur ou par son lecteur d'écran. */
-const TEXT_ATTRIBUTES = new Set(['placeholder', 'title', 'aria-label'])
+const TEXT_ATTRIBUTES = new Set(['placeholder', 'title', 'aria-label', 'alt'])
+
+/** Noms accessibles : signalés dès qu'ils portent un mot, quelle qu'en soit la langue. */
+const ACCESSIBLE_NAMES = new Set(['aria-label', 'alt'])
+const ANY_WORD = /\p{L}{2,}/u
 
 /** Lettres accentuées du français (et ligatures). */
 const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüÿœæ]/i
@@ -136,13 +150,13 @@ function literalAttributeValue(initializer: ts.JsxAttribute['initializer']): str
   return null
 }
 
-/** Textes français en dur d'un source TSX. */
-function findHardcodedFrench(source: string, fileName = 'fichier.tsx'): Finding[] {
+/** Textes en dur d'un source TSX : français partout, toute langue dans un nom accessible. */
+function findHardcodedText(source: string, fileName = 'fichier.tsx'): Finding[] {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const findings: Finding[] = []
-  const report = (node: ts.Node, raw: string) => {
+  const report = (node: ts.Node, raw: string, accessibleName = false) => {
     const text = normalize(raw)
-    if (!text || !looksFrench(text)) return
+    if (!text || !(looksFrench(text) || (accessibleName && ANY_WORD.test(text)))) return
     const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
     findings.push({ line: line + 1, text })
   }
@@ -151,7 +165,7 @@ function findHardcodedFrench(source: string, fileName = 'fichier.tsx'): Finding[
       report(node, node.text)
     } else if (ts.isJsxAttribute(node) && TEXT_ATTRIBUTES.has(node.name.getText(sourceFile))) {
       const value = literalAttributeValue(node.initializer)
-      if (value !== null) report(node, value)
+      if (value !== null) report(node, value, ACCESSIBLE_NAMES.has(node.name.getText(sourceFile)))
     }
     ts.forEachChild(node, visit)
   }
@@ -160,12 +174,12 @@ function findHardcodedFrench(source: string, fileName = 'fichier.tsx'): Finding[
 }
 
 function findingsOf(relativePath: string): Finding[] {
-  return findHardcodedFrench(readFileSync(join(SRC_DIR, relativePath), 'utf8'), relativePath)
+  return findHardcodedText(readFileSync(join(SRC_DIR, relativePath), 'utf8'), relativePath)
 }
 
 const FILES = scannedFiles()
 
-describe('détecteur de texte français en dur', () => {
+describe('détecteur de texte en dur', () => {
   it('signale le texte entre balises et les attributs lus', () => {
     const source = [
       'export function Demo() {',
@@ -179,13 +193,31 @@ describe('détecteur de texte français en dur', () => {
       '  )',
       '}',
     ].join('\n')
-    expect(findHardcodedFrench(source).map((f) => f.text)).toEqual([
+    expect(findHardcodedText(source).map((f) => f.text)).toEqual([
       'Paramètres',
       'À qui ?',
       'Tous les joueurs sont gagnants.',
       'Ton pseudo online',
       'joueurs',
     ])
+  })
+
+  it('un nom accessible (aria-label, alt) est signalé dès qu’il porte un mot, même pas français', () => {
+    const source = [
+      'export function Demo({ i }: { i: number }) {',
+      '  return (',
+      '    <div title="Score">',
+      '      <button aria-label="-1 bot">−</button>',
+      '      <button aria-label="+1">+</button>',
+      '      <img src={src} alt={`Capture ${i + 1}`} />',
+      '      <img src={src} alt="" />',
+      '      <img src={src} alt={t("screenshotAlt", { index: i + 1 })} />',
+      '    </div>',
+      '  )',
+      '}',
+    ].join('\n')
+    // « Score » en title n'est pas un nom accessible : seul le français y est relevé.
+    expect(findHardcodedText(source).map((f) => f.text)).toEqual(['-1 bot', 'Capture'])
   })
 
   it('laisse passer traductions, expressions, commentaires, emoji et code', () => {
@@ -204,7 +236,7 @@ describe('détecteur de texte français en dur', () => {
       '  )',
       '}',
     ].join('\n')
-    expect(findHardcodedFrench(source)).toEqual([])
+    expect(findHardcodedText(source)).toEqual([])
   })
 })
 

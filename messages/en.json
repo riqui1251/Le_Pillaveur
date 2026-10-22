@@ -482,7 +482,9 @@
       "title": "Add bots",
       "hint": "They count toward the {min}-player minimum and take the empty seats.",
       "on": "On",
-      "off": "Off"
+      "off": "Off",
+      "remove": "Remove a bot",
+      "add": "Add a bot"
     },
     "top5Badge": "Top {rank} in this game",
     "back": "Back",
@@ -5504,6 +5506,7 @@
     "screenshots": "Screenshots (optional, max {max})",
     "addScreenshot": "Add",
     "removeScreenshot": "Delete capture",
+    "screenshotAlt": "Screenshot {index}",
     "contactEmail": "Contact email (optional)",
     "emptyMessage": "Please describe your return.",
     "imageError": "Unable to process one or more images.",

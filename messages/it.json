@@ -482,7 +482,9 @@
       "title": "Aggiungi bot",
       "hint": "Contano nel minimo di {min} giocatori e prendono i posti vuoti.",
       "on": "Attivo",
-      "off": "Disattivo"
+      "off": "Disattivo",
+      "remove": "Togli un bot",
+      "add": "Aggiungi un bot"
     },
     "top5Badge": "Top {rank} di questo gioco",
     "back": "Indietro",
@@ -5504,6 +5506,7 @@
     "screenshots": "Screenshot (facoltativi, massimo {max})",
     "addScreenshot": "Aggiungere",
     "removeScreenshot": "Elimina acquisizione",
+    "screenshotAlt": "Acquisizione {index}",
     "contactEmail": "Email di contatto (facoltativo)",
     "emptyMessage": "Descrivi il tuo reso.",
     "imageError": "Impossibile elaborare una o più immagini.",

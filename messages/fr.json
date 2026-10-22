@@ -482,7 +482,9 @@
       "title": "Ajouter des bots",
       "hint": "Ils comptent dans le minimum de {min} joueurs et prennent les places vides.",
       "on": "Activé",
-      "off": "Désactivé"
+      "off": "Désactivé",
+      "remove": "Retirer un bot",
+      "add": "Ajouter un bot"
     },
     "top5Badge": "Top {rank} de ce jeu",
     "back": "Retour",
@@ -5504,6 +5506,7 @@
     "screenshots": "Captures d'écran (optionnel, max {max})",
     "addScreenshot": "Ajouter",
     "removeScreenshot": "Supprimer la capture",
+    "screenshotAlt": "Capture {index}",
     "contactEmail": "Email de contact (optionnel)",
     "emptyMessage": "Merci de décrire votre retour.",
     "imageError": "Impossible de traiter une ou plusieurs images.",
