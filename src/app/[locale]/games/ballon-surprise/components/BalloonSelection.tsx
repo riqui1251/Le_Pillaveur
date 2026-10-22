@@ -18,6 +18,8 @@ interface BalloonSelectionProps {
 
 export default function BalloonSelection({ players, onBalloonsSelected }: BalloonSelectionProps) {
   const t = useTranslations('games.ballon-surprise.selection');
+  // L'identifiant de couleur ('red') sert aux classes Tailwind ; le joueur lit son nom traduit.
+  const tColors = useTranslations('games.ballon-surprise.colors');
   const [choices, setChoices] = useState<{ [playerId: string]: string }>({});
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(players.length > 0 ? players[0].id : null);
 
@@ -90,7 +92,7 @@ export default function BalloonSelection({ players, onBalloonsSelected }: Balloo
                       onClick={() => handleColorSelect(color)}
                       disabled={!selectedPlayerId}
                       className={`relative bg-${color}-500 hover:bg-${color}-600 text-white p-4 rounded-full aspect-square transition-opacity duration-200 group flex items-center justify-center ${!selectedPlayerId ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      aria-label={t('balloonAria', { color })}
+                      aria-label={t('balloonAria', { color: tColors(color) })}
                     >
                       {playersWithThisColor.length > 0 && (
                         <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-1">
