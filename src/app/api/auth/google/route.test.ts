@@ -95,6 +95,39 @@ beforeEach(() => {
   verifyMock.mockResolvedValue({ email: 'kevin@exemple.fr', given_name: 'Kevin' })
 })
 
+describe('POST /api/auth/google — compte à mot de passe dont l’adresse n’est pas prouvée', () => {
+  it('pré-détournement : refus neutre, aucune session, l’adresse n’est pas marquée vérifiée', async () => {
+    // Un tiers a inscrit kevin@… avec SON mot de passe, sans confirmation d'adresse.
+    database({ ...existingAccount, passwordHash: 'hash-du-tiers', emailVerified: null } as typeof existingAccount)
+
+    const res = await google()
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).code).toBe('email_taken')
+    expect(res.headers.get('set-cookie') ?? '').not.toContain('lp_session=jeton-session')
+    expect(userDb.update).not.toHaveBeenCalled()
+    expect(userDb.create).not.toHaveBeenCalled()
+  })
+
+  it('adresse déjà prouvée (« mot de passe oublié », rappel du vendredi) : la connexion Google passe', async () => {
+    database({ ...existingAccount, passwordHash: 'hash', emailVerified: new Date('2026-01-01') } as typeof existingAccount)
+
+    const res = await google()
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('set-cookie')).toContain('lp_session=jeton-session')
+  })
+
+  it('compte Google sans mot de passe : reconnexion inchangée, adresse posée vérifiée', async () => {
+    database(existingAccount)
+
+    const res = await google()
+
+    expect(res.status).toBe(200)
+    expect(userDb.update.mock.calls[0][0].data).toHaveProperty('emailVerified')
+  })
+})
+
 describe('POST /api/auth/google — ambiance', () => {
   it('création avec « Sans alcool » : le compte naît soft', async () => {
     database(null)

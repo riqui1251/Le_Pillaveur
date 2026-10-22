@@ -51,6 +51,15 @@ export const POST = withApiRoute('auth/google POST', async (request: Request) =>
     let user = await prisma.user.findUnique({ where: { email } })
     let createdNow = false
 
+    // Mot de passe posé sans preuve de l'adresse (inscription, invité
+    // pérennisé par e-mail : aucune confirmation exigée) : n'importe qui a pu
+    // créer ce compte au nom d'autrui. Y ouvrir la session Google ferait
+    // entrer le vrai titulaire dans un compte dont un tiers garde le mot de
+    // passe — et le marquerait vérifié, ce qui rouvrirait aussi la liaison
+    // Discord / Facebook / Apple. Même refus neutre que leur retour OAuth :
+    // « mot de passe oublié » prouve l'adresse (reset-password) et débloque.
+    if (user && user.passwordHash && !user.emailVerified) return apiError('email_taken', 409)
+
     if (!user) {
       await ensureServerModerationTermsLoaded()
       const displayName = await pickAvailableDisplayName(
