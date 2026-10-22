@@ -5234,7 +5234,88 @@
         },
         "tileNeutral": "neutra",
         "tileAssassin": "asesino",
-        "tileRevealed": "revelada"
+        "tileRevealed": "revelada",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "nice": "¡Bien visto, {name}! Uno más 🎯",
+          "nice_2": "{name}, ¡qué ojo! ¿Seguimos?",
+          "nice_3": "¡En el clavo, {name}!",
+          "lead": "¡Vamos por delante, {name}! 🔥",
+          "lead_2": "{name}, ¡gracias a ti vamos ganando! ¡No aflojéis!",
+          "lead_3": "¡Y zas, en cabeza! Gracias, {name} 🚀",
+          "miss": "Nada por aquí, {name}… ¡pero casi!",
+          "miss_2": "Fallo, {name}. No pasa nada, ocurre 🤷",
+          "miss_3": "{name}, ¡un transeúnte inocente! Se acabó nuestro turno…",
+          "oops": "Uy, {name}… esa era de ellos 😬",
+          "oops_2": "{name}, les acabas de hacer un regalo 🎁",
+          "oops_3": "¡Vaya! Hemos jugado para el otro equipo, {name} 🙈",
+          "thanks": "Gracias por el regalo, {name} 😘",
+          "thanks_2": "{name}, ¡te debemos una! 😇",
+          "thanks_3": "Qué amable, {name}. ¿Ahora juegas con nosotros? 😏",
+          "assassin": "{name}… era el asesino 💀",
+          "assassin_2": "¡Nooo, {name}! ¡Esa no! 😱",
+          "assassin_3": "{name}, estábamos tan cerca… Descanse en paz la partida 🪦",
+          "saved": "¡Gracias, {name}, nos regalas la victoria! 🏆",
+          "saved_2": "{name}, nunca lo olvidaremos 🙏",
+          "saved_3": "Victoria por incomparecencia gracias a ti, {name} 😂",
+          "win": "¡Hemos ganado gracias a ti, {name}! 🏆",
+          "win_2": "{name}, ¡la última palabra! ¡Menudo equipo! 🎉",
+          "win_3": "¡Campeones! Gracias, {name} 🥳",
+          "tease": "¿Ya sin ideas, {name}? 😏",
+          "tease_2": "{name} pasa… ¿miedo al asesino? 🐔",
+          "tease_3": "Gracias por dejarnos jugar, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Bien visto, {name}. Con cuidado, seguimos.",
+            "nice_2": "{name}, bonito. No tentemos a la suerte.",
+            "thanks": "Gracias, {name}. Muy amable.",
+            "thanks_2": "{name}, qué detalle… no voy a decir que no."
+          },
+          "farceur": {
+            "nice": "{name}, ¿tienes un don o has hecho trampa? 😜",
+            "nice_2": "¡Bingo, {name}! ¿Lees mentes? 🔮",
+            "thanks": "{name}, ¿hoy es mi cumpleaños? 🎁",
+            "thanks_2": "¡Gracias, {name}! Te mandaré una postal 💌"
+          },
+          "suiveur": {
+            "nice": "¡Bravo, {name}! Todos contentos, yo también 😊",
+            "nice_2": "¿{name} lo ha pillado? ¡Pues estoy {speaker, select, f {encantada} m {encantado} other {feliz}}!",
+            "thanks": "Como dice mi equipo: gracias, {name} 😇",
+            "thanks_2": "{name}, toda la mesa te da las gracias. ¡Yo también!"
+          },
+          "agressif": {
+            "nice": "¡Por fin uno bueno, {name}! ¡Sigue!",
+            "nice_2": "{name}, ¡otra! ¡Vamos a aplastarlos!",
+            "thanks": "¡Gracias, {name}! Repite cuando quieras 😈",
+            "thanks_2": "{name}, ¿en qué equipo juegas, exactamente? 😈"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…¡y olé!"
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [

@@ -5234,7 +5234,88 @@
         },
         "tileNeutral": "neutral",
         "tileAssassin": "assassin",
-        "tileRevealed": "revealed"
+        "tileRevealed": "revealed",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "nice": "Nice one, {name}! One more 🎯",
+          "nice_2": "{name}, good eye! Shall we keep going?",
+          "nice_3": "Bang on target, {name}!",
+          "lead": "We’re ahead, {name}! 🔥",
+          "lead_2": "{name}, thanks to you we’re leading! Don’t let up!",
+          "lead_3": "And just like that, we’re in front! Thanks {name} 🚀",
+          "miss": "Nothing there, {name}… but we were close!",
+          "miss_2": "Missed, {name}. No biggie, it happens 🤷",
+          "miss_3": "{name}, an innocent bystander! Our turn’s over…",
+          "oops": "Ouch, {name}… that was one of theirs 😬",
+          "oops_2": "{name}, you just gave them a present 🎁",
+          "oops_3": "Oops! We played for the other team, {name} 🙈",
+          "thanks": "Thanks for the gift, {name} 😘",
+          "thanks_2": "{name}, we owe you one! 😇",
+          "thanks_3": "So kind, {name}. Playing for us now? 😏",
+          "assassin": "{name}… that was the assassin 💀",
+          "assassin_2": "Noooo, {name}! Not that one! 😱",
+          "assassin_3": "{name}, we were so close… Rest in peace, our game 🪦",
+          "saved": "Thanks {name}, you just handed us the win! 🏆",
+          "saved_2": "{name}, we’ll never forget this 🙏",
+          "saved_3": "A win by forfeit, all thanks to you, {name} 😂",
+          "win": "We won thanks to you, {name}! 🏆",
+          "win_2": "{name}, the last word! What a team! 🎉",
+          "win_3": "Champions! Thanks {name} 🥳",
+          "tease": "Out of ideas already, {name}? 😏",
+          "tease_2": "{name} passes… scared of the assassin? 🐔",
+          "tease_3": "Thanks for letting us play, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Well spotted, {name}. Carefully now, let’s go on.",
+            "nice_2": "{name}, nice. Let’s not tempt fate.",
+            "thanks": "Thank you, {name}. Very kind of you.",
+            "thanks_2": "{name}, how nice… I won’t say no."
+          },
+          "farceur": {
+            "nice": "{name}, is that a gift or did you cheat? 😜",
+            "nice_2": "Bingo, {name}! Are you reading minds? 🔮",
+            "thanks": "{name}, is it my birthday today? 🎁",
+            "thanks_2": "Thanks {name}! I’ll send you a postcard 💌"
+          },
+          "suiveur": {
+            "nice": "Bravo {name}! Everyone’s happy, so am I 😊",
+            "nice_2": "{name} got it? Then I’m {speaker, select, f {delighted} m {delighted} other {over the moon}}!",
+            "thanks": "Like my team says: thanks, {name} 😇",
+            "thanks_2": "{name}, the whole table thanks you. Me too!"
+          },
+          "agressif": {
+            "nice": "Finally a good one, {name}! Keep going!",
+            "nice_2": "{name}, again! Let’s crush them!",
+            "thanks": "Thanks, {name}! Do it again anytime 😈",
+            "thanks_2": "{name}, which team are you on, exactly? 😈"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…ta-da!"
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

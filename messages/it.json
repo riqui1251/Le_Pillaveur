@@ -5234,7 +5234,88 @@
         },
         "tileNeutral": "neutra",
         "tileAssassin": "assassino",
-        "tileRevealed": "rivelata"
+        "tileRevealed": "rivelata",
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "nice": "Ben visto, {name}! Uno in più 🎯",
+          "nice_2": "{name}, che occhio! Andiamo avanti?",
+          "nice_3": "Centro perfetto, {name}!",
+          "lead": "Siamo in vantaggio, {name}! 🔥",
+          "lead_2": "{name}, grazie a te siamo davanti! Non molliamo!",
+          "lead_3": "E zac, in testa! Grazie {name} 🚀",
+          "miss": "A vuoto, {name}… ma c’eravamo quasi!",
+          "miss_2": "Mancato, {name}. Niente di grave, capita 🤷",
+          "miss_3": "{name}, un passante innocente! Il nostro turno è finito…",
+          "oops": "Ahi, {name}… era uno dei loro 😬",
+          "oops_2": "{name}, gli hai appena fatto un regalo 🎁",
+          "oops_3": "Ops! Abbiamo giocato per l’altra squadra, {name} 🙈",
+          "thanks": "Grazie del regalo, {name} 😘",
+          "thanks_2": "{name}, te ne dobbiamo una! 😇",
+          "thanks_3": "Troppo gentile, {name}. Ora giochi per noi? 😏",
+          "assassin": "{name}… era l’assassino 💀",
+          "assassin_2": "Nooo, {name}! Non quella! 😱",
+          "assassin_3": "{name}, eravamo così vicini… Riposi in pace la partita 🪦",
+          "saved": "Grazie {name}, ci regali la vittoria! 🏆",
+          "saved_2": "{name}, non lo dimenticheremo mai 🙏",
+          "saved_3": "Vittoria a tavolino grazie a te, {name} 😂",
+          "win": "Abbiamo vinto grazie a te, {name}! 🏆",
+          "win_2": "{name}, l’ultima parola! Che squadra! 🎉",
+          "win_3": "Campioni! Grazie {name} 🥳",
+          "tease": "Già a corto di idee, {name}? 😏",
+          "tease_2": "{name} passa… paura dell’assassino? 🐔",
+          "tease_3": "Grazie di lasciarci giocare, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Ben visto, {name}. Con prudenza, andiamo avanti.",
+            "nice_2": "{name}, bello. Non tentiamo la sorte.",
+            "thanks": "Grazie, {name}. Molto gentile.",
+            "thanks_2": "{name}, che pensiero… non dirò di no."
+          },
+          "farceur": {
+            "nice": "{name}, hai un dono o hai barato? 😜",
+            "nice_2": "Bingo, {name}! Leggi nel pensiero? 🔮",
+            "thanks": "{name}, oggi è il mio compleanno? 🎁",
+            "thanks_2": "Grazie {name}! Ti manderò una cartolina 💌"
+          },
+          "suiveur": {
+            "nice": "Bravo {name}! Sono tutti contenti, anch’io 😊",
+            "nice_2": "{name} ha indovinato? Allora sono {speaker, select, f {felicissima} m {felicissimo} other {al settimo cielo}}!",
+            "thanks": "Come dice la mia squadra: grazie, {name} 😇",
+            "thanks_2": "{name}, tutto il tavolo ti ringrazia. Anch’io!"
+          },
+          "agressif": {
+            "nice": "Finalmente uno giusto, {name}! Continua!",
+            "nice_2": "{name}, ancora! Schiacciamoli!",
+            "thanks": "Grazie, {name}! Rifallo quando vuoi 😈",
+            "thanks_2": "{name}, ma in che squadra giochi, esattamente? 😈"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…e vai!"
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
+        }
       },
       "tutorial": {
         "steps": [

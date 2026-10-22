@@ -5234,7 +5234,88 @@
         },
         "tileNeutral": "neutre",
         "tileAssassin": "assassin",
-        "tileRevealed": "révélée"
+        "tileRevealed": "révélée",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "nice": "Bien vu, {name} ! Un de plus 🎯",
+          "nice_2": "{name}, t’as l’œil ! On continue ?",
+          "nice_3": "Pile dans le mille, {name} !",
+          "lead": "On passe devant, {name} ! 🔥",
+          "lead_2": "{name}, grâce à toi on mène ! On lâche rien !",
+          "lead_3": "Et hop, en tête ! Merci {name} 🚀",
+          "miss": "Dans le vide, {name}… mais on y était presque !",
+          "miss_2": "Raté, {name}. Pas grave, ça arrive 🤷",
+          "miss_3": "{name}, un passant innocent ! La main passe…",
+          "oops": "Aïe, {name}… c’était un des leurs 😬",
+          "oops_2": "{name}, tu viens de leur faire un cadeau 🎁",
+          "oops_3": "Oups ! On a joué pour l’autre équipe, {name} 🙈",
+          "thanks": "Merci du cadeau, {name} 😘",
+          "thanks_2": "{name}, on te revaudra ça ! 😇",
+          "thanks_3": "Trop gentil, {name}. Tu joues pour nous maintenant ? 😏",
+          "assassin": "{name}… c’était l’assassin 💀",
+          "assassin_2": "Noooon, {name} ! Pas celle-là ! 😱",
+          "assassin_3": "{name}, on était si près… Paix à notre partie 🪦",
+          "saved": "Merci {name}, tu nous offres la victoire ! 🏆",
+          "saved_2": "{name}, on ne l’oubliera jamais 🙏",
+          "saved_3": "Victoire sur tapis vert grâce à toi, {name} 😂",
+          "win": "On a gagné grâce à toi, {name} ! 🏆",
+          "win_2": "{name}, le dernier mot ! Quelle équipe ! 🎉",
+          "win_3": "Champions ! Merci {name} 🥳",
+          "tease": "Déjà à court d’idées, {name} ? 😏",
+          "tease_2": "{name} passe la main… la peur de l’assassin ? 🐔",
+          "tease_3": "Merci de nous laisser jouer, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Bien vu, {name}. Prudemment, on continue.",
+            "nice_2": "{name}, joli. Ne tentons pas le diable.",
+            "thanks": "Merci, {name}. C’est très aimable.",
+            "thanks_2": "{name}, c’est gentil… je ne vais pas refuser."
+          },
+          "farceur": {
+            "nice": "{name}, t’as un don ou t’as triché ? 😜",
+            "nice_2": "Bingo, {name} ! Tu lis dans les pensées ? 🔮",
+            "thanks": "{name}, c’est ma fête aujourd’hui ? 🎁",
+            "thanks_2": "Merci {name} ! Je t’enverrai une carte postale 💌"
+          },
+          "suiveur": {
+            "nice": "Bravo {name} ! Tout le monde est content, moi aussi 😊",
+            "nice_2": "{name} a trouvé ? Alors je suis {speaker, select, f {ravie} m {ravi} other {aux anges}} !",
+            "thanks": "Comme dit mon équipe : merci, {name} 😇",
+            "thanks_2": "{name}, toute la table te remercie. Moi aussi !"
+          },
+          "agressif": {
+            "nice": "Enfin un bon, {name} ! Continue !",
+            "nice_2": "{name}, encore ! On les écrase !",
+            "thanks": "Merci, {name} ! Recommence quand tu veux 😈",
+            "thanks_2": "{name}, tu joues dans quelle équipe, au juste ? 😈"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…et hop !"
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [

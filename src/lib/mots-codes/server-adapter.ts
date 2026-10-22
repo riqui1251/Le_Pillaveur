@@ -1,6 +1,8 @@
 import {
+  addMCSpeech,
   createMCState,
   currentMCActorId,
+  mcRemainingFor,
   mcSpymasterOf,
   reduceMC,
   toMCClientView,
@@ -14,6 +16,7 @@ import { phaseKey } from '@/lib/online/phase-clock'
 import { getMCWords } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 import { maskContactDetails } from '@/lib/chat-moderation'
+import { mcBotSay, type MCSpeechEvent } from './bot-speech'
 
 /**
  * Adaptateur serveur de Mots Codés : sérialisation, mapping HTTP → actions
@@ -89,7 +92,7 @@ export function parseMCState(json: string | null): MCState | null {
   try {
     const raw = JSON.parse(json) as MCState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [], turn: raw.turn ?? 0, speech: raw.speech ?? [] }
   } catch {
     return null
   }
@@ -105,10 +108,15 @@ export type MCRoomActionInput =
 
 export type MCRoomActionResult = { ok: true; state: MCState } | { ok: false; error: string }
 
+/**
+ * `sayRand` tire les paroles des bots (bot-speech.ts) : les tests le fixent,
+ * la route garde Math.random. Il ne touche jamais le RNG du jeu.
+ */
 export function applyMCRoomAction(
   state: MCState,
   userId: string,
-  input: MCRoomActionInput
+  input: MCRoomActionInput,
+  sayRand: () => number = Math.random
 ): MCRoomActionResult {
   try {
     switch (input.type) {
@@ -131,21 +139,14 @@ export function applyMCRoomAction(
           }),
         }
       }
-      case 'guess':
-        return {
-          ok: true,
-          state: reduceMC(state, {
-            type: 'GUESS',
-            playerId: userId,
-            tile: input.tile,
-            now: Date.now(),
-          }),
-        }
-      case 'pass':
-        return {
-          ok: true,
-          state: reduceMC(state, { type: 'PASS', playerId: userId, now: Date.now() }),
-        }
+      case 'guess': {
+        const next = reduceMC(state, { type: 'GUESS', playerId: userId, tile: input.tile, now: Date.now() })
+        return { ok: true, state: withMCSpeech(next, mcSpeechEvent(state, userId, input), sayRand) }
+      }
+      case 'pass': {
+        const next = reduceMC(state, { type: 'PASS', playerId: userId, now: Date.now() })
+        return { ok: true, state: withMCSpeech(next, mcSpeechEvent(state, userId, input), sayRand) }
+      }
       case 'advance':
         return {
           ok: true,
@@ -161,6 +162,45 @@ export function applyMCRoomAction(
     }
   } catch (e) {
     if (e instanceof MCEngineError) return { ok: false, error: e.message }
+    throw e
+  }
+}
+
+// ─── Paroles des bots ────────────────────────────────────────────────────────
+
+/**
+ * Le coup auquel la table réagit : une tuile retournée ou la main passée, par
+ * un devineur HUMAIN. Ni l'indice (qui se donne au vocal), ni les coups
+ * d'office des bots, ni le temps écoulé n'appellent de réaction.
+ */
+export function mcSpeechEvent(
+  before: MCState,
+  actorId: string,
+  input: MCRoomActionInput
+): MCSpeechEvent | null {
+  const actor = before.players.find((p) => p.id === actorId)
+  if (!actor || actor.isBot || before.phase !== 'guess') return null
+  if (input.type === 'guess') {
+    const remainingBefore = { gold: mcRemainingFor(before, 'gold'), red: mcRemainingFor(before, 'red') }
+    return { type: 'guess', by: actor.id, tile: input.tile, remainingBefore }
+  }
+  if (input.type === 'pass') return { type: 'pass', by: actor.id }
+  return null
+}
+
+/**
+ * L'état après le coup, avec la réaction d'un bot s'il en a une. Le
+ * planificateur ne lit que la vue SPECTATEUR (jamais la grille de clés) ;
+ * une parole que le moteur refuserait laisse le coup intact, sans parole.
+ */
+export function withMCSpeech(after: MCState, event: MCSpeechEvent | null, sayRand: () => number): MCState {
+  if (!event) return after
+  const say = mcBotSay(toMCSpectatorView(after), event, sayRand)
+  if (!say) return after
+  try {
+    return addMCSpeech(after, say)
+  } catch (e) {
+    if (e instanceof MCEngineError) return after
     throw e
   }
 }
