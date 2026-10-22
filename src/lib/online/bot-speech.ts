@@ -1,4 +1,5 @@
-import { botTraitsFor, type BotTrait, type BotTraits } from './bot-personas'
+import { createRng } from '@/lib/petit-buveur/rng'
+import { botTraitsFor, personaForBotName, type BotTrait, type BotTraits } from './bot-personas'
 
 /**
  * SOCLE DE PAROLE DES BOTS — briques pures partagées par les jeux à débat
@@ -344,4 +345,64 @@ export function speechSuspicion<K extends string>({
     }
   }
   return score
+}
+
+/** Chance qu'un bot réagisse à une révélation, par point de bavardage (le tiers du Menteur). */
+export const REACTION_TALK_PER_BAVARDAGE = 1 / 3
+
+/** Une réaction possible à une révélation, proposée par le jeu. */
+export type ReactionCandidate<K extends string> = {
+  speech: BotSpeech<K>
+  /** Elle vise un humain : elle passe devant, c'est la sienne que le joueur vient lire. */
+  aimsHuman: boolean
+}
+
+/**
+ * RÉACTIONS DÉRIVÉES d'une révélation, pour les jeux où les bots parlent avec
+ * leur coup (Bluff, Sans Filtre, Dilemmes ; le Menteur garde sa règle) :
+ * jamais écrites dans l'état, recalculées par chaque écran depuis la vue
+ * publique et une graine tirée de la manche — tous les téléphones et la TV
+ * rendent les mêmes bulles, sans Math.random.
+ *
+ * Les candidates arrivent dans l'ordre de préférence du jeu ; celles qui
+ * visent un humain passent devant (tri stable). L'auteur doit être un bot à
+ * persona (ni humain, ni converti, qui garde son pseudo humain) à qui il
+ * reste du plafond de la manche, min(engineCap, bavardage), paroles de l'état
+ * comprises. Un seul tirage par auteur, sur sa première candidate : il parle
+ * s'il tombe sous bavardage/3. Au plus `max` réactions.
+ */
+export function seededReactions<K extends string>({
+  candidates,
+  players,
+  speech,
+  round,
+  engineCap,
+  max,
+  seed,
+}: {
+  candidates: readonly ReactionCandidate<K>[]
+  players: readonly { id: string; name: string; isBot: boolean }[]
+  /** Le fil de l'état : seule la manche `round` compte pour le plafond. */
+  speech: readonly BotSpeech<K>[]
+  round: number
+  engineCap: number
+  max: number
+  seed: string
+}): BotSpeech<K>[] {
+  const byId = new Map(players.map((p) => [p.id, p]))
+  const said = (id: string) => speech.filter((sp) => sp.round === round && sp.playerId === id).length
+  const ordered = [...candidates].sort((a, b) => Number(b.aimsHuman) - Number(a.aimsHuman))
+  const rng = createRng(seed)
+  const rolled = new Set<string>()
+  const out: BotSpeech<K>[] = []
+  for (const { speech: sp } of ordered) {
+    if (out.length >= max) break
+    if (rolled.has(sp.playerId) || sp.playerId === sp.targetId) continue
+    const author = byId.get(sp.playerId)
+    const persona = author?.isBot ? personaForBotName(author.name) : null
+    if (!persona || said(sp.playerId) >= Math.min(engineCap, persona.bavardage)) continue
+    rolled.add(sp.playerId)
+    if (rng.next() < persona.bavardage * REACTION_TALK_PER_BAVARDAGE) out.push(sp)
+  }
+  return out
 }

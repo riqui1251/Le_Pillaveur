@@ -3095,7 +3095,85 @@
         "yourVote": "Your vote",
         "yourFake": "Your bluff",
         "myFakeLabel": "Your bluff is in",
-        "quoted": "“{text}”"
+        "quoted": "“{text}”",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "proud": "My bluff is ready. You’re gonna fall for it, {name}.",
+          "proud_2": "{name}, I just wrote a masterpiece of lies 😏",
+          "proud_3": "Mine’s so believable I almost bought it myself, {name}.",
+          "chase": "Enjoy first place while it lasts, {name}.",
+          "chase_2": "{name} in the lead? Not for long 😈",
+          "chase_3": "I’m coming for you, {name}. Check your mirrors 👀",
+          "sure": "Easy. I know this one by heart, {name}.",
+          "sure_2": "{name}, spotted the real one in two seconds flat 😎",
+          "sure_3": "No-brainer. What about you, {name}, stuck?",
+          "unsure": "Total guess… Don’t judge me, {name}.",
+          "unsure_2": "{name}, they all sound real. Is that normal? 😵",
+          "unsure_3": "Torn between three… {name}, whisper me the right one!",
+          "sniff": "{name}, I can spot your style in one of these answers 😏",
+          "sniff_2": "One of these bluffs has {name} written all over it…",
+          "sniff_3": "I can smell your lie from here, {name}.",
+          "fooled": "Nice one, {name}, {speaker, select, f {you got me} m {you got me} other {well played}}!",
+          "fooled_2": "I fell for it hook, line and sinker, {name}. Respect 🎩",
+          "fooled_3": "{name}, and here I was trusting you… 😤",
+          "gotYou": "And bam, straight into the trap, {name} 😏",
+          "gotYou_2": "You voted for MY bluff, {name}? I’m flattered 😇",
+          "gotYou_3": "{name}, enjoyed my lie? It’s homemade 😋",
+          "found": "Got the real one. Did you, {name}? 😏",
+          "found_2": "{name}, should’ve voted like me!",
+          "found_3": "Way too easy, that one. Right, {name}?",
+          "bravo": "What a bluff, {name}! The whole table fell for it 👏",
+          "bravo_2": "{name}, you lie way too well. It’s scary 😅",
+          "bravo_3": "Hats off, {name}. I’m framing that one 🖼️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "proud": "I weighed every word of my bluff, {name}.",
+            "proud_2": "A quiet little bluff… You won’t see it coming, {name}.",
+            "fooled": "{speaker, select, f {Fooled like a total beginner} m {Fooled like a total beginner} other {Totally fooled}}, {name}.",
+            "fooled_2": "I should’ve been wary of you, {name}…"
+          },
+          "farceur": {
+            "proud": "My bluff? Based on a true story, {name} 🤥",
+            "proud_2": "{name}, get ready to laugh… at yourself 😜",
+            "fooled": "Bravo, {name}, you lie almost as well as I do 😜",
+            "fooled_2": "{name}, I let you win. Obviously 😇"
+          },
+          "suiveur": {
+            "proud": "Did what everyone does: a bluff, {name}!",
+            "proud_2": "{name}, my bluff looks just like yours. On purpose 😊",
+            "fooled": "I followed my gut, {name}… and your bluff 🙈",
+            "fooled_2": "{name}, your bluff looked so sure of itself…"
+          },
+          "agressif": {
+            "proud": "My bluff’s gonna eat you alive, {name}.",
+            "proud_2": "{name}, you’ll fall for it. Guaranteed 😈",
+            "fooled": "Grr… {name}, you’ll pay for that.",
+            "fooled_2": "{name}, once, fine. Twice, never 😤"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

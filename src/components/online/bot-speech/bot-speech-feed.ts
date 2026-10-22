@@ -156,6 +156,23 @@ export type LineTranslator = {
   format: (key: string, values?: Record<string, string>) => string
 }
 
+/**
+ * Tics qui trinquent (le « …tchin ! » de Marcel, « …cheers! », « …¡salud! »,
+ * « …cin cin! ») : copies conformes du Loup-Garou, ils restent au catalogue.
+ */
+export const DRINK_TIC_KEYS: readonly string[] = ['botTic.marcel']
+
+/**
+ * Le catalogue vu d'un écran réglé Sans alcool : les phrases n'ont aucun mot
+ * de boisson (vérifié par les tests de chaque catalogue), seuls les tics qui
+ * trinquent se taisent — botTic ne les trouve plus et la phrase part sans tic.
+ * Chaque écran suit SON ambiance, comme la consigne à boire de la TV.
+ */
+export function softLineTranslator(tr: LineTranslator, soft: boolean): LineTranslator {
+  if (!soft) return tr
+  return { ...tr, has: (key) => !DRINK_TIC_KEYS.includes(key) && tr.has(key) }
+}
+
 export type LineOptions = {
   /** Habiller la phrase du tic de l'auteur : sa première parole de la manche. */
   withTic?: boolean

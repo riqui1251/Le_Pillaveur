@@ -1,5 +1,34 @@
 import { describe, expect, it } from 'vitest'
-import { genreOfId } from './bot-speech-feed'
+import { DRINK_TIC_KEYS, botLine, genreOfId, softLineTranslator } from './bot-speech-feed'
+import { DRINK_WORDS, SPEECH_LOCALES, flattenSpeechCatalogue, icuTranslator, speechCatalogueOf } from './catalogue-spec'
+
+describe('softLineTranslator : un écran Sans alcool tait les tics qui trinquent', () => {
+  const tr = icuTranslator({
+    'botSay.proud': 'Mon bluff est prêt, {name}.',
+    'botTic.marcel': '…tchin !',
+    'botTic.gepeto': '…véridique !',
+  })
+  const riqui = { name: 'Riqui', isBot: false }
+
+  it('la phrase reste, sans le tic de Marcel ; les autres tics ne bougent pas', () => {
+    const soft = softLineTranslator(tr, true)
+    expect(botLine('proud', { name: 'Marcel', isBot: true }, riqui, tr)).toBe('Mon bluff est prêt, Riqui. …tchin !')
+    expect(botLine('proud', { name: 'Marcel', isBot: true }, riqui, soft)).toBe('Mon bluff est prêt, Riqui.')
+    expect(botLine('proud', { name: 'Gépéto', isBot: true }, riqui, soft)).toBe('Mon bluff est prêt, Riqui. …véridique !')
+    expect(softLineTranslator(tr, false)).toBe(tr)
+  })
+
+  it('DRINK_TIC_KEYS : exactement les tics du Loup-Garou qui parlent de boire, dans au moins une langue', () => {
+    const drinking = new Set<string>()
+    for (const locale of SPEECH_LOCALES) {
+      const flat = flattenSpeechCatalogue(speechCatalogueOf('games.loup-garou.game', locale))
+      for (const [key, text] of Object.entries(flat)) {
+        if (key.startsWith('botTic.') && DRINK_WORDS[locale].test(text)) drinking.add(key)
+      }
+    }
+    expect([...drinking].sort()).toEqual([...DRINK_TIC_KEYS].sort())
+  })
+})
 
 const TABLE = [
   { id: 'h', name: 'Riqui', isBot: false },

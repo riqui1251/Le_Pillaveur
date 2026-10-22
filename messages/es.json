@@ -3095,7 +3095,85 @@
         "yourVote": "Tu voto",
         "yourFake": "Tu farol",
         "myFakeLabel": "Tu farol se ha enviado",
-        "quoted": "«{text}»"
+        "quoted": "«{text}»",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "proud": "Mi farol ya está listo. Vas a picar, {name}.",
+          "proud_2": "{name}, acabo de escribir una obra maestra de la mentira 😏",
+          "proud_3": "El mío es tan creíble que hasta yo me lo creo, {name}.",
+          "chase": "Disfruta del primer puesto mientras dure, {name}.",
+          "chase_2": "¿{name} en cabeza? No por mucho tiempo 😈",
+          "chase_3": "Voy a por ti, {name}. Mira por el retrovisor 👀",
+          "sure": "Fácil. Esta me la sé de memoria, {name}.",
+          "sure_2": "{name}, he pillado la buena en dos segundos 😎",
+          "sure_3": "Ni me lo he pensado. ¿Y tú, {name}, en blanco?",
+          "unsure": "Voto a ciegas… No me juzgues, {name}.",
+          "unsure_2": "{name}, todas parecen verdad. ¿Es normal? 😵",
+          "unsure_3": "Dudo entre tres… {name}, ¡sóplame la buena!",
+          "sniff": "{name}, reconozco tu estilo en una de estas respuestas 😏",
+          "sniff_2": "Aquí hay un farol que huele a {name} de lejos…",
+          "sniff_3": "Tu mentira la huelo desde aquí, {name}.",
+          "fooled": "{speaker, select, f {Me la has colado} m {Me la has colado} other {Bien jugado}}, {name}. ¡Qué crack!",
+          "fooled_2": "Me lo tragué enterito, {name}. Chapó 🎩",
+          "fooled_3": "{name}, y yo que confiaba en ti… 😤",
+          "gotYou": "Y zas, de cabeza a la trampa, {name} 😏",
+          "gotYou_2": "¿Has votado MI farol, {name}? Qué halago 😇",
+          "gotYou_3": "{name}, ¿te gustó mi mentira? Es casera 😋",
+          "found": "La buena la tenía yo. ¿Y tú, {name}? 😏",
+          "found_2": "{name}, ¡haber votado como yo!",
+          "found_3": "Demasiado fácil. ¿A que sí, {name}?",
+          "bravo": "¡Menudo farol, {name}! Ha picado toda la mesa 👏",
+          "bravo_2": "{name}, mientes demasiado bien. Da miedo 😅",
+          "bravo_3": "Chapó, {name}. Ese farol lo enmarco 🖼️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "proud": "He medido cada palabra de mi farol, {name}.",
+            "proud_2": "Un farol discretito… No lo verás venir, {name}.",
+            "fooled": "{speaker, select, f {Me la colaron como a una novata} m {Me la colaron como a un novato} other {Me la colaron sin piedad}}, {name}.",
+            "fooled_2": "Tendría que haber desconfiado de ti, {name}…"
+          },
+          "farceur": {
+            "proud": "¿Mi farol? Basado en hechos reales, {name} 🤥",
+            "proud_2": "{name}, prepárate para reírte… de ti 😜",
+            "fooled": "Bravo, {name}, mientes casi tan bien como yo 😜",
+            "fooled_2": "{name}, te he dejado ganar. Obviamente 😇"
+          },
+          "suiveur": {
+            "proud": "He hecho lo que todos: un farol, {name}.",
+            "proud_2": "{name}, mi farol se parece a los vuestros. Adrede 😊",
+            "fooled": "Seguí mi instinto, {name}… y tu farol 🙈",
+            "fooled_2": "{name}, tu farol parecía tan seguro de sí mismo…"
+          },
+          "agressif": {
+            "proud": "Mi farol te va a devorar, {name}.",
+            "proud_2": "{name}, vas a picar. Garantizado 😈",
+            "fooled": "Grr… {name}, me las vas a pagar.",
+            "fooled_2": "{name}, una vez, vale. Dos, jamás 😤"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [

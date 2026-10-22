@@ -74,6 +74,14 @@ const NAME = 'Mauricette'
 const bot = (name: string) => ({ name, isBot: true })
 const RIQUI = { name: 'Riqui', isBot: false }
 
+/** Mots de boisson, langue par langue : aucune phrase n'en porte (la TV et le Sans alcool lisent les mêmes). */
+export const DRINK_WORDS: Record<string, RegExp> = {
+  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|\bsant[ée]|tchin|trinqu|ap[ée]ro/i,
+  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass/i,
+  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind/i,
+  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind/i,
+}
+
 export function describeSpeechCatalogue({
   node,
   kinds,
@@ -82,6 +90,7 @@ export function describeSpeechCatalogue({
   extraArgs = {},
   maxChars = 70,
   maxCharsWithExtraArgs = maxChars,
+  sober = false,
 }: {
   /** Namespace du jeu : `games.<jeu>.game`. */
   node: string
@@ -97,6 +106,13 @@ export function describeSpeechCatalogue({
   maxChars?: number
   /** Longueur max d'une phrase qui lit un argument de `extraArgs` (l'indice cité allonge la bulle). */
   maxCharsWithExtraArgs?: number
+  /**
+   * Jeu joué aussi Sans alcool, où les bots parlent avec leur coup (Bluff,
+   * Sans Filtre, Dilemmes) : ni mot de boisson ni chiffre dans les phrases,
+   * pour tout couple de genres, et des tics copies conformes du Loup-Garou —
+   * c'est le fil qui tait ceux qui trinquent (softLineTranslator).
+   */
+  sober?: boolean
 }): void {
   const catalogues = SPEECH_LOCALES.map((locale) => [locale, speechCatalogueOf(node, locale)] as const)
   const sayKeys = (game: SpeechCatalogue) =>
@@ -212,6 +228,30 @@ export function describeSpeechCatalogue({
             }
           }
         }
+      }
+    })
+
+    if (!sober) return
+
+    it('Sans alcool : ni mot de boisson ni chiffre dans les phrases (tics exclus), pour tout couple de genres', () => {
+      for (const [locale, game] of catalogues) {
+        const flat = flattenSpeechCatalogue(game)
+        for (const key of sayKeys(game)) {
+          expect(flat[key], `${locale}.${key}`).not.toMatch(/\d/)
+          const format = new IntlMessageFormat(flat[key], locale)
+          for (const speaker of GENRES) {
+            for (const target of GENRES) {
+              const line = String(format.format({ ...extraArgs, name: NAME, speaker, target }))
+              expect(line, `${locale}.${key} : ${line}`).not.toMatch(DRINK_WORDS[locale])
+            }
+          }
+        }
+      }
+    })
+
+    it('les 20 tics sont ceux du Loup-Garou, mot pour mot, dans chaque langue', () => {
+      for (const [locale, game] of catalogues) {
+        expect(game.botTic, locale).toEqual(speechCatalogueOf('games.loup-garou.game', locale).botTic)
       }
     })
   })

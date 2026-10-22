@@ -3095,7 +3095,85 @@
         "yourVote": "Ton vote",
         "yourFake": "Ton bluff",
         "myFakeLabel": "Ton bluff est envoyé",
-        "quoted": "« {text} »"
+        "quoted": "« {text} »",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "proud": "Mon bluff est prêt. Tu vas tomber dedans, {name}.",
+          "proud_2": "{name}, je viens d’écrire un chef-d’œuvre de mensonge 😏",
+          "proud_3": "Le mien est si crédible que j’y crois moi-même, {name}.",
+          "chase": "Profite bien de ta première place, {name}. Ça va pas durer.",
+          "chase_2": "{name} en tête ? Plus pour longtemps 😈",
+          "chase_3": "J’arrive, {name}. Regarde derrière toi 👀",
+          "sure": "Facile. Celle-là, je la connais par cœur, {name}.",
+          "sure_2": "{name}, j’ai trouvé la vraie en deux secondes 😎",
+          "sure_3": "Même pas besoin de réfléchir. Et toi, {name}, tu sèches ?",
+          "unsure": "Je vote au pif… Ne me juge pas, {name}.",
+          "unsure_2": "{name}, elles ont toutes l’air vraies, c’est normal ? 😵",
+          "unsure_3": "J’hésite entre trois… {name}, souffle-moi la bonne !",
+          "sniff": "{name}, je reconnais ta plume dans une de ces réponses 😏",
+          "sniff_2": "Il y a un bluff qui sent le {name} à plein nez…",
+          "sniff_3": "Ton mensonge, je le flaire d’ici, {name}.",
+          "fooled": "Bien joué, {name}, {speaker, select, f {tu m’as eue} m {tu m’as eu} other {bien vu}} !",
+          "fooled_2": "J’y ai cru dur comme fer, {name}. Chapeau 🎩",
+          "fooled_3": "{name}, et moi qui te faisais confiance… 😤",
+          "gotYou": "Et hop, dans le panneau, {name} 😏",
+          "gotYou_2": "Tu as voté pour MON bluff, {name} ? Merci du compliment 😇",
+          "gotYou_3": "{name}, il t’a plu, mon mensonge ? C’est du fait maison 😋",
+          "found": "La vraie, je l’avais. Et toi, {name} ? 😏",
+          "found_2": "{name}, fallait voter comme moi !",
+          "found_3": "Trop facile, celle-là. Hein, {name} ?",
+          "bravo": "Quel bluff, {name} ! Toute la table est tombée dedans 👏",
+          "bravo_2": "{name}, tu mens trop bien, ça fait peur 😅",
+          "bravo_3": "Chapeau, {name}. Celui-là, je l’encadre 🖼️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "proud": "J’ai pesé chaque mot de mon bluff, {name}.",
+            "proud_2": "Un petit bluff tout discret… Tu n’y verras que du feu, {name}.",
+            "fooled": "{speaker, select, f {Je me suis fait avoir comme une débutante} m {Je me suis fait avoir comme un débutant} other {Je me suis fait avoir}}, {name}.",
+            "fooled_2": "J’aurais dû me méfier de toi, {name}…"
+          },
+          "farceur": {
+            "proud": "Mon bluff ? Inspiré d’une histoire vraie, {name} 🤥",
+            "proud_2": "{name}, prépare-toi à rire jaune 😜",
+            "fooled": "Bravo, {name}, tu mens presque aussi bien que moi 😜",
+            "fooled_2": "{name}, je t’ai laissé gagner. Évidemment 😇"
+          },
+          "suiveur": {
+            "proud": "J’ai fait comme tout le monde : un bluff, {name} !",
+            "proud_2": "{name}, mon bluff ressemble aux vôtres. C’est fait exprès 😊",
+            "fooled": "J’ai suivi mon instinct, {name}… et ton bluff 🙈",
+            "fooled_2": "{name}, ton bluff avait l’air si sûr de lui…"
+          },
+          "agressif": {
+            "proud": "Mon bluff va te manger tout cru, {name}.",
+            "proud_2": "{name}, tu vas tomber dedans. Garanti 😈",
+            "fooled": "Grr… {name}, tu vas me le payer.",
+            "fooled_2": "{name}, une fois, passe encore. Deux fois, jamais 😤"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
