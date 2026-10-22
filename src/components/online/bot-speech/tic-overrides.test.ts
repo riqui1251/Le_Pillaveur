@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { botLine, type LineTranslator } from './bot-speech-feed'
+import { ambianceLineTranslator, botLine, type LineTranslator } from './bot-speech-feed'
 import { ticOverrides } from './tic-overrides'
 
 const CATALOGUE: Record<string, string> = {
   'botSay.cheer': 'Bravo, {name} !',
   'botSay.cheer_2': 'Bien vu, {name} !',
   'botTic.marcel': '…tchin !',
-  'botTicSoft.marcel': '…et hop !',
   'botTic.gaston': 'Minute, papillon !',
   'botTicAlt.gaston': 'Minute, la jeunesse !',
   'botTic.raoul': 'Sans vouloir te vexer,',
@@ -21,19 +20,22 @@ const RAOUL = { name: 'Raoul', isBot: true }
 const RIQUI = { name: 'Riqui', isBot: false }
 
 describe('ticOverrides', () => {
-  it('ambiance soft : le tic qui trinque cède la place à sa variante sans alcool, et seulement en soft', () => {
-    expect(botLine('cheer', MARCEL, RIQUI, ticOverrides(flat, true))).toBe('Bravo, Riqui ! …et hop !')
-    expect(botLine('cheer', MARCEL, RIQUI, ticOverrides(flat, false))).toBe('Bravo, Riqui ! …tchin !')
-  })
-
   it('un tic retouché pour le jeu l’est toujours, soft ou pas', () => {
     for (const soft of [true, false]) {
-      expect(botLine('cheer', GASTON, RIQUI, ticOverrides(flat, soft))).toBe('Minute, la jeunesse ! Bravo, Riqui !')
+      const tr = ambianceLineTranslator(ticOverrides(flat), soft)
+      expect(botLine('cheer', GASTON, RIQUI, tr)).toBe('Minute, la jeunesse ! Bravo, Riqui !')
     }
   })
 
+  it('composé avec l’ambiance : le tic qui trinque se tait en Sans alcool, et seulement là', () => {
+    expect(botLine('cheer', MARCEL, RIQUI, ambianceLineTranslator(ticOverrides(flat), true))).toBe('Bravo, Riqui !')
+    expect(botLine('cheer', MARCEL, RIQUI, ambianceLineTranslator(ticOverrides(flat), false))).toBe(
+      'Bravo, Riqui ! …tchin !'
+    )
+  })
+
   it('un tic sans variante et les phrases passent sans détour', () => {
-    const tr = ticOverrides(flat, true)
+    const tr = ticOverrides(flat)
     expect(botLine('cheer', RAOUL, RIQUI, tr)).toBe('Sans vouloir te vexer, bravo, Riqui !')
     expect(tr.format('botSay.cheer_2', { name: 'Riqui' })).toBe('Bien vu, Riqui !')
   })

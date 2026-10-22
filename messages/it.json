@@ -3705,9 +3705,6 @@
             "jinx_2": "Trema, {name}. Il cicalino sono io."
           }
         },
-        "botTicSoft": {
-          "marcel": "…e vai!"
-        },
         "botTic": {
           "barnabe": "Se posso permettermi,",
           "gepeto": "…giuro!",
@@ -3869,9 +3866,6 @@
             "found": "Era ora, {name}!",
             "found_2": "{name} ha indovinato. Va be’. Avanti!"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…e vai!"
         },
         "botTicAlt": {
           "gaston": "Piano, piano!"
@@ -5576,9 +5570,6 @@
             "thanks": "Grazie, {name}! Rifallo quando vuoi 😈",
             "thanks_2": "{name}, ma in che squadra giochi, esattamente? 😈"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…e vai!"
         },
         "botTic": {
           "barnabe": "Se posso permettermi,",

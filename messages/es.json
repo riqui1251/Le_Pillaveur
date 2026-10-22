@@ -3705,9 +3705,6 @@
             "jinx_2": "Tiembla, {name}. El silbato soy yo."
           }
         },
-        "botTicSoft": {
-          "marcel": "…¡y olé!"
-        },
         "botTic": {
           "barnabe": "Si me permiten,",
           "gepeto": "…¡palabrita!",
@@ -3869,9 +3866,6 @@
             "found": "¡Ya era hora, {name}!",
             "found_2": "{name} lo ha pillado. Vale. ¡Siguiente!"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…¡y olé!"
         },
         "botTicAlt": {
           "gaston": "¡Un momentito!"
@@ -5576,9 +5570,6 @@
             "thanks": "¡Gracias, {name}! Repite cuando quieras 😈",
             "thanks_2": "{name}, ¿en qué equipo juegas, exactamente? 😈"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…¡y olé!"
         },
         "botTic": {
           "barnabe": "Si me permiten,",

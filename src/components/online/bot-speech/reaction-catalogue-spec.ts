@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 // Le moteur ICU de next-intl et son parseur : ce qui se lit ici se rend pareil à l'écran.
 import { IntlMessageFormat } from 'intl-messageformat'
 import { parse, TYPE, type MessageFormatElement } from '@formatjs/icu-messageformat-parser'
+import { DRINK_TIC_KEYS } from './bot-speech-feed'
 import {
+  DRINK_WORDS,
   SPEECH_LOCALES,
   describeSpeechCatalogue,
   flattenSpeechCatalogue,
@@ -17,21 +19,16 @@ import {
  * langue par langue :
  *   • aucune phrase ne parle de boire, ni n'écrit un chiffre : la TV comme un
  *     téléphone en ambiance « Sans alcool » lisent les mêmes bulles ;
- *   • les tics sont ceux du Loup-Garou, mot pour mot ; un tic qui trinque
- *     (« …tchin ! ») a sa variante `botTicSoft`, lue en ambiance soft, et un
- *     tic retouché pour le jeu (`botTicAlt`) garde la ponctuation finale de
- *     l'original (tic-overrides.ts), les deux sans boisson ;
+ *   • les tics sont ceux du Loup-Garou, mot pour mot ; ceux qui trinquent
+ *     (« …tchin ! ») se taisent en ambiance soft (DRINK_TIC_KEYS), et un tic
+ *     retouché pour le jeu (`botTicAlt`) garde la ponctuation finale de
+ *     l'original (tic-overrides.ts), sans boisson ;
  *   • les phrases ne lisent que `name`, `speaker` et `target` : aucun argument
  *     ne peut y glisser le mot à deviner ni une case de la grille.
  */
 
-/** Les mots de la boisson ; « santé » seul, pas le « plaisante » du tic de Paulette. */
-export const DRINK: Record<string, RegExp> = {
-  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|\bsant[ée](?![a-z])|tchin|trinqu|ap[ée]ro/i,
-  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass/i,
-  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind/i,
-  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind/i,
-}
+/** Les mots de la boisson, communs à tous les catalogues (catalogue-spec). */
+const DRINK = DRINK_WORDS
 
 const GENRES = ['f', 'm', 'other'] as const
 const ARGS = ['name', 'speaker', 'target']
@@ -51,8 +48,6 @@ function argNames(elements: MessageFormatElement[], acc = new Set<string>()): Se
 }
 
 type ReactionCatalogue = SpeechCatalogue & {
-  /** Tics retouchés en ambiance « Sans alcool » (tic-overrides.ts). */
-  botTicSoft?: Record<string, string>
   /** Tics retouchés pour ce jeu, toujours (un mot de la pioche dans le tic). */
   botTicAlt?: Record<string, string>
   feedAria?: string
@@ -95,7 +90,6 @@ export function describeNoSecretWords(node: string, secrets: (locale: string) =>
       }
       // Les tics tels que la bulle les montre : retouchés pour le jeu, puis en ambiance soft.
       for (const [key, tic] of Object.entries({ ...game.botTic, ...game.botTicAlt })) lines.push([`botTic.${key}`, tic])
-      for (const [key, tic] of Object.entries(game.botTicSoft ?? {})) lines.push([`botTicSoft.${key}`, tic])
       const banned = [...new Set(secrets(locale).map(wordsOf))].filter((w) => w.trim().length > 0)
       const hits: string[] = []
       for (const [key, line] of lines) {
@@ -147,16 +141,15 @@ export function describeReactionCatalogue({
       }
     })
 
-    it('les 20 tics du Loup-Garou, mot pour mot ; ceux qui trinquent ont leur variante sans alcool', () => {
+    it('les 20 tics du Loup-Garou, mot pour mot ; ceux qui trinquent sont ceux que le fil tait en Sans alcool', () => {
       expect(game.botTic).toEqual(speechCatalogueOf('games.loup-garou.game', locale).botTic)
-      const soft = game.botTicSoft ?? {}
       const alt = game.botTicAlt ?? {}
       const effective = { ...game.botTic, ...alt }
       for (const [key, tic] of Object.entries(effective)) {
-        if (DRINK[locale].test(tic)) expect(soft[key], `${key} : ${tic}`).toBeTruthy()
+        if (DRINK[locale].test(tic)) expect(DRINK_TIC_KEYS, `${key} : ${tic}`).toContain(key)
       }
       expect(new Set(Object.values(effective)).size).toBe(Object.keys(game.botTic).length)
-      for (const [key, tic] of [...Object.entries(soft), ...Object.entries(alt)]) {
+      for (const [key, tic] of Object.entries(alt)) {
         expect(game.botTic, key).toHaveProperty(key)
         expect(tic, key).not.toMatch(DRINK[locale])
         expect(tic, key).not.toContain('{')

@@ -72,7 +72,7 @@ describe('CrobardSpeechFeed', () => {
       const html = render([sp('g', 'found', 'h'), sp('m', 'found', 'h')], { locale })
       expect(html, locale).toContain(g.botTicAlt.gaston)
       expect(html, locale).not.toContain('papillon')
-      expect(render([sp('m', 'go', 'h')], { locale, soft: true }), locale).toContain(g.botTicSoft.marcel)
+      expect(render([sp('m', 'go', 'h')], { locale }), locale).toContain(g.botTic.marcel)
       expect(render([sp('m', 'go', 'h')], { locale, soft: true }), locale).not.toContain(g.botTic.marcel)
     }
   })

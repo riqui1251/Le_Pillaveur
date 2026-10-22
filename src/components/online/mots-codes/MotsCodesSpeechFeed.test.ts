@@ -14,7 +14,7 @@ import { MotsCodesSpeechFeed } from './MotsCodesSpeechFeed'
 const LOCALES = ['fr', 'en', 'es', 'it'] as const
 const catalogue = (locale: string): AbstractIntlMessages =>
   JSON.parse(readFileSync(new URL(`../../../../messages/${locale}.json`, import.meta.url), 'utf8'))
-type Game = { feedAria: string; botTic: Record<string, string>; botTicSoft: Record<string, string> }
+type Game = { feedAria: string; botTic: Record<string, string> }
 const game = (locale: string) =>
   (catalogue(locale) as unknown as { games: { 'mots-codes': { game: Game } } }).games['mots-codes'].game
 
@@ -69,11 +69,11 @@ describe('MotsCodesSpeechFeed', () => {
 
   it('ambiance « Sans alcool » : Marcel ne trinque plus', () => {
     for (const locale of LOCALES) {
-      const { botTic, botTicSoft } = game(locale)
+      const { botTic } = game(locale)
       expect(render([sp('m', 'thanks', 'h')], { locale }), locale).toContain(botTic.marcel)
       const soft = render([sp('m', 'thanks', 'h')], { locale, soft: true })
-      expect(soft, locale).toContain(botTicSoft.marcel)
       expect(soft, locale).not.toContain(botTic.marcel)
+      expect(soft.match(/<li/g), locale).toHaveLength(1)
     }
   })
 

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import type { MCClientView } from '@/lib/mots-codes/engine'
 import { BotSpeechFeed, type FeedPlayer } from '../bot-speech/BotSpeechFeed'
-import type { LineTranslator } from '../bot-speech/bot-speech-feed'
+import { ambianceLineTranslator, type LineTranslator } from '../bot-speech/bot-speech-feed'
 import { ticOverrides } from '../bot-speech/tic-overrides'
 
 /**
@@ -13,7 +13,7 @@ import { ticOverrides } from '../bot-speech/tic-overrides'
  * namespace littéral, comme l'exige le relevé des tranches de messages. La
  * « manche » des paroles est le tour d'équipe (`turn`). Les bulles ne
  * portent que des kinds et des noms : rien de la grille de clés. En ambiance
- * « Sans alcool », le tic qui trinque prend sa variante soft.
+ * « Sans alcool », le tic qui trinque se tait (ambianceLineTranslator).
  */
 export function MotsCodesSpeechFeed({
   view,
@@ -32,8 +32,8 @@ export function MotsCodesSpeechFeed({
 }) {
   const t = useTranslations('games.mots-codes.game')
   const { mode } = useAmbianceMode()
-  const tr: LineTranslator = ticOverrides(
-    { has: (key) => t.has(key), format: (key, values) => t(key, values) },
+  const tr: LineTranslator = ambianceLineTranslator(
+    ticOverrides({ has: (key) => t.has(key), format: (key, values) => t(key, values) }),
     soft ?? mode === 'soft'
   )
   return (

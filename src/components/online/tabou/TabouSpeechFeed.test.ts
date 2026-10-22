@@ -71,14 +71,14 @@ describe('TabouSpeechFeed', () => {
     }
   })
 
-  it('ambiance « Sans alcool » : Marcel ne trinque plus, son tic prend sa variante soft', () => {
+  it('ambiance « Sans alcool » : Marcel ne trinque plus, sa phrase reste', () => {
     for (const locale of LOCALES) {
-      const { botTic, botTicSoft } = game(locale) as Record<string, Record<string, string>>
+      const { botTic } = game(locale) as Record<string, Record<string, string>>
       const normal = render([sp('m', 'jinx', 'h')], { locale })
       const soft = render([sp('m', 'jinx', 'h')], { locale, soft: true })
       expect(normal, locale).toContain(botTic.marcel)
       expect(soft, locale).not.toContain(botTic.marcel)
-      expect(soft, locale).toContain(botTicSoft.marcel)
+      expect(soft.match(/<li/g), locale).toHaveLength(1)
     }
   })
 

@@ -3705,9 +3705,6 @@
             "jinx_2": "Tremble, {name}. I am the buzzer."
           }
         },
-        "botTicSoft": {
-          "marcel": "…ta-da!"
-        },
         "botTic": {
           "barnabe": "With all due respect,",
           "gepeto": "…true story!",
@@ -3869,9 +3866,6 @@
             "found": "About time, {name}!",
             "found_2": "{name} got it. Fine. Next!"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…ta-da!"
         },
         "botTicAlt": {
           "gaston": "Hold your horses!"
@@ -5576,9 +5570,6 @@
             "thanks": "Thanks, {name}! Do it again anytime 😈",
             "thanks_2": "{name}, which team are you on, exactly? 😈"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…ta-da!"
         },
         "botTic": {
           "barnabe": "With all due respect,",

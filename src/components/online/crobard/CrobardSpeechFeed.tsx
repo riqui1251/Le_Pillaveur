@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import type { CrobardClientView } from '@/lib/crobard/engine'
 import { BotSpeechFeed, type FeedPlayer } from '../bot-speech/BotSpeechFeed'
-import type { LineTranslator } from '../bot-speech/bot-speech-feed'
+import { ambianceLineTranslator, type LineTranslator } from '../bot-speech/bot-speech-feed'
 import { ticOverrides } from '../bot-speech/tic-overrides'
 
 /**
@@ -14,7 +14,7 @@ import { ticOverrides } from '../bot-speech/tic-overrides'
  * portent que des kinds et des noms : rien du mot dessiné ne peut s'y lire,
  * et aucun texte du catalogue, tics retouchés compris (tic-overrides.ts), ne
  * contient un mot de la pioche. En ambiance « Sans alcool », le tic qui
- * trinque prend sa variante soft.
+ * trinque se tait (ambianceLineTranslator).
  */
 export function CrobardSpeechFeed({
   view,
@@ -33,8 +33,8 @@ export function CrobardSpeechFeed({
 }) {
   const t = useTranslations('games.crobard.game')
   const { mode } = useAmbianceMode()
-  const tr: LineTranslator = ticOverrides(
-    { has: (key) => t.has(key), format: (key, values) => t(key, values) },
+  const tr: LineTranslator = ambianceLineTranslator(
+    ticOverrides({ has: (key) => t.has(key), format: (key, values) => t(key, values) }),
     soft ?? mode === 'soft'
   )
   return (

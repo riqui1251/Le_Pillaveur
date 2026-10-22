@@ -3705,9 +3705,6 @@
             "jinx_2": "Tremble, {name}. Le buzzer, c’est moi."
           }
         },
-        "botTicSoft": {
-          "marcel": "…et hop !"
-        },
         "botTic": {
           "barnabe": "Si je puis me permettre,",
           "gepeto": "…véridique !",
@@ -3869,9 +3866,6 @@
             "found": "Pas trop tôt, {name} !",
             "found_2": "{name} a trouvé. Bon. Au suivant !"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…et hop !"
         },
         "botTicAlt": {
           "gaston": "Minute, la jeunesse !"
@@ -5576,9 +5570,6 @@
             "thanks": "Merci, {name} ! Recommence quand tu veux 😈",
             "thanks_2": "{name}, tu joues dans quelle équipe, au juste ? 😈"
           }
-        },
-        "botTicSoft": {
-          "marcel": "…et hop !"
         },
         "botTic": {
           "barnabe": "Si je puis me permettre,",
