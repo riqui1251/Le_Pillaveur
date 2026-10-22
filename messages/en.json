@@ -1341,6 +1341,72 @@
         "description": "Each player's drink tally is shown next.",
         "confirm": "End game",
         "cancel": "Keep playing"
+      },
+      "feedAria": "Table chatter",
+      "botSay": {
+        "jinx": "You roll and I pay for it, {name}?!",
+        "jinx_2": "{name}, your dice {speaker, select, f {cursed me} m {cursed me} other {jinxed me}} 😩",
+        "jinx_3": "My number again… Doing it on purpose, {name}?",
+        "bullseye": "My number! Thanks for the roll, {name} 🎯",
+        "bullseye_2": "Spot on! You’ve got golden hands, {name}.",
+        "bullseye_3": "{name}, I love you. Roll again!",
+        "gift": "Free rounds for all! Hold out your glass, {name} 🎁",
+        "gift_2": "{name}, it’s a gift, my pleasure 😇",
+        "gift_3": "Thanks, dice! {name}, to your health 🍻",
+        "almost": "One die off, {name}… so close 😅",
+        "almost_2": "Almost! {name}, did you see that?",
+        "almost_3": "My number came up… only halfway, {name} 🙃",
+        "mock": "Cheers, {name}! The dice have spoken 🍻",
+        "mock_2": "{name}, this round’s on you 😏",
+        "mock_3": "Bottoms up, {name}! 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "jinx": "Roll better than that, {name}!",
+          "jinx_2": "{name}, give me back my dice right now.",
+          "mock": "Drink, {name}, and make it quick!",
+          "mock_2": "Bottoms up, {name}. We’re counting 👀"
+        },
+        "farceur": {
+          "jinx": "The dice and I… it’s complicated, {name} 🙃",
+          "jinx_2": "{name}, did you blow on them backwards?",
+          "mock": "Clink, {name}! The dice like you 🥂",
+          "mock_2": "{name}, glug glug glug 🍻"
+        },
+        "prudent": {
+          "jinx": "It had to land on someone, {name}.",
+          "jinx_2": "I half expected that, {name}.",
+          "mock": "Gently, {name}, small sips.",
+          "mock_2": "Cheers, {name}. The dice show no mercy."
+        },
+        "suiveur": {
+          "jinx": "Why always me, {name}? 🥺",
+          "jinx_2": "{name}, could you roll for me instead?",
+          "mock": "Cheers, {name}! We’re toasting you 🍻",
+          "mock_2": "{name}, to your health! (not mine 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "With all due respect,",
+        "gepeto": "…true story!",
+        "raoul": "No offence,",
+        "suzette": "Same here,",
+        "marcel": "…cheers!",
+        "gaston": "Hold your horses!",
+        "bernadette": "…dearie.",
+        "norbert": "Statistically,",
+        "ginette": "Excuse me?!",
+        "roger": "…as they say.",
+        "paulette": "…just kidding. Or not.",
+        "dede": "All in!",
+        "huguette": "Back in my day,",
+        "keke": "…no cap.",
+        "mauricette": "Oh dear, oh dear,",
+        "firmin": "…just saying.",
+        "josiane": "Between us,",
+        "lucien": "…no stress.",
+        "germaine": "…chop-chop!",
+        "bricole": "…that should hold."
       }
     },
     "meta": {
@@ -1658,6 +1724,72 @@
         "waiting": "{name} is deciding: keep going or pass?",
         "hint": "Nice! Bet again or pass it on.",
         "continueSelf": "Bet again"
+      },
+      "feedAria": "Table chatter",
+      "botSay": {
+        "panache": "Big bet, and it’s in! Your turn to sweat, {name} 😎",
+        "panache_2": "Nothing ventured, nothing gained, {name}!",
+        "panache_3": "{name}, watch and take notes 😏",
+        "dare": "I’m going on! The pot doesn’t scare me, {name}.",
+        "dare_2": "One more! Bet I can do it, {name}?",
+        "dare_3": "{name}, fortune favours the bold 🍀",
+        "handOff": "A gift, {name}! It’s red hot 🔥",
+        "handOff_2": "Hot potato’s yours, {name} 🥔",
+        "handOff_3": "{name}, the pot is all yours. Good luck 😇",
+        "lament": "What rotten luck… Don’t laugh, {name} 😩",
+        "lament_2": "{speaker, select, f {I blew it} m {I blew it} other {Epic fail}}… Avenge me, {name} 😩",
+        "lament_3": "The cards hate me, {name}. It’s official.",
+        "mock": "Down the hatch, {name}! 🍻",
+        "mock_2": "Cheers, {name}! All of it, mind 😏",
+        "mock_3": "{name}, goes down smooth, eh? 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "panache": "Too easy. Next, {name}!",
+          "panache_2": "{name}, that’s how it’s done.",
+          "mock": "Drink up, {name}, and no faces!",
+          "mock_2": "Bottoms up, {name}. I’m watching 👀"
+        },
+        "farceur": {
+          "panache": "Abracadabra, {name}! The cards love me 🪄",
+          "panache_2": "Ta-daa! Admire this, {name} 🎉",
+          "mock": "Clink clink, {name}! 🥂",
+          "mock_2": "{name}, glug glug glug 🍻"
+        },
+        "prudent": {
+          "panache": "Bet held. Caution and flair, {name}.",
+          "panache_2": "I had a good feeling, {name}.",
+          "mock": "Easy does it, {name}, small sips.",
+          "mock_2": "Cheers, {name}. It had to land on someone."
+        },
+        "suiveur": {
+          "panache": "It worked! Did I do good, {name}? 😊",
+          "panache_2": "Just like the pros, {name}!",
+          "mock": "Cheers, {name}! We’re toasting you 🍻",
+          "mock_2": "{name}, to your health! (not mine 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "With all due respect,",
+        "gepeto": "…true story!",
+        "raoul": "No offence,",
+        "suzette": "Same here,",
+        "marcel": "…cheers!",
+        "gaston": "Hold your horses!",
+        "bernadette": "…dearie.",
+        "norbert": "Statistically,",
+        "ginette": "Excuse me?!",
+        "roger": "…as they say.",
+        "paulette": "…just kidding. Or not.",
+        "dede": "All in!",
+        "huguette": "Back in my day,",
+        "keke": "…no cap.",
+        "mauricette": "Oh dear, oh dear,",
+        "firmin": "…just saying.",
+        "josiane": "Between us,",
+        "lucien": "…no stress.",
+        "germaine": "…chop-chop!",
+        "bricole": "…that should hold."
       }
     },
     "roue-des-gorgees": {
@@ -2625,7 +2757,79 @@
         "legendMine": "Your ship",
         "playerReadySr": "fleet ready",
         "playerPlacingSr": "still placing their fleet",
-        "playerLeftSr": "left the game"
+        "playerLeftSr": "left the game",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "sunk": "Sunk! Bye bye, {name} 🚢",
+          "sunk_2": "One ship down! Sorry, {name}.",
+          "sunk_3": "{name}, your ship sleeps with the fishes 🐟",
+          "bomb": "Bomb! Take cover, {name} 💣",
+          "bomb_2": "Brace yourself, {name}, it’s gonna shake!",
+          "bomb_3": "{name}, a little explosive gift 🎁",
+          "hit": "Hit! Hold on tight, {name}.",
+          "hit_2": "Boom! Things are heating up, {name} 💥",
+          "hit_3": "{name}, I found something…",
+          "miss": "Splash… Your go, {name}.",
+          "miss_2": "Missed! Make the most of it, {name}.",
+          "miss_3": "Nothing but water… Do better, {name} 😤",
+          "lost": "My ship! {name}, you’re heartless 😭",
+          "lost_2": "{name}, you just sank my favourite…",
+          "lost_3": "Farewell, my lovely ship. Thanks, {name} 😤",
+          "ouch": "Ouch! You’ll pay for that, {name}.",
+          "ouch_2": "Ow… {name}, you could have warned me!",
+          "ouch_3": "{name}, that stings! 🩹",
+          "taunt": "Missed, {name}! Aiming at seagulls? 🐦",
+          "taunt_2": "Splash! Thanks for the show, {name}.",
+          "taunt_3": "{name}, the sea is big, huh? 😏"
+        },
+        "botSayTrait": {
+          "agressif": {
+            "sunk": "Down she goes! Next, {name}.",
+            "sunk_2": "Sunk clean, {name}. No prisoners.",
+            "taunt": "Pathetic, {name}. Truly.",
+            "taunt_2": "{name}, are you aiming with your feet?"
+          },
+          "farceur": {
+            "sunk": "Glug glug glug… Hello, {name} 🐠",
+            "sunk_2": "Hello {name}? Your ship isn’t answering 📞",
+            "taunt": "Splash! Gone fishing, {name}? 🎣",
+            "taunt_2": "{name}, you hit a dolphin, well done 🐬"
+          },
+          "prudent": {
+            "sunk": "Sunk. Nothing personal, {name}.",
+            "sunk_2": "Sorry, {name}, it had to go down.",
+            "taunt": "Not this time, {name}.",
+            "taunt_2": "You’ll need better aim, {name}."
+          },
+          "suiveur": {
+            "sunk": "Sunk! Did I do good, {name}? 😊",
+            "sunk_2": "{name}, I sank something! 🎉",
+            "taunt": "Missed! Like me earlier, {name}.",
+            "taunt_2": "Splash! Happens to everyone, {name}."
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [
@@ -6020,7 +6224,85 @@
         "handCount": "{count, plural, one {# card in hand} other {# cards in hand}}",
         "outPosition": "Hand empty · position {rank}",
         "passed": "passed",
-        "playerLeft": "left the table"
+        "playerLeft": "left the table",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "brag": "Now that’s heavy. Your go, {name} 😎",
+          "brag_2": "So, {name}, not so smug now?",
+          "brag_3": "Chew on that one, {name}.",
+          "cut": "Cut! Sorry, {name} 😇",
+          "cut_2": "And here comes a two! Tough luck, {name}.",
+          "cut_3": "{name}, I’ll be taking that trick.",
+          "ouRien": "{name}, match it or skip it!",
+          "ouRien_2": "Same rank! Match it or you’re skipped, {name} 😏",
+          "ouRien_3": "Equal again, {name}. Your move!",
+          "close": "Four of a kind! Thanks for the setup, {name}.",
+          "close_2": "That’s the one I was missing, {name} 😁",
+          "close_3": "Closed! This trick is mine, {name}.",
+          "out": "No cards left! Good luck, {name} 😎",
+          "out_2": "I’m out. Have fun, {name}!",
+          "out_3": "Empty hand! {name}, I’ll watch you suffer.",
+          "grumble": "Seriously, {name}? You cut me?!",
+          "grumble_2": "{name}, my lovely trick… you’ll pay for that.",
+          "grumble_3": "Not cool, {name}. Not cool at all 😤",
+          "hail": "Hats off, {name}! The crown suits you 👑",
+          "hail_2": "Well done, {name}. {target, select, f {Madam President} m {Mr President} other {Your Excellency}} 🎩",
+          "hail_3": "{name} in power! We bow 🙇",
+          "mockTrou": "So, {name}, nice view from down there? 😏",
+          "mockTrou_2": "{name}, your two best cards, please 😇",
+          "mockTrou_3": "Welcome to the bottom of the Trou, {name}!",
+          "sulk": "Enjoy it, {name}. The wheel turns.",
+          "sulk_2": "{name}, give me back my cards! 😭",
+          "sulk_3": "{speaker, select, f {Dead last} m {Dead last} other {Rock bottom}}… savour it while it lasts, {name}."
+        },
+        "botSayTrait": {
+          "agressif": {
+            "brag": "BAM! On your knees, {name}.",
+            "brag_2": "Can you top that, {name}? Doubt it 😈",
+            "cut": "Cut clean, {name}. Next!",
+            "cut_2": "{name}, your trick? Confiscated."
+          },
+          "farceur": {
+            "brag": "Abracadabra, {name}! Ta-da 🪄",
+            "brag_2": "Surprise, {name}! Applause, please 🎉",
+            "cut": "Oops, {name}… my two slipped 🙃",
+            "cut_2": "Hi {name}! Just a two passing through 👋"
+          },
+          "prudent": {
+            "brag": "Kept them warm just for you, {name}.",
+            "brag_2": "Patience pays off, {name}.",
+            "cut": "I had to cut, {name}. Sorry.",
+            "cut_2": "Apologies, {name}, but this trick is mine."
+          },
+          "suiveur": {
+            "brag": "Not bad, huh, {name}? 😊",
+            "brag_2": "{name}, I’m playing like the big kids!",
+            "cut": "Everyone’s cutting, so me too, {name}!",
+            "cut_2": "I cut… is that how it works, {name}?"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

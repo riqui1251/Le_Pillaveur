@@ -51,6 +51,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
 import { genreOf, genreOfId } from './bot-speech/bot-speech-feed'
+import { PresidentSpeechFeed } from './president/PresidentSpeechFeed'
 
 /**
  * PRÉSIDENT en ligne (serveur-autoritaire). Le tapis et la table en haut, la
@@ -346,6 +347,9 @@ export function PresidentOnline() {
           ? t('roles.vicePresident', { genre })
           : t('roles.viceTrou')
   const rankingLabel = (role: PreRole, p: PrePlayerView) => roleLabel(role, genreOf(p))
+  // Paroles des bots de la manche : sous la table en jeu, sous le classement
+  // à l'interlude et en fin de partie — jamais dans la barre de la main.
+  const speechFeed = <PresidentSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
   const cardName = (card: number) => (preIsJoker(card) ? t('joker') : cardLabel(card))
   const tutorialButton = <TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />
   const tutorialModal = (
@@ -390,6 +394,7 @@ export function PresidentOnline() {
               iconOf={iconOf}
               labelOf={rankingLabel}
             />
+            <div className="w-full max-w-sm">{speechFeed}</div>
             {!isSoft && <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>}
           </>
         }
@@ -437,6 +442,7 @@ export function PresidentOnline() {
             iconOf={iconOf}
             labelOf={rankingLabel}
           />
+          <div className="w-full max-w-sm">{speechFeed}</div>
           <p className="max-w-sm text-center text-sm text-cream/80">{t('exchangeInfo')}</p>
           {!isSoft && <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>}
         </div>
@@ -714,6 +720,9 @@ export function PresidentOnline() {
           )
         })}
       </ul>
+
+      {/* Paroles des bots : sous la table, le tapis et la main restent en place. */}
+      {speechFeed}
 
       {/* Historique des plis de la manche (le plus récent en premier) */}
       {trickHistory.length > 0 && (

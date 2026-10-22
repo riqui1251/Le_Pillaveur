@@ -11,6 +11,7 @@ import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { PurpleSpeechFeed } from '@/components/online/purple/PurpleSpeechFeed'
 import { TvAvatar } from './tv-shared'
 
 /**
@@ -293,6 +294,11 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
               </div>
             </>
           )}
+        </div>
+
+        {/* Paroles des bots : les plus récentes en bas, les anciennes sortent par le haut. */}
+        <div className="flex max-h-[8rem] min-h-0 shrink flex-col justify-end overflow-hidden">
+          <PurpleSpeechFeed view={state} iconOf={(p) => iconOf(p.id)} variant="tv" />
         </div>
 
         {history.length > 0 && (

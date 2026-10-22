@@ -17,6 +17,10 @@ const STICK_THRESHOLD_PX = 24
 export type BotSpeechFeedProps<K extends string> = {
   speeches: readonly BotSpeech<K>[]
   round: number
+  /** Jeux sans manches : première fenêtre affichée (cf. FeedWindow), `round` seule par défaut. */
+  sinceRound?: number
+  /** Paroles élaguées par le moteur avant `speeches[0]` (cf. FeedWindow) : clés stables. */
+  indexBase?: number
   players: readonly FeedPlayer[]
   iconOf: (p: FeedPlayer) => string
   /** Spectateur local ; absent sur la TV (aucune bulle n'y est surlignée). */
@@ -80,6 +84,8 @@ type Bubble = {
 export function BotSpeechFeed<K extends string>({
   speeches,
   round,
+  sinceRound,
+  indexBase,
   players,
   iconOf,
   meId,
@@ -96,7 +102,10 @@ export function BotSpeechFeed<K extends string>({
   const atEndRef = useRef(true)
   const [hasNewer, setHasNewer] = useState(false)
   const tv = variant === 'tv'
-  const items = speechFeedItems(speeches, round, meId, tv ? TV_FEED_SIZE : undefined)
+  const items = speechFeedItems(speeches, round, meId, tv ? TV_FEED_SIZE : undefined, {
+    since: sinceRound,
+    indexBase,
+  })
   const count = items.length
 
   const nameOf = (id: string | null) => players.find((p) => p.id === id)?.name ?? '—'

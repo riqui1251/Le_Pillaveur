@@ -9,6 +9,7 @@ import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
+import { ToucherCouleSpeechFeed } from '@/components/online/toucher-coule/ToucherCouleSpeechFeed'
 import { cn } from '@/lib/utils'
 import { TvAvatar, tvColor, tvRem } from './tv-shared'
 
@@ -228,7 +229,7 @@ export function TvToucherCoule({ room, state }: { room: TvRoomDto; state: TCClie
   const totalShips = config.playersPerTeam * config.shipSizesPerPlayer.length
   // Compté depuis les navires coulés : en placement, les navires pas encore posés ne sont pas « perdus ».
   const shipsLeft = (team: TeamId) => totalShips - state.ships.filter((s) => s.team === team && s.sunk).length
-  const iconOf = (p: TCPlayer) =>
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
   const teamLabel = (team: TeamId) => (team === 'A' ? t('teamA') : t('teamB'))
 
@@ -371,6 +372,13 @@ export function TvToucherCoule({ room, state }: { room: TvRoomDto; state: TCClie
             <span className="inline-flex items-center gap-1.5">
               <span className="h-5 w-5 shrink-0 rounded bg-red-800" /> {tg('legendSunk')}
             </span>
+          </div>
+        )}
+
+        {/* Paroles des bots : les plus récentes en bas, les anciennes sortent par le haut. */}
+        {!placement && (
+          <div className="flex max-h-[13rem] min-h-0 w-full shrink flex-col justify-end overflow-hidden">
+            <ToucherCouleSpeechFeed view={state} iconOf={(p) => iconOf(p) ?? '👤'} variant="tv" />
           </div>
         )}
 

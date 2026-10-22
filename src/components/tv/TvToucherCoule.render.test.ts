@@ -4,7 +4,7 @@ import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl'
 import { describe, expect, it } from 'vitest'
 import fr from '../../../messages/fr.json'
 import { build } from '@/app/[locale]/tv/apercu-dev/fixtures/toucher-coule'
-import type { TCClientView } from '@/lib/toucher-coule/engine'
+import { tcSpeechRound, type TCClientView } from '@/lib/toucher-coule/engine'
 import { TvToucherCoule } from './TvToucherCoule'
 
 ;(globalThis as { React?: typeof React }).React = React
@@ -66,6 +66,25 @@ describe('TvToucherCoule — vue spectateur', () => {
     expect(html).toContain('+2')
     expect((html.match(/lucide-hourglass/g) ?? []).length).toBe(3)
     expect(html).not.toMatch(/text-white\/60/)
+  })
+
+  it('les paroles des bots s’affichent au centre, lisibles à 3 m, sans clé brute', () => {
+    const fixture = fixtures.find((f) => f.id === 'duel-1v1')!
+    const room = fixture.steps[1].room!
+    const view = JSON.parse(room.gameStateJson!) as TCClientView
+    const [target, author] = view.players
+    const speech = [{ playerId: author.id, kind: 'sunk' as const, targetId: target.id, round: tcSpeechRound(view) }]
+    const html = renderToStaticMarkup(
+      createElement(
+        NextIntlClientProvider,
+        { locale: 'fr', messages: fr as unknown as AbstractIntlMessages, timeZone: 'Europe/Paris' } as ComponentProps<typeof NextIntlClientProvider>,
+        createElement(TvToucherCoule, { room, state: { ...view, speech } })
+      )
+    )
+    expect(html).toContain(fr.games['toucher-coule'].game.feedAria)
+    expect(html).toContain(target.name)
+    expect(html).not.toMatch(/botSay\./)
+    expect(html).not.toMatch(/text-(xs|sm)\b|text-\[\d+px\]/)
   })
 
   it('aucune classe de texte illisible à 3 m', () => {

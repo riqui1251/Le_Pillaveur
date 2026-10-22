@@ -1341,6 +1341,72 @@
         "description": "Después verás el resumen de tragos de cada jugador.",
         "confirm": "Terminar",
         "cancel": "Seguir jugando"
+      },
+      "feedAria": "Charla de la mesa",
+      "botSay": {
+        "jinx": "¿Tú tiras y yo lo pago, {name}?",
+        "jinx_2": "{name}, tus dados {speaker, select, f {me han gafado} m {me han gafado} other {me dan mala suerte}} 😩",
+        "jinx_3": "Otra vez mi número… ¿Lo haces adrede, {name}?",
+        "bullseye": "¡Mi número! Gracias por la tirada, {name} 🎯",
+        "bullseye_2": "¡En el clavo! Tienes manos de oro, {name}.",
+        "bullseye_3": "{name}, te quiero. ¡Tira otra vez!",
+        "gift": "¡Barra libre! Acerca el vaso, {name} 🎁",
+        "gift_2": "{name}, es un regalo, con cariño 😇",
+        "gift_3": "¡Gracias, dados! {name}, a tu salud 🍻",
+        "almost": "Por un dado, {name}… qué rabia 😅",
+        "almost_2": "¡Casi! {name}, ¿lo has visto?",
+        "almost_3": "Salió mi número… a medias, {name} 🙃",
+        "mock": "¡Salud, {name}! Los dados han hablado 🍻",
+        "mock_2": "{name}, esta ronda te toca a ti 😏",
+        "mock_3": "¡A tu salud, {name}! 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "jinx": "¡Tira mejor que eso, {name}!",
+          "jinx_2": "{name}, devuélveme mis dados ya.",
+          "mock": "Bebe, {name}, ¡y rapidito!",
+          "mock_2": "De un trago, {name}. Contamos 👀"
+        },
+        "farceur": {
+          "jinx": "Los dados y yo… es complicado, {name} 🙃",
+          "jinx_2": "{name}, ¿les soplaste al revés?",
+          "mock": "¡Chin chin, {name}! Los dados te quieren 🥂",
+          "mock_2": "{name}, glu glu glu 🍻"
+        },
+        "prudent": {
+          "jinx": "A alguien le tenía que tocar, {name}.",
+          "jinx_2": "Ya me lo esperaba, {name}.",
+          "mock": "Despacio, {name}, a sorbitos.",
+          "mock_2": "Salud, {name}. Los dados no perdonan."
+        },
+        "suiveur": {
+          "jinx": "¿Por qué siempre yo, {name}? 🥺",
+          "jinx_2": "{name}, ¿tiras tú por mí?",
+          "mock": "¡Salud, {name}! Brindamos contigo 🍻",
+          "mock_2": "{name}, ¡a tu salud! (no a la mía 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Si me permiten,",
+        "gepeto": "…¡palabrita!",
+        "raoul": "Sin ánimo de ofender,",
+        "suzette": "Yo igual,",
+        "marcel": "…¡salud!",
+        "gaston": "¡Un momentito!",
+        "bernadette": "…cariño.",
+        "norbert": "Estadísticamente,",
+        "ginette": "¡Pero bueno!",
+        "roger": "…como dicen por ahí.",
+        "paulette": "…es broma. O no.",
+        "dede": "¡Me la juego!",
+        "huguette": "En mis tiempos,",
+        "keke": "…fijo.",
+        "mauricette": "Ay, ay, ay,",
+        "firmin": "…lo digo por decir.",
+        "josiane": "Entre nosotros,",
+        "lucien": "…tranqui.",
+        "germaine": "…¡y rapidito!",
+        "bricole": "…eso debería aguantar."
       }
     },
     "meta": {
@@ -1658,6 +1724,72 @@
         "waiting": "{name} duda: ¿seguir o pasar?",
         "hint": "¡Bien visto! Apuesta otra vez o pasa el turno.",
         "continueSelf": "Apostar otra vez"
+      },
+      "feedAria": "Charla de la mesa",
+      "botSay": {
+        "panache": "Apuesta gorda, ¡y sale! Te toca sudar, {name} 😎",
+        "panache_2": "Quien no arriesga no gana, {name}.",
+        "panache_3": "{name}, mira y toma nota 😏",
+        "dare": "¡Sigo! El bote no me asusta, {name}.",
+        "dare_2": "¡Otra más! ¿Apostamos a que lo logro, {name}?",
+        "dare_3": "{name}, la suerte sonríe a los valientes 🍀",
+        "handOff": "¡Regalito, {name}! Quema 🔥",
+        "handOff_2": "La patata caliente es tuya, {name} 🥔",
+        "handOff_3": "{name}, te dejo el bote. Suerte 😇",
+        "lament": "Qué mala pata… No te rías, {name} 😩",
+        "lament_2": "{speaker, select, f {La he liado} m {La he liado} other {Fallo épico}}… Véngame, {name} 😩",
+        "lament_3": "Las cartas me odian, {name}. Es oficial.",
+        "mock": "¡Salud, {name}! De un trago 🍻",
+        "mock_2": "¡A tu salud, {name}! Todo, ¿eh? 😏",
+        "mock_3": "{name}, entra solo, ¿a que sí? 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "panache": "Demasiado fácil. ¡Siguiente, {name}!",
+          "panache_2": "{name}, así se juega.",
+          "mock": "Bebe, {name}, ¡y sin muecas!",
+          "mock_2": "De un trago, {name}. Te vigilo 👀"
+        },
+        "farceur": {
+          "panache": "¡Abracadabra, {name}! Las cartas me adoran 🪄",
+          "panache_2": "¡Tachán! Admira, {name} 🎉",
+          "mock": "¡Chin chin, {name}! 🥂",
+          "mock_2": "{name}, glu glu glu 🍻"
+        },
+        "prudent": {
+          "panache": "Apuesta cumplida. Prudencia y estilo, {name}.",
+          "panache_2": "Ya lo intuía, {name}.",
+          "mock": "Con calma, {name}, a sorbitos.",
+          "mock_2": "Salud, {name}. Le tenía que tocar a alguien."
+        },
+        "suiveur": {
+          "panache": "¡Salió! ¿Lo hice bien, {name}? 😊",
+          "panache_2": "¡Como los profesionales, {name}!",
+          "mock": "¡Salud, {name}! Brindamos contigo 🍻",
+          "mock_2": "{name}, ¡a tu salud! (no a la mía 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Si me permiten,",
+        "gepeto": "…¡palabrita!",
+        "raoul": "Sin ánimo de ofender,",
+        "suzette": "Yo igual,",
+        "marcel": "…¡salud!",
+        "gaston": "¡Un momentito!",
+        "bernadette": "…cariño.",
+        "norbert": "Estadísticamente,",
+        "ginette": "¡Pero bueno!",
+        "roger": "…como dicen por ahí.",
+        "paulette": "…es broma. O no.",
+        "dede": "¡Me la juego!",
+        "huguette": "En mis tiempos,",
+        "keke": "…fijo.",
+        "mauricette": "Ay, ay, ay,",
+        "firmin": "…lo digo por decir.",
+        "josiane": "Entre nosotros,",
+        "lucien": "…tranqui.",
+        "germaine": "…¡y rapidito!",
+        "bricole": "…eso debería aguantar."
       }
     },
     "roue-des-gorgees": {
@@ -2625,7 +2757,79 @@
         "legendMine": "Tu barco",
         "playerReadySr": "flota lista",
         "playerPlacingSr": "aún coloca su flota",
-        "playerLeftSr": "salió de la partida"
+        "playerLeftSr": "salió de la partida",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "sunk": "¡Hundido! Adiós, {name} 🚢",
+          "sunk_2": "¡Un barco a pique! Lo siento, {name}.",
+          "sunk_3": "{name}, tu barco duerme con los peces 🐟",
+          "bomb": "¡Bomba! A cubierto, {name} 💣",
+          "bomb_2": "Cuidado, {name}, ¡que esto va a temblar!",
+          "bomb_3": "{name}, un regalito explosivo 🎁",
+          "hit": "¡Tocado! Agárrate, {name}.",
+          "hit_2": "¡Bum! Esto se calienta, {name} 💥",
+          "hit_3": "{name}, he encontrado algo…",
+          "miss": "Chof… Te toca, {name}.",
+          "miss_2": "¡Agua! Aprovecha, {name}.",
+          "miss_3": "Solo agua… Hazlo mejor, {name} 😤",
+          "lost": "¡Mi barco! {name}, no tienes corazón 😭",
+          "lost_2": "{name}, acabas de hundir mi favorito…",
+          "lost_3": "Adiós, mi precioso barco. Gracias, {name} 😤",
+          "ouch": "¡Uy! Me las vas a pagar, {name}.",
+          "ouch_2": "Auch… {name}, ¡podrías avisar!",
+          "ouch_3": "{name}, ¡eso escuece! 🩹",
+          "taunt": "¡Agua, {name}! ¿Disparas a las gaviotas? 🐦",
+          "taunt_2": "¡Chof! Gracias por el espectáculo, {name}.",
+          "taunt_3": "{name}, el mar es grande, ¿eh? 😏"
+        },
+        "botSayTrait": {
+          "agressif": {
+            "sunk": "¡A pique! Siguiente, {name}.",
+            "sunk_2": "Hundido limpio, {name}. Sin prisioneros.",
+            "taunt": "Lamentable, {name}. De verdad.",
+            "taunt_2": "{name}, ¿apuntas con los pies?"
+          },
+          "farceur": {
+            "sunk": "Glu glu glu… Hola, {name} 🐠",
+            "sunk_2": "¿Hola, {name}? Tu barco no contesta 📞",
+            "taunt": "¡Chof! ¿Pescando, {name}? 🎣",
+            "taunt_2": "{name}, le diste a un delfín, ¡bravo! 🐬"
+          },
+          "prudent": {
+            "sunk": "Hundido. Nada personal, {name}.",
+            "sunk_2": "Lo siento, {name}, tenía que hundirse.",
+            "taunt": "Esta vez no, {name}.",
+            "taunt_2": "Tendrás que apuntar mejor, {name}."
+          },
+          "suiveur": {
+            "sunk": "¡Hundido! ¿Lo hice bien, {name}? 😊",
+            "sunk_2": "{name}, ¡he hundido algo! 🎉",
+            "taunt": "¡Agua! Como yo antes, {name}.",
+            "taunt_2": "¡Chof! Le pasa a cualquiera, {name}."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
@@ -6020,7 +6224,85 @@
         "handCount": "{count, plural, one {# carta en la mano} other {# cartas en la mano}}",
         "outPosition": "Mano vacía · posición {rank}",
         "passed": "ha pasado",
-        "playerLeft": "ha dejado la mesa"
+        "playerLeft": "ha dejado la mesa",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "brag": "Eso sí que pesa. Te toca, {name} 😎",
+          "brag_2": "¿Qué, {name}? ¿Ya no vas tan sobrado?",
+          "brag_3": "Toma, {name}, digiere esto.",
+          "cut": "¡Cortado! Lo siento, {name} 😇",
+          "cut_2": "¡Y zas, un dos! Mala suerte, {name}.",
+          "cut_3": "{name}, esta baza me la quedo yo.",
+          "ouRien": "{name}, ¡igual o nada!",
+          "ouRien_2": "¡Empate! O igualas o pasas, {name} 😏",
+          "ouRien_3": "Mismo valor, {name}. Te toca seguir.",
+          "close": "¡Póker! Gracias por el pase, {name}.",
+          "close_2": "Solo me faltaba esa, {name} 😁",
+          "close_3": "¡Cierro! Esta baza es mía, {name}.",
+          "out": "¡Sin cartas! Mucho ánimo, {name} 😎",
+          "out_2": "Yo me salgo. ¡Diviértete, {name}!",
+          "out_3": "¡Mano vacía! {name}, te veré sufrir.",
+          "grumble": "¿En serio, {name}? ¿Me cortas a mí?",
+          "grumble_2": "{name}, mi preciosa baza… me las pagarás.",
+          "grumble_3": "Feo, {name}. Muy feo 😤",
+          "hail": "¡Chapó, {name}! La corona te sienta bien 👑",
+          "hail_2": "Respeto, {name}. {target, select, f {Señora presidenta} m {Señor presidente} other {Su excelencia}} 🎩",
+          "hail_3": "¡{name} al poder! Nos inclinamos 🙇",
+          "mockTrou": "¿Qué tal las vistas desde abajo, {name}? 😏",
+          "mockTrou_2": "{name}, tus dos mejores cartas, por favor 😇",
+          "mockTrou_3": "¡Al fondo del Trou, {name}! Ya tienes casa 🏠",
+          "sulk": "Disfrútalo, {name}. La rueda gira.",
+          "sulk_2": "{name}, ¡devuélveme mis cartas! 😭",
+          "sulk_3": "{speaker, select, f {La última} m {El último} other {Al fondo}}… disfrútalo mientras dure, {name}."
+        },
+        "botSayTrait": {
+          "agressif": {
+            "brag": "¡Y PUM! De rodillas, {name}.",
+            "brag_2": "¿Superas eso, {name}? Lo dudo 😈",
+            "cut": "Cortado en seco, {name}. ¡Siguiente!",
+            "cut_2": "{name}, ¿tu baza? Confiscada."
+          },
+          "farceur": {
+            "brag": "¡Abracadabra, {name}! Tachán 🪄",
+            "brag_2": "¡Sorpresa, {name}! Aplausos, por favor 🎉",
+            "cut": "Uy, {name}… se me escurrió el dos 🙃",
+            "cut_2": "¡Hola, {name}! Pasaba un dos por aquí 👋"
+          },
+          "prudent": {
+            "brag": "Las guardaba calentitas para ti, {name}.",
+            "brag_2": "La paciencia tiene premio, {name}.",
+            "cut": "Tenía que cortar, {name}. Lo siento.",
+            "cut_2": "Perdona, {name}, pero esta baza es mía."
+          },
+          "suiveur": {
+            "brag": "No está mal, ¿eh, {name}? 😊",
+            "brag_2": "{name}, ¡juego como los mayores!",
+            "cut": "Todos cortan, así que yo también, {name}.",
+            "cut_2": "Corto… ¿se hace así, {name}?"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [

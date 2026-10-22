@@ -25,6 +25,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { PurpleSpeechFeed } from './purple/PurpleSpeechFeed'
 import {
   PURPLE_BET_META,
   PURPLE_BET_TYPES,
@@ -268,6 +269,7 @@ export function PurpleOnline() {
         : t('online.waitingBet', { name: currentName })
 
   const turnHint = isMyTurn ? (deciding ? t('decision.hint') : betting ? t('chooseBet') : undefined) : undefined
+  const speechFeed = <PurpleSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
 
   return (
     <>
@@ -374,6 +376,10 @@ export function PurpleOnline() {
           </PurpleBetGrid>
         )}
 
+        {/* Paroles des bots SOUS les paris : une bulle qui arrive ne déplace
+            jamais un bouton sous le doigt. Montée même vide (région aria-live). */}
+        {speechFeed}
+
         <PurpleHistory cards={view.cardHistory} />
       </div>
 
@@ -414,6 +420,11 @@ export function PurpleOnline() {
         cards={view.drawnCards}
         onDismiss={isMyTurn && !busy ? () => void play('close-reveal', { action: 'close-reveal' }) : undefined}
       >
+        {/* La pique du bot se lit avec le verdict : copie muette du fil (le
+            fil sous les paris reste la région annoncée), les plus récentes. */}
+        <div aria-hidden className="mb-3 flex max-h-[7.5rem] flex-col justify-end overflow-hidden text-left">
+          {speechFeed}
+        </div>
         {isMyTurn ? (
           <Button
             variant="primary"

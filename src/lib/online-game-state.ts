@@ -456,6 +456,9 @@ export type SerializedCard = {
 
 export type PurplePlayer = { id: string; name: string; isBot: boolean; leftAt: number | null }
 
+/** Parole publique d'un bot (kind de PURPLE_SPEECH_KINDS), forme jumelle de BotSpeech. */
+export type PurpleSyncedSpeech = { playerId: string; kind: string; targetId: string | null; round: number }
+
 export type PurpleSyncedState = {
   version: number
   players: PurplePlayer[]
@@ -473,6 +476,10 @@ export type PurpleSyncedState = {
   cardHistory: SerializedCard[]
   totalCardsDrawn: number
   rematchVotes?: string[]
+  /** Mains passées (fenêtre des paroles) ; absent d'un état d'avant les paroles. */
+  turn?: number
+  speech?: PurpleSyncedSpeech[]
+  speechBase?: number
 }
 
 export function parsePurpleState(json: string | null | undefined): PurpleSyncedState | null {
@@ -515,6 +522,9 @@ export type Serialized1220History = {
 
 export type Game1220Player = { id: string; name: string; isBot: boolean; leftAt: number | null }
 
+/** Parole publique d'un bot (kind de GAME_1220_SPEECH_KINDS), forme jumelle de BotSpeech. */
+export type Game1220SyncedSpeech = { playerId: string; kind: string; targetId: string | null; round: number }
+
 export type Game1220SyncedState = {
   version: number
   players: Game1220Player[]
@@ -528,6 +538,9 @@ export type Game1220SyncedState = {
   /** Lancers de toute la partie ; absent d'une partie lancée avant lui. */
   rollCount?: number
   rematchVotes?: string[]
+  /** Paroles des bots, la « manche » étant le lancer (`round` = rollCount du lancer). */
+  speech?: Game1220SyncedSpeech[]
+  speechBase?: number
 }
 
 export function parse1220State(json: string | null | undefined): Game1220SyncedState | null {

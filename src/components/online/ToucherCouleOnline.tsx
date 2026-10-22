@@ -54,6 +54,7 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { ToucherCouleSpeechFeed } from './toucher-coule/ToucherCouleSpeechFeed'
 
 /**
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
@@ -1060,6 +1061,10 @@ export function ToucherCouleOnline() {
               {legend(true)}
             </>
           )}
+
+          {/* Paroles des bots SOUS la grille : une bulle qui arrive ne la
+              déplace jamais sous le doigt qui vise. */}
+          <ToucherCouleSpeechFeed view={view} iconOf={(p) => iconOf(p) ?? '👤'} meId={user.id} variant="phone" />
 
           <div className="grid grid-cols-2 gap-2">
             {(['A', 'B'] as const).map((team) => (

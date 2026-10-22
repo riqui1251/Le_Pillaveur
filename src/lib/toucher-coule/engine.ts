@@ -1,4 +1,5 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * Moteur pur Toucher-Coulé (bataille navale par équipes) — SERVEUR-AUTORITAIRE.
@@ -73,6 +74,36 @@ export type TCLastShot = {
   bombResults?: TCBombCellResult[]
 }
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.toucher-coule.game),
+ * née dans la même écriture que le tir qui la provoque (bot-speech.ts) :
+ *   • le tireur : sunk (il coule un navire), bomb (sa Bombe), hit (touché),
+ *     miss (à l'eau, au tireur suivant) ;
+ *   • la cible : lost (son navire coulé), ouch (son navire touché), taunt (un
+ *     bot de l'équipe visée chambre le tir dans l'eau).
+ * Le kind ne dit que ce que le tir a montré : jamais où sont les navires.
+ */
+export type TCSpeechKind = 'sunk' | 'bomb' | 'hit' | 'miss' | 'lost' | 'ouch' | 'taunt'
+export type TCSpeech = BotSpeech<TCSpeechKind>
+
+export const TC_SPEECH_KINDS = [
+  'sunk',
+  'bomb',
+  'hit',
+  'miss',
+  'lost',
+  'ouch',
+  'taunt',
+] as const satisfies readonly TCSpeechKind[]
+
+/** Paroles max par bot et par fenêtre de tours ; le bavardage du persona borne en dessous. */
+export const TC_SPEECH_CAP = 2
+/** Tours minimum d'une fenêtre de paroles (une rotation complète des tireurs au-delà). */
+export const TC_SPEECH_WINDOW_MIN = 4
+
+/** Une parole à écrire : son auteur (un bot), son kind, le joueur qu'elle nomme. */
+export type TCSay = { playerId: string; kind: TCSpeechKind; targetId: string }
+
 export type TCState = {
   mode: TCMode
   gridSize: number
@@ -92,6 +123,14 @@ export type TCState = {
   rngState: number
   /** Power-up "Bombe" activé pour la partie (choix hôte, figé au lancement). */
   rulePowerups: boolean
+  /**
+   * PUBLIC — paroles des bots, celles de la fenêtre de tours en cours et de
+   * la précédente (tcSpeechRound). Optionnel : un état sérialisé avant son
+   * arrivée n'en a pas.
+   */
+  speech?: TCSpeech[]
+  /** Paroles déjà élaguées du début du fil : les clés des bulles restent stables. */
+  speechBase?: number
 }
 
 export type TCAction =
@@ -435,6 +474,47 @@ export function reduceTC(state: TCState, action: TCAction): TCState {
     default:
       throw new TCEngineError('UNKNOWN_ACTION')
   }
+}
+
+/** Tours d'une fenêtre de paroles : une rotation complète des tireurs, quatre au moins. */
+export function tcSpeechWindowTurns(state: { turnOrder: readonly string[] }): number {
+  return Math.max(TC_SPEECH_WINDOW_MIN, state.turnOrder.length)
+}
+
+/**
+ * La « manche » des paroles d'un jeu sans manches : la fenêtre de tours en
+ * cours (le tour passe à chaque tir dans l'eau). Le plafond se compte par
+ * fenêtre, et le fil montre la fenêtre en cours et la précédente.
+ */
+export function tcSpeechRound(state: { turnOrder: readonly string[]; turnCount: number }): number {
+  return Math.floor(Math.max(0, state.turnCount - 1) / tcSpeechWindowTurns(state))
+}
+
+/**
+ * Les paroles `says` ajoutées au fil, dans la fenêtre courante. Appelé sur
+ * l'état qui SORT d'un tir, dans la même écriture : pas de version de plus.
+ * Refuse (INVALID_SPEECH, ALREADY_SPOKE) un kind inconnu, un auteur qui n'est
+ * pas un bot à table, une cible absente ou soi-même, un plafond atteint. Le
+ * fil ne garde que la fenêtre courante et la précédente ; `speechBase` compte
+ * ce qui en est sorti, pour des clés de bulles stables à l'écran.
+ */
+export function withTCSpeech(state: TCState, says: readonly TCSay[]): TCState {
+  if (says.length === 0) return state
+  const round = tcSpeechRound(state)
+  const all = state.speech ?? []
+  let speech = all.filter((sp) => sp.round >= round - 1)
+  const speechBase = (state.speechBase ?? 0) + (all.length - speech.length)
+  for (const say of says) {
+    if (!(TC_SPEECH_KINDS as readonly string[]).includes(say.kind)) throw new TCEngineError('INVALID_SPEECH')
+    const author = state.players.find((p) => p.id === say.playerId)
+    if (!author || !author.isBot || author.leftAt) throw new TCEngineError('INVALID_SPEECH')
+    const target = state.players.find((p) => p.id === say.targetId)
+    if (!target || target.id === author.id) throw new TCEngineError('INVALID_SPEECH')
+    const said = speech.filter((sp) => sp.playerId === author.id && sp.round === round).length
+    if (said >= TC_SPEECH_CAP) throw new TCEngineError('ALREADY_SPOKE')
+    speech = [...speech, { playerId: author.id, kind: say.kind, targetId: target.id, round }]
+  }
+  return { ...state, speech, speechBase }
 }
 
 /** Fait uniquement placer les bots (sans tirer) — utilisé après un remplacement en phase placement. */
