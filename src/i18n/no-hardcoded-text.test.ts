@@ -5,7 +5,8 @@ import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Textes français écrits EN DUR dans les écrans locaux.
+ * Textes français écrits EN DUR dans les écrans locaux et dans les composants
+ * partagés (écrans en ligne, TV, hub, briques de jeu).
  *
  * Un libellé tapé directement dans le JSX ne passe pas par next-intl : la
  * tablée anglaise, espagnole ou italienne lit « À qui ? » ou « Paramètres de
@@ -33,6 +34,12 @@ const GAMES_DIR = join(SRC_DIR, 'app', '[locale]', 'games')
 
 /** Écrans relevés, hors pages de jeu : la gestion des joueurs locaux et la fiche compte. */
 const EXTRA_FILES = ['components/PlayerManager.tsx', 'components/ui/AccountInfo.tsx']
+
+/**
+ * Composants partagés, relevés en entier (sous-dossiers compris) : les écrans
+ * en ligne et TV de chaque jeu, le hub et les briques communes des jeux.
+ */
+const SHARED_DIRS = ['components/online', 'components/game', 'components/hub', 'components/tv']
 
 /** Attributs lus par le joueur ou par son lecteur d'écran. */
 const TEXT_ATTRIBUTES = new Set(['placeholder', 'title', 'aria-label'])
@@ -76,6 +83,17 @@ const LISTE_D_ATTENTE: Record<string, { depuis: string; raison: string; textes: 
 
 type Finding = { line: number; text: string }
 
+/** Les composants `.tsx` d'un dossier et de ses sous-dossiers, en ordre stable. */
+function tsxFilesUnder(dir: string): string[] {
+  const files: string[] = []
+  for (const entry of readdirSync(dir).sort()) {
+    const path = join(dir, entry)
+    if (statSync(path).isDirectory()) files.push(...tsxFilesUnder(path))
+    else if (entry.endsWith('.tsx') && !entry.endsWith('.test.tsx')) files.push(path)
+  }
+  return files
+}
+
 /** Fichiers relevés, en chemin relatif à src/ (séparateur « / »). */
 function scannedFiles(): string[] {
   const files: string[] = []
@@ -92,6 +110,7 @@ function scannedFiles(): string[] {
     }
   }
   for (const extra of EXTRA_FILES) files.push(join(SRC_DIR, extra))
+  for (const dir of SHARED_DIRS) files.push(...tsxFilesUnder(join(SRC_DIR, dir)))
   return files.map((file) => relative(SRC_DIR, file).replace(/\\/g, '/'))
 }
 
@@ -189,11 +208,19 @@ describe('détecteur de texte français en dur', () => {
   })
 })
 
-describe('écrans locaux sans texte français en dur', () => {
+describe('écrans sans texte français en dur', () => {
   it('relève bien les pages et composants des jeux, la gestion des joueurs et le compte', () => {
     expect(FILES.some((f) => /^app\/\[locale\]\/games\/[^/]+\/page\.tsx$/.test(f))).toBe(true)
     expect(FILES.some((f) => /^app\/\[locale\]\/games\/[^/]+\/components\/[^/]+\.tsx$/.test(f))).toBe(true)
     for (const extra of EXTRA_FILES) expect(FILES).toContain(extra)
+  })
+
+  it('relève les composants partagés, sous-dossiers compris, sans les tests', () => {
+    for (const dir of SHARED_DIRS) expect(FILES.some((f) => f.startsWith(`${dir}/`)), dir).toBe(true)
+    expect(FILES).toContain('components/online/GameOnlineLobby.tsx')
+    expect(FILES).toContain('components/tv/TvMenteur.tsx')
+    expect(FILES.some((f) => /^components\/(online|tv)\/[^/]+\/[^/]+\.tsx$/.test(f))).toBe(true)
+    expect(FILES.filter((f) => !f.endsWith('.tsx'))).toEqual([])
   })
 
   for (const file of FILES) {
