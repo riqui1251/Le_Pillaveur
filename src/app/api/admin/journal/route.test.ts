@@ -16,9 +16,14 @@ const { userMock, prismaMock, tables } = vi.hoisted(() => {
     featureBan: [] as Row[],
     moderationTerm: [] as Row[],
   }
-  type Args = { where?: { action?: { notIn?: string[] } }; take?: number }
+  type Args = { where?: { action?: { notIn?: string[] }; NOT?: Record<string, unknown> }; take?: number }
   const visible = (rows: Row[], args?: Args) =>
-    rows.filter((r) => !args?.where?.action?.notIn?.includes(r.action as string))
+    rows.filter((r) => {
+      if (args?.where?.action?.notIn?.includes(r.action as string)) return false
+      // NOT { a, b } : écarte les lignes qui vérifient TOUS ses champs, comme Prisma.
+      const not = args?.where?.NOT
+      return !(not && Object.entries(not).every(([field, value]) => (r[field] ?? null) === value))
+    })
   const model = (name: keyof typeof tables) => ({
     findMany: vi.fn(async (args?: Args) =>
       visible(tables[name], args)
@@ -46,6 +51,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/online-room', () => ({ cleanupAbandonedRooms: vi.fn() }))
 vi.mock('@/lib/name-moderation-attempts-server', () => ({ listFlaggedNameModerationUsers: vi.fn() }))
 
+import { PIONEER_FRAME_KEY } from '@/lib/online/cosmetics'
 import { GET } from './route'
 
 const at = (minute: number) => new Date(Date.UTC(2026, 9, 20, 10, minute))
@@ -61,13 +67,14 @@ const ban = (id: string, minute: number, action = 'ban') => ({
   user: suzon,
   actor: alice,
 })
-const grant = (id: string, minute: number) => ({
+const grant = (id: string, minute: number, { cosmeticKey = 'cadre-or', byStaff = true } = {}) => ({
   id,
   userId: 'u-suzon',
-  cosmeticKey: 'cadre-or',
+  cosmeticKey,
+  grantedById: byStaff ? 'u-alice' : null,
   createdAt: at(minute),
   user: suzon,
-  grantedBy: alice,
+  grantedBy: byStaff ? alice : null,
 })
 const featureBan = (id: string, minute: number) => ({
   id,
@@ -187,11 +194,46 @@ describe('GET /api/admin/journal — pagination', () => {
   })
 
   it('lit juste assez de chaque source pour la page demandée', async () => {
+    tables.moderationTerm = Array.from({ length: 25 }, (_, i) => term(`t${i}`, i))
+
     await get('?page=3&pageSize=10')
 
     for (const source of ['accountBanEvent', 'cosmeticGrant', 'featureBan', 'moderationTerm'] as const) {
       expect(prismaMock[source].findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 30 }))
     }
+  })
+
+  it.each([['?page=9&pageSize=3'], ['?page=400000000000000000']])(
+    'page %s au-delà de la fin : vide, total juste, sans lire aucune source',
+    async (query) => {
+      seedHistory()
+
+      const res = await get(query)
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toMatchObject({ entries: [], total: 10 })
+      // Sans ce garde, la page vide chargeait tout le journal, et une page
+      // démesurée passait à Prisma un `take` hors des 64 bits (500).
+      for (const source of ['accountBanEvent', 'cosmeticGrant', 'featureBan', 'moderationTerm'] as const) {
+        expect(prismaMock[source].findMany).not.toHaveBeenCalled()
+      }
+    }
+  )
+
+  it('le cadre Pionnier gagné par un joueur n’est pas un acte de l’équipe : hors du journal ET du total', async () => {
+    tables.cosmeticGrant = [
+      // Gagné aux Premiers pas : personne ne l'a offert.
+      grant('earned', 3, { cosmeticKey: PIONEER_FRAME_KEY, byStaff: false }),
+      // Offert par l'équipe, Pionnier compris : au journal.
+      grant('given', 2, { cosmeticKey: PIONEER_FRAME_KEY }),
+      // Offert par un membre de l'équipe supprimé depuis (SetNull) : toujours un acte d'équipe.
+      grant('orphan', 1, { cosmeticKey: 'frame:vip-cle', byStaff: false }),
+    ]
+
+    const body = await (await get()).json()
+
+    expect(body.total).toBe(2)
+    expect(body.entries.map((e: { id: string }) => e.id)).toEqual(['grant-given', 'grant-orphan'])
   })
 
   it.each([
