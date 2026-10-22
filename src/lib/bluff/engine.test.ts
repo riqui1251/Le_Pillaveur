@@ -366,6 +366,38 @@ describe('vues anti-triche', () => {
     expect(next.players.every((p) => p.score === BLUFF_POINTS_FOUND_REAL)).toBe(true)
   })
 
+  it('la vue de CHAQUE joueur, avant le reveal, ne livre ni la vraie réponse ni un auteur', () => {
+    const voting = submitAll(make(4))
+    for (const viewer of voting.players) {
+      const view = toBluffClientView(voting, viewer.id)
+      const json = JSON.stringify(view)
+      expect(json).not.toMatch(/"isReal"|"authorId"|"real"|fake-/)
+      for (const opt of view.voteOptions!) {
+        for (const p of voting.players) expect(opt.candidateId).not.toContain(p.id)
+      }
+    }
+  })
+
+  it('l’auteur d’un bluff choisi par id opaque marque bien ses points au décompte', () => {
+    const voting = submitAll(make(4))
+    const views = Object.fromEntries(voting.players.map((p) => [p.id, toBluffClientView(voting, p.id)]))
+    const textOfP0 = voting.pendingFakes.p0
+    const realText = voting.roundPrompts[voting.promptIdx].answer
+    const idByText = (viewerId: string, text: string) =>
+      views[viewerId].voteOptions!.find((o) => o.candidateId !== views[viewerId].myCandidateId && o.text === text)!
+        .candidateId
+    let next = reduceBluff(voting, { type: 'VOTE', playerId: 'p0', candidateId: idByText('p0', realText), now: T0 })
+    for (const id of ['p1', 'p2', 'p3']) {
+      next = reduceBluff(next, { type: 'VOTE', playerId: id, candidateId: idByText(id, textOfP0), now: T0 })
+    }
+    expect(next.phase).toBe('reveal')
+    const scoreOf = (id: string) => next.players.find((p) => p.id === id)!.score
+    expect(scoreOf('p0')).toBe(BLUFF_POINTS_FOUND_REAL + 3 * BLUFF_POINTS_PER_FOOLED)
+    for (const id of ['p1', 'p2', 'p3']) expect(scoreOf(id)).toBe(0)
+    const revealedP0 = next.lastReveal!.candidates.find((c) => c.authorId === 'p0')!
+    expect(revealedP0.votes.sort()).toEqual(['p1', 'p2', 'p3'])
+  })
+
   it('désigne au joueur SON bluff pendant le vote, jamais celui des autres ni à la TV', () => {
     const s = make(4)
     expect(toBluffClientView(s, 'p0').myCandidateId).toBeNull()
