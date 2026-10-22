@@ -13,7 +13,7 @@ import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { checkRateLimit, networkRateLimitKey, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 import { cookies } from 'next/headers'
@@ -22,6 +22,14 @@ import { readConsentedVisitorId } from '@/lib/auth-cookies'
 
 const LOGIN_LIMIT = 10
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
+/**
+ * Plafond par RÉSEAU, toutes adresses confondues : le quota ci-dessus est
+ * compté par couple (IP, e-mail), et un script qui essayait un mot de passe
+ * sur des milliers d'adresses depuis une seule IP repartait de zéro à chaque
+ * adresse. Une session dure 30 jours : trente connexions en 15 minutes
+ * depuis un même réseau couvrent largement une tablée.
+ */
+const LOGIN_NETWORK_LIMIT = 30
 
 export const POST = withApiRoute('auth/login POST', async (request: Request) => {
   try {
@@ -33,6 +41,12 @@ export const POST = withApiRoute('auth/login POST', async (request: Request) => 
 
     const rate = checkRateLimit(rateLimitKey(request, 'login', email), LOGIN_LIMIT, LOGIN_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
+    const network = checkRateLimit(
+      networkRateLimitKey(request, 'login-network'),
+      LOGIN_NETWORK_LIMIT,
+      LOGIN_WINDOW_MS
+    )
+    if (!network.ok) return rateLimitResponse(network.retryAfterSec)
 
     // MÊME refus pour les trois cas (adresse mal formée, compte inconnu, mot
     // de passe faux) : distinguer reviendrait à dire quelles adresses ont un

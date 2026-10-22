@@ -14,7 +14,7 @@ import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
-import { checkRateLimit, rateLimitKey } from '@/lib/rate-limit'
+import { checkRateLimit, rateLimitKey, readTextBodyLimited } from '@/lib/rate-limit'
 import { apiError, withApiRoute } from '@/lib/api-route'
 import { appBaseUrl } from '@/lib/email'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
@@ -37,6 +37,7 @@ import {
   oauthCredentials,
   oauthNameCookieOptions,
   readOAuthNameCookie,
+  sameOAuthState,
   type OAuthProfile,
   type OAuthState,
 } from '@/lib/oauth-server'
@@ -46,6 +47,12 @@ const CALLBACK_WINDOW_MS = 15 * 60 * 1000
 // Même plafond que POST /api/auth/delete-account.
 const DELETE_LIMIT = 5
 const DELETE_WINDOW_MS = 60 * 60 * 1000
+/**
+ * Formulaire de retour d'Apple : code, state, id_token et, la première fois,
+ * `user` — quelques kilo-octets. Lu borné : cette adresse est publique, et
+ * `formData()` matérialisait en mémoire n'importe quel corps.
+ */
+const APPLE_FORM_MAX_BYTES = 16 * 1024
 
 /**
  * RETOUR du flux Discord / Facebook / Apple (voir POST /api/auth/oauth/[provider]).
@@ -90,7 +97,7 @@ export const GET = withApiRoute(
       !isOAuthProvider(provider) ||
       !saved ||
       saved.provider !== provider ||
-      url.searchParams.get('state') !== saved.state
+      !sameOAuthState(saved.state, url.searchParams.get('state'))
     ) {
       return fail('oauth_failed')
     }
@@ -133,22 +140,24 @@ export const POST = withApiRoute(
   async (request: Request, { params }: { params: Promise<{ provider: string }> }) => {
     const { provider } = await params
     if (provider !== 'apple') return apiError('not_found', 404)
-    const form = await request.formData().catch(() => null)
+    // Corps trop gros ou illisible : rebond sans code, que le GET refuse.
+    const body = await readTextBodyLimited(request, APPLE_FORM_MAX_BYTES)
+    const form = new URLSearchParams(body.ok ? body.text : '')
     const query = new URLSearchParams()
     for (const key of ['code', 'state', 'error']) {
-      const value = form?.get(key)
-      if (typeof value === 'string' && value) query.set(key, value.slice(0, 2048))
+      const value = form.get(key)
+      if (value) query.set(key, value.slice(0, 2048))
     }
     const response = NextResponse.redirect(new URL(`/api/auth/oauth/apple/callback?${query}`, appBaseUrl()), 303)
-    const firstName = appleFirstName(form?.get('user'))
+    const firstName = appleFirstName(form.get('user'))
     if (firstName) response.cookies.set(oauthNameCookieOptions(firstName))
     return response
   }
 )
 
 /** `user` du POST d'Apple : {"name":{"firstName","lastName"},"email"}, à la première autorisation. */
-function appleFirstName(raw: FormDataEntryValue | null | undefined): string {
-  if (typeof raw !== 'string') return ''
+function appleFirstName(raw: string | null): string {
+  if (!raw) return ''
   try {
     const user = JSON.parse(raw) as { name?: { firstName?: unknown } }
     return typeof user.name?.firstName === 'string' ? user.name.firstName.trim().slice(0, 60) : ''
@@ -163,6 +172,8 @@ type Fail = (code: OnlineErrorCode) => NextResponse
  * Connexion. Le lien (fournisseur, identifiant) retrouve le compte ; à
  * défaut, l'adresse CONFIRMÉE chez le fournisseur retrouve le compte qui la
  * porte (créé par mot de passe ou Google) et l'y lie, ou crée le compte.
+ * Jamais un compte à mot de passe dont l'adresse n'a pas été prouvée : voir
+ * plus bas.
  */
 async function signIn(
   request: Request,
@@ -179,6 +190,12 @@ async function signIn(
     if (!profile.email) return fail('oauth_email_required')
     if (!profile.emailVerified) return fail('oauth_email_unverified')
     user = await prisma.user.findUnique({ where: { email: profile.email } })
+    // Mot de passe posé sans preuve de l'adresse (inscription ou invité
+    // pérennisé : aucune confirmation exigée) : n'importe qui a pu créer ce
+    // compte au nom d'autrui. Le lier ferait entrer le vrai titulaire dans un
+    // compte dont un tiers garde le mot de passe. Refus neutre : « mot de
+    // passe oublié » prouve l'adresse (reset-password) et débloque le lien.
+    if (user && user.passwordHash && !user.emailVerified) return fail('email_taken')
     if (!user) {
       await ensureServerModerationTermsLoaded()
       const displayName = await pickAvailableDisplayName(profile.name || profile.email.split('@')[0])

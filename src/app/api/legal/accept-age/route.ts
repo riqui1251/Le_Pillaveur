@@ -13,6 +13,8 @@ import {
 import { getCurrentUser } from '@/lib/auth-server'
 import { eraseVisitorTracking } from '@/lib/analytics-server'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/api-route'
+import { readJsonBodyLimited } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -25,6 +27,12 @@ export const runtime = 'nodejs'
  * un nouvel accord donné dans ces secondes perd le début de sa visite.
  */
 const ERASE_RETRY_DELAY_MS = 5_000
+
+/**
+ * Trois champs booléens et une version : 8 Ko est très large. Route publique,
+ * sans session : `request.json()` y matérialisait n'importe quel corps.
+ */
+const BODY_MAX_BYTES = 8 * 1024
 
 /** Ce qu'un refus doit effacer, capturé AVANT de retirer les cookies. */
 type ErasureTargets = {
@@ -75,13 +83,14 @@ export async function POST(request: Request) {
   // y compris sur une page de lecture avant tout portail) : il ne certifie
   // pas l'âge, seul le portail 18+ le fait.
   let consentOnly = false
-  try {
-    const body = await request.json()
+  const parsed = await readJsonBodyLimited<Record<string, unknown> | null>(request, BODY_MAX_BYTES)
+  if (!parsed.ok && parsed.reason === 'too_large') return apiError('payload_too_large', 413)
+  // Corps vide ou illisible (ancien client) : refus par défaut, le consentement ne se présume pas.
+  if (parsed.ok) {
+    const body = parsed.body
     analytics = body?.analytics === true
     consentVersion = body?.consentVersion
     consentOnly = body?.consentOnly === true
-  } catch {
-    // Corps vide (ancien client) : refus par défaut, le consentement ne se présume pas.
   }
 
   const granted = analytics && consentVersion === ANALYTICS_CONSENT_GRANTED

@@ -6,12 +6,19 @@ import {
   isValidEmail,
 } from '@/lib/auth-server'
 import { sendPasswordResetEmail } from '@/lib/email'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { checkRateLimit, networkRateLimitKey, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 
 const RESET_HOURS = 1
 const FORGOT_LIMIT = 5
 const FORGOT_WINDOW_MS = 60 * 60 * 1000
+/**
+ * Plafond par RÉSEAU, toutes adresses confondues : compté par couple (IP,
+ * e-mail), le quota ci-dessus laissait une seule IP faire partir un e-mail
+ * vers chaque adresse d'une liste (quota d'envoi Resend, réputation du
+ * domaine). Personne ne réinitialise dix mots de passe par heure.
+ */
+const FORGOT_NETWORK_LIMIT = 10
 
 export const POST = withApiRoute('auth/forgot-password POST', async (request: Request) => {
   try {
@@ -22,6 +29,12 @@ export const POST = withApiRoute('auth/forgot-password POST', async (request: Re
 
     const rate = checkRateLimit(rateLimitKey(request, 'forgot-password', email), FORGOT_LIMIT, FORGOT_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
+    const network = checkRateLimit(
+      networkRateLimitKey(request, 'forgot-password-network'),
+      FORGOT_NETWORK_LIMIT,
+      FORGOT_WINDOW_MS
+    )
+    if (!network.ok) return rateLimitResponse(network.retryAfterSec)
 
     if (!isValidEmail(email)) return apiError('invalid_email', 400)
 
