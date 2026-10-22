@@ -238,8 +238,8 @@ function Absents({ absents, texts }: { absents: TvPbScreenModel['absents']; text
   const named = absents.slice(0, ABSENTS_VISIBLE)
   return (
     <div className="shrink-0 space-y-1 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-3 py-1.5">
-      {named.map((a) => (
-        <p key={a.name} className="line-clamp-2 break-words text-lg font-semibold leading-snug text-amber-100">
+      {named.map((a, i) => (
+        <p key={`${i}-${a.name}`} className="line-clamp-2 break-words text-lg font-semibold leading-snug text-amber-100">
           <PhaseCountdown endsAt={a.endsAt}>
             {({ seconds }) => texts.t('online.waitingReturn', { name: a.name, seconds })}
           </PhaseCountdown>
