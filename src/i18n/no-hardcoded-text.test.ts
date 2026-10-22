@@ -5,7 +5,7 @@ import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Textes français écrits EN DUR dans les écrans locaux.
+ * Textes français écrits EN DUR dans les écrans locaux (et le Petit Buveur en ligne).
  *
  * Un libellé tapé directement dans le JSX ne passe pas par next-intl : la
  * tablée anglaise, espagnole ou italienne lit « À qui ? » ou « Paramètres de
@@ -31,8 +31,20 @@ import { describe, expect, it } from 'vitest'
 const SRC_DIR = resolve(fileURLToPath(new URL('../', import.meta.url)))
 const GAMES_DIR = join(SRC_DIR, 'app', '[locale]', 'games')
 
-/** Écrans relevés, hors pages de jeu : la gestion des joueurs locaux et la fiche compte. */
-const EXTRA_FILES = ['components/PlayerManager.tsx', 'components/ui/AccountInfo.tsx']
+/**
+ * Écrans relevés, hors pages de jeu : la gestion des joueurs locaux, la fiche
+ * compte, et l'écran du Petit Buveur EN LIGNE et à la TV, qui ne vivent pas
+ * sous app/[locale]/games (« textes en dur de l'UI en ligne », refonte online).
+ */
+const EXTRA_FILES = [
+  'components/PlayerManager.tsx',
+  'components/ui/AccountInfo.tsx',
+  'components/online/PetitBuveurOnline.tsx',
+  'components/tv/TvPetitBuveur.tsx',
+]
+
+/** Dossiers relevés en entier (composants .tsx) : le Petit Buveur partagé, en ligne et à la TV. */
+const EXTRA_DIRS = ['components/petit-buveur', 'components/online/petit-buveur', 'components/tv/petit-buveur']
 
 /** Attributs lus par le joueur ou par son lecteur d'écran. */
 const TEXT_ATTRIBUTES = new Set(['placeholder', 'title', 'aria-label'])
@@ -92,6 +104,12 @@ function scannedFiles(): string[] {
     }
   }
   for (const extra of EXTRA_FILES) files.push(join(SRC_DIR, extra))
+  for (const extraDir of EXTRA_DIRS) {
+    const dir = join(SRC_DIR, extraDir)
+    for (const file of readdirSync(dir).sort()) {
+      if (file.endsWith('.tsx')) files.push(join(dir, file))
+    }
+  }
   return files.map((file) => relative(SRC_DIR, file).replace(/\\/g, '/'))
 }
 
@@ -190,10 +208,11 @@ describe('détecteur de texte français en dur', () => {
 })
 
 describe('écrans locaux sans texte français en dur', () => {
-  it('relève bien les pages et composants des jeux, la gestion des joueurs et le compte', () => {
+  it('relève bien les pages et composants des jeux, la gestion des joueurs, le compte et le Petit Buveur en ligne', () => {
     expect(FILES.some((f) => /^app\/\[locale\]\/games\/[^/]+\/page\.tsx$/.test(f))).toBe(true)
     expect(FILES.some((f) => /^app\/\[locale\]\/games\/[^/]+\/components\/[^/]+\.tsx$/.test(f))).toBe(true)
     for (const extra of EXTRA_FILES) expect(FILES).toContain(extra)
+    for (const extraDir of EXTRA_DIRS) expect(FILES.some((f) => f.startsWith(`${extraDir}/`))).toBe(true)
   })
 
   for (const file of FILES) {

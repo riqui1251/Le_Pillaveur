@@ -3885,8 +3885,8 @@
           "wheelDrinks": "{count} sip(s)!",
           "pfWin": "Bet won — nobody drinks",
           "pfLose": "{name} drinks {count} sip(s)!",
-          "pile": "HEADS",
-          "face": "TAILS",
+          "pile": "TAILS",
+          "face": "HEADS",
           "deHonteSafe": "Safe!",
           "deHonteDrink": "2 sips!",
           "deHonteForward": "Move forward one square!",
@@ -4090,7 +4090,7 @@
         "SAFE"
       ],
       "caseDescriptions": {
-        "normal": "Case safe",
+        "normal": "Safe square",
         "gorgée": "Drink {count} sip(s)!",
         "gorgéeCulSec": "Dry ass! 🍺",
         "defi": "Challenge: {challenge} or drink {count} sip(s)!",
@@ -4135,10 +4135,10 @@
         "bonus": "✨ {actor} advances from box {from} to {to}!",
         "reculGroupe": "⬅️ Group retreat! All players behind {actor} move back one space.",
         "grappinLeader": "🪝 {actor} is already in the lead, no grappling possible.",
-        "grappinJoin": "🪝 Grapple! {actor} joins {target} (box {case}).",
+        "grappinJoin": "🪝 Grapple! {actor} joins {target} (square {case}).",
         "pont": "🌉 Bridge ({side})! {count} player(s) on square {case} {direction} of a square.",
-        "pontPile": "stack",
-        "pontFace": "face",
+        "pontPile": "tails",
+        "pontFace": "heads",
         "pontAdvance": "advance",
         "pontBack": "steps back",
         "loterieCancelled": "🎰 Lottery canceled (not enough players).",
@@ -4159,10 +4159,10 @@
         "diceLabel": "Dice: {value}"
       },
       "coinFlip": {
-        "pile": "Stack",
-        "face": "Face",
-        "won": "Draw: {result} — the target wins!",
-        "lost": "Draw: {result} — the target loses and drinks."
+        "pile": "Tails",
+        "face": "Heads",
+        "won": "Flip: {result} — the target wins!",
+        "lost": "Flip: {result} — the target loses and drinks."
       },
       "game": {
         "rollDice": "Roll the dice",
@@ -4195,7 +4195,7 @@
           "vote": "🗳️ Vote",
           "shameDice": "🎲 Dice of shame",
           "coinFlip": "🪙 Heads or tails",
-          "chance": "🍀 Case Luck",
+          "chance": "🍀 Luck square",
           "exchange": "🔄 Exchange box",
           "saveGame": "💾 Game in progress",
           "teleportPrompt": "Swap your position with:",
@@ -4464,7 +4464,7 @@
           "outcomeDrink": "🎲 Dice of shame ({roll}): {player} takes 2 forfeits!"
         },
         "coinFlip": {
-          "lost": "Draw: {result} — the target loses and takes a forfeit."
+          "lost": "Flip: {result} — the target loses and takes a forfeit."
         },
         "wheel": {
           "sips": "{count, plural, one {# forfeit} other {# forfeits}}"
