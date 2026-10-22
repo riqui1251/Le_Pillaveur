@@ -20,6 +20,7 @@ import { menteurBotTickDelayMs } from '@/lib/menteur/bot-tick'
 import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useDeadline } from '@/hooks/useDeadline'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -111,6 +112,9 @@ export function MenteurOnline() {
   const tutorial = useGameTutorial('menteur', inGame)
   const cosmetics = useMemberCosmetics(room)
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
+  // Le moteur refuse « Manche suivante » avant le temps de lecture
+  // (READING_TIME) : le bouton reste grisé, décompte affiché, jusque-là.
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
 
   const totalDice = useMemo(
     () => (view ? view.players.reduce((s, p) => s + p.diceCount, 0) : 0),
@@ -759,11 +763,17 @@ export function MenteurOnline() {
               variant="primary"
               size="gameLg"
               className={cn('w-full gap-2', pending === 'continue' && SENDING)}
-              disabled={busy}
+              disabled={busy || (view.continueAt != null && !continueUnlocked)}
               onClick={() => void play('continue', { action: 'continue' })}
             >
               {pending === 'continue' && spinner}
-              {t('reveal.continue')}
+              {view.continueAt != null && !continueUnlocked ? (
+                <PhaseCountdown endsAt={view.continueAt}>
+                  {({ seconds }) => t('reveal.continueIn', { seconds })}
+                </PhaseCountdown>
+              ) : (
+                t('reveal.continue')
+              )}
             </Button>
           )}
         </div>

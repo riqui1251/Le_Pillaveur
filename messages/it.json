@@ -2917,7 +2917,8 @@
           "calzaLostSoft": "{name} ha tentato Calza e ha sbagliato: perde un dado",
           "eliminatedMsg": "💀 {name} non ha più dadi — tutto d’un fiato, {genre, select, f {eliminata} m {eliminato} other {fuori dal gioco}}!",
           "eliminatedMsgSoft": "💀 {name} non ha più dadi — {genre, select, f {eliminata} m {eliminato} other {fuori dal gioco}}!",
-          "continue": "Manche successiva"
+          "continue": "Manche successiva",
+          "continueIn": "Manche successiva tra {seconds} s"
         },
         "victoryTitle": "{name} vince il tavolo!",
         "victoryDrinks": "I bugiardi smascherati finiscono il bicchiere 🍻",

@@ -748,6 +748,8 @@ export function menteurSipsTotal(lostCount: number): number {
 
 export type MenteurClientView = Omit<MenteurState, 'rngState' | 'players'> & {
   players: MenteurPlayerView[]
+  /** Fin du temps de lecture de la révélation (READING_TIME avant) ; null hors révélation. */
+  continueAt: number | null
 }
 
 /** Vue PAR JOUEUR : ses dés visibles, ceux des autres réduits à un compte. */
@@ -756,6 +758,8 @@ export function toMenteurClientView(state: MenteurState, viewerId: string): Ment
   void _rng
   return {
     ...rest,
+    continueAt:
+      state.phase === 'reveal' && state.revealAt != null ? state.revealAt + MENTEUR_REVEAL_MIN_MS : null,
     players: players.map((p) => ({
       ...p,
       dice: p.id === viewerId ? [...p.dice] : [],

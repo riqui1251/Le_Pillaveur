@@ -2917,7 +2917,8 @@
           "calzaLostSoft": "{name} intentó Calza y falló: pierde un dado",
           "eliminatedMsg": "💀 {name} se queda sin dados — ¡de un trago, {genre, select, f {eliminada} m {eliminado} other {fuera del juego}}!",
           "eliminatedMsgSoft": "💀 {name} se queda sin dados — ¡{genre, select, f {eliminada} m {eliminado} other {fuera del juego}}!",
-          "continue": "Siguiente ronda"
+          "continue": "Siguiente ronda",
+          "continueIn": "Siguiente ronda en {seconds} s"
         },
         "victoryTitle": "¡{name} gana la mesa!",
         "victoryDrinks": "Los mentirosos descubiertos terminan su copa 🍻",

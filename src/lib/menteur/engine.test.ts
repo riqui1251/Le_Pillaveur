@@ -374,6 +374,17 @@ describe('temps de lecture de la révélation (F33)', () => {
     expect(next.revealAt).toBeNull()
   })
 
+  it('la vue publie la fin du temps de lecture : le bouton « Manche suivante » reste grisé jusque-là', () => {
+    const s = craft([P('a', [2, 2, 4]), P('b', [6, 5, 5])], {
+      currentBid: { qty: 4, face: 6, by: 'a' },
+      turnIdx: 1,
+    })
+    expect(toMenteurClientView(s, 'a').continueAt).toBeNull()
+    const revealed = reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })
+    expect(toMenteurClientView(revealed, 'a').continueAt).toBe(T0 + MENTEUR_REVEAL_MIN_MS)
+    expect(toMenteurSpectatorView(revealed).continueAt).toBe(T0 + MENTEUR_REVEAL_MIN_MS)
+  })
+
   it('un BOT (tick de service) enchaîne sans attendre — une table de bots ne se figera jamais', () => {
     const s = craft(
       [P('a', [2, 2, 4], { isBot: true }), P('b', [6, 5, 5], { isBot: true })],
@@ -1064,7 +1075,7 @@ describe('mémoire de la table : la chaîne des enchères et les duels', () => {
   // Liste blanche EXACTE : un champ d'état ajouté demain est public par
   // construction (…rest) ; ce test l'arrête tant qu'on n'a pas décidé.
   const VIEW_KEYS = [
-    'bids', 'currentBid', 'duels', 'lastReveal', 'palifico', 'phase', 'players', 'rematchVotes',
+    'bids', 'continueAt', 'currentBid', 'duels', 'lastReveal', 'palifico', 'phase', 'players', 'rematchVotes',
     'revealAt', 'round', 'ruleCalza', 'rulePalifico', 'speech', 'turnIdx', 'version', 'winnerId',
   ]
   const PLAYER_KEYS = ['dice', 'diceCount', 'id', 'isBot', 'leftAt', 'lostCount', 'name', 'sipsTotal']
