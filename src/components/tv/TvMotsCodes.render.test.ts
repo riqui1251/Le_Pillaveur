@@ -102,6 +102,22 @@ describe('TvMotsCodes — vue spectateur', () => {
     expect(render('equipes-14-2', 1).view.players.length).toBe(16)
   })
 
+  it('les réactions des bots sous la grille, jusqu’à l’assassin ; absentes sans parole', () => {
+    const chatter = fixtures.find((f) => f.id === 'paroles-bots')!
+    chatter.steps.forEach((_, i) => {
+      const { html, view } = render('paroles-bots', i)
+      const said = (view.speech ?? []).filter((sp) => sp.round === view.turn)
+      expect(said.length, `étape ${i}`).toBeGreaterThan(0)
+      expect(html).toContain('aria-label="Fil de la table"')
+      expect(html.indexOf('Fil de la table')).toBeGreaterThan(html.lastIndexOf('rounded-xl border-2'))
+      for (const sp of said) expect(html).toContain(view.players.find((p) => p.id === sp.playerId)!.name)
+    })
+    expect(render('paroles-bots', 2).view.phase).toBe('finished')
+    for (const fixture of fixtures.filter((f) => f.id !== 'paroles-bots')) {
+      fixture.steps.forEach((_, i) => expect(render(fixture.id, i).html).not.toContain('Fil de la table'))
+    }
+  })
+
   it('aucune classe de texte illisible à 3 m', () => {
     for (const fixture of fixtures) {
       fixture.steps.forEach((_, i) => {

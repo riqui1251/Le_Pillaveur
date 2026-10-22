@@ -32,6 +32,7 @@ import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { genreOf } from './bot-speech/bot-speech-feed'
+import { TabouSpeechFeed } from './tabou/TabouSpeechFeed'
 
 /**
  * TABOU VOCAL en ligne (serveur-autoritaire). Pendant la manche, `currentWord`
@@ -312,6 +313,7 @@ export function TabouOnline() {
 
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const hasBar = describing || roundEnd
+  const hasBots = view.players.some((p) => p.isBot)
 
   const busyIcon = (Icon: LucideIcon) =>
     busy ? (
@@ -444,6 +446,12 @@ export function TabouOnline() {
             </div>
           </>
         )}
+
+        {/* Réactions des bots, sous la carte et le bilan, au-dessus des équipes :
+            dans le flux, jamais par-dessus la carte ni sous la barre d'action.
+            Monté dès qu'un bot est assis, même vide, pour que la région
+            aria-live existe avant la première bulle. */}
+        {hasBots && <TabouSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />}
 
         {renderTeams(false)}
       </div>

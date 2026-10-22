@@ -1,5 +1,6 @@
 import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * MOTS CODÉS — moteur PUR, serveur-autoritaire.
@@ -43,6 +44,54 @@ export type MCPlayer = {
 
 export type MCPhase = 'countdown' | 'clue' | 'guess' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.mots-codes.game) : une
+ * RÉACTION à une tuile que toute la table vient de voir se retourner, ou à
+ * une équipe qui passe la main. Écrite par l'adaptateur dans la même
+ * réduction que le coup (aucun tick de plus) ; le kind ne se calcule que sur
+ * la vue spectateur — la couleur d'une tuile révélée, les mots restants —,
+ * jamais sur la grille de clés, et un bot qui tient la clé (maître-mot) ne
+ * parle jamais.
+ *   • tuile de son équipe : nice (bien vu), lead (on passe devant) ;
+ *   • tuile neutre : miss ; tuile adverse : oops (un coéquipier), thanks (un
+ *     adversaire remercie du cadeau) ;
+ *   • assassin : assassin (un coéquipier), saved (un adversaire) ;
+ *   • dernier mot : win (un coéquipier), thanks (le dernier mot adverse) ;
+ *   • main passée : tease (un adversaire).
+ */
+export type MCSpeechKind =
+  | 'nice'
+  | 'lead'
+  | 'miss'
+  | 'oops'
+  | 'thanks'
+  | 'assassin'
+  | 'saved'
+  | 'win'
+  | 'tease'
+export type MCSpeech = BotSpeech<MCSpeechKind>
+/** Une parole à écrire : le bot qui parle, son kind, le joueur qu'il nomme. */
+export type MCSay = SpeechMove<MCSpeechKind>
+
+/** Les phases où chaque kind peut naître : celle qu'ouvre la tuile retournée. */
+const MC_SPEECH_PHASES: Record<MCSpeechKind, readonly MCPhase[]> = {
+  nice: ['guess', 'clue'],
+  lead: ['guess', 'clue'],
+  miss: ['clue'],
+  oops: ['clue'],
+  thanks: ['clue', 'finished'],
+  assassin: ['finished'],
+  saved: ['finished'],
+  win: ['finished'],
+  tease: ['clue'],
+}
+
+export const MC_SPEECH_KINDS = Object.keys(MC_SPEECH_PHASES) as MCSpeechKind[]
+/** Paroles max par bot et par tour d'équipe ; le bavardage du persona borne en dessous. */
+export const MC_SPEECH_CAP = 2
+/** Bulles max de toute la table par tour d'équipe. */
+export const MC_TURN_SPEECH_MAX = 3
+
 export type MCState = TimedPhaseState & {
   version: number
   phase: MCPhase
@@ -61,6 +110,17 @@ export type MCState = TimedPhaseState & {
   loseReason: 'assassin' | null
   rematchVotes: string[]
   rngState: number
+  /**
+   * PUBLIC — numéro du tour d'équipe (un par phase d'indice), la « manche »
+   * des paroles. Optionnel : un état sérialisé avant son arrivée n'en a pas
+   * (compté depuis 0).
+   */
+  turn?: number
+  /**
+   * PUBLIC — paroles des bots, celles du tour en cours et du précédent au
+   * plus (chaque nouveau tour ne garde que celui qui s'achève).
+   */
+  speech?: MCSpeech[]
 }
 
 export type MCAction =
@@ -178,14 +238,20 @@ export function createMCState(
     loseReason: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    turn: 0,
+    speech: [],
   }
 }
 
 // ─── Transitions internes ────────────────────────────────────────────────────
 
 function enterCluePhase(state: MCState, team: MCTeam, now: number): MCState {
+  const turn = state.turn ?? 0
   return {
     ...state,
+    turn: turn + 1,
+    // Le fil ne garde que le tour qui s'achève : jamais plus de deux tours.
+    speech: (state.speech ?? []).filter((sp) => sp.round === turn),
     activeTeam: team,
     clue: null,
     guessesLeft: 0,
@@ -357,6 +423,38 @@ export function reduceMC(state: MCState, action: MCAction): MCState {
       const exhaustive: never = action
       throw new MCEngineError(`UNKNOWN_ACTION_${String((exhaustive as { type?: string }).type)}`)
     }
+  }
+}
+
+// ─── Paroles des bots ────────────────────────────────────────────────────────
+
+/**
+ * Le fil après la parole `say`, écrite au tour courant. La réaction
+ * accompagne le coup qui l'a fait naître : même version d'état. Refusée
+ * (MCEngineError) hors de ses phases, d'un orateur qui n'est pas un bot
+ * assis ou qui tient la clé (un maître-mot bot se tait : sa parole aurait
+ * l'air informée), vers un joueur absent ou vers soi, au-delà du plafond du
+ * bot ou de la table — l'adaptateur garde alors le coup sans la parole.
+ */
+export function addMCSpeech(state: MCState, say: MCSay): MCState {
+  if (!MC_SPEECH_KINDS.includes(say.kind)) throw new MCEngineError('INVALID_KIND')
+  if (!MC_SPEECH_PHASES[say.kind].includes(state.phase)) throw new MCEngineError('SPEECH_OUT_OF_PHASE')
+  const speaker = state.players.find((p) => p.id === say.playerId)
+  if (!speaker || !speaker.isBot || speaker.leftAt || speaker.isSpymaster) {
+    throw new MCEngineError('INVALID_SPEAKER')
+  }
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.leftAt || target.id === speaker.id) throw new MCEngineError('INVALID_TARGET')
+  const turn = state.turn ?? 0
+  const speech = state.speech ?? []
+  const current = speech.filter((sp) => sp.round === turn)
+  if (current.length >= MC_TURN_SPEECH_MAX) throw new MCEngineError('TABLE_TALK_FULL')
+  if (current.filter((sp) => sp.playerId === speaker.id).length >= MC_SPEECH_CAP) {
+    throw new MCEngineError('ALREADY_SPOKE')
+  }
+  return {
+    ...state,
+    speech: [...speech, { playerId: speaker.id, kind: say.kind, targetId: target.id, round: turn }],
   }
 }
 

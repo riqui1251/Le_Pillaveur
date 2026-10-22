@@ -17,7 +17,16 @@ import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { PlayingCardBack } from '@/components/ui/PlayingCard'
+import { TV_FEED_SIZE, playerIcon, speechFeedItems } from '@/components/online/bot-speech/bot-speech-feed'
+import { MotsCodesSpeechFeed } from '@/components/online/mots-codes/MotsCodesSpeechFeed'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
+
+/**
+ * Les réactions des bots sous la grille : deux bulles au plus à l'écran,
+ * calées en bas et rognées en haut, pour que la grille garde sa hauteur.
+ * Sans parole dans le tour, la bande n'existe pas.
+ */
+const FEED_CLIP = 'flex max-h-[6.5rem] min-h-0 w-full shrink-0 flex-col justify-end overflow-hidden'
 
 /**
  * MOTS CODÉS sur grand écran : la grille en géant, l'indice courant, et de
@@ -154,6 +163,8 @@ export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientV
   // Même quorum que les téléphones (OnlineEndScreen) : les membres de la table et leurs seuls votes.
   const rematch = rematchCounter(room.members, state.rematchVotes ?? [], null)
   const compact = (['gold', 'red'] as const).some((team) => state.players.filter((p) => p.team === team).length > 9)
+  const talking =
+    state.phase !== 'countdown' && speechFeedItems(state.speech ?? [], state.turn ?? 0, null, TV_FEED_SIZE).length > 0
 
   const column = (team: MCTeam) => (
     <TeamColumn
@@ -299,6 +310,12 @@ export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientV
             )
           )}
         </div>
+
+        {talking && (
+          <div className={FEED_CLIP}>
+            <MotsCodesSpeechFeed view={state} iconOf={(p) => playerIcon(p, room.members)} variant="tv" />
+          </div>
+        )}
       </>
     )
   }

@@ -3642,7 +3642,97 @@
         "yourTeam": "Your team",
         "you": "(you)",
         "describerTag": "describing",
-        "leftTag": "offline"
+        "leftTag": "offline",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "go": "Your turn, {name}! We’re all ears 👂",
+          "go_2": "Come on {name}, make us shine!",
+          "go_3": "{name}, antennas up, we’re listening 📡",
+          "jinx": "Good luck, {name}… we’re watching for the tiniest slip 👀",
+          "jinx_2": "{name}, one forbidden word and we buzz!",
+          "jinx_3": "Breathe, {name}. We’re the taboo police tonight 😈",
+          "skip": "{name}, I describe like a clam: I’ll sit this one out!",
+          "skip_2": "{speaker, select, f {Sorry} m {Sorry} other {My bad}}, {name}, no mic for me. I pass!",
+          "skip_3": "I’m passing, {name}. I’ll cheer you on from here 📣",
+          "found": "Got it! Nice one, {name} 🎯",
+          "found_2": "What an ear, {name}!",
+          "found_3": "{name}, you’re on fire! Next!",
+          "lead": "We’re ahead thanks to you, {name}! 🔥",
+          "lead_2": "{name}, we’re leading! Don’t let up!",
+          "lead_3": "And just like that, we’re ahead! Thanks {name} 🚀",
+          "grumble": "Easy, {name}, leave some words for us!",
+          "grumble_2": "That’s way too fast, {name}… got a cheat sheet? 🤨",
+          "grumble_3": "{name}, stop describing so well, it’s annoying 😤",
+          "buzz": "Taboo! Busted, {name} 🚨",
+          "buzz_2": "{name}, we {target, select, f {heard you} m {heard you} other {heard you loud and clear}}! Forbidden word!",
+          "buzz_3": "Beep beep beep! Not on our watch, {name} 😏",
+          "protest": "What?! That wasn’t even a forbidden word, {name}!",
+          "protest_2": "{name}, your ears are a bit too sharp, no? 🙄",
+          "protest_3": "Outrageous call, {name}! I’m appealing 📢",
+          "tease": "Drawing a blank, {name}? 😏",
+          "tease_2": "Passing already? Come on {name}, a little effort!",
+          "tease_3": "{name} passes… noted, noted 📝",
+          "proud": "What a round, {name}! Hats off 🎩",
+          "proud_2": "{name}, you describe like a walking dictionary! 📚",
+          "proud_3": "Great streak, {name}. Do that again anytime!",
+          "console": "No worries, {name}, we’ll make up for it!",
+          "console_2": "{name}, we’re saving our strength for the next one 💪",
+          "console_3": "Come on {name}, next round’s the one!"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "found": "Well played, {name}. Found with method.",
+            "found_2": "{name}, nice. No rush, just how I like it.",
+            "jinx": "Take your time, {name}… we’re listening very closely.",
+            "jinx_2": "{name}, I’m watching every word. Politely, but watching."
+          },
+          "farceur": {
+            "found": "{name} got it! Anyone seen their cheat sheet? 😜",
+            "found_2": "Got it! {name}, is that a gift or a hidden mic? 🕵️",
+            "jinx": "{name}, say a forbidden word and I’ll know… 👻",
+            "jinx_2": "Good luck, {name}. Taboo is lurking tonight 🌙"
+          },
+          "suiveur": {
+            "found": "Bravo {name}! Everyone’s clapping, so I am too 👏",
+            "found_2": "{name} got it? Then I’m {speaker, select, f {thrilled} m {thrilled} other {over the moon}}!",
+            "jinx": "I’m with everyone else: good luck, {name} 😬",
+            "jinx_2": "{name}, we’re watching you. Well, they are, I’m following."
+          },
+          "agressif": {
+            "found": "Finally! About time, {name}!",
+            "found_2": "Got it. Next! No dawdling, {name}!",
+            "jinx": "{name}, one slip and I buzz without mercy 😈",
+            "jinx_2": "Tremble, {name}. I am the buzzer."
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…ta-da!"
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        },
+        "botTicAlt": {
+          "gaston": "Hold your horses!"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3723,6 +3813,90 @@
           "drawing": "drawing",
           "found": "found it",
           "away": "offline"
+        },
+        "feedAria": "Table chatter",
+        "botSay": {
+          "go": "Pencils ready, {name}! We can’t wait 🎨",
+          "go_2": "{name}, draw us a masterpiece!",
+          "go_3": "Come on {name}, show us your magic touch ✏️",
+          "skip": "{name}, I draw like a toddler: I’ll pass!",
+          "skip_2": "{speaker, select, f {Sorry} m {Sorry} other {My bad}}, {name}, my doodles scare people. I pass!",
+          "skip_3": "I’ll pass, {name}. Even my stick figures flop 😅",
+          "puzzled": "Uh… what is that, {name}? 🤔",
+          "puzzled_2": "{name}, I’m tilting my head every which way… nothing 🙃",
+          "puzzled_3": "Lovely scribble, {name}. But of what? 😅",
+          "admire": "Ooh, nice line work, {name}!",
+          "admire_2": "{name}, it’s taking shape, I can feel it ✨",
+          "admire_3": "Such confident strokes, {name} 👏",
+          "erase": "Wipe it all and start over, {name}? 😅",
+          "erase_2": "{name}, back to square one? Hang in there!",
+          "erase_3": "Blank page, {name}… the suspense is killing me 😬",
+          "first": "Already?! Nice one, {name} ⚡",
+          "first_2": "How did you get it so fast, {name}?!",
+          "first_3": "{name} guesses faster than their own shadow 🤠",
+          "found": "Bravo, {name}! 👏",
+          "found_2": "{name} got it! Me, still nothing…",
+          "found_3": "Nice one, {name}. I’m still looking 🤔",
+          "bravo": "Beautifully drawn, {name}! 🎨",
+          "bravo_2": "{name}, this belongs in a gallery! 🖼️",
+          "bravo_3": "Great work, {name}. Even I could’ve… no, actually 😅",
+          "stumped": "Oh, THAT’s what it was?! Sorry, {name} 🙈",
+          "stumped_2": "{name}, I swear I was trying really hard 😅",
+          "stumped_3": "Nobody? Let’s call it abstract art, {name} 🖌️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "go": "Take your time, {name}. We’re watching calmly.",
+            "go_2": "{name}, one line at a time and all will be well.",
+            "found": "Well spotted, {name}. Neatly guessed.",
+            "found_2": "{name}, nice. I’m still thinking it over."
+          },
+          "farceur": {
+            "go": "{name}, if it’s ugly, we’ll say it’s on purpose 😜",
+            "go_2": "Your turn, {name}. No stick figures, okay? 😏",
+            "found": "{name} got it! Cheating or psychic? 🔮",
+            "found_2": "Got it?! {name}, you’ve got a hidden talent 🕵️"
+          },
+          "suiveur": {
+            "go": "Everyone’s cheering you on, so I am too, {name}!",
+            "go_2": "{name}, we’re all crossing our fingers for you. Me too 🤞",
+            "found": "Bravo {name}! Everyone’s clapping, so I clap too 👏",
+            "found_2": "{name} got it? Then I’m {speaker, select, f {delighted} m {delighted} other {over the moon}}!"
+          },
+          "agressif": {
+            "go": "{name}, draw fast, we haven’t got all night!",
+            "go_2": "Come on {name}, no scribbles, I’m judging 😈",
+            "found": "About time, {name}!",
+            "found_2": "{name} got it. Fine. Next!"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…ta-da!"
+        },
+        "botTicAlt": {
+          "gaston": "Hold your horses!"
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {
@@ -5346,7 +5520,88 @@
         },
         "tileNeutral": "neutral",
         "tileAssassin": "assassin",
-        "tileRevealed": "revealed"
+        "tileRevealed": "revealed",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "nice": "Nice one, {name}! One more 🎯",
+          "nice_2": "{name}, good eye! Shall we keep going?",
+          "nice_3": "Bang on target, {name}!",
+          "lead": "We’re ahead, {name}! 🔥",
+          "lead_2": "{name}, thanks to you we’re leading! Don’t let up!",
+          "lead_3": "And just like that, we’re in front! Thanks {name} 🚀",
+          "miss": "Nothing there, {name}… but we were close!",
+          "miss_2": "Missed, {name}. No biggie, it happens 🤷",
+          "miss_3": "{name}, an innocent bystander! Our turn’s over…",
+          "oops": "Ouch, {name}… that was one of theirs 😬",
+          "oops_2": "{name}, you just gave them a present 🎁",
+          "oops_3": "Oops! We played for the other team, {name} 🙈",
+          "thanks": "Thanks for the gift, {name} 😘",
+          "thanks_2": "{name}, we owe you one! 😇",
+          "thanks_3": "So kind, {name}. Playing for us now? 😏",
+          "assassin": "{name}… that was the assassin 💀",
+          "assassin_2": "Noooo, {name}! Not that one! 😱",
+          "assassin_3": "{name}, we were so close… Rest in peace, our game 🪦",
+          "saved": "Thanks {name}, you just handed us the win! 🏆",
+          "saved_2": "{name}, we’ll never forget this 🙏",
+          "saved_3": "A win by forfeit, all thanks to you, {name} 😂",
+          "win": "We won thanks to you, {name}! 🏆",
+          "win_2": "{name}, the last word! What a team! 🎉",
+          "win_3": "Champions! Thanks {name} 🥳",
+          "tease": "Out of ideas already, {name}? 😏",
+          "tease_2": "{name} passes… scared of the assassin? 🐔",
+          "tease_3": "Thanks for letting us play, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Well spotted, {name}. Carefully now, let’s go on.",
+            "nice_2": "{name}, nice. Let’s not tempt fate.",
+            "thanks": "Thank you, {name}. Very kind of you.",
+            "thanks_2": "{name}, how nice… I won’t say no."
+          },
+          "farceur": {
+            "nice": "{name}, is that a gift or did you cheat? 😜",
+            "nice_2": "Bingo, {name}! Are you reading minds? 🔮",
+            "thanks": "{name}, is it my birthday today? 🎁",
+            "thanks_2": "Thanks {name}! I’ll send you a postcard 💌"
+          },
+          "suiveur": {
+            "nice": "Bravo {name}! Everyone’s happy, so am I 😊",
+            "nice_2": "{name} got it? Then I’m {speaker, select, f {delighted} m {delighted} other {over the moon}}!",
+            "thanks": "Like my team says: thanks, {name} 😇",
+            "thanks_2": "{name}, the whole table thanks you. Me too!"
+          },
+          "agressif": {
+            "nice": "Finally a good one, {name}! Keep going!",
+            "nice_2": "{name}, again! Let’s crush them!",
+            "thanks": "Thanks, {name}! Do it again anytime 😈",
+            "thanks_2": "{name}, which team are you on, exactly? 😈"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…ta-da!"
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

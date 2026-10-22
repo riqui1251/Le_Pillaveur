@@ -3642,7 +3642,97 @@
         "yourTeam": "Ton équipe",
         "you": "(toi)",
         "describerTag": "décrit",
-        "leftTag": "hors ligne"
+        "leftTag": "hors ligne",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "go": "À toi, {name} ! On est tout ouïe 👂",
+          "go_2": "Allez {name}, fais-nous briller !",
+          "go_3": "{name}, on t’écoute, les antennes dressées 📡",
+          "jinx": "Bonne chance, {name}… on guette le moindre faux pas 👀",
+          "jinx_2": "{name}, un seul mot interdit et on buzze !",
+          "jinx_3": "Respire, {name}. Les tabous, c’est nous qui les surveillons 😈",
+          "skip": "{name}, je décris comme une huître : je passe mon tour !",
+          "skip_2": "{speaker, select, f {Désolée} m {Désolé} other {Pardon}}, {name}, pas de micro pour moi. Je passe !",
+          "skip_3": "Je passe la main, {name}. Je vous encourage d’ici 📣",
+          "found": "Trouvé ! Bien vu, {name} 🎯",
+          "found_2": "Quelle oreille, {name} !",
+          "found_3": "{name}, t’es en feu ! Au suivant !",
+          "lead": "On passe devant grâce à toi, {name} ! 🔥",
+          "lead_2": "{name}, on mène ! On lâche rien !",
+          "lead_3": "Et hop, devant ! Merci {name} 🚀",
+          "grumble": "Doucement, {name}, laisse-nous des mots !",
+          "grumble_2": "Ça va trop vite, {name}… t’aurais pas une antisèche ? 🤨",
+          "grumble_3": "{name}, arrête de faire deviner si bien, c’est agaçant 😤",
+          "buzz": "Tabou ! Grillé, {name} 🚨",
+          "buzz_2": "{name}, on t’a {target, select, f {entendue} m {entendu} other {bien entendu}} ! Mot interdit !",
+          "buzz_3": "Bip bip bip ! Pas de ça chez nous, {name} 😏",
+          "protest": "Quoi ?! C’était même pas un mot interdit, {name} !",
+          "protest_2": "{name}, t’as l’oreille un peu trop fine, non ? 🙄",
+          "protest_3": "Arbitrage scandaleux, {name} ! Je fais appel 📢",
+          "tease": "On sèche, {name} ? 😏",
+          "tease_2": "Passer, déjà ? Allez {name}, un petit effort !",
+          "tease_3": "{name} passe… on note, on note 📝",
+          "proud": "Quelle manche, {name} ! Chapeau 🎩",
+          "proud_2": "{name}, tu décris comme un dictionnaire ! 📚",
+          "proud_3": "Belle série, {name}. Tu nous refais ça quand tu veux !",
+          "console": "C’est pas grave, {name}, on se rattrape !",
+          "console_2": "{name}, on garde des forces pour la prochaine 💪",
+          "console_3": "Allez {name}, la prochaine sera la bonne !"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "found": "Bien joué, {name}. Trouvé avec méthode.",
+            "found_2": "{name}, joli. Sans précipitation, comme j’aime.",
+            "jinx": "Prends ton temps, {name}… on écoute très attentivement.",
+            "jinx_2": "{name}, je surveille chaque mot. Poliment, mais je surveille."
+          },
+          "farceur": {
+            "found": "{name} a trouvé ! Quelqu’un a vu son antisèche ? 😜",
+            "found_2": "Trouvé ! {name}, t’as un don ou un micro caché ? 🕵️",
+            "jinx": "{name}, au moindre mot interdit, je le saurai… 👻",
+            "jinx_2": "Bonne chance, {name}. Le tabou rôde ce soir 🌙"
+          },
+          "suiveur": {
+            "found": "Bravo {name} ! Tout le monde applaudit, alors moi aussi 👏",
+            "found_2": "{name} a trouvé ? Alors je suis {speaker, select, f {contente} m {content} other {aux anges}} !",
+            "jinx": "Je dis comme les autres : bonne chance, {name} 😬",
+            "jinx_2": "{name}, on te surveille. Enfin, eux surveillent, moi je suis."
+          },
+          "agressif": {
+            "found": "Enfin ! Pas trop tôt, {name} !",
+            "found_2": "Trouvé. Suivant ! On traîne pas, {name} !",
+            "jinx": "{name}, un faux pas et je buzze sans pitié 😈",
+            "jinx_2": "Tremble, {name}. Le buzzer, c’est moi."
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…et hop !"
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        },
+        "botTicAlt": {
+          "gaston": "Minute, la jeunesse !"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3723,6 +3813,90 @@
           "drawing": "dessine",
           "found": "a trouvé",
           "away": "hors ligne"
+        },
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "go": "À tes crayons, {name} ! On a hâte 🎨",
+          "go_2": "{name}, fais-nous un chef-d’œuvre !",
+          "go_3": "Allez {name}, montre-nous ton coup de patte ✏️",
+          "skip": "{name}, moi, je dessine comme un pied : je passe !",
+          "skip_2": "{speaker, select, f {Désolée} m {Désolé} other {Pardon}}, {name}, mes dessins font peur. Je passe mon tour !",
+          "skip_3": "Je passe, {name}. Même mes bonshommes bâtons sont ratés 😅",
+          "puzzled": "Euh… c’est quoi, ça, {name} ? 🤔",
+          "puzzled_2": "{name}, je penche la tête dans tous les sens… rien 🙃",
+          "puzzled_3": "Joli gribouillis, {name}. Mais de quoi ? 😅",
+          "admire": "Oh, joli coup de crayon, {name} !",
+          "admire_2": "{name}, ça prend forme, je le sens ✨",
+          "admire_3": "Quel trait assuré, {name} 👏",
+          "erase": "On efface tout et on recommence, {name} ? 😅",
+          "erase_2": "{name}, retour à la case départ ? Courage !",
+          "erase_3": "Page blanche, {name}… le suspense est total 😬",
+          "first": "Déjà ?! Bien vu, {name} ⚡",
+          "first_2": "Comment t’as trouvé si vite, {name} ?!",
+          "first_3": "{name} devine plus vite que son ombre 🤠",
+          "found": "Bravo, {name} ! 👏",
+          "found_2": "{name} a trouvé ! Moi, toujours pas…",
+          "found_3": "Bien vu, {name}. Je cherche encore 🤔",
+          "bravo": "Bien dessiné, {name} ! 🎨",
+          "bravo_2": "{name}, ça mérite une expo ! 🖼️",
+          "bravo_3": "Joli travail, {name}. Même moi j’aurais pu… non, en fait 😅",
+          "stumped": "Ah, c’était ÇA ?! Pardon, {name} 🙈",
+          "stumped_2": "{name}, je jure que je cherchais très fort 😅",
+          "stumped_3": "Personne ? On dira que c’était de l’art abstrait, {name} 🖌️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "go": "Prends ton temps, {name}. On t’observe sagement.",
+            "go_2": "{name}, trait par trait, et tout ira bien.",
+            "found": "Bien vu, {name}. Proprement deviné.",
+            "found_2": "{name}, joli. Moi, je réfléchis encore."
+          },
+          "farceur": {
+            "go": "{name}, si c’est moche, on dira que c’est voulu 😜",
+            "go_2": "À toi, {name}. Pas de bonhomme bâton, hein ! 😏",
+            "found": "{name} a trouvé ! Triche ou voyance ? 🔮",
+            "found_2": "Trouvé ?! {name}, t’as un don caché 🕵️"
+          },
+          "suiveur": {
+            "go": "Tout le monde t’encourage, alors moi aussi, {name} !",
+            "go_2": "{name}, on croise tous les doigts pour toi. Moi aussi 🤞",
+            "found": "Bravo {name} ! Tout le monde applaudit, j’applaudis 👏",
+            "found_2": "{name} a trouvé ? Alors je suis {speaker, select, f {ravie} m {ravi} other {aux anges}} !"
+          },
+          "agressif": {
+            "go": "{name}, dessine vite, on n’a pas toute la nuit !",
+            "go_2": "Allez {name}, pas de gribouillis, je juge 😈",
+            "found": "Pas trop tôt, {name} !",
+            "found_2": "{name} a trouvé. Bon. Au suivant !"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…et hop !"
+        },
+        "botTicAlt": {
+          "gaston": "Minute, la jeunesse !"
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
         }
       },
       "tutorial": {
@@ -5346,7 +5520,88 @@
         },
         "tileNeutral": "neutre",
         "tileAssassin": "assassin",
-        "tileRevealed": "révélée"
+        "tileRevealed": "révélée",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "nice": "Bien vu, {name} ! Un de plus 🎯",
+          "nice_2": "{name}, t’as l’œil ! On continue ?",
+          "nice_3": "Pile dans le mille, {name} !",
+          "lead": "On passe devant, {name} ! 🔥",
+          "lead_2": "{name}, grâce à toi on mène ! On lâche rien !",
+          "lead_3": "Et hop, en tête ! Merci {name} 🚀",
+          "miss": "Dans le vide, {name}… mais on y était presque !",
+          "miss_2": "Raté, {name}. Pas grave, ça arrive 🤷",
+          "miss_3": "{name}, un passant innocent ! La main passe…",
+          "oops": "Aïe, {name}… c’était un des leurs 😬",
+          "oops_2": "{name}, tu viens de leur faire un cadeau 🎁",
+          "oops_3": "Oups ! On a joué pour l’autre équipe, {name} 🙈",
+          "thanks": "Merci du cadeau, {name} 😘",
+          "thanks_2": "{name}, on te revaudra ça ! 😇",
+          "thanks_3": "Trop gentil, {name}. Tu joues pour nous maintenant ? 😏",
+          "assassin": "{name}… c’était l’assassin 💀",
+          "assassin_2": "Noooon, {name} ! Pas celle-là ! 😱",
+          "assassin_3": "{name}, on était si près… Paix à notre partie 🪦",
+          "saved": "Merci {name}, tu nous offres la victoire ! 🏆",
+          "saved_2": "{name}, on ne l’oubliera jamais 🙏",
+          "saved_3": "Victoire sur tapis vert grâce à toi, {name} 😂",
+          "win": "On a gagné grâce à toi, {name} ! 🏆",
+          "win_2": "{name}, le dernier mot ! Quelle équipe ! 🎉",
+          "win_3": "Champions ! Merci {name} 🥳",
+          "tease": "Déjà à court d’idées, {name} ? 😏",
+          "tease_2": "{name} passe la main… la peur de l’assassin ? 🐔",
+          "tease_3": "Merci de nous laisser jouer, {name} 😇"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "nice": "Bien vu, {name}. Prudemment, on continue.",
+            "nice_2": "{name}, joli. Ne tentons pas le diable.",
+            "thanks": "Merci, {name}. C’est très aimable.",
+            "thanks_2": "{name}, c’est gentil… je ne vais pas refuser."
+          },
+          "farceur": {
+            "nice": "{name}, t’as un don ou t’as triché ? 😜",
+            "nice_2": "Bingo, {name} ! Tu lis dans les pensées ? 🔮",
+            "thanks": "{name}, c’est ma fête aujourd’hui ? 🎁",
+            "thanks_2": "Merci {name} ! Je t’enverrai une carte postale 💌"
+          },
+          "suiveur": {
+            "nice": "Bravo {name} ! Tout le monde est content, moi aussi 😊",
+            "nice_2": "{name} a trouvé ? Alors je suis {speaker, select, f {ravie} m {ravi} other {aux anges}} !",
+            "thanks": "Comme dit mon équipe : merci, {name} 😇",
+            "thanks_2": "{name}, toute la table te remercie. Moi aussi !"
+          },
+          "agressif": {
+            "nice": "Enfin un bon, {name} ! Continue !",
+            "nice_2": "{name}, encore ! On les écrase !",
+            "thanks": "Merci, {name} ! Recommence quand tu veux 😈",
+            "thanks_2": "{name}, tu joues dans quelle équipe, au juste ? 😈"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…et hop !"
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [

@@ -492,7 +492,9 @@ describe('le socle ne dépend d’aucun jeu', () => {
           const source = readFileSync(full, 'utf8')
           if (!/(?:\bfrom\s+|\bimport\(\s*)['"][^'"]*catalogue-spec['"]/.test(source)) continue
           if (entry.name.endsWith('.test.ts')) testImporters += 1
-          else offenders.push(relative(src, full))
+          // Une fabrique dérivée (reaction-catalogue-spec.ts) : son nom finit en
+          // catalogue-spec, ses propres importeurs passent donc au même relevé.
+          else if (!entry.name.endsWith('catalogue-spec.ts')) offenders.push(relative(src, full))
         }
       }
     }
