@@ -6,12 +6,13 @@ import type { PetitBuveurCastState } from '@/lib/cast-types'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { resolveAmbianceMode } from '@/app/[locale]/games/petit-buveur/ambiance'
 import { useBoardSequence } from '@/components/online/petit-buveur/useBoardSequence'
+import { PetitBuveurSpeechFeed, useSettledSpeech } from '@/components/online/petit-buveur/PetitBuveurSpeechFeed'
 import type { EngineView } from '@/components/online/petit-buveur/view-helpers'
 import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
 import { LOCAL_DICE_RESULT_MS } from '@/app/[locale]/games/petit-buveur/board-display'
 import { castCues, onlineInteractionKey, onlineRollCue } from './petit-buveur-cues'
 import { castHeld, castScreenModel } from './petit-buveur/cast-view'
-import { onlineScreenModel } from './petit-buveur/online-view'
+import { onlineIconOf, onlineScreenModel } from './petit-buveur/online-view'
 import {
   useCastDiceShow,
   useDiceShow,
@@ -30,7 +31,8 @@ import { TvPbVictory } from './petit-buveur/TvPbVictory'
  * téléphone qui lance, la TV montre le dé, fait marcher le pion case par case
  * (useBoardSequence), retourne la carte une fois le pion posé, et garde
  * l'effet d'un tirage caché sous son spectacle. L'écran de fin attend que le
- * pion gagnant soit arrivé.
+ * pion gagnant soit arrivé. La parole d'un bot, écrite avec le coup qu'elle
+ * commente, attend de même que le plateau soit posé.
  */
 export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineView }) {
   const view = state
@@ -56,6 +58,19 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineV
   const board = useBoardSequence(view, frozen, { silent: true, keepPace: true })
   const finished = view.phase === 'finished' || Boolean(view.winner)
   const endRevealed = useEndReveal(finished, !frozen && !board.animating)
+  const feed = useSettledSpeech(view.speech, view.turnCount, !frozen && !board.animating)
+  // La dernière bulle seulement : la colonne du classement lui cède sa hauteur (SPEECH_BLOCK_REM).
+  const speech = feed.speech.some((sp) => sp.round === feed.round) ? (
+    <PetitBuveurSpeechFeed
+      speech={feed.speech}
+      round={feed.round}
+      players={view.players}
+      iconOf={(p) => onlineIconOf(view, room.members, p.id)}
+      variant="tv"
+      soft={soft}
+      tvSize={1}
+    />
+  ) : null
 
   const model = onlineScreenModel(
     view,
@@ -79,7 +94,7 @@ export function TvPetitBuveur({ room, state }: { room: TvRoomDto; state: EngineV
           texts={texts}
         />
       ) : (
-        <TvPbScreen model={model} texts={texts} />
+        <TvPbScreen model={model} texts={texts} speech={speech} />
       )}
       <TvPbDiceOverlay
         phase={dice.phase}

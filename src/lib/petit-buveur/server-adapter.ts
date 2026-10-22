@@ -13,6 +13,7 @@ import {
 } from './engine'
 import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
 import type { Difficulty } from './types'
+import { petitBuveurBotSay } from './bot-speech'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 
 /**
@@ -88,6 +89,8 @@ export function parseEngineState(json: string | null): EngineState | null {
   try {
     const parsed = JSON.parse(json) as EngineState
     if (!parsed || !Array.isArray(parsed.players)) return null
+    // `speech` reste absent tant qu'aucun bot n'a parlé (état d'avant les paroles compris).
+    if (parsed.speech !== undefined && !Array.isArray(parsed.speech)) delete parsed.speech
     return parsed
   } catch {
     return null
@@ -113,44 +116,74 @@ export function withSideDeadline(state: EngineState, now: number): EngineState {
   return { ...state, pending: { ...p, deadlineAt: now + PB_SIDE_CHOICE_MS } }
 }
 
-function applyEngine(state: EngineState, action: EngineAction, now: number): RoomActionResult {
+/**
+ * Le coup, puis la parole qu'il inspire à un bot (bot-speech.ts), dans la
+ * même écriture. `sayRand` tire les paroles sur son propre flux : le RNG du
+ * moteur, lui, n'en sait rien — même partie avec ou sans paroles.
+ */
+function applyEngine(state: EngineState, action: EngineAction, now: number, sayRand: () => number): RoomActionResult {
   try {
     // Le joueur qui doit agir a pu quitter la table entre-temps (cible de pile ou face).
-    return { ok: true, state: withSideDeadline(passDepartedTurns(reduce(state, action)), now) }
+    const next = withSideDeadline(passDepartedTurns(reduce(state, action)), now)
+    return { ok: true, state: withPetitBuveurSay(state, next, sayRand) }
   } catch (e) {
     return { ok: false, error: e instanceof EngineError ? e.message : 'ENGINE_ERROR' }
   }
 }
 
 /**
+ * La parole d'un bot sur le coup qui mène de `prev` à `next`, lue sur les
+ * seules VUES CLIENT (ni RNG, ni case cachée). Le planificateur ne propose
+ * que des paroles recevables (les tests le vérifient) ; si le moteur en
+ * refusait une quand même, le coup passe sans elle : une phrase ne coûte
+ * jamais un lancer.
+ */
+export function withPetitBuveurSay(prev: EngineState, next: EngineState, sayRand: () => number): EngineState {
+  const moves = petitBuveurBotSay(toClientView(prev), toClientView(next), sayRand)
+  if (moves.length === 0) return next
+  try {
+    return reduce(next, { type: 'SAY', moves })
+  } catch (e) {
+    if (e instanceof EngineError) return next
+    throw e
+  }
+}
+
+/**
  * Applique une action de salle de façon autoritaire. La validation du tour est
  * portée par le moteur (`reduce` lève NOT_YOUR_TURN, INTERACTION_PENDING,
- * INVALID_TARGET, INVALID_CHOICE…).
+ * INVALID_TARGET, INVALID_CHOICE…). Un humain ne fait jamais parler un bot
+ * qu'à travers son coup : SAY n'est pas une action de salle.
  */
 export function applyRoomAction(
   state: EngineState,
   userId: string,
   input: RoomActionInput,
-  now: number = Date.now()
+  now: number = Date.now(),
+  sayRand: () => number = Math.random
 ): RoomActionResult {
   const action: EngineAction =
     input.type === 'roll'
       ? { type: 'ROLL', playerId: userId }
       : { type: 'RESOLVE_INTERACTION', playerId: userId, choice: input.choice }
-  return applyEngine(state, action, now)
+  return applyEngine(state, action, now, sayRand)
 }
 
 /**
  * Délai de l'étape `side` dépassé : le côté de la cible est tiré au hasard
  * (RNG du moteur). NOT_DUE tant que l'échéance n'est pas atteinte.
  */
-export function applyTimeoutAction(state: EngineState, now: number): RoomActionResult {
+export function applyTimeoutAction(
+  state: EngineState,
+  now: number,
+  sayRand: () => number = Math.random
+): RoomActionResult {
   const p = state.pending
   if (state.phase === 'finished' || p?.stage !== 'side' || p.deadlineAt == null || now < p.deadlineAt) {
     return { ok: false, error: 'NOT_DUE' }
   }
   const next = autoAction(state)
-  return applyEngine(next.state, next.action, now)
+  return applyEngine(next.state, next.action, now, sayRand)
 }
 
 /** Vue client : l'état SAUF `rngState` (secret serveur), case cachée masquée. */
@@ -281,13 +314,17 @@ export function convertPlayerToBot(state: EngineState, playerId: string): Engine
  * le côté de pile ou face quand il en est la cible. Lancer, cible (jamais
  * lui-même), verdict d'un défi, côté, option : tirés au hasard par le RNG du
  * moteur, donc rejouables à graine égale. Même chose pour la décision en
- * attente d'un joueur parti.
+ * attente d'un joueur parti. Sa parole éventuelle (`sayRand`) n'y change rien.
  */
-export function applyBotAction(state: EngineState, now: number = Date.now()): RoomActionResult {
+export function applyBotAction(
+  state: EngineState,
+  now: number = Date.now(),
+  sayRand: () => number = Math.random
+): RoomActionResult {
   if (!deciderPlaysAuto(state)) return { ok: false, error: 'NOT_BOT_TURN' }
   if (!state.pending && state.players[state.currentPlayer]?.leftAt) {
     return { ok: true, state: withSideDeadline(passDepartedTurns(state), now) }
   }
   const next = autoAction(state)
-  return applyEngine(next.state, next.action, now)
+  return applyEngine(next.state, next.action, now, sayRand)
 }

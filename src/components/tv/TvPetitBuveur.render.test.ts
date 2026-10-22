@@ -14,6 +14,7 @@ import { TvPetitBuveur, TvPetitBuveurCast } from './TvPetitBuveur'
 import { TvRoomScreen } from './TvRoomScreen'
 import { TvPbVictory } from './petit-buveur/TvPbVictory'
 import { usePbTexts } from './petit-buveur/use-pb-texts'
+import { rankingDensity, SPEECH_BLOCK_REM } from './petit-buveur/model'
 
 // La config Vitest (env node, sans plugin React) compile le JSX en React.createElement
 // sans l'importer : le composant le cherche donc en global.
@@ -308,6 +309,53 @@ describe('TvPetitBuveur — partie en ligne', () => {
   })
 })
 
+describe('TvPetitBuveur — paroles des bots', () => {
+  /** 4 joueurs et 3 bots, carte posée, rien en attente. */
+  function sevenWithBots(): EngineState {
+    const names = ['Léa', 'Jean-Baptiste', 'Marie-Charlotte', 'Hugo', 'Raoul', 'Josiane', 'Kéké']
+    let s = createInitialState(
+      names.map((name, i) => ({ id: `u${i + 1}`, name })),
+      settings,
+      'tv-paroles'
+    )
+    s = { ...s, players: s.players.map((p, i) => (i >= 4 ? { ...p, isBot: true } : p)) }
+    for (let i = 0; i < 400 && (s.pending || !s.lastOutcome || s.turnCount < 2); i += 1) {
+      const n = autoAction(s)
+      s = reduce(n.state, n.action)
+    }
+    return s
+  }
+
+  it('la dernière parole d’un bot au pied du classement, coupée à quatre lignes ; le classement lui cède sa hauteur', () => {
+    const s = sevenWithBots()
+    expect(s.phase).toBe('playing')
+    const silent = html(createElement(TvPetitBuveur, { room: onlineRoom, state: toClientView(s) }))
+    const spoken = reduce(s, {
+      type: 'SAY',
+      moves: [
+        { playerId: 'u5', kind: 'overtake', targetId: 'u1' },
+        { playerId: 'u6', kind: 'aim', targetId: 'u2' },
+      ],
+    })
+    const out = html(createElement(TvPetitBuveur, { room: onlineRoom, state: toClientView(spoken) }))
+    expect(silent).not.toContain('Fil de la table')
+    expect(out).toContain('aria-label="Fil de la table"')
+    // Une seule bulle, la dernière : Josiane taquine Jean-Baptiste.
+    expect(out.match(/rounded-tl-sm/g)).toHaveLength(1)
+    expect(out).toContain('<span class="font-bold">Josiane</span>')
+    expect(out).toContain('Jean-Baptiste')
+    expect(out).toContain('[&amp;_li&gt;div]:line-clamp-4')
+    // Sept joueurs : la case sous chaque nom tant que personne ne parle, sur une ligne quand la bulle prend sa place.
+    expect(rankingDensity(7).mode).toBe('detailed')
+    expect(rankingDensity(7, SPEECH_BLOCK_REM).mode).toBe('single')
+    const caseLines = /text-lg font-semibold leading-tight text-white\/75">/g
+    expect(silent.match(caseLines)).toHaveLength(7)
+    expect(out.match(caseLines)).toBeNull()
+    expect(out).not.toMatch(/\btext-(xs|sm)\b/)
+    expect(out).not.toMatch(/\d+px/)
+  })
+})
+
 describe('TvPbVictory — écran de fin du Petit Buveur', () => {
   const players = [
     { id: 'a', name: 'Alice', index: 0, icon: null, position: 29, drinks: 3 },
@@ -390,6 +438,13 @@ describe('fixtures de l’aperçu TV — chaque étape rendue comme une télé a
   it('partie finie : le QR de l’en-tête reste (la fin se dévoile avec le pion gagnant)', () => {
     const [header] = screen(online, 'fin-12').split('<main')
     expect(header).toContain('<svg')
+  })
+
+  it('un bot commente le coup : une bulle, au pied du classement', () => {
+    const out = screen(online, 'paroles-bot-7')
+    expect(out).toContain('aria-label="Fil de la table"')
+    expect(out.match(/rounded-tl-sm/g)).toHaveLength(1)
+    expect(out.split('<aside')[1] ?? '').toContain('Fil de la table')
   })
 
   it('attente Chance et Téléport : qui décide, en entier', () => {

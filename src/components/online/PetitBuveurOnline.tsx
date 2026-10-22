@@ -35,6 +35,7 @@ import {
 import type { PetitBuveurT } from '@/app/[locale]/games/petit-buveur/case-config'
 import { ChoiceSheet, PRIMARY_CHOICE, SECONDARY_CHOICE, DANGER_CHOICE, focusOnMount } from './petit-buveur/ChoiceSheet'
 import { useBoardSequence } from './petit-buveur/useBoardSequence'
+import { PetitBuveurSpeechFeed, useSettledSpeech } from './petit-buveur/PetitBuveurSpeechFeed'
 import {
   caseDescription,
   choiceOf,
@@ -56,7 +57,7 @@ import { PbPawn, pbPawnColumns, pbPawnSize } from '@/components/petit-buveur/PbP
 import { PbDifficultyIcon, PbEffectIcon, PB_EFFECT_STYLE, type PbEffectKind } from '@/components/petit-buveur/effects'
 import { PbDialogClose, allowEscapeClose } from '@/components/petit-buveur/PbDialogClose'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
-import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
+import { InteractionSpectacle, useSpectacleRunning } from '@/components/petit-buveur/InteractionSpectacle'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
@@ -242,6 +243,10 @@ export function PetitBuveurOnline() {
   const board = useBoardSequence(view, Boolean(diceOverlay))
   const shownPositions = board.positions
   const boardSettled = !diceOverlay && !board.animating
+  // Paroles des bots : la bulle d'un coup attend que son effet soit montré
+  // (dé, pion, carte, puis roue ou pièce), comme la carte de la case.
+  const spectacleRunning = useSpectacleRunning(view?.lastInteraction)
+  const feed = useSettledSpeech(view?.speech, view?.turnCount ?? 0, boardSettled && !spectacleRunning)
   // Les gorgées de la case tombent avec son effet, pas pendant que le pion marche vers elle.
   const drinksById = useMemo(
     () => shownDrinks(view?.players ?? [], board.effectPending ? view?.lastOutcome : null),
@@ -958,6 +963,22 @@ export function PetitBuveurOnline() {
             </CaseRevealCard>
           )
         })()}
+
+        {/* Paroles des bots, sous la carte qu'elles commentent : dans le flux,
+            jamais par-dessus le plateau, le dé ni la barre d'action. Monté
+            vide dès le début (région live prête avant la première bulle),
+            sans écart tant qu'il est vide. */}
+        <div className={feed.speech.some((sp) => sp.round === feed.round) ? undefined : '-mt-2.5 sm:-mt-3'}>
+          <PetitBuveurSpeechFeed
+            speech={feed.speech}
+            round={feed.round}
+            players={view.players}
+            iconOf={(p) => iconOf(p.id)}
+            meId={user.id}
+            variant="phone"
+            soft={ambiance === 'soft'}
+          />
+        </div>
 
         {/* Effets actifs — une rangée de pastilles qui ouvre le détail et la légende */}
         {effectChips.length > 0 && (

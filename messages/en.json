@@ -4918,6 +4918,81 @@
         "rollDiceFor": "{name}, roll the dice",
         "verdict": {
           "drinks": "{count, plural, one {drinks # sip} other {drinks # sips}}"
+        },
+        "feedAria": "Table chatter",
+        "botSay": {
+          "ouch": "Ouch! Don’t laugh, {name}…",
+          "ouch_2": "{name}, this board is rigged, I’m telling you 😤",
+          "ouch_3": "This square has it in for me, {name} 😩",
+          "aim": "A little gift for you, {name}! With love 😘",
+          "aim_2": "Sorry, {name}… well, not that sorry 😇",
+          "aim_3": "{name}, nothing personal. Well, a bit 😏",
+          "payback": "{name}, I’ll remember that…",
+          "payback_2": "Thanks for the gift, {name}. I’ll return it 😏",
+          "payback_3": "So that’s how it is, {name}? Fine… 😤",
+          "sentBack": "Hey! Give me my square back, {name}!",
+          "sentBack_2": "{name}, I had only just got there 😩",
+          "sentBack_3": "Reverse gear… thanks a lot, {name} 🙄",
+          "overtake": "Passing you, {name}! Bye bye 👋",
+          "overtake_2": "Make way, {name}, coming through! 🏎️",
+          "overtake_3": "{name}, enjoy the view of my back 😎",
+          "closeToWin": "One more roll, {name}, and it’s in the bag 🏁",
+          "closeToWin_2": "{name}, I can already see the finish line 🏆",
+          "closeToWin_3": "Finish in sight! Hold on tight, {name} 😏",
+          "duelLost": "Rematch, {name}! That duel was rigged 😤",
+          "duelLost_2": "{name}, that was luck, nothing else.",
+          "duelLost_3": "Well played, {name}… but I’ll be back ⚔️",
+          "flipLost": "This coin is rigged, {name}!",
+          "flipLost_2": "{name}, next time I’m tossing the coin 🪙",
+          "flipLost_3": "Heads, tails… lost. Funny, is it, {name}? 🙄"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "ouch": "I had a bad feeling about this square, {name}…",
+            "ouch_2": "{name}, I should have stayed at the start.",
+            "aim": "My apologies, {name}, those are the rules.",
+            "aim_2": "{name}, please don’t take it the wrong way."
+          },
+          "farceur": {
+            "ouch": "Didn’t hurt! Well, a bit. Shh, {name} 🤫",
+            "ouch_2": "{name}, I did it on purpose. Really 😜",
+            "aim": "Surprise, {name}! 🎁",
+            "aim_2": "{name}, I picked at random. I swear 😇"
+          },
+          "suiveur": {
+            "ouch": "Why is it always me, {name}? 😩",
+            "ouch_2": "{name}, take my advice: avoid this square 😅",
+            "aim": "It had to land on someone, {name}…",
+            "aim_2": "{name}, anyone would have done the same, right? 🤭"
+          },
+          "agressif": {
+            "ouch": "This board will pay for that, {name} 😤",
+            "ouch_2": "{name}, the first one who laughs is my next target 😈",
+            "aim": "That’s for you, {name}. And it’s only the start 😈",
+            "aim_2": "{name}, you were right in my sights 🎯"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {

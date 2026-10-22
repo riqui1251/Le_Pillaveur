@@ -43,6 +43,11 @@ export type BotSpeechFeedProps<K extends string> = {
    * La TV garde son fil annoncé tel quel.
    */
   live?: 'all' | 'aimed'
+  /**
+   * Bulles gardées à l'écran de la TV (TV_FEED_SIZE par défaut) : une TV à
+   * la mise en page calibrée (Petit Buveur) n'en loge que la dernière.
+   */
+  tvSize?: number
 }
 
 type Bubble = {
@@ -95,6 +100,7 @@ export function BotSpeechFeed<K extends string>({
   aimedBadge,
   valuesOf,
   live = 'all',
+  tvSize = TV_FEED_SIZE,
 }: BotSpeechFeedProps<K>) {
   const reduced = useReducedMotion()
   const t = useTranslations('gameUi.feed')
@@ -102,7 +108,7 @@ export function BotSpeechFeed<K extends string>({
   const atEndRef = useRef(true)
   const [hasNewer, setHasNewer] = useState(false)
   const tv = variant === 'tv'
-  const items = speechFeedItems(speeches, round, meId, tv ? TV_FEED_SIZE : undefined, {
+  const items = speechFeedItems(speeches, round, meId, tv ? tvSize : undefined, {
     since: sinceRound,
     indexBase,
   })

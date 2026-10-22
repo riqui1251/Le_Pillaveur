@@ -239,6 +239,17 @@ export function absentsBlockRem(count: number): number {
   return h + 0.5
 }
 
+/** Lignes max de la bulle d'un bot au pied du classement (text-xl) ; au-delà, coupée. */
+export const SPEECH_LINES = 4
+
+/**
+ * Hauteur (rem) réservée au pied du classement à la bulle d'un bot, écart
+ * compris : SPEECH_LINES lignes de text-xl (1,75 rem), le rembourrage et le
+ * filet de la bulle. Le classement la retire de sa hauteur, comme l'encadré
+ * des absents ; une seule bulle (la dernière) tient dans la colonne.
+ */
+export const SPEECH_BLOCK_REM = SPEECH_LINES * 1.75 + 0.875 + 0.5
+
 /** Hauteur de la liste des effets (bandeau sous le plateau, titre retiré), un peu de marge comprise. */
 export const EFFECTS_LIST_REM = 11
 const EFFECT_ROW_TWO_REM = 3.69

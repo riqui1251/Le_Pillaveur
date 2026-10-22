@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Beer, Dice6, Leaf, Sparkles, Trophy } from 'lucide-react'
@@ -24,6 +24,7 @@ import {
   pawnGrid,
   pendingLayout,
   rankingDensity,
+  SPEECH_BLOCK_REM,
   type TitleLayout,
   type TvPbCard,
   type TvPbChange,
@@ -40,9 +41,19 @@ const BOARD_SIZE = 30
  * Vue plateau du Petit Buveur en grand, pour la toile TV de 80 × 39 rem :
  * à gauche le joueur au tour, le plateau de 30 cases (10 × 3) puis la carte
  * de la dernière case et les effets en cours ; à droite le classement et les
- * gorgées. Ne lit que le modèle déjà calé sur la chronologie du téléphone.
+ * gorgées, et sous lui la dernière parole d'un bot (`speech`, partie en
+ * ligne). Ne lit que le modèle déjà calé sur la chronologie du téléphone.
  */
-export function TvPbScreen({ model, texts }: { model: TvPbScreenModel; texts: PbTexts }) {
+export function TvPbScreen({
+  model,
+  texts,
+  speech = null,
+}: {
+  model: TvPbScreenModel
+  texts: PbTexts
+  /** Fil des paroles des bots (une bulle), quand un bot a parlé : le classement lui cède SPEECH_BLOCK_REM. */
+  speech?: ReactNode
+}) {
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[80rem] flex-1 gap-5 px-6 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -57,7 +68,7 @@ export function TvPbScreen({ model, texts }: { model: TvPbScreenModel; texts: Pb
           </div>
         </div>
       </div>
-      <RankingPanel model={model} texts={texts} />
+      <RankingPanel model={model} texts={texts} speech={speech} />
     </div>
   )
 }
@@ -645,11 +656,11 @@ const RANK_BORDER = [
   'border-orange-500/25 bg-orange-600/10',
 ]
 
-function RankingPanel({ model, texts }: { model: TvPbScreenModel; texts: PbTexts }) {
+function RankingPanel({ model, texts, speech }: { model: TvPbScreenModel; texts: PbTexts; speech: ReactNode }) {
   const t = useTranslations('tv')
   const reduced = useReducedMotion()
   const ranked = useMemo(() => [...model.players].sort((a, b) => b.position - a.position), [model.players])
-  const density = rankingDensity(ranked.length, absentsBlockRem(model.absents.length))
+  const density = rankingDensity(ranked.length, absentsBlockRem(model.absents.length) + (speech ? SPEECH_BLOCK_REM : 0))
   const visible = ranked.slice(0, density.visible)
   const hidden = ranked.length - visible.length
   // Clé texte : le modèle est recalculé à chaque rendu, les compteurs ne changent qu'avec les gorgées.
@@ -722,6 +733,9 @@ function RankingPanel({ model, texts }: { model: TvPbScreenModel; texts: PbTexts
           </li>
         )}
       </ol>
+      {/* Au pied de la colonne, dans la hauteur que le classement lui a cédée :
+          la bulle est coupée à SPEECH_LINES lignes (line-clamp-4). */}
+      {speech && <div className="mt-auto shrink-0 [&_li>div]:line-clamp-4">{speech}</div>}
     </aside>
   )
 }

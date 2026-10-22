@@ -11,7 +11,7 @@ import {
   type InteractionChoice,
 } from './engine'
 import { BOARD_SIZE, CASES_INTERACTIVE, needsTarget, type EngineCase } from './types'
-import { applyBotAction, deciderPlaysAuto, markPlayerLeft, rejoinPlayer } from './server-adapter'
+import { applyBotAction, deciderPlaysAuto, markPlayerLeft, rejoinPlayer, withPetitBuveurSay } from './server-adapter'
 
 /** Contrat de règles commun local / en ligne, scénarios repris de l'audit. */
 
@@ -783,70 +783,117 @@ function randomChoice(state: EngineState, r: () => number): InteractionChoice {
   }
 }
 
+/** Dé de parole qui ne tombe jamais : des bots muets. */
+const SILENT = () => 1
+
+/**
+ * Une partie aléatoire (graine `game`), départs et retours compris. Avec
+ * `sayRand`, après chaque coup, la parole qu'il inspire à un bot est écrite
+ * comme le fait l'adaptateur (withPetitBuveurSay) ; sans, le moteur seul
+ * (bots muets). Rend l'état final, la signature de chaque coup et le nombre
+ * de coups suivis d'une parole.
+ */
+function playRandomGame(
+  game: number,
+  violations: string[],
+  sayRand?: () => number
+): { final: EngineState; steps: string[]; spoken: number } {
+  const talk = (before: EngineState, after: EngineState) =>
+    sayRand ? withPetitBuveurSay(before, after, sayRand) : after
+  const r = mulberry(game * 7919 + 1)
+  const n = 2 + (game % 7)
+  let s = createInitialState(
+    Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i}` })),
+    { difficulty: (['facile', 'normal', 'difficile', 'extreme'] as const)[game % 4], defiDrinks: SETTINGS.defiDrinks },
+    `prop-${game}`
+  )
+  s.players.forEach((p, i) => {
+    if (i % 2 === 1) p.isBot = true
+  })
+  const trace: string[] = []
+  let spoken = 0
+  let steps = 0
+  while (s.phase !== 'finished' && steps < 3000) {
+    // Départs et retours en cours de partie : la main ne reste jamais à un absent.
+    const humans = s.players.filter((p) => !p.isBot)
+    const roll = r()
+    if (roll < 0.004) {
+      const present = humans.filter((p) => !p.leftAt)
+      if (present.length > 0 && s.players.filter((p) => !p.leftAt).length > 2) {
+        s = markPlayerLeft(s, present[Math.floor(r() * present.length)].id, steps) ?? s
+      }
+    } else if (roll < 0.02) {
+      const gone = humans.find((p) => p.leftAt)
+      if (gone) s = rejoinPlayer(s, gone.id) ?? s
+    }
+    if (s.phase === 'finished') break
+    const before = s
+    const deciderId = currentDeciderId(s)!
+    const decider = player(s, deciderId)
+    // Un absent ne garde la main que pour une décision en attente, que le tick de service joue.
+    if (decider.leftAt && !s.pending) violations.push(`partie ${game} : la main est à ${deciderId}, parti`)
+    if (decider.leftAt) {
+      const ticked = applyBotAction(s, steps, sayRand ?? SILENT)
+      if (!ticked.ok) violations.push(`partie ${game} : tick refusé pour ${deciderId} (${ticked.error})`)
+      else s = ticked.state
+    } else if (decider.isBot || !s.pending) {
+      const auto = autoAction(s)
+      s = talk(before, reduce(auto.state, auto.action))
+    } else {
+      s = talk(before, resolve(s, deciderId, randomChoice(s, r)))
+    }
+    steps += 1
+    if ((s.speech ?? []).length > 0 && s.speech !== before.speech) spoken += 1
+    trace.push(`${s.version}:${s.rngState}:${s.currentPlayer}:${s.turnCount}:${s.phase}`)
+    for (const p of s.players) {
+      if (p.position < 0 || p.position > BOARD_SIZE - 1) violations.push(`partie ${game} : ${p.id}@${p.position}`)
+    }
+    const onLast = s.players.filter((p) => p.position === BOARD_SIZE - 1)
+    if (s.phase === 'finished') {
+      if (!s.winner || player(s, s.winner).position !== BOARD_SIZE - 1) violations.push(`partie ${game} : gagnant hors arrivée`)
+    } else if (onLast.length > 0) {
+      violations.push(`partie ${game} : ${onLast.map((p) => p.id)} sur l'arrivée sans victoire`)
+    }
+    if (s.phase !== 'finished') {
+      const muted = observable(before, s)
+      if (muted) violations.push(`partie ${game} : ${muted}`)
+    }
+  }
+  if (s.phase !== 'finished') violations.push(`partie ${game} : pas finie en ${steps} coups`)
+  return { final: s, steps: trace, spoken }
+}
+
+function withoutSpeech(s: EngineState): EngineState {
+  const { speech: _speech, ...rest } = s
+  void _speech
+  return rest
+}
+
 describe('propriétés : 2 000 parties aléatoires, 2 à 8 joueurs, bots inclus', () => {
   it('positions bornées, un seul gagnant sur la dernière case, parties finies, aucune case muette', () => {
     const violations: string[] = []
     for (let game = 0; game < 2000; game += 1) {
-      const r = mulberry(game * 7919 + 1)
-      const n = 2 + (game % 7)
-      let s = createInitialState(
-        Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i}` })),
-        { difficulty: (['facile', 'normal', 'difficile', 'extreme'] as const)[game % 4], defiDrinks: SETTINGS.defiDrinks },
-        `prop-${game}`
-      )
-      s.players.forEach((p, i) => {
-        if (i % 2 === 1) p.isBot = true
-      })
-      let steps = 0
-      while (s.phase !== 'finished' && steps < 3000) {
-        // Départs et retours en cours de partie : la main ne reste jamais à un absent.
-        const humans = s.players.filter((p) => !p.isBot)
-        const roll = r()
-        if (roll < 0.004) {
-          const present = humans.filter((p) => !p.leftAt)
-          if (present.length > 0 && s.players.filter((p) => !p.leftAt).length > 2) {
-            s = markPlayerLeft(s, present[Math.floor(r() * present.length)].id, steps) ?? s
-          }
-        } else if (roll < 0.02) {
-          const gone = humans.find((p) => p.leftAt)
-          if (gone) s = rejoinPlayer(s, gone.id) ?? s
-        }
-        if (s.phase === 'finished') break
-        const before = s
-        const deciderId = currentDeciderId(s)!
-        const decider = player(s, deciderId)
-        // Un absent ne garde la main que pour une décision en attente, que le tick de service joue.
-        if (decider.leftAt && !s.pending) violations.push(`partie ${game} : la main est à ${deciderId}, parti`)
-        if (decider.leftAt) {
-          const ticked = applyBotAction(s, steps)
-          if (!ticked.ok) violations.push(`partie ${game} : tick refusé pour ${deciderId} (${ticked.error})`)
-          else s = ticked.state
-        } else if (decider.isBot || !s.pending) {
-          const auto = autoAction(s)
-          s = reduce(auto.state, auto.action)
-        } else {
-          s = resolve(s, deciderId, randomChoice(s, r))
-        }
-        steps += 1
-        for (const p of s.players) {
-          if (p.position < 0 || p.position > BOARD_SIZE - 1) violations.push(`partie ${game} : ${p.id}@${p.position}`)
-        }
-        const onLast = s.players.filter((p) => p.position === BOARD_SIZE - 1)
-        if (s.phase === 'finished') {
-          if (!s.winner || player(s, s.winner).position !== BOARD_SIZE - 1) violations.push(`partie ${game} : gagnant hors arrivée`)
-        } else if (onLast.length > 0) {
-          violations.push(`partie ${game} : ${onLast.map((p) => p.id)} sur l'arrivée sans victoire`)
-        }
-        if (s.phase !== 'finished') {
-          const muted = observable(before, s)
-          if (muted) violations.push(`partie ${game} : ${muted}`)
-        }
-      }
-      if (s.phase !== 'finished') violations.push(`partie ${game} : pas finie en ${steps} coups`)
+      playRandomGame(game, violations)
       if (violations.length > 20) break
     }
     expect(violations).toEqual([])
   })
+
+  it('les paroles ne pèsent pas sur le jeu : les mêmes 2 000 parties, coup pour coup, quand les bots parlent', () => {
+    const violations: string[] = []
+    let spoken = 0
+    for (let game = 0; game < 2000; game += 1) {
+      const silent = playRandomGame(game, violations)
+      const talking = playRandomGame(game, violations, mulberry(game * 104729 + 7))
+      expect(talking.steps, `partie ${game}`).toEqual(silent.steps)
+      expect(withoutSpeech(talking.final), `partie ${game}`).toEqual(silent.final)
+      expect(silent.spoken, `partie ${game}`).toBe(0)
+      spoken += talking.spoken
+    }
+    expect(violations).toEqual([])
+    // Des parties où l'on parle vraiment : sans paroles, le test ne prouverait rien.
+    expect(spoken).toBeGreaterThan(2000)
+  }, 120_000)
 
   it('le RNG du moteur seul décide pour les bots (rejouable, sans Math.random)', () => {
     const spy = vi.spyOn(Math, 'random').mockImplementation(() => {

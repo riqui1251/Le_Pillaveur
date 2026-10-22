@@ -298,6 +298,35 @@ function ShameDieSpectacle({ value, reduced }: { value: number; reduced: boolean
   )
 }
 
+/**
+ * Le spectacle d'un tirage est-il à l'écran ? Même chronologie que
+ * InteractionSpectacle (suspense puis résultat tenu), mais lue pendant le
+ * rendu : le rendu qui reçoit le nouveau tirage le sait déjà, et ce qui doit
+ * attendre son résultat (la bulle d'un bot qui commente la roue ou la pièce)
+ * n'a pas une image d'avance. Le tirage présent au montage ne se rejoue pas.
+ */
+export function useSpectacleRunning(interaction: LastInteraction | null | undefined): boolean {
+  const reduced = useReducedMotion() ?? false
+  const key = interaction ? JSON.stringify(interaction) : null
+  const [run, setRun] = useState<{ key: string | null; running: boolean }>({ key, running: false })
+  let current = run
+  if (key !== run.key) {
+    current = { key, running: key !== null }
+    setRun(current)
+  }
+  const runKey = current.key
+  const kind = current.running && interaction ? interaction.kind : null
+  useEffect(() => {
+    if (!kind) return
+    const timer = setTimeout(
+      () => setRun((r) => (r.key === runKey ? { ...r, running: false } : r)),
+      spectacleSpinMs(kind, reduced) + SPECTACLE_OUTCOME_HOLD_MS
+    )
+    return () => clearTimeout(timer)
+  }, [runKey, kind, reduced])
+  return current.running
+}
+
 export function InteractionSpectacle({
   interaction,
   caseLabel,
