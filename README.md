@@ -15,6 +15,10 @@ sur un VPS Ubuntu, derrière Caddy puis Cloudflare. Les ports 80/443 ne sont ouv
   `scripts/sync-prisma-client.mjs`) puis lance `next dev` ; dans un worktree, copier `.env` du dépôt principal à
   la main avant de lancer.
 - `npm test` — tous les tests Vitest ; `npx vitest run <fichier>` pour un seul.
+- `npm run test:e2e` — Playwright, écran de téléphone : chaque jeu dans les quatre langues, contre le build de
+  production (`npm run build` d'abord) servi sur le port 3100 avec une base SQLite jetable (`e2e/.tmp/`). Captures
+  dans `e2e/screenshots/<langue>/`, non suivies. `-g "pmu"` pour un seul jeu. Chromium attendu en révision 1194
+  (`@playwright/test` épinglé en 1.56.1).
 - `npm run lint` — `next lint` (déprécié par Next 16 : passer à `eslint .` le jour venu, la config
   `eslint.config.mjs` est déjà au format plat). Zéro erreur exigé, les avertissements se résorbent au fil de l'eau.
 - `npx tsc --noEmit -p .` — vérification des types, lancée aussi par le build.
