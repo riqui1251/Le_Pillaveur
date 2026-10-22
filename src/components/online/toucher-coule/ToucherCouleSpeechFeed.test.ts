@@ -26,6 +26,7 @@ const PLAYERS = [
   { id: 'b2', name: 'Gépéto', isBot: true },
   { id: 'b1', name: 'Raoul', isBot: true },
   { id: 'b3', name: 'Bernadette', isBot: true },
+  { id: 'b4', name: 'Marcel', isBot: true },
 ]
 const TURN_ORDER = ['h', 'b2', 'b1', 'b3']
 const sp = (playerId: string, kind: TCSpeechKind, targetId: string, round: number): TCSpeech => ({
@@ -37,7 +38,11 @@ const sp = (playerId: string, kind: TCSpeechKind, targetId: string, round: numbe
 
 type View = { turnCount: number; speech: TCSpeech[]; speechBase?: number }
 
-function render(view: View, { locale = 'fr', variant = 'phone' as 'phone' | 'tv' } = {}, errors: unknown[] = []) {
+function render(
+  view: View,
+  { locale = 'fr', variant = 'phone' as 'phone' | 'tv', soft = false } = {},
+  errors: unknown[] = []
+) {
   return renderToStaticMarkup(
     createElement(
       IntlProvider,
@@ -47,6 +52,7 @@ function render(view: View, { locale = 'fr', variant = 'phone' as 'phone' | 'tv'
         iconOf: (p) => (p.isBot ? '🤖' : '🦊'),
         meId: variant === 'tv' ? undefined : 'h',
         variant,
+        soft,
       })
     )
   )
@@ -64,6 +70,19 @@ describe('ToucherCouleSpeechFeed', () => {
       expect(errors).toEqual([])
       expect(lines).toHaveLength(variant === 'tv' ? 4 : TC_SPEECH_KINDS.length)
       for (const line of lines) expect(line).not.toMatch(/botSay|\{|\}/)
+    }
+  })
+
+  it('« Sans alcool » : le tic qui trinque (Marcel) se tait, la phrase reste', () => {
+    for (const locale of LOCALES) {
+      const game = (catalogue(locale) as { games: { 'toucher-coule': { game: { botTic: Record<string, string> } } } }).games[
+        'toucher-coule'
+      ].game
+      const view = { turnCount: 1, speech: [sp('b4', 'sunk', 'h', 0)] }
+      const [alcool] = bubbles(render(view, { locale }))
+      const [sober] = bubbles(render(view, { locale, soft: true }))
+      expect(alcool, locale).toContain(game.botTic.marcel)
+      expect(sober, locale).not.toContain(game.botTic.marcel)
     }
   })
 

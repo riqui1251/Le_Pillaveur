@@ -18,7 +18,8 @@ import {
   type TCSpeechKind,
   type TCState,
 } from './engine'
-import { tcBotSpeech, tcTalkChance } from './bot-speech'
+import { tcBotSpeech, tcTalkBase } from './bot-speech'
+import { reactionTalkChance } from '@/lib/online/reaction-speech'
 import { buildTCState, withTCBotTalk } from './server-adapter'
 
 const always = (v: number) => () => v
@@ -96,7 +97,8 @@ describe('le tir et ses réactions', () => {
     s = fire(s, 'b1', 11)
     const sunk = fire(s, 'b1', 12)
     expect(speak(sunk, always(0))).toEqual([{ playerId: 'b1', kind: 'sunk', targetId: 'b2' }])
-    expect(speak(sunk, seq(0.99, 0))).toEqual([{ playerId: 'b2', kind: 'lost', targetId: 'b1' }])
+    // Deux tirages par option : l'orateur, puis son dé de parole.
+    expect(speak(sunk, seq(0, 0.99, 0, 0))).toEqual([{ playerId: 'b2', kind: 'lost', targetId: 'b1' }])
   })
 
   it('un bot tire dans l’eau : « Plouf », adressé au tireur suivant ; touché : hit à l’armateur', () => {
@@ -171,11 +173,10 @@ describe('plafond, sobriété et anti-triche', () => {
   })
 
   it('les chances suivent le bavardage, le trait et la rancune, jamais systématiques', () => {
-    for (const kind of TC_SPEECH_KINDS) {
-      expect(tcTalkChance(kind, botTraitsFor('Gépéto'))).toBeLessThan(1)
-    }
-    expect(tcTalkChance('sunk', botTraitsFor('Raoul'))).toBeGreaterThan(tcTalkChance('sunk', botTraitsFor('Suzette')))
-    expect(tcTalkChance('lost', botTraitsFor('Germaine'))).toBeGreaterThan(tcTalkChance('lost', botTraitsFor('Lucien')))
+    const chance = (kind: TCSpeechKind, name: string) => reactionTalkChance(tcTalkBase(kind, botTraitsFor(name)), botTraitsFor(name))
+    for (const kind of TC_SPEECH_KINDS) expect(chance(kind, 'Gépéto')).toBeLessThan(1)
+    expect(chance('sunk', 'Raoul')).toBeGreaterThan(chance('sunk', 'Suzette'))
+    expect(chance('lost', 'Germaine')).toBeGreaterThan(chance('lost', 'Lucien'))
   })
 })
 

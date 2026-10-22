@@ -2,8 +2,9 @@
 
 import { useTranslations } from 'next-intl'
 import { tcSpeechRound, type TCSpeech } from '@/lib/toucher-coule/engine'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { BotSpeechFeed, type FeedPlayer } from '../bot-speech/BotSpeechFeed'
-import type { LineTranslator } from '../bot-speech/bot-speech-feed'
+import { ambianceLineTranslator, type LineTranslator } from '../bot-speech/bot-speech-feed'
 
 /**
  * Fil des paroles du Touché-Coulé (téléphone et TV) : le fil commun aux jeux
@@ -14,12 +15,15 @@ import type { LineTranslator } from '../bot-speech/bot-speech-feed'
  * précédente (tcSpeechRound), pour qu'un « Coulé ! » survive au tir dans
  * l'eau qui le suit d'une seconde. `speechBase` (paroles élaguées par le
  * moteur) garde les clés des bulles, donc leurs phrases, stables à l'écran.
+ * Aucune phrase ne parle de boire ; en « Sans alcool », le tic qui trinque se
+ * tait (ambianceLineTranslator).
  */
 export function ToucherCouleSpeechFeed({
   view,
   iconOf,
   meId,
   variant,
+  soft,
 }: {
   view: {
     turnOrder: readonly string[]
@@ -32,12 +36,15 @@ export function ToucherCouleSpeechFeed({
   /** Spectateur local ; absent sur la TV (aucune bulle n'y est surlignée). */
   meId?: string | null
   variant: 'phone' | 'tv'
+  /** Ambiance imposée (tests) ; sinon celle du compte ou de l'appareil. */
+  soft?: boolean
 }) {
   const t = useTranslations('games.toucher-coule.game')
-  const tr: LineTranslator = {
-    has: (key) => t.has(key),
-    format: (key, values) => t(key, values),
-  }
+  const { mode } = useAmbianceMode()
+  const tr: LineTranslator = ambianceLineTranslator(
+    { has: (key) => t.has(key), format: (key, values) => t(key, values) },
+    soft ?? mode === 'soft'
+  )
   const round = tcSpeechRound(view)
 
   return (

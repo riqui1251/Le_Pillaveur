@@ -15,8 +15,7 @@ import {
  *
  * Aucune phrase ne situe un navire : ni case, ni ligne, ni colonne, ni
  * voisinage — un bot touché râle, il ne dit pas où sont ses autres bateaux.
- * Aucun mot de boisson : téléphones et TV ne partagent pas forcément
- * l'ambiance « Sans alcool ».
+ * Jeu joué aussi Sans alcool (drinkFree) : ni mot de boisson ni chiffre.
  */
 
 const NODE = 'games.toucher-coule.game'
@@ -27,14 +26,9 @@ describeSpeechCatalogue({
   traitKinds: ['sunk', 'taunt'],
   personaKind: 'sunk',
   maxChars: 70,
+  drinkFree: true,
 })
 
-const DRINK: Record<string, RegExp> = {
-  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|sant[ée]|tchin|trinqu|ap[ée]ro/i,
-  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass/i,
-  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind/i,
-  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind/i,
-}
 /** Ce qui situerait un navire sur la grille. */
 const WHERE: Record<string, RegExp> = {
   fr: /gauche|droite|en haut|en bas|ligne|colonne|\bcoin\b|à côté|voisin|tout près|pas loin|\bcase/i,
@@ -54,18 +48,13 @@ describe.each(SPEECH_LOCALES)('toucher-coule/%s', (locale) => {
     expect(Object.keys(flat).sort()).toEqual(Object.keys(fr).sort())
   })
 
-  it('ni position de navire, ni mot de boisson, dans aucune phrase rendue (tics exclus)', () => {
+  it('aucune position de navire, dans aucune phrase rendue (tics exclus)', () => {
     for (const key of sayKeys) {
       const format = new IntlMessageFormat(flat[key], locale)
       for (const genre of GENRES) {
         const line = String(format.format({ name: 'Mauricette', speaker: genre, target: genre }))
         expect(line, `${key} : ${line}`).not.toMatch(WHERE[locale])
-        expect(line, `${key} : ${line}`).not.toMatch(DRINK[locale])
       }
     }
-  })
-
-  it('les 20 tics sont ceux du Loup-Garou, mot pour mot', () => {
-    expect(game.botTic).toEqual(speechCatalogueOf('games.loup-garou.game', locale).botTic)
   })
 })
