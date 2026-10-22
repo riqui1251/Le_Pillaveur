@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useGameBottomBarInset } from '@/components/game/GameFixedActionBar'
 import { cn } from '@/lib/utils'
 
 /**
@@ -56,8 +57,10 @@ export type EndActionDockProps = {
   mode?: EndActionDockMode
   /**
    * Réserve à droite la place de la pastille du vocal (`game-bottom-bar`),
-   * qui flotte au-dessus des barres du bas sur téléphone. Mode `fixed`
-   * seulement ; les jeux locaux, sans vocal, passent `false`.
+   * qui flotte au-dessus des barres du bas sur téléphone — seulement quand
+   * elle est réellement à l'écran (`useGameBottomBarInset`) : sinon, sous
+   * 720 px, « Rejouer » restait décentré pour rien. Mode `fixed` seulement ;
+   * les jeux locaux, sans vocal, passent `false`.
    */
   voiceGutter?: boolean
   className?: string
@@ -82,6 +85,7 @@ export function EndActionDock({
   const dockRef = useRef<HTMLDivElement>(null)
   const [reserved, setReserved] = useState(0)
   const fixed = mode === 'fixed'
+  const voiceInset = useGameBottomBarInset()
 
   // Hauteur réelle du dock (zone sûre, libellés sur deux lignes, bandeau
   // d'avis, ligne d'erreur) : une réserve calculée en rem se trompait dès
@@ -148,9 +152,7 @@ export function EndActionDock({
           // z-30 comme les autres barres d'action fixes : sous la Navbar et
           // les modales, au-dessus des confettis et du contenu qui défile.
           'fixed inset-x-0 bottom-0 z-30 pl-4 pt-3',
-          voiceGutter
-            ? 'game-bottom-bar min-[720px]:pr-4'
-            : 'pr-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))]',
+          voiceGutter ? voiceInset : 'pr-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))]',
           SURFACE,
           className
         )}
