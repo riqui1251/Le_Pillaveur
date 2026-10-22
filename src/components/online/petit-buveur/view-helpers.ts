@@ -5,7 +5,7 @@ import type {
   LastOutcome,
   OutcomeNote,
 } from '@/lib/petit-buveur/engine'
-import { CASES_INTERACTIVE_TARGET, CASES_NO_SELF_TARGET } from '@/lib/petit-buveur/types'
+import { CASES_INTERACTIVE_TARGET, CASES_NO_SELF_TARGET, type EngineCase } from '@/lib/petit-buveur/types'
 
 /**
  * Logique pure de l'écran Petit Buveur EN LIGNE : qui décide, quelle fenêtre
@@ -149,6 +149,27 @@ export function noteMessage(note: OutcomeNote, nameOf: (id: string) => string, a
     case 'no-effect':
       return { key: 'online.notes.noEffect', values: {} }
   }
+}
+
+type Translate = (key: string, values?: Record<string, string | number>) => string
+
+/**
+ * Consigne d'une case (clé `caseDescriptions.*` sous games.petit-buveur),
+ * comme `formatCaseDescription` du jeu local. Le texte d'un défi est résolu
+ * par son index (`defiText`, variante Soft comprise) ; sans texte, pas de
+ * consigne.
+ */
+export function caseDescription(
+  c: Pick<EngineCase, 'type' | 'effect' | 'gorgeeCulSec' | 'defiIndex'>,
+  t: Translate,
+  defiText: (index: number | undefined) => string | null | undefined
+): string | null {
+  if (c.type === 'defi') {
+    const challenge = defiText(c.defiIndex)
+    return challenge ? t('caseDescriptions.defi', { challenge, count: c.effect }) : null
+  }
+  if (c.type === 'gorgée' && c.gorgeeCulSec) return t('caseDescriptions.gorgéeCulSec')
+  return t(`caseDescriptions.${c.type}`, { count: c.effect })
 }
 
 type DefiItem = { text: string }

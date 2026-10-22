@@ -8,6 +8,7 @@ import { ALCOHOL_DEFI_INDEXES } from '@/app/[locale]/games/petit-buveur/ambiance
 import type { PetitBuveurT } from '@/app/[locale]/games/petit-buveur/case-config'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import {
+  caseDescription,
   deciderIdOf,
   defiTextAt,
   landingIndex,
@@ -88,8 +89,8 @@ export function onlineCard(view: EngineView, texts: PbTexts): TvPbCard | null {
   if (!last) return null
   const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? ''
   const outcome = view.lastOutcome && view.lastOutcome.caseType === last.type ? view.lastOutcome : null
-  const shownDefi: EngineCase | null =
-    outcome?.effectiveCase?.type === 'defi' ? outcome.effectiveCase : last.type === 'defi' ? last : null
+  // Consigne de la case jouée (celle rejouée par Répétition / Rewind), défi compris — comme le téléphone.
+  const shownCase: EngineCase = outcome?.effectiveCase ?? last
   const lines = outcome ? outcomeLines(texts, outcome, nameOf) : []
   const family = getCaseMeta(last.type).family
   const landing = outcome ? landingIndex(view.players, outcome) : null
@@ -99,7 +100,7 @@ export function onlineCard(view: EngineView, texts: PbTexts): TvPbCard | null {
     title: outcome ? outcomeTitle(texts, outcome) : caseLabel(texts, last.type),
     caseNumber: landing != null ? landing + 1 : null,
     dice: view.lastDice ?? null,
-    detail: shownDefi ? defiText(texts, shownDefi.defiIndex) : null,
+    detail: shownCase.type === 'normal' ? null : caseDescription(shownCase, texts.t, (i) => defiText(texts, i)),
     changes: outcome ? outcome.changes : [],
     lines,
     targetId: outcome?.targetId ?? null,
@@ -113,6 +114,17 @@ export function onlinePending(view: EngineView, texts: PbTexts): TvPbPending | n
   const pending = view.pending
   if (!pending) return null
   const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? ''
+  // Cible choisie à l'aveugle : comme la diffusion du jeu local, la case reste cachée.
+  if (pending.hidden) {
+    return {
+      caseType: 'target',
+      icon: '🎯',
+      title: texts.t('game.target.title'),
+      detail: texts.t('game.target.hint'),
+      targetId: null,
+      waiting: { kind: 'choice', name: nameOf(deciderIdOf(view)) },
+    }
+  }
   const pendingCase = pending.case ?? view.lastCase ?? null
   const title =
     pending.caseType === 'double-case' && pending.cases?.length
@@ -120,13 +132,7 @@ export function onlinePending(view: EngineView, texts: PbTexts): TvPbPending | n
       : pending.via
         ? `${caseLabel(texts, pending.via)} → ${caseLabel(texts, pending.caseType)}`
         : caseLabel(texts, pending.caseType)
-  let detail: string | null = null
-  if (pendingCase?.type === 'defi') {
-    const challenge = defiText(texts, pendingCase.defiIndex)
-    detail = challenge ? texts.t('caseDescriptions.defi', { challenge, count: pendingCase.effect }) : null
-  } else if (pendingCase?.type === 'question') {
-    detail = texts.t('caseDescriptions.question', { count: pendingCase.effect })
-  }
+  const detail = pendingCase ? caseDescription(pendingCase, texts.t, (i) => defiText(texts, i)) : null
   const waiting: TvPbPending['waiting'] =
     pending.stage === 'side'
       ? { kind: 'side', name: nameOf(pending.targetId), deadlineAt: typeof pending.deadlineAt === 'number' ? pending.deadlineAt : null }

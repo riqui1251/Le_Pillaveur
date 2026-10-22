@@ -187,6 +187,12 @@ export interface EnginePending {
   targetId?: string
   /** Étape `side` : échéance (epoch ms, horloge serveur) avant tirage au hasard. */
   deadlineAt?: number
+  /**
+   * VUE CLIENT seulement (jamais dans l'état du moteur) : case tirée cachée
+   * pendant un choix de cible à l'aveugle — `caseType` n'y vaut rien, voir
+   * hidesDrawnCase (server-adapter.ts).
+   */
+  hidden?: boolean
 }
 
 export interface EngineState {
