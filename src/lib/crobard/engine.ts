@@ -163,6 +163,12 @@ export type CrobardState = TimedPhaseState & {
   word: string | null
   /** PUBLIC dès qu'un trait est tracé — c'est le principe même du jeu. */
   strokes: Stroke[]
+  /**
+   * Jeton du dernier « annuler » appliqué : le téléphone renvoie un annuler
+   * dont la réponse s'est perdue, et ce renvoi ne doit pas retirer un
+   * deuxième trait. Optionnel : un état d'avant n'en a pas.
+   */
+  lastUndoId?: string
   /** PUBLIC — qui a déjà trouvé cette manche (ordre = rang de score), jamais LE mot. */
   correctGuessers: string[]
   allWords: string[]
@@ -187,7 +193,7 @@ export type CrobardAction =
   | { type: 'CHOOSE_WORD'; playerId: string; index: number; now: number }
   | { type: 'DRAW_STROKE'; playerId: string; stroke: Stroke }
   | { type: 'CLEAR'; playerId: string }
-  | { type: 'UNDO_STROKE'; playerId: string }
+  | { type: 'UNDO_STROKE'; playerId: string; undoId?: string }
   | { type: 'GUESS'; playerId: string; text: string; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
@@ -375,8 +381,15 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
     case 'UNDO_STROKE': {
       if (state.phase !== 'drawing') throw new CrobardEngineError('NOT_DRAWING_PHASE')
       if (action.playerId !== state.drawerId) throw new CrobardEngineError('NOT_DRAWER')
+      // Renvoi d'un annuler déjà appliqué : rien de plus à retirer.
+      if (action.undoId && action.undoId === state.lastUndoId) return state
       if (state.strokes.length === 0) throw new CrobardEngineError('NOTHING_TO_UNDO')
-      return { ...state, strokes: state.strokes.slice(0, -1), version: state.version + 1 }
+      return {
+        ...state,
+        strokes: state.strokes.slice(0, -1),
+        ...(action.undoId ? { lastUndoId: action.undoId } : {}),
+        version: state.version + 1,
+      }
     }
 
     case 'GUESS': {

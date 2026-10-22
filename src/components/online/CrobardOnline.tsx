@@ -47,8 +47,14 @@ import { CrobardSpeechFeed } from './crobard/CrobardSpeechFeed'
 
 type StrokeQueueItem =
   | { action: 'draw-stroke'; stroke: Stroke }
-  | { action: 'undo-stroke' }
+  | { action: 'undo-stroke'; undoId: string }
   | { action: 'clear' }
+
+function newUndoId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 
 /** Seuil d'urgence du chrono : 10 s de choix en tout, 80 s de dessin. */
 const CHOOSING_DANGER_MS = 4_000
@@ -389,7 +395,8 @@ export function CrobardOnline() {
       <PartyCanvasTools
         tool={tool}
         hasStrokes={view.strokes.length > 0}
-        onUndo={() => queueStrokeAction({ action: 'undo-stroke' })}
+        // Un jeton par geste : un renvoi (réponse perdue) ne retire pas un 2e trait.
+        onUndo={() => queueStrokeAction({ action: 'undo-stroke', undoId: newUndoId() })}
         onClear={() => {
           // L'effacement rend caducs les traits encore en file.
           strokeQueueRef.current = [{ action: 'clear' }]

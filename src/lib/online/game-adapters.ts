@@ -1330,7 +1330,8 @@ const crobardAdapter: GameAdapter = {
     } else if (body.action === 'clear') {
       input = { type: 'clear' }
     } else if (body.action === 'undo-stroke') {
-      input = { type: 'undo-stroke' }
+      const undoId = typeof body.undoId === 'string' && body.undoId.length <= 64 ? body.undoId : undefined
+      input = { type: 'undo-stroke', ...(undoId ? { undoId } : {}) }
     } else if (body.action === 'guess' && typeof body.text === 'string') {
       input = { type: 'guess', text: body.text }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
