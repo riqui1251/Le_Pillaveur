@@ -456,6 +456,9 @@ export type SerializedCard = {
 
 export type PurplePlayer = { id: string; name: string; isBot: boolean; leftAt: number | null }
 
+/** Parole publique d'un bot (kind de PURPLE_SPEECH_KINDS), forme jumelle de BotSpeech. */
+export type PurpleSyncedSpeech = { playerId: string; kind: string; targetId: string | null; round: number }
+
 export type PurpleSyncedState = {
   version: number
   players: PurplePlayer[]
@@ -473,6 +476,10 @@ export type PurpleSyncedState = {
   cardHistory: SerializedCard[]
   totalCardsDrawn: number
   rematchVotes?: string[]
+  /** Mains passées (fenêtre des paroles) ; absent d'un état d'avant les paroles. */
+  turn?: number
+  speech?: PurpleSyncedSpeech[]
+  speechBase?: number
 }
 
 export function parsePurpleState(json: string | null | undefined): PurpleSyncedState | null {

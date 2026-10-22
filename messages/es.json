@@ -1656,6 +1656,72 @@
         "waiting": "{name} duda: ¿seguir o pasar?",
         "hint": "¡Bien visto! Apuesta otra vez o pasa el turno.",
         "continueSelf": "Apostar otra vez"
+      },
+      "feedAria": "Charla de la mesa",
+      "botSay": {
+        "panache": "Apuesta gorda, ¡y sale! Te toca sudar, {name} 😎",
+        "panache_2": "Quien no arriesga no gana, {name}.",
+        "panache_3": "{name}, mira y toma nota 😏",
+        "dare": "¡Sigo! El bote no me asusta, {name}.",
+        "dare_2": "¡Otra más! ¿Apostamos a que lo logro, {name}?",
+        "dare_3": "{name}, la suerte sonríe a los valientes 🍀",
+        "handOff": "¡Regalito, {name}! Quema 🔥",
+        "handOff_2": "La patata caliente es tuya, {name} 🥔",
+        "handOff_3": "{name}, te dejo el bote. Suerte 😇",
+        "lament": "Qué mala pata… No te rías, {name} 😩",
+        "lament_2": "{speaker, select, f {La he liado} m {La he liado} other {Fallo épico}}… Véngame, {name} 😩",
+        "lament_3": "Las cartas me odian, {name}. Es oficial.",
+        "mock": "¡Salud, {name}! De un trago 🍻",
+        "mock_2": "¡A tu salud, {name}! Todo, ¿eh? 😏",
+        "mock_3": "{name}, entra solo, ¿a que sí? 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "panache": "Demasiado fácil. ¡Siguiente, {name}!",
+          "panache_2": "{name}, así se juega.",
+          "mock": "Bebe, {name}, ¡y sin muecas!",
+          "mock_2": "De un trago, {name}. Te vigilo 👀"
+        },
+        "farceur": {
+          "panache": "¡Abracadabra, {name}! Las cartas me adoran 🪄",
+          "panache_2": "¡Tachán! Admira, {name} 🎉",
+          "mock": "¡Chin chin, {name}! 🥂",
+          "mock_2": "{name}, glu glu glu 🍻"
+        },
+        "prudent": {
+          "panache": "Apuesta cumplida. Prudencia y estilo, {name}.",
+          "panache_2": "Ya lo intuía, {name}.",
+          "mock": "Con calma, {name}, a sorbitos.",
+          "mock_2": "Salud, {name}. Le tenía que tocar a alguien."
+        },
+        "suiveur": {
+          "panache": "¡Salió! ¿Lo hice bien, {name}? 😊",
+          "panache_2": "¡Como los profesionales, {name}!",
+          "mock": "¡Salud, {name}! Brindamos contigo 🍻",
+          "mock_2": "{name}, ¡a tu salud! (no a la mía 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Si me permiten,",
+        "gepeto": "…¡palabrita!",
+        "raoul": "Sin ánimo de ofender,",
+        "suzette": "Yo igual,",
+        "marcel": "…¡salud!",
+        "gaston": "¡Un momentito!",
+        "bernadette": "…cariño.",
+        "norbert": "Estadísticamente,",
+        "ginette": "¡Pero bueno!",
+        "roger": "…como dicen por ahí.",
+        "paulette": "…es broma. O no.",
+        "dede": "¡Me la juego!",
+        "huguette": "En mis tiempos,",
+        "keke": "…fijo.",
+        "mauricette": "Ay, ay, ay,",
+        "firmin": "…lo digo por decir.",
+        "josiane": "Entre nosotros,",
+        "lucien": "…tranqui.",
+        "germaine": "…¡y rapidito!",
+        "bricole": "…eso debería aguantar."
       }
     },
     "roue-des-gorgees": {

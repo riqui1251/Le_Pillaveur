@@ -1656,6 +1656,72 @@
         "waiting": "{name} ci pensa: continuare o passare?",
         "hint": "Ben fatto! Scommetti ancora o passa la mano.",
         "continueSelf": "Scommetti ancora"
+      },
+      "feedAria": "Chiacchiere al tavolo",
+      "botSay": {
+        "panache": "Puntata grossa, ed è dentro! Ora tremi tu, {name} 😎",
+        "panache_2": "Chi non risica non rosica, {name}!",
+        "panache_3": "{name}, guarda e prendi appunti 😏",
+        "dare": "Continuo! Il piatto non mi fa paura, {name}.",
+        "dare_2": "Un’altra! Scommettiamo che ce la faccio, {name}?",
+        "dare_3": "{name}, la fortuna aiuta gli audaci 🍀",
+        "handOff": "Regalino, {name}! Scotta 🔥",
+        "handOff_2": "La patata bollente è tua, {name} 🥔",
+        "handOff_3": "{name}, ti lascio il piatto. Buona fortuna 😇",
+        "lament": "Che sfiga… Non ridere, {name} 😩",
+        "lament_2": "{speaker, select, f {Ho fatto un disastro} m {Ho fatto un disastro} other {Disastro totale}}… Vendicami, {name} 😩",
+        "lament_3": "Le carte mi odiano, {name}. È ufficiale.",
+        "mock": "Salute, {name}! Tutto d’un fiato 🍻",
+        "mock_2": "Alla tua, {name}! Fino in fondo, eh 😏",
+        "mock_3": "{name}, va giù che è un piacere, no? 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "panache": "Troppo facile. Avanti, {name}!",
+          "panache_2": "{name}, ecco come si gioca.",
+          "mock": "Bevi, {name}, e senza smorfie!",
+          "mock_2": "Tutto d’un fiato, {name}. Ti tengo d’occhio 👀"
+        },
+        "farceur": {
+          "panache": "Abracadabra, {name}! Le carte mi adorano 🪄",
+          "panache_2": "Tadà! Ammira, {name} 🎉",
+          "mock": "Cin cin, {name}! 🥂",
+          "mock_2": "{name}, glu glu glu 🍻"
+        },
+        "prudent": {
+          "panache": "Scommessa vinta. Prudenza e stile, {name}.",
+          "panache_2": "Me lo sentivo, {name}.",
+          "mock": "Con calma, {name}, a piccoli sorsi.",
+          "mock_2": "Salute, {name}. Doveva toccare a qualcuno."
+        },
+        "suiveur": {
+          "panache": "È andata! Ho fatto bene, {name}? 😊",
+          "panache_2": "Proprio come i professionisti, {name}!",
+          "mock": "Salute, {name}! Brindiamo con te 🍻",
+          "mock_2": "{name}, alla tua salute! (non alla mia 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Se posso permettermi,",
+        "gepeto": "…giuro!",
+        "raoul": "Senza offesa,",
+        "suzette": "Anch’io,",
+        "marcel": "…cin cin!",
+        "gaston": "Piano, piano!",
+        "bernadette": "…tesoro.",
+        "norbert": "Statisticamente,",
+        "ginette": "Ma insomma!",
+        "roger": "…come si suol dire.",
+        "paulette": "…scherzo. O forse no.",
+        "dede": "Punto tutto!",
+        "huguette": "Ai miei tempi,",
+        "keke": "…fidati, bro.",
+        "mauricette": "Mamma mia,",
+        "firmin": "…dico così per dire.",
+        "josiane": "Detto tra noi,",
+        "lucien": "…tranquillo.",
+        "germaine": "…e sbrigatevi!",
+        "bricole": "…dovrebbe reggere."
       }
     },
     "roue-des-gorgees": {

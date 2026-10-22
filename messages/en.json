@@ -1656,6 +1656,72 @@
         "waiting": "{name} is deciding: keep going or pass?",
         "hint": "Nice! Bet again or pass it on.",
         "continueSelf": "Bet again"
+      },
+      "feedAria": "Table chatter",
+      "botSay": {
+        "panache": "Big bet, and it’s in! Your turn to sweat, {name} 😎",
+        "panache_2": "Nothing ventured, nothing gained, {name}!",
+        "panache_3": "{name}, watch and take notes 😏",
+        "dare": "I’m going on! The pot doesn’t scare me, {name}.",
+        "dare_2": "One more! Bet I can do it, {name}?",
+        "dare_3": "{name}, fortune favours the bold 🍀",
+        "handOff": "A gift, {name}! It’s red hot 🔥",
+        "handOff_2": "Hot potato’s yours, {name} 🥔",
+        "handOff_3": "{name}, the pot is all yours. Good luck 😇",
+        "lament": "What rotten luck… Don’t laugh, {name} 😩",
+        "lament_2": "{speaker, select, f {I blew it} m {I blew it} other {Epic fail}}… Avenge me, {name} 😩",
+        "lament_3": "The cards hate me, {name}. It’s official.",
+        "mock": "Down the hatch, {name}! 🍻",
+        "mock_2": "Cheers, {name}! All of it, mind 😏",
+        "mock_3": "{name}, goes down smooth, eh? 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "panache": "Too easy. Next, {name}!",
+          "panache_2": "{name}, that’s how it’s done.",
+          "mock": "Drink up, {name}, and no faces!",
+          "mock_2": "Bottoms up, {name}. I’m watching 👀"
+        },
+        "farceur": {
+          "panache": "Abracadabra, {name}! The cards love me 🪄",
+          "panache_2": "Ta-daa! Admire this, {name} 🎉",
+          "mock": "Clink clink, {name}! 🥂",
+          "mock_2": "{name}, glug glug glug 🍻"
+        },
+        "prudent": {
+          "panache": "Bet held. Caution and flair, {name}.",
+          "panache_2": "I had a good feeling, {name}.",
+          "mock": "Easy does it, {name}, small sips.",
+          "mock_2": "Cheers, {name}. It had to land on someone."
+        },
+        "suiveur": {
+          "panache": "It worked! Did I do good, {name}? 😊",
+          "panache_2": "Just like the pros, {name}!",
+          "mock": "Cheers, {name}! We’re toasting you 🍻",
+          "mock_2": "{name}, to your health! (not mine 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "With all due respect,",
+        "gepeto": "…true story!",
+        "raoul": "No offence,",
+        "suzette": "Same here,",
+        "marcel": "…cheers!",
+        "gaston": "Hold your horses!",
+        "bernadette": "…dearie.",
+        "norbert": "Statistically,",
+        "ginette": "Excuse me?!",
+        "roger": "…as they say.",
+        "paulette": "…just kidding. Or not.",
+        "dede": "All in!",
+        "huguette": "Back in my day,",
+        "keke": "…no cap.",
+        "mauricette": "Oh dear, oh dear,",
+        "firmin": "…just saying.",
+        "josiane": "Between us,",
+        "lucien": "…no stress.",
+        "germaine": "…chop-chop!",
+        "bricole": "…that should hold."
       }
     },
     "roue-des-gorgees": {

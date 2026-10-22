@@ -81,6 +81,20 @@ export function speechFeedItems<K extends string>(
   return limit !== undefined && items.length > limit ? items.slice(items.length - limit) : items
 }
 
+/**
+ * Le fil sans les paroles de ces kinds (celles qui parlent de boire, pour un
+ * spectateur « Sans alcool ») : elles restent à leur place, hors de toute
+ * manche affichée, pour que les autres bulles gardent leur clé — donc leur
+ * phrase — d'un écran à l'autre.
+ */
+export function hideSpeechKinds<S extends { kind: string; round: number }>(
+  speeches: readonly S[],
+  kinds: readonly string[]
+): S[] {
+  if (kinds.length === 0) return [...speeches]
+  return speeches.map((speech) => (kinds.includes(speech.kind) ? { ...speech, round: Number.NEGATIVE_INFINITY } : speech))
+}
+
 type FeedPerson = { name: string; isBot: boolean }
 export type FeedAuthor = FeedPerson | undefined
 

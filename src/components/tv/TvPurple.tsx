@@ -11,6 +11,8 @@ import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { PurpleSpeechFeed } from '@/components/online/purple/PurpleSpeechFeed'
 import { TvAvatar } from './tv-shared'
 
 /**
@@ -78,6 +80,7 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
   const tCommon = useTranslations('common')
   const tv = useTranslations('tv')
   const reduced = useReducedMotion()
+  const { mode: ambiance } = useAmbianceMode()
 
   // Même détection que le téléphone : le serveur reboucle le paquet épuisé,
   // le nombre de cartes restantes REMONTE.
@@ -293,6 +296,16 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
               </div>
             </>
           )}
+        </div>
+
+        {/* Paroles des bots : les plus récentes en bas, les anciennes sortent par le haut. */}
+        <div className="flex max-h-[8rem] min-h-0 shrink flex-col justify-end overflow-hidden">
+          <PurpleSpeechFeed
+            view={state}
+            iconOf={(p) => iconOf(p.id)}
+            variant="tv"
+            soft={ambiance === 'soft'}
+          />
         </div>
 
         {history.length > 0 && (

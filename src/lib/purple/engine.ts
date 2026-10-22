@@ -1,4 +1,5 @@
 import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * Moteur pur du Purple en ligne — SERVEUR-AUTORITAIRE.
@@ -27,6 +28,37 @@ export type PurplePlayer = { id: string; name: string; isBot: boolean; leftAt: n
 
 export type PurplePhase = 'playing' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.purple), née dans la
+ * même écriture que le coup qui la provoque (bot-speech.ts) :
+ *   • son coup : panache (pari risqué gagné), dare (il continue, cagnotte
+ *     chargée), handOff (il passe la main et la cagnotte) ;
+ *   • la mauvaise pioche : lament (le perdant, un bot, se lamente), mock (un
+ *     bot chambre celui qui boit).
+ * Le kind ne dit que ce que la table a vu : rien sur les prochaines cartes.
+ */
+export type PurpleSpeechKind = 'panache' | 'dare' | 'handOff' | 'lament' | 'mock'
+export type PurpleSpeech = BotSpeech<PurpleSpeechKind>
+
+export const PURPLE_SPEECH_KINDS = [
+  'panache',
+  'dare',
+  'handOff',
+  'lament',
+  'mock',
+] as const satisfies readonly PurpleSpeechKind[]
+
+/** Les kinds dont les phrases parlent de boire : masqués pour qui joue « Sans alcool ». */
+export const PURPLE_DRINK_SPEECH_KINDS = ['mock'] as const satisfies readonly PurpleSpeechKind[]
+
+/** Paroles max par bot et par fenêtre de tours ; le bavardage du persona borne en dessous. */
+export const PURPLE_SPEECH_CAP = 2
+/** Tours minimum d'une fenêtre de paroles (un tour de table au-delà). */
+export const PURPLE_SPEECH_WINDOW_MIN = 6
+
+/** Une parole à écrire : son auteur (un bot), son kind, le joueur qu'elle nomme. */
+export type PurpleSay = { playerId: string; kind: PurpleSpeechKind; targetId: string }
+
 export interface PurpleState {
   version: number
   rngState: RngState
@@ -47,6 +79,16 @@ export interface PurpleState {
   cardHistory: PurpleCard[]
   totalCardsDrawn: number
   rematchVotes: string[]
+  /**
+   * Mains passées depuis le début (passe, verdict refermé, départ du joueur
+   * au tour) : la fenêtre des paroles se compte en tours. Optionnel : un état
+   * sérialisé avant son arrivée part de 0.
+   */
+  turn?: number
+  /** PUBLIC — paroles des bots, fenêtre de tours en cours et précédente (purpleSpeechRound). */
+  speech?: PurpleSpeech[]
+  /** Paroles déjà élaguées du début du fil : les clés des bulles restent stables. */
+  speechBase?: number
 }
 
 export type PurpleAction =
@@ -121,6 +163,9 @@ export function createPurpleState(
     cardHistory: [],
     totalCardsDrawn: 0,
     rematchVotes: [],
+    turn: 0,
+    speech: [],
+    speechBase: 0,
   }
 }
 
@@ -136,6 +181,52 @@ function nextActiveIndex(state: PurpleState, from: number): number {
     if (!state.players[idx].leftAt) return idx
   }
   return from
+}
+
+/** La main passe au joueur d'index `idx` : un tour de plus pour la fenêtre des paroles. */
+function handTo(state: PurpleState, idx: number): Pick<PurpleState, 'currentPlayer' | 'turn'> {
+  return { currentPlayer: idx, turn: (state.turn ?? 0) + 1 }
+}
+
+/** Tours d'une fenêtre de paroles : un tour de table, six tours au moins. */
+export function purpleSpeechWindowTurns(state: { players: readonly unknown[] }): number {
+  return Math.max(PURPLE_SPEECH_WINDOW_MIN, state.players.length)
+}
+
+/**
+ * La « manche » des paroles d'un jeu sans manches : la fenêtre de tours en
+ * cours. Le plafond se compte par fenêtre, et le fil montre la fenêtre en
+ * cours et la précédente.
+ */
+export function purpleSpeechRound(state: { players: readonly unknown[]; turn?: number }): number {
+  return Math.floor((state.turn ?? 0) / purpleSpeechWindowTurns(state))
+}
+
+/**
+ * Les paroles `says` ajoutées au fil, dans la fenêtre courante. Appelé sur
+ * l'état qui SORT d'un coup, dans la même écriture : pas de version de plus.
+ * Refuse (INVALID_SPEECH, ALREADY_SPOKE) un kind inconnu, un auteur qui n'est
+ * pas un bot à table, une cible absente ou soi-même, un plafond atteint. Le
+ * fil ne garde que la fenêtre courante et la précédente ; `speechBase` compte
+ * ce qui en est sorti, pour des clés de bulles stables à l'écran.
+ */
+export function withPurpleSpeech(state: PurpleState, says: readonly PurpleSay[]): PurpleState {
+  if (says.length === 0) return state
+  const round = purpleSpeechRound(state)
+  const all = state.speech ?? []
+  let speech = all.filter((sp) => sp.round >= round - 1)
+  const speechBase = (state.speechBase ?? 0) + (all.length - speech.length)
+  for (const say of says) {
+    if (!(PURPLE_SPEECH_KINDS as readonly string[]).includes(say.kind)) throw new PurpleEngineError('INVALID_SPEECH')
+    const author = state.players.find((p) => p.id === say.playerId)
+    if (!author || !author.isBot || author.leftAt) throw new PurpleEngineError('INVALID_SPEECH')
+    const target = state.players.find((p) => p.id === say.targetId)
+    if (!target || target.id === author.id) throw new PurpleEngineError('INVALID_SPEECH')
+    const said = speech.filter((sp) => sp.playerId === author.id && sp.round === round).length
+    if (said >= PURPLE_SPEECH_CAP) throw new PurpleEngineError('ALREADY_SPOKE')
+    speech = [...speech, { playerId: author.id, kind: say.kind, targetId: target.id, round }]
+  }
+  return { ...state, speech, speechBase }
 }
 
 export function currentPurpleActorId(state: PurpleState): string | null {
@@ -220,7 +311,7 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
       return {
         ...state,
         version: state.version + 1,
-        currentPlayer: nextActiveIndex(state, state.currentPlayer),
+        ...handTo(state, nextActiveIndex(state, state.currentPlayer)),
         drawnCards: [],
         lastBet: null,
         isCorrect: null,
@@ -234,7 +325,7 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
       return {
         ...state,
         version: state.version + 1,
-        currentPlayer: nextActiveIndex(state, state.currentPlayer),
+        ...handTo(state, nextActiveIndex(state, state.currentPlayer)),
         drawnCards: [],
         lastBet: null,
         isCorrect: null,
@@ -259,7 +350,7 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
       const next = { ...state, players, version: state.version + 1 }
       // Si c'était le tour du partant, passe la main sans changer la cagnotte.
       if (currentPurpleActorId(state) === action.playerId && activePlayerIds(next).length > 0) {
-        return { ...next, currentPlayer: nextActiveIndex(next, next.currentPlayer) }
+        return { ...next, ...handTo(next, nextActiveIndex(next, next.currentPlayer)) }
       }
       return next
     }

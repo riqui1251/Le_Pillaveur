@@ -5,9 +5,11 @@ import {
   PURPLE_MIN_PLAYERS,
   PURPLE_MAX_PLAYERS,
   toPurpleClientView,
+  withPurpleSpeech,
   type PurpleState,
   type PurpleBet,
 } from './engine'
+import { purpleBotSpeech, type PurpleSpeechEvent } from './bot-speech'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -54,7 +56,7 @@ export function parsePurpleState(json: string | null): PurpleState | null {
   try {
     const raw = JSON.parse(json) as PurpleState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+    return { ...raw, rematchVotes: raw.rematchVotes ?? [], turn: raw.turn ?? 0, speech: raw.speech ?? [] }
   } catch {
     return null
   }
@@ -75,7 +77,29 @@ export type PurpleRoomActionResult =
 
 const VALID_BETS = new Set<PurpleBet>(['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple'])
 
-/** IA du bot : pari aléatoire simple, continue une fois sur deux si possible. */
+/**
+ * Les paroles des bots jointes à un coup (bot-speech.ts), lues sur les vues
+ * CLIENT avant et après — paquet masqué, sans graine : aucune parole ne peut
+ * annoncer la carte suivante. Écrites dans l'état du coup, même écriture.
+ * Une parole refusée par le moteur ne coûte jamais le coup.
+ */
+export function withPurpleBotTalk(
+  before: PurpleState,
+  after: PurpleState,
+  event: PurpleSpeechEvent,
+  sayRand: () => number = Math.random
+): PurpleState {
+  const says = purpleBotSpeech(toPurpleClientView(before), toPurpleClientView(after), event, sayRand)
+  if (says.length === 0) return after
+  try {
+    return withPurpleSpeech(after, says)
+  } catch (e) {
+    if (e instanceof PurpleEngineError) return after
+    throw e
+  }
+}
+
+/** IA du bot : pari aléatoire simple, continue une fois sur deux si possible ; ses paroles avec. */
 function applyPurpleBotAction(state: PurpleState): PurpleRoomActionResult {
   const actorId = state.players[state.currentPlayer]?.id
   const actor = state.players.find((p) => p.id === actorId)
@@ -86,11 +110,14 @@ function applyPurpleBotAction(state: PurpleState): PurpleRoomActionResult {
     }
     if (state.canContinue) {
       const action = Math.random() < 0.5 ? 'CONTINUE' : 'PASS'
-      return { ok: true, state: reducePurple(state, { type: action, playerId: actorId! }) }
+      const next = reducePurple(state, { type: action, playerId: actorId! })
+      const event: PurpleSpeechEvent = { type: action === 'CONTINUE' ? 'continue' : 'pass', playerId: actorId! }
+      return { ok: true, state: withPurpleBotTalk(state, next, event) }
     }
     const bets: PurpleBet[] = ['rouge', 'noir', 'purple', 'double-rouge', 'double-noir', 'double-purple']
     const bet = bets[Math.floor(Math.random() * bets.length)]
-    return { ok: true, state: reducePurple(state, { type: 'BET', playerId: actorId!, bet }) }
+    const next = reducePurple(state, { type: 'BET', playerId: actorId!, bet })
+    return { ok: true, state: withPurpleBotTalk(state, next, { type: 'bet', playerId: actorId!, bet }) }
   } catch (e) {
     if (e instanceof PurpleEngineError) return { ok: false, error: e.message }
     throw e
@@ -104,9 +131,11 @@ export function applyPurpleRoomAction(
 ): PurpleRoomActionResult {
   try {
     switch (input.type) {
-      case 'bet':
+      case 'bet': {
         if (!VALID_BETS.has(input.bet)) return { ok: false, error: 'INVALID_BET' }
-        return { ok: true, state: reducePurple(state, { type: 'BET', playerId: userId, bet: input.bet }) }
+        const next = reducePurple(state, { type: 'BET', playerId: userId, bet: input.bet })
+        return { ok: true, state: withPurpleBotTalk(state, next, { type: 'bet', playerId: userId, bet: input.bet }) }
+      }
       case 'continue':
         return { ok: true, state: reducePurple(state, { type: 'CONTINUE', playerId: userId }) }
       case 'pass':

@@ -1656,6 +1656,72 @@
         "waiting": "{name} hésite : continuer ou passer ?",
         "hint": "Bien vu ! Parie encore ou passe la main.",
         "continueSelf": "Parier encore"
+      },
+      "feedAria": "Fil de la table",
+      "botSay": {
+        "panache": "Gros pari, et ça passe ! À toi de trembler, {name} 😎",
+        "panache_2": "Qui ne risque rien n’a rien, {name} !",
+        "panache_3": "{name}, regarde et prends des notes 😏",
+        "dare": "Je continue ! La cagnotte ne me fait pas peur, {name}.",
+        "dare_2": "Encore une ! Tu paries que j’y arrive, {name} ?",
+        "dare_3": "{name}, la chance sourit aux audacieux 🍀",
+        "handOff": "Cadeau, {name} ! Elle est brûlante 🔥",
+        "handOff_2": "À toi la patate chaude, {name} 🥔",
+        "handOff_3": "{name}, je te laisse la cagnotte. Bonne chance 😇",
+        "lament": "Mais quelle poisse… Ne rigole pas, {name} 😩",
+        "lament_2": "{speaker, select, f {Je me suis plantée} m {Je me suis planté} other {Raté en beauté}}… Venge-moi, {name} 😩",
+        "lament_3": "Les cartes me détestent, {name}. C’est officiel.",
+        "mock": "Santé, {name} ! Cul sec 🍻",
+        "mock_2": "À la tienne, {name} ! Tout, hein 😏",
+        "mock_3": "{name}, ça descend tout seul, non ? 🍺"
+      },
+      "botSayTrait": {
+        "agressif": {
+          "panache": "Trop facile. Suivant, {name} !",
+          "panache_2": "{name}, voilà comment on joue.",
+          "mock": "Bois, {name}, et sans grimacer !",
+          "mock_2": "Cul sec, {name}. Je surveille 👀"
+        },
+        "farceur": {
+          "panache": "Abracadabra, {name} ! Les cartes m’adorent 🪄",
+          "panache_2": "Tadaaa ! Admire, {name} 🎉",
+          "mock": "Tchin tchin, {name} ! 🥂",
+          "mock_2": "{name}, glou glou glou 🍻"
+        },
+        "prudent": {
+          "panache": "Pari tenu. Prudence et panache, {name}.",
+          "panache_2": "Je l’avais bien senti, {name}.",
+          "mock": "Tranquillement, {name}, à petites gorgées.",
+          "mock_2": "Santé, {name}. Il fallait bien que ça tombe sur quelqu’un."
+        },
+        "suiveur": {
+          "panache": "Ça passe ! J’ai bien fait, {name} ? 😊",
+          "panache_2": "Comme les pros, {name} !",
+          "mock": "Santé, {name} ! On trinque avec toi 🍻",
+          "mock_2": "{name}, à ta santé ! (pas à la mienne 😅)"
+        }
+      },
+      "botTic": {
+        "barnabe": "Si je puis me permettre,",
+        "gepeto": "…véridique !",
+        "raoul": "Sans vouloir te vexer,",
+        "suzette": "Moi pareil,",
+        "marcel": "…tchin !",
+        "gaston": "Minute, papillon !",
+        "bernadette": "…mon petit.",
+        "norbert": "Statistiquement,",
+        "ginette": "Non mais oh !",
+        "roger": "…comme dirait l’autre.",
+        "paulette": "…je plaisante. Ou pas.",
+        "dede": "Banco !",
+        "huguette": "De mon temps,",
+        "keke": "…c’est carré.",
+        "mauricette": "Oh là là là là,",
+        "firmin": "…je dis ça, je dis rien.",
+        "josiane": "Entre nous,",
+        "lucien": "…tranquille.",
+        "germaine": "…et que ça saute !",
+        "bricole": "…ça devrait tenir."
       }
     },
     "roue-des-gorgees": {
