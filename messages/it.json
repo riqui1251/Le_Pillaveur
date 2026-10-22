@@ -3561,7 +3561,97 @@
         "yourTeam": "La tua squadra",
         "you": "(tu)",
         "describerTag": "descrive",
-        "leftTag": "offline"
+        "leftTag": "offline",
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "go": "Tocca a te, {name}! Siamo tutt’orecchi 👂",
+          "go_2": "Forza {name}, facci brillare!",
+          "go_3": "{name}, antenne dritte, ti ascoltiamo 📡",
+          "jinx": "In bocca al lupo, {name}… guardiamo ogni passo falso 👀",
+          "jinx_2": "{name}, una parola proibita e suoniamo il cicalino!",
+          "jinx_3": "Respira, {name}. Stasera i tabù li controlliamo noi 😈",
+          "skip": "{name}, descrivo come un’ostrica: passo il turno!",
+          "skip_2": "{speaker, select, f {Scusa} m {Scusa} other {Perdonami}}, {name}, niente microfono per me. Passo!",
+          "skip_3": "Passo la mano, {name}. Vi faccio il tifo da qui 📣",
+          "found": "Indovinato! Bravo, {name} 🎯",
+          "found_2": "Che orecchio, {name}!",
+          "found_3": "{name}, sei una furia! Avanti la prossima!",
+          "lead": "Siamo in testa grazie a te, {name}! 🔥",
+          "lead_2": "{name}, siamo davanti! Non molliamo!",
+          "lead_3": "E zac, davanti! Grazie {name} 🚀",
+          "grumble": "Piano, {name}, lasciaci qualche parola!",
+          "grumble_2": "Troppo veloce, {name}… hai un bigliettino? 🤨",
+          "grumble_3": "{name}, smettila di descrivere così bene, è irritante 😤",
+          "buzz": "Tabù! Questa non passa, {name} 🚨",
+          "buzz_2": "{name}, ti {target, select, f {abbiamo sentita} m {abbiamo sentito} other {abbiamo sentito benissimo}}! Parola proibita!",
+          "buzz_3": "Bip bip bip! Qui non si dice, {name} 😏",
+          "protest": "Cosa?! Non era nemmeno una parola proibita, {name}!",
+          "protest_2": "{name}, hai l’orecchio un po’ troppo fino, no? 🙄",
+          "protest_3": "Arbitraggio scandaloso, {name}! Faccio ricorso 📢",
+          "tease": "Vuoto totale, {name}? 😏",
+          "tease_2": "Già passi? Dai {name}, un piccolo sforzo!",
+          "tease_3": "{name} passa… annotato, annotato 📝",
+          "proud": "Che manche, {name}! Tanto di cappello 🎩",
+          "proud_2": "{name}, descrivi come un vocabolario! 📚",
+          "proud_3": "Bella serie, {name}. Rifallo quando vuoi!",
+          "console": "Non fa niente, {name}, ci rifacciamo!",
+          "console_2": "{name}, teniamo le forze per la prossima 💪",
+          "console_3": "Dai {name}, la prossima è quella buona!"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "found": "Ben giocato, {name}. Indovinato con metodo.",
+            "found_2": "{name}, bello. Senza fretta, come piace a me.",
+            "jinx": "Prenditi il tuo tempo, {name}… ascoltiamo con attenzione.",
+            "jinx_2": "{name}, sorveglio ogni parola. Con garbo, ma sorveglio."
+          },
+          "farceur": {
+            "found": "{name} ha indovinato! Qualcuno ha visto il bigliettino? 😜",
+            "found_2": "Indovinato! {name}, hai un dono o un microfono nascosto? 🕵️",
+            "jinx": "{name}, se dici una parola proibita lo saprò… 👻",
+            "jinx_2": "In bocca al lupo, {name}. Stasera il tabù è in agguato 🌙"
+          },
+          "suiveur": {
+            "found": "Bravo {name}! Applaudono tutti, quindi anch’io 👏",
+            "found_2": "{name} ha indovinato? Allora sono {speaker, select, f {contenta} m {contento} other {al settimo cielo}}!",
+            "jinx": "Dico come gli altri: in bocca al lupo, {name} 😬",
+            "jinx_2": "{name}, ti sorvegliamo. Cioè, loro sorvegliano, io seguo."
+          },
+          "agressif": {
+            "found": "Finalmente! Era ora, {name}!",
+            "found_2": "Indovinato. Avanti! Non si dorme, {name}!",
+            "jinx": "{name}, un passo falso e suono senza pietà 😈",
+            "jinx_2": "Trema, {name}. Il cicalino sono io."
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…e vai!"
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
+        },
+        "botTicAlt": {
+          "gaston": "Piano, piano!"
+        }
       },
       "tutorial": {
         "steps": [

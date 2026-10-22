@@ -1,5 +1,5 @@
 import { getTabouWords } from '@/lib/tabou/data'
-import { createTabouState, reduceTabou, type TabouState, type TabouTeam } from '@/lib/tabou/engine'
+import { addTabouSpeech, createTabouState, reduceTabou, type TabouState, type TabouTeam } from '@/lib/tabou/engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { BOT_PERSONAS, botDisplayName } from '@/lib/online/bot-personas'
 import { onlineRoom, previewMembers, type PreviewMember, type TvPreviewFixture, type TvPreviewStep } from '../fixture-kit'
@@ -158,10 +158,33 @@ function botDescriber(): TvPreviewFixture {
   }
 }
 
+/** Réactions des bots (remplaçants) : le fil sous la manche, puis sous son bilan. */
+function botChatter(): TvPreviewFixture {
+  const { list, state } = table(6, 2)
+  const start = advance(state)
+  const d = describer(start)
+  const mate = start.players.find((p) => p.isBot && p.team === d.team)!
+  const rival = start.players.find((p) => p.isBot && p.team !== d.team)!
+  let s = addTabouSpeech(start, { playerId: rival.id, kind: 'jinx', targetId: d.id })
+  s = found(s, 3)
+  const finder = s.players.find((p) => !p.isBot && p.team === d.team && p.id !== d.id)!
+  s = addTabouSpeech(s, { playerId: mate.id, kind: 'lead', targetId: finder.id })
+  s = taboo(s, 1)
+  s = addTabouSpeech(s, { playerId: rival.id, kind: 'buzz', targetId: d.id })
+  s = found(s, 2)
+  const end = addTabouSpeech(advance(s), { playerId: mate.id, kind: 'proud', targetId: d.id })
+  return {
+    id: 'paroles-bots',
+    label: 'Réactions des bots, 6 joueurs (4 humains + 2 bots)',
+    steps: [step('manche, trois réactions', list, s), step('bilan, belle manche', list, end)],
+  }
+}
+
 export function build(): TvPreviewFixture[] {
   return [
     fullGame(16, 'partie-16', 'Partie complète, 16 joueurs (8 contre 8), noms longs'),
     fullGame(4, 'partie-4', 'Partie complète, 4 joueurs (2 contre 2)'),
     botDescriber(),
+    botChatter(),
   ]
 }
