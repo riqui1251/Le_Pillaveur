@@ -73,6 +73,22 @@ describe('TvBluff — écran TV du Grand Bluff', () => {
     expect(left[1].view.lastReveal?.candidates.length).toBeGreaterThanOrEqual(16)
   })
 
+  it('les paroles des bots dans une colonne à droite, effacée tant qu’aucune bulle n’est dite', () => {
+    const talk = steps.filter((s) => s.fixture === 'paroles').map(render)
+    expect(talk.map((r) => r.view.phase)).toEqual(['submit', 'vote', 'reveal'])
+    for (const r of talk) {
+      expect(r.html).toContain('w-[22rem]')
+      expect(r.html).toContain('aria-live="polite"')
+      expect(r.html).toMatch(/Barnabé<\/span> /)
+    }
+    expect(talk[1].html).toMatch(/Gépéto<\/span> /)
+    const silent = render(steps.find((s) => s.fixture === 'huit' && s.label === 'vote 5/8')!)
+    expect(silent.view.speech ?? []).toEqual([])
+    expect(silent.html).not.toContain('w-[22rem]')
+    // Monté quand même : la région live existe avant la première parole.
+    expect(silent.html).toContain('aria-live="polite"')
+  })
+
   it('compte la revanche comme les téléphones : membres présents seulement, bots exclus', () => {
     const end = steps.find((s) => s.fixture === 'seize' && s.label === 'fin de partie')!
     const room = end.room!

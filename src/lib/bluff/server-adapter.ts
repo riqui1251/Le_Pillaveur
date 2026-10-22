@@ -9,10 +9,15 @@ import {
   BLUFF_DEFAULT_ROUNDS,
   BLUFF_MIN_PLAYERS,
   BLUFF_MAX_PLAYERS,
+  BLUFF_SAY_ERRORS,
+  type BluffAction,
+  type BluffPlayer,
+  type BluffSay,
   type BluffState,
 } from './engine'
+import { bluffBotSay } from './bot-speech'
 import { phaseKey } from '@/lib/online/phase-clock'
-import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
+import { botDisplayName, botTraitsFor, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getBluffPrompts } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
@@ -78,6 +83,7 @@ export function parseBluffState(json: string | null): BluffState | null {
       pendingVotes: raw.pendingVotes ?? {},
       candidates: raw.candidates ?? [],
       revealAt: raw.revealAt ?? null,
+      speech: raw.speech ?? [],
     }
   } catch {
     return null
@@ -191,6 +197,25 @@ export function bluffSpectatorViewJson(state: BluffState): string {
 
 // ─── Bots ────────────────────────────────────────────────────────────────────
 
+/** La parole du bot avec son coup (bot-speech.ts), tirée sur SA vue client, avant le coup. */
+function bluffSayOf(state: BluffState, bot: BluffPlayer, sayRand: () => number): BluffSay | undefined {
+  const said = bluffBotSay(toBluffClientView(state, bot.id), bot.id, botTraitsFor(bot.name), sayRand)
+  return said?.targetId ? { kind: said.kind, targetId: said.targetId } : undefined
+}
+
+/**
+ * Le coup avec sa parole ; une parole refusée par le moteur (planificateur
+ * en défaut) ne coûte jamais le coup : il est rejoué sans elle.
+ */
+function reduceWithSay(state: BluffState, action: Extract<BluffAction, { say?: BluffSay }>): BluffState {
+  try {
+    return reduceBluff(state, action)
+  } catch (e) {
+    if (!action.say || !(e instanceof BluffEngineError) || !BLUFF_SAY_ERRORS.includes(e.message)) throw e
+    return reduceBluff(state, { ...action, say: undefined })
+  }
+}
+
 /**
  * Un bot bluffe avec un des mauvais choix ORIGINAUX de la question (garanti
  * plausible) et vote au hasard (hors son propre bluff — jamais pondéré vers
@@ -198,9 +223,20 @@ export function bluffSpectatorViewJson(state: BluffState): string {
  * n'existent qu'en REMPLACEMENT d'un joueur parti.
  *
  * Pendant `submit`/`vote` (simultanés), un seul tick fait agir TOUS les bots
- * en attente d'un coup.
+ * en attente d'un coup, chacun avec la parole qu'il y joint (bot-speech.ts),
+ * tirée sur l'état laissé par le bot précédent : la sobriété par phase
+ * compte déjà ses bulles.
+ *
+ * `rand` tire les coups, `sayRand` les paroles : un test leur donne deux
+ * flux, pour que les phrases ne déplacent aucun tirage du jeu. En
+ * production, les deux sont Math.random.
  */
-export function applyBluffBotAction(state: BluffState): BluffRoomActionResult {
+export function applyBluffBotAction(
+  state: BluffState,
+  rand: () => number = Math.random,
+  now: number = Date.now(),
+  sayRand: () => number = rand
+): BluffRoomActionResult {
   try {
     if (state.phase === 'submit') {
       const active = bluffActive(state)
@@ -210,13 +246,13 @@ export function applyBluffBotAction(state: BluffState): BluffRoomActionResult {
       let next = state
       for (const bot of pendingBots) {
         if (next.phase !== 'submit') break
-        const decoy =
-          prompt.decoys[Math.floor(Math.random() * prompt.decoys.length)] ?? prompt.answer
-        next = reduceBluff(next, {
+        const decoy = prompt.decoys[Math.floor(rand() * prompt.decoys.length)] ?? prompt.answer
+        next = reduceWithSay(next, {
           type: 'SUBMIT_FAKE',
           playerId: bot.id,
           text: decoy,
-          now: Date.now(),
+          now,
+          say: bluffSayOf(next, bot, sayRand),
         })
       }
       return { ok: true, state: next }
@@ -230,12 +266,13 @@ export function applyBluffBotAction(state: BluffState): BluffRoomActionResult {
       for (const bot of pendingBots) {
         if (next.phase !== 'vote') break
         const options = next.candidates.filter((c) => c.authorId !== bot.id)
-        const target = options[Math.floor(Math.random() * options.length)]
-        next = reduceBluff(next, {
+        const target = options[Math.floor(rand() * options.length)]
+        next = reduceWithSay(next, {
           type: 'VOTE',
           playerId: bot.id,
           candidateId: target.candidateId,
-          now: Date.now(),
+          now,
+          say: bluffSayOf(next, bot, sayRand),
         })
       }
       return { ok: true, state: next }
@@ -247,7 +284,7 @@ export function applyBluffBotAction(state: BluffState): BluffRoomActionResult {
     if (state.phase === 'reveal') {
       return {
         ok: true,
-        state: reduceBluff(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
+        state: reduceBluff(state, { type: 'CONTINUE', playerId: actor.id, now }),
       }
     }
     return { ok: false, error: 'NOT_BOT_TURN' }

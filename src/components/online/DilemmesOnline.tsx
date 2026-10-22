@@ -25,6 +25,7 @@ import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { DilemmesSpeechFeed } from './dilemmes/DilemmesSpeechFeed'
 
 /**
  * DILEMMES en ligne (serveur-autoritaire). Votes SECRETS pendant la manche
@@ -440,110 +441,117 @@ export function DilemmesOnline() {
       {/* « Qui de la table » révélé : le verdict nommé, puis TOUTE la table
           (moi compris) classée par voix — on voit aussi celles qu'on a reçues. */}
       {tally && (
-        <>
-          <motion.section
-            aria-labelledby="dil-verdict"
-            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={reduceMotion ? { duration: 0.2 } : { type: 'spring', stiffness: 260, damping: 20 }}
-            className="rounded-2xl border border-gold bg-cream px-4 py-4 text-center text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] ring-2 ring-gold"
-          >
-            {tally.topIds.length > 0 ? (
-              <>
-                <h3 id="dil-verdict" className="text-sm font-bold text-[#24201A]">
-                  {isSoft
-                    ? t('who.topTitle', { count: tally.topIds.length })
-                    : t('who.topDrinks', { count: tally.topIds.length })}
-                </h3>
-                {iAmTop && <p className="mt-1 font-display text-xl font-bold text-suit-red">{t('who.itsYou')}</p>}
-                <ul className="mt-2 space-y-1">
-                  {tally.topIds.map((id) => {
-                    const p = view.players.find((x) => x.id === id)
-                    return (
-                      <li key={id} className="flex items-center justify-center gap-2">
-                        {p && (
-                          <span aria-hidden className="shrink-0 text-2xl">
-                            <PlayerAvatarGlyph value={iconOf(p)} />
-                          </span>
-                        )}
-                        <span className="min-w-0 break-words font-display text-2xl font-bold leading-tight">
-                          {nameOf(id)}
-                          {id === user.id && <span className="text-base font-semibold text-[#6B6455]"> {t('you')}</span>}
-                        </span>
-                      </li>
-                    )
-                  })}
-                </ul>
-                <p className="mt-2 text-sm font-semibold">{t('who.votes', { count: tally.top })}</p>
-              </>
-            ) : (
-              <h3 id="dil-verdict" className="font-display text-lg font-bold">{t('who.nobody')}</h3>
-            )}
-          </motion.section>
-
-          <section aria-labelledby="dil-ranking" className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
-            <h3 id="dil-ranking" className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-gold">
-              {t('who.rankingTitle')}
-            </h3>
-            <ol className="space-y-1.5">
-              {tally.rows.map((row) => {
-                const p = view.players.find((x) => x.id === row.id)
-                const mine = row.id === user.id
-                const top = tally.topIds.includes(row.id)
-                return (
-                  <li
-                    key={row.id}
-                    className={cn('rounded-xl px-2.5 py-2', mine && 'bg-gold/10 ring-1 ring-gold/40')}
-                  >
-                    <div className="flex items-center gap-2">
+        <motion.section
+          aria-labelledby="dil-verdict"
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={reduceMotion ? { duration: 0.2 } : { type: 'spring', stiffness: 260, damping: 20 }}
+          className="rounded-2xl border border-gold bg-cream px-4 py-4 text-center text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.8)] ring-2 ring-gold"
+        >
+          {tally.topIds.length > 0 ? (
+            <>
+              <h3 id="dil-verdict" className="text-sm font-bold text-[#24201A]">
+                {isSoft
+                  ? t('who.topTitle', { count: tally.topIds.length })
+                  : t('who.topDrinks', { count: tally.topIds.length })}
+              </h3>
+              {iAmTop && <p className="mt-1 font-display text-xl font-bold text-suit-red">{t('who.itsYou')}</p>}
+              <ul className="mt-2 space-y-1">
+                {tally.topIds.map((id) => {
+                  const p = view.players.find((x) => x.id === id)
+                  return (
+                    <li key={id} className="flex items-center justify-center gap-2">
                       {p && (
-                        <span aria-hidden className="shrink-0 text-lg">
+                        <span aria-hidden className="shrink-0 text-2xl">
                           <PlayerAvatarGlyph value={iconOf(p)} />
                         </span>
                       )}
-                      <OnlinePlayerName
-                        name={nameOf(row.id)}
-                        cosmetics={cosmetics.get(row.id)}
-                        className="min-w-0 truncate text-sm font-bold text-cream"
-                      />
-                      {mine && <span className="shrink-0 text-sm font-semibold text-cream/70">{t('you')}</span>}
-                      {/* Parti après avoir reçu des voix : il reste au classement, signalé. */}
-                      {Boolean(p?.leftAt) && (
-                        <>
-                          <WifiOff className="h-4 w-4 shrink-0 text-cream/80" aria-hidden />
-                          <span className="sr-only">{` (${t('awayTag')})`}</span>
-                        </>
-                      )}
-                      <span
-                        className={cn(
-                          'ml-auto shrink-0 text-sm font-black tabular-nums',
-                          top ? 'text-gold' : row.votes > 0 ? 'text-cream' : 'text-cream/70'
-                        )}
-                      >
-                        {t('who.votes', { count: row.votes })}
+                      <span className="min-w-0 break-words font-display text-2xl font-bold leading-tight">
+                        {nameOf(id)}
+                        {id === user.id && <span className="text-base font-semibold text-[#6B6455]"> {t('you')}</span>}
                       </span>
-                    </div>
-                    <div aria-hidden className="mt-1.5 h-2 overflow-hidden rounded-full bg-black/30">
-                      <div
-                        className={cn('h-full rounded-full', top ? 'bg-gold' : 'bg-red-400')}
-                        style={{ width: `${tally.top > 0 ? (row.votes / tally.top) * 100 : 0}%` }}
-                      />
-                    </div>
-                    {row.voterIds.length > 0 && (
-                      <p className="mt-1 break-words text-sm text-cream/70">
-                        {t('who.by', { names: row.voterIds.map(nameOf).join(', ') })}
-                      </p>
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
-          </section>
-        </>
+                    </li>
+                  )
+                })}
+              </ul>
+              <p className="mt-2 text-sm font-semibold">{t('who.votes', { count: tally.top })}</p>
+            </>
+          ) : (
+            <h3 id="dil-verdict" className="font-display text-lg font-bold">{t('who.nobody')}</h3>
+          )}
+        </motion.section>
       )}
 
       {isReveal && !isSoft && !isWho && (
         <p className="text-center font-display text-lg font-bold text-amber-200">{t('minorityDrinks')}</p>
+      )}
+
+      {/* Paroles des bots : SOUS la carte à voter, jamais au-dessus — une
+          bulle qui arrive ne déplace pas le choix sous le doigt. À la
+          révélation, la réaction se lit juste sous le verdict, avant le
+          classement. Toujours monté, à la même place : sa région live doit
+          exister avant la première bulle. */}
+      <DilemmesSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
+
+      {tally && (
+        <section aria-labelledby="dil-ranking" className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <h3 id="dil-ranking" className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-gold">
+            {t('who.rankingTitle')}
+          </h3>
+          <ol className="space-y-1.5">
+            {tally.rows.map((row) => {
+              const p = view.players.find((x) => x.id === row.id)
+              const mine = row.id === user.id
+              const top = tally.topIds.includes(row.id)
+              return (
+                <li
+                  key={row.id}
+                  className={cn('rounded-xl px-2.5 py-2', mine && 'bg-gold/10 ring-1 ring-gold/40')}
+                >
+                  <div className="flex items-center gap-2">
+                    {p && (
+                      <span aria-hidden className="shrink-0 text-lg">
+                        <PlayerAvatarGlyph value={iconOf(p)} />
+                      </span>
+                    )}
+                    <OnlinePlayerName
+                      name={nameOf(row.id)}
+                      cosmetics={cosmetics.get(row.id)}
+                      className="min-w-0 truncate text-sm font-bold text-cream"
+                    />
+                    {mine && <span className="shrink-0 text-sm font-semibold text-cream/70">{t('you')}</span>}
+                    {/* Parti après avoir reçu des voix : il reste au classement, signalé. */}
+                    {Boolean(p?.leftAt) && (
+                      <>
+                        <WifiOff className="h-4 w-4 shrink-0 text-cream/80" aria-hidden />
+                        <span className="sr-only">{` (${t('awayTag')})`}</span>
+                      </>
+                    )}
+                    <span
+                      className={cn(
+                        'ml-auto shrink-0 text-sm font-black tabular-nums',
+                        top ? 'text-gold' : row.votes > 0 ? 'text-cream' : 'text-cream/70'
+                      )}
+                    >
+                      {t('who.votes', { count: row.votes })}
+                    </span>
+                  </div>
+                  <div aria-hidden className="mt-1.5 h-2 overflow-hidden rounded-full bg-black/30">
+                    <div
+                      className={cn('h-full rounded-full', top ? 'bg-gold' : 'bg-red-400')}
+                      style={{ width: `${tally.top > 0 ? (row.votes / tally.top) * 100 : 0}%` }}
+                    />
+                  </div>
+                  {row.voterIds.length > 0 && (
+                    <p className="mt-1 break-words text-sm text-cream/70">
+                      {t('who.by', { names: row.voterIds.map(nameOf).join(', ') })}
+                    </p>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </section>
       )}
 
       {/* Table pendant le vote : qui a voté (jamais QUOI) — chaque état a son signe. */}

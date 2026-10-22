@@ -107,8 +107,10 @@ export function describeSpeechCatalogue({
   /** Longueur max d'une phrase qui lit un argument de `extraArgs` (l'indice cité allonge la bulle). */
   maxCharsWithExtraArgs?: number
   /**
-   * Jeu joué en ambiance Sans alcool : aucune phrase ne parle de boire, et
-   * les seuls tics qui trinquent sont ceux que le fil tait (DRINK_TIC_KEYS).
+   * Jeu joué aussi Sans alcool : ni mot de boisson ni chiffre dans les
+   * phrases, pour tout couple de genres (auteur, cible), et des tics copies
+   * conformes du Loup-Garou — le fil tait ceux qui trinquent
+   * (DRINK_TIC_KEYS, ambianceLineTranslator).
    */
   drinkFree?: boolean
 }): void {
@@ -192,25 +194,6 @@ export function describeSpeechCatalogue({
       }
     })
 
-    if (drinkFree) {
-      it('Sans alcool : aucune phrase ne parle de boire, quel que soit le genre ; les tics qui trinquent sont ceux que le fil tait', () => {
-        for (const [locale, game] of catalogues) {
-          const flat = flattenSpeechCatalogue(game)
-          for (const key of sayKeys(game)) {
-            const format = new IntlMessageFormat(flat[key], locale)
-            for (const genre of GENRES) {
-              const line = String(format.format({ ...extraArgs, name: NAME, speaker: genre, target: genre }))
-              expect(line, `${locale}.${key} : ${line}`).not.toMatch(DRINK_WORDS[locale])
-            }
-          }
-          const toasting = Object.entries(game.botTic)
-            .filter(([, text]) => DRINK_WORDS[locale].test(text))
-            .map(([key]) => key)
-          for (const key of toasting) expect(DRINK_TIC_KEYS, `${locale}.botTic.${key}`).toContain(key)
-        }
-      })
-    }
-
     it('20 tics distincts par langue, exactement ceux des personas, sans argument ICU, ≤ 30 caractères', () => {
       const ticKeys = BOT_PERSONAS.map((p) => p.ticKey).sort()
       for (const [locale, game] of catalogues) {
@@ -245,6 +228,34 @@ export function describeSpeechCatalogue({
             }
           }
         }
+      }
+    })
+
+    if (!drinkFree) return
+
+    it('Sans alcool : ni mot de boisson ni chiffre dans les phrases (tics exclus), pour tout couple de genres', () => {
+      for (const [locale, game] of catalogues) {
+        const flat = flattenSpeechCatalogue(game)
+        for (const key of sayKeys(game)) {
+          expect(flat[key], `${locale}.${key}`).not.toMatch(/\d/)
+          const format = new IntlMessageFormat(flat[key], locale)
+          for (const speaker of GENRES) {
+            for (const target of GENRES) {
+              const line = String(format.format({ ...extraArgs, name: NAME, speaker, target }))
+              expect(line, `${locale}.${key} : ${line}`).not.toMatch(DRINK_WORDS[locale])
+            }
+          }
+        }
+      }
+    })
+
+    it('les 20 tics sont ceux du Loup-Garou, mot pour mot ; ceux qui trinquent sont ceux que le fil tait', () => {
+      for (const [locale, game] of catalogues) {
+        expect(game.botTic, locale).toEqual(speechCatalogueOf('games.loup-garou.game', locale).botTic)
+        const toasting = Object.entries(game.botTic)
+          .filter(([, text]) => DRINK_WORDS[locale].test(text))
+          .map(([key]) => key)
+        for (const key of toasting) expect(DRINK_TIC_KEYS, `${locale}.botTic.${key}`).toContain(key)
       }
     })
   })

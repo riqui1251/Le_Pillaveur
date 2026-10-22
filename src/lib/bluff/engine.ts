@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * LE GRAND BLUFF (Fibbage apéro) — moteur PUR, serveur-autoritaire.
@@ -81,6 +82,57 @@ export type BluffRoundResult = {
 
 export type BluffPhase = 'countdown' | 'submit' | 'vote' | 'reveal' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.bluff.game), portée par
+ * son coup et née dans la MÊME réduction — aucun tick de plus. Le kind est le
+ * seul message, choisi sur la vue du bot : il ne dit jamais quel texte est le
+ * sien, lequel il a voté, ni où est la vraie réponse.
+ *   • bluff (SUBMIT_FAKE) : proud (« mon bluff est prêt »), chase (pique au
+ *     meneur du score, un humain) ;
+ *   • vote (VOTE) : sure, unsure (du bagout, le vote d'un bot est au hasard),
+ *     sniff (« je reconnais ta plume » : l'humain visé a un bluff en lice).
+ * fooled, gotYou, found et bravo sont les réactions à la révélation :
+ * dérivées de la vue publique (reveal-reactions.ts), jamais écrites ici.
+ */
+export type BluffSpeechKind =
+  | 'proud'
+  | 'chase'
+  | 'sure'
+  | 'unsure'
+  | 'sniff'
+  | 'fooled'
+  | 'gotYou'
+  | 'found'
+  | 'bravo'
+export type BluffSpeech = BotSpeech<BluffSpeechKind>
+
+export const BLUFF_SPEECH_KINDS = [
+  'proud',
+  'chase',
+  'sure',
+  'unsure',
+  'sniff',
+  'fooled',
+  'gotYou',
+  'found',
+  'bravo',
+] as const satisfies readonly BluffSpeechKind[]
+
+/** Paroles max par bot et par manche, réactions comprises ; le bavardage du persona borne en dessous. */
+export const BLUFF_SPEECH_CAP = 2
+
+/** Les kinds qu'un coup peut porter ; les réactions de révélation n'y sont jamais. */
+export const BLUFF_SAY_KINDS_OF = {
+  SUBMIT_FAKE: ['proud', 'chase'],
+  VOTE: ['sure', 'unsure', 'sniff'],
+} as const satisfies Record<'SUBMIT_FAKE' | 'VOTE', readonly BluffSpeechKind[]>
+
+/** La parole jointe à un coup : son kind et le joueur qu'elle nomme. */
+export type BluffSay = { kind: BluffSpeechKind; targetId: string }
+
+/** Codes d'un `say` refusé : le coup, lui, reste jouable sans parole. */
+export const BLUFF_SAY_ERRORS: readonly string[] = ['INVALID_KIND', 'INVALID_TARGET', 'ALREADY_SPOKE']
+
 export type BluffState = TimedPhaseState & {
   version: number
   phase: BluffPhase
@@ -101,11 +153,17 @@ export type BluffState = TimedPhaseState & {
   winnerId: string | null
   /** SECRET serveur. */
   rngState: number
+  /**
+   * PUBLIC — paroles des bots de la manche en cours (`round` = promptIdx),
+   * vidées au CONTINUE. Optionnel : un état sérialisé avant leur arrivée
+   * n'en a pas (parseBluffState complète).
+   */
+  speech?: BluffSpeech[]
 }
 
 export type BluffAction =
-  | { type: 'SUBMIT_FAKE'; playerId: string; text: string; now: number }
-  | { type: 'VOTE'; playerId: string; candidateId: string; now: number }
+  | { type: 'SUBMIT_FAKE'; playerId: string; text: string; now: number; say?: BluffSay }
+  | { type: 'VOTE'; playerId: string; candidateId: string; now: number; say?: BluffSay }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
@@ -145,6 +203,46 @@ function normalize(text: string): string {
 export function bluffRevealElapsedMs(state: BluffState, now: number): number {
   if (state.revealAt == null) return Number.POSITIVE_INFINITY
   return now - state.revealAt
+}
+
+/** Le meneur du score s'il est seul en tête avec au moins un point, parmi les joueurs encore là. */
+export function bluffSoleLeader<P extends { leftAt: number | null; score: number }>(players: readonly P[]): P | null {
+  const seated = players.filter((p) => !p.leftAt)
+  const top = Math.max(0, ...seated.map((p) => p.score))
+  const leaders = seated.filter((p) => p.score === top)
+  return top > 0 && leaders.length === 1 ? leaders[0] : null
+}
+
+/**
+ * Le fil après un coup qui porte `say`, ou tel quel sans parole. Seul un bot
+ * parle (l'adaptateur HTTP ne lit jamais `say`) ; la cible est un autre
+ * joueur encore là, que le kind désigne :
+ *   • chase vise le meneur seul en tête, devant l'auteur ;
+ *   • sniff vise un joueur dont un bluff est en lice (public : hasSubmitted) ;
+ *   • proud, sure et unsure, n'importe qui d'autre.
+ * Un kind hors de ceux du coup, une cible refusée ou un plafond atteint
+ * refusent le coup — l'adaptateur le rejoue alors sans parole.
+ */
+function withSay(
+  state: BluffState,
+  actor: BluffPlayer,
+  type: keyof typeof BLUFF_SAY_KINDS_OF,
+  say: BluffSay | undefined
+): BluffSpeech[] {
+  const speech = state.speech ?? []
+  if (!say) return speech
+  const kinds: readonly BluffSpeechKind[] = BLUFF_SAY_KINDS_OF[type]
+  if (!actor.isBot || !kinds.includes(say.kind)) throw new BluffEngineError('INVALID_KIND')
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.id === actor.id || target.leftAt) throw new BluffEngineError('INVALID_TARGET')
+  if (say.kind === 'chase' && (bluffSoleLeader(state.players)?.id !== target.id || target.score <= actor.score)) {
+    throw new BluffEngineError('INVALID_TARGET')
+  }
+  if (say.kind === 'sniff' && !state.pendingFakes[target.id]) throw new BluffEngineError('INVALID_TARGET')
+  const round = state.promptIdx
+  const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === round)
+  if (mine.length >= BLUFF_SPEECH_CAP) throw new BluffEngineError('ALREADY_SPOKE')
+  return [...speech, { playerId: actor.id, kind: say.kind, targetId: target.id, round }]
 }
 
 // ─── Création ────────────────────────────────────────────────────────────────
@@ -191,6 +289,7 @@ export function createBluffState(
     rematchVotes: [],
     winnerId: null,
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -327,8 +426,9 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
           Object.values(state.pendingFakes).some((t) => normalize(t) === wanted)
         if (taken) throw new BluffEngineError('FAKE_TAKEN')
       }
+      const speech = withSay(state, actor, 'SUBMIT_FAKE', action.say)
       const pendingFakes = { ...state.pendingFakes, [actor.id]: trimmed }
-      const next = { ...state, pendingFakes, version: state.version + 1 }
+      const next = { ...state, pendingFakes, speech, version: state.version + 1 }
       const active = bluffActive(state)
       if (active.every((p) => pendingFakes[p.id])) return enterVotePhase(next, action.now)
       return next
@@ -342,8 +442,9 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
       const candidate = state.candidates.find((c) => c.candidateId === action.candidateId)
       if (!candidate) throw new BluffEngineError('INVALID_CANDIDATE')
       if (candidate.authorId === voter.id) throw new BluffEngineError('CANNOT_VOTE_OWN_FAKE')
+      const speech = withSay(state, voter, 'VOTE', action.say)
       const pendingVotes = { ...state.pendingVotes, [voter.id]: candidate.candidateId }
-      const next = { ...state, pendingVotes, version: state.version + 1 }
+      const next = { ...state, pendingVotes, speech, version: state.version + 1 }
       const active = bluffActive(state)
       if (active.every((p) => pendingVotes[p.id])) return resolveVotes(next, action.now)
       return next
@@ -392,6 +493,7 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
           phaseEndsAt: null,
           revealAt: null,
           winnerId: leaders.length === 1 ? leaders[0].id : null,
+          speech: [],
           version: state.version + 1,
         }
       }
@@ -403,6 +505,7 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
         pendingVotes: {},
         lastReveal: null,
         revealAt: null,
+        speech: [],
         ...enterPhase(state.phaseSeq, 'submit', BLUFF_SUBMIT_MS, action.now),
         phase: 'submit',
         version: state.version + 1,

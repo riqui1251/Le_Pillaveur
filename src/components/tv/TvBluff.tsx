@@ -16,7 +16,10 @@ import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { rematchCounter } from '@/components/online/end-screen'
-import { TvBigCountdown, TvTimeBar } from './tv-shared'
+import { TV_FEED_SIZE, speechFeedItems } from '@/components/online/bot-speech/bot-speech-feed'
+import { BluffSpeechFeed } from '@/components/online/bluff/BluffSpeechFeed'
+import { bluffRevealReactions } from '@/lib/bluff/reveal-reactions'
+import { TV_FEED_CLIP, TvBigCountdown, TvTimeBar } from './tv-shared'
 
 type BluffPlayerView = BluffClientView['players'][number]
 
@@ -137,6 +140,14 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
   const leftPlayer = players.find((p) => !p.isBot && p.leftAt)
   const prompt = state.prompt ?? ''
   const tight = Boolean(leftPlayer?.leftAt)
+  // Mêmes bulles que le fil (paroles de la manche + réactions de la révélation).
+  const withFeed =
+    speechFeedItems(
+      [...(state.speech ?? []), ...bluffRevealReactions(state)],
+      state.promptIdx,
+      null,
+      TV_FEED_SIZE
+    ).length > 0
   // Au vote et à la révélation, la question est déjà connue : deux lignes au plus, la place va aux cartes.
   const promptSize =
     phase === 'submit'
@@ -182,37 +193,50 @@ export function TvBluff({ room, state }: { room: TvRoomDto; state: BluffClientVi
         </div>
       )}
 
-      {prompt && (
-        <div className="shrink-0 rounded-3xl border border-rose-400/30 bg-rose-600/10 px-8 py-2.5 text-center">
-          {/* leading-tight APRÈS la taille : cn (twMerge) l'efface s'il la précède. */}
-          <p className={cn('font-black text-white', promptSize, 'leading-tight', phase === 'submit' ? 'line-clamp-3' : 'line-clamp-2')}>
-            {prompt}
-          </p>
+      <div className="flex min-h-0 flex-1 gap-6">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          {prompt && (
+            <div className="shrink-0 rounded-3xl border border-rose-400/30 bg-rose-600/10 px-8 py-2.5 text-center">
+              {/* leading-tight APRÈS la taille : cn (twMerge) l'efface s'il la précède. */}
+              <p className={cn('font-black text-white', promptSize, 'leading-tight', phase === 'submit' ? 'line-clamp-3' : 'line-clamp-2')}>
+                {prompt}
+              </p>
+            </div>
+          )}
+
+          {phase === 'submit' && <SubmitCenter players={players} iconOf={iconOf} submitPrompt={t('submitPrompt')} />}
+
+          {phase === 'vote' && state.voteOptions && (
+            <>
+              <OptionsGrid options={state.voteOptions} tight={tight} />
+              <StatusStrip players={players} iconOf={iconOf} doneOf={doneOf} />
+            </>
+          )}
+
+          {phase === 'reveal' && reveal && (
+            <>
+              <p
+                className={cn(
+                  'shrink-0 truncate text-center font-black text-emerald-200',
+                  reveal.realAnswer.length > 40 ? 'text-3xl' : 'text-4xl'
+                )}
+              >
+                {t('reveal.realAnswer', { answer: reveal.realAnswer })}
+              </p>
+              <RevealGrid reveal={reveal} nameOf={nameOf} iconOfId={iconOfId} tight={tight} />
+            </>
+          )}
         </div>
-      )}
 
-      {phase === 'submit' && <SubmitCenter players={players} iconOf={iconOf} submitPrompt={t('submitPrompt')} />}
-
-      {phase === 'vote' && state.voteOptions && (
-        <>
-          <OptionsGrid options={state.voteOptions} tight={tight} />
-          <StatusStrip players={players} iconOf={iconOf} doneOf={doneOf} />
-        </>
-      )}
-
-      {phase === 'reveal' && reveal && (
-        <>
-          <p
-            className={cn(
-              'shrink-0 truncate text-center font-black text-emerald-200',
-              reveal.realAnswer.length > 40 ? 'text-3xl' : 'text-4xl'
-            )}
-          >
-            {t('reveal.realAnswer', { answer: reveal.realAnswer })}
-          </p>
-          <RevealGrid reveal={reveal} nameOf={nameOf} iconOfId={iconOfId} tight={tight} />
-        </>
-      )}
+        {/* Les paroles des bots à droite, comme sur la TV du Menteur : sans
+            bulle, la colonne s'efface et laisse toute la largeur aux cartes,
+            mais le fil reste monté (région live née avant la 1re parole). */}
+        <div className={withFeed ? 'flex w-[22rem] shrink-0 flex-col justify-center' : 'hidden'}>
+          <div className={TV_FEED_CLIP}>
+            <BluffSpeechFeed view={state} iconOf={iconOf} variant="tv" />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * DILEMMES — moteur PUR, serveur-autoritaire.
@@ -34,6 +35,53 @@ export type DilPhase = 'countdown' | 'vote' | 'reveal' | 'finished'
 
 export type DilRevealEntry = { voterId: string; choice: string }
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.dilemmes.game), portée
+ * par son vote et née dans la MÊME réduction. Le kind est le seul message, et
+ * il ne dit JAMAIS ce que le bot a voté — le vote reste secret jusqu'à la
+ * révélation, comme celui des humains :
+ *   • easy (« facile, celle-là ») et tough (« dur de choisir ») ;
+ *   • confess, sur un « Je n'ai jamais » : il taquine un humain (« avoue ! »).
+ * outvoted, teaseMinority, twin, spill, designated et called sont les
+ * réactions à la révélation : dérivées de la vue publique
+ * (reveal-reactions.ts), jamais écrites ici.
+ */
+export type DilSpeechKind =
+  | 'easy'
+  | 'tough'
+  | 'confess'
+  | 'outvoted'
+  | 'teaseMinority'
+  | 'twin'
+  | 'spill'
+  | 'designated'
+  | 'called'
+export type DilSpeech = BotSpeech<DilSpeechKind>
+
+export const DIL_SPEECH_KINDS = [
+  'easy',
+  'tough',
+  'confess',
+  'outvoted',
+  'teaseMinority',
+  'twin',
+  'spill',
+  'designated',
+  'called',
+] as const satisfies readonly DilSpeechKind[]
+
+/** Paroles max par bot et par manche, réactions comprises ; le bavardage du persona borne en dessous. */
+export const DIL_SPEECH_CAP = 2
+
+/** Les kinds qu'un vote peut porter ; les réactions de la révélation n'y sont jamais. */
+export const DIL_SAY_KINDS: readonly DilSpeechKind[] = ['easy', 'tough', 'confess']
+
+/** La parole jointe à un vote : son kind et le joueur qu'elle nomme. */
+export type DilSay = { kind: DilSpeechKind; targetId: string }
+
+/** Codes d'un `say` refusé : le vote, lui, reste valable sans parole. */
+export const DIL_SAY_ERRORS: readonly string[] = ['INVALID_KIND', 'INVALID_TARGET', 'ALREADY_SPOKE']
+
 export type DilState = TimedPhaseState & {
   version: number
   phase: DilPhase
@@ -47,10 +95,16 @@ export type DilState = TimedPhaseState & {
   lastReveal: DilRevealEntry[] | null
   rematchVotes: string[]
   rngState: number
+  /**
+   * PUBLIC — paroles des bots de la manche en cours (`round`), vidées à la
+   * carte suivante. Optionnel : un état sérialisé avant leur arrivée n'en a
+   * pas (parseDilState complète).
+   */
+  speech?: DilSpeech[]
 }
 
 export type DilAction =
-  | { type: 'VOTE'; playerId: string; choice: string; now: number }
+  | { type: 'VOTE'; playerId: string; choice: string; now: number; say?: DilSay }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
@@ -81,6 +135,25 @@ function validChoice(state: DilState, card: DilCard, voterId: string, choice: st
     return state.players.some((p) => p.id === choice && !p.leftAt && p.id !== voterId)
   }
   return choice === 'A' || choice === 'B'
+}
+
+/**
+ * Le fil après un vote qui porte `say`, ou tel quel sans parole. Seul un bot
+ * parle (l'adaptateur HTTP ne lit jamais `say`), vers un autre joueur encore
+ * là ; confess n'existe que sur un « Je n'ai jamais ». Un kind de réaction,
+ * une cible refusée ou un plafond atteint refusent le vote — l'adaptateur le
+ * rejoue alors sans parole.
+ */
+function withSay(state: DilState, actor: DilPlayer, card: DilCard, say: DilSay | undefined): DilSpeech[] {
+  const speech = state.speech ?? []
+  if (!say) return speech
+  if (!actor.isBot || !DIL_SAY_KINDS.includes(say.kind)) throw new DilEngineError('INVALID_KIND')
+  if (say.kind === 'confess' && card.kind !== 'never') throw new DilEngineError('INVALID_KIND')
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.id === actor.id || target.leftAt) throw new DilEngineError('INVALID_TARGET')
+  const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === state.round)
+  if (mine.length >= DIL_SPEECH_CAP) throw new DilEngineError('ALREADY_SPOKE')
+  return [...speech, { playerId: actor.id, kind: say.kind, targetId: target.id, round: state.round }]
 }
 
 // ─── Création ────────────────────────────────────────────────────────────────
@@ -118,6 +191,7 @@ export function createDilState(
     lastReveal: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -133,6 +207,7 @@ function enterVote(state: DilState, now: number): DilState {
     ...state,
     votes: {},
     lastReveal: null,
+    speech: [],
     ...enterPhase(state.phaseSeq, 'vote', DIL_VOTE_MS, now),
     phase: 'vote',
     version: state.version + 1,
@@ -162,8 +237,9 @@ export function reduceDil(state: DilState, action: DilAction): DilState {
       if (!card || !validChoice(state, card, actor.id, action.choice)) {
         throw new DilEngineError('INVALID_CHOICE')
       }
+      const speech = withSay(state, actor, card, action.say)
       const votes = { ...state.votes, [actor.id]: action.choice }
-      const next = { ...state, votes, version: state.version + 1 }
+      const next = { ...state, votes, speech, version: state.version + 1 }
       if (dilActive(state).every((p) => votes[p.id])) return enterReveal(next, action.now)
       return next
     }
@@ -191,6 +267,7 @@ export function reduceDil(state: DilState, action: DilAction): DilState {
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
+          speech: [],
           version: state.version + 1,
         }
       }
