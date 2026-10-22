@@ -42,6 +42,12 @@ export function adminErrorResponse(error: unknown, context: string): NextRespons
   return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
 }
 
+/**
+ * Au-delà, une page est forcément vide, et `skip` doit tenir dans l'entier
+ * 64 bits que Prisma accepte (`?page=4e17` : 500).
+ */
+export const MAX_PAGE = 100_000
+
 /** Bornage commun des paramètres de pagination (F40/F75). */
 export function parsePaging(
   searchParams: URLSearchParams,
@@ -49,7 +55,7 @@ export function parsePaging(
 ): { page: number; pageSize: number; skip: number } {
   const rawPage = Number.parseInt(searchParams.get('page') ?? '1', 10)
   const rawSize = Number.parseInt(searchParams.get('pageSize') ?? String(defaultSize), 10)
-  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.min(rawPage, MAX_PAGE) : 1
   const pageSize =
     Number.isFinite(rawSize) && rawSize > 0 ? Math.min(rawSize, maxSize) : defaultSize
   return { page, pageSize, skip: (page - 1) * pageSize }
