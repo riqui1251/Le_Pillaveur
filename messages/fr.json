@@ -5329,7 +5329,70 @@
         "pointsSr": "{count, plural, one {# point} other {# points}}",
         "handedIn": "copie rendue",
         "playerLeft": "a quitté la table",
-        "contestTargetSr": "la réponse « {answer} » de {name}"
+        "contestTargetSr": "la réponse « {answer} » de {name}",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "stop": "Déjà ?! T’es une machine, {name} !",
+          "stop_2": "Hé ! J’avais pas fini, {name} 😤",
+          "stop_3": "{name}, tu pouvais pas attendre deux secondes ?",
+          "contest": "« {answer} » ? Ça existe vraiment, ça, {name} ? 🤨",
+          "contest_2": "{name}, « {answer} »… tu l’as inventé, avoue.",
+          "contest_3": "Hum. « {answer} », {name}. On vote, là ?",
+          "twin": "« {answer} » en double… {name}, t’as copié ? 👀",
+          "twin_2": "{name}, « {answer} » ? Quelqu’un a eu la même idée 👀",
+          "twin_3": "« {answer} », deux fois ! {name}, c’était prévu ?",
+          "tease": "{name} rafle tout… c’est louche 🤨",
+          "tease_2": "Quelqu’un peut arrêter {name} ?",
+          "tease_3": "{name}, t’as un dictionnaire caché sous la table ?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "stop": "Déjà ? Il me fallait une minute de plus, {name}.",
+            "stop_2": "Doucement, {name}… certains réfléchissent encore.",
+            "contest": "Sans vouloir chipoter, « {answer} », {name}… vraiment ?",
+            "contest_2": "J’ai un doute sur « {answer} », {name}."
+          },
+          "farceur": {
+            "stop": "STOP ? J’allais écrire un chef-d’œuvre, {name} !",
+            "stop_2": "{name} a crié STOP, moi j’ai crié maman 😱",
+            "contest": "« {answer} » ? Joli effort d’imagination, {name} 😜",
+            "contest_2": "{name}, « {answer} », c’est dans quel dictionnaire ? Le tien ? 📖"
+          },
+          "suiveur": {
+            "stop": "Si {name} dit STOP, c’est STOP.",
+            "stop_2": "Bon, d’accord, {name}… tout le monde pose son stylo !",
+            "contest": "Si les autres contestent « {answer} », moi aussi, {name}.",
+            "contest_2": "« {answer} »… j’attends de voir ce que dit la table, {name}."
+          },
+          "agressif": {
+            "stop": "STOP ?! Tu vas me le payer, {name} 😤",
+            "stop_2": "{name}, ce STOP sent la panique.",
+            "contest": "« {answer} » ? Faut oser, {name} 😈",
+            "contest_2": "{name}, « {answer} » ? Même pas en rêve 🙅"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [

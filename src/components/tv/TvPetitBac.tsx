@@ -17,6 +17,8 @@ import { useDeadline } from '@/hooks/useDeadline'
 import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { PetitBacSpeechFeed } from '@/components/online/petit-bac/PetitBacSpeechFeed'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 type Player = PbcClientView['players'][number]
@@ -41,6 +43,15 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
       </p>
     ) : null
 
+  // Paroles des bots (au STOP, puis sur la grille) : une bande sous le jeu,
+  // qui ne prend sa place qu'une fois qu'un bot a parlé.
+  const { mode } = useAmbianceMode()
+  const speechFeed = (state.speech ?? []).some((sp) => sp.round === state.round) ? (
+    <div className="flex shrink-0 justify-center">
+      <PetitBacSpeechFeed view={state} iconOf={iconOf} variant="tv" soft={mode === 'soft'} />
+    </div>
+  ) : null
+
   if (state.phase === 'finished') return <Finished state={state} iconOf={iconOf} />
 
   if (state.phase === 'countdown') {
@@ -57,7 +68,7 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
   }
 
   if (state.phase === 'reveal' && state.revealGrid) {
-    return <Reveal state={state} iconOf={iconOf} banner={leftBanner} />
+    return <Reveal state={state} iconOf={iconOf} banner={leftBanner} feed={speechFeed} />
   }
 
   const active = state.players.filter((p) => !p.leftAt)
@@ -120,6 +131,7 @@ export function TvPetitBac({ room, state }: { room: TvRoomDto; state: PbcClientV
         </div>
       </div>
 
+      {state.phase === 'flush' && speechFeed}
       <PlayerStrip players={active} iconOf={iconOf} showSubmitted={state.phase === 'flush'} />
     </div>
   )
@@ -208,10 +220,12 @@ function Reveal({
   state,
   iconOf,
   banner,
+  feed,
 }: {
   state: PbcClientView
   iconOf: (p: Player) => string
   banner: ReactNode
+  feed: ReactNode
 }) {
   const t = useTranslations('games.petit-bac.game')
   const grid = state.revealGrid ?? []
@@ -363,6 +377,7 @@ function Reveal({
       {tooFewToContest && (
         <p className="shrink-0 text-center text-xl font-semibold text-white/80">{t('contestTooFewPlayers')}</p>
       )}
+      {feed}
     </div>
   )
 }

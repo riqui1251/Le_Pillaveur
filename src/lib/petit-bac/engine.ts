@@ -1,5 +1,6 @@
 import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * PETIT BAC — moteur PUR, serveur-autoritaire.
@@ -84,6 +85,32 @@ export type PbcPlayer = {
 
 export type PbcPhase = 'countdown' | 'write' | 'flush' | 'reveal' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.petit-bac.game) —
+ * au Petit Bac, un déserteur converti, copie blanche —, écrite par
+ * l'adaptateur dans la MÊME écriture que la transition qui la provoque :
+ *   • stop : au STOP d'un humain (« Déjà ?! »), cible = qui l'a crié ;
+ *   • à la révélation, quand les grilles deviennent publiques :
+ *     contest (une réponse qui rapporte 2 points, citée), twin (une réponse
+ *     en doublon, citée : « t'as copié ? »), tease (le meneur humain).
+ * `category` désigne la case citée (contest, twin) : la phrase la lit dans
+ * la grille publique. Aucune phrase dans l'état, toute parole a une cible.
+ */
+export type PbcSpeechKind = 'stop' | 'contest' | 'twin' | 'tease'
+export type PbcSpeech = BotSpeech<PbcSpeechKind> & { category?: number }
+export type PbcSayMove = SpeechMove<PbcSpeechKind> & { category?: number }
+
+export const PBC_SPEECH_KINDS = ['stop', 'contest', 'twin', 'tease'] as const satisfies readonly PbcSpeechKind[]
+/** Paroles max par bot et par manche ; le bavardage borne en dessous. */
+export const PBC_SPEECH_CAP = 2
+/** Kinds recevables par phase : le STOP se commente dès le gel, les grilles à la révélation seulement. */
+export const PBC_SAY_KINDS_OF_PHASE: Record<'flush' | 'reveal', readonly PbcSpeechKind[]> = {
+  flush: ['stop'],
+  reveal: ['stop', 'contest', 'twin', 'tease'],
+}
+/** Les kinds qui citent une case de la grille. */
+export const PBC_CITING_KINDS: readonly PbcSpeechKind[] = ['contest', 'twin']
+
 export type PbcState = TimedPhaseState & {
   version: number
   phase: PbcPhase
@@ -107,6 +134,12 @@ export type PbcState = TimedPhaseState & {
   rejected: string[]
   rematchVotes: string[]
   rngState: number
+  /**
+   * PUBLIC — paroles des bots, de la manche en cours et de la précédente au
+   * plus. Optionnel : un état sérialisé avant leur arrivée n'en a pas
+   * (parsePbcState complète).
+   */
+  speech?: PbcSpeech[]
 }
 
 export type PbcAction =
@@ -118,6 +151,8 @@ export type PbcAction =
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
+  /** Paroles de bots (jamais d'un humain : l'adaptateur HTTP ne la mappe pas). */
+  | { type: 'SAY'; moves: PbcSayMove[] }
 
 export class PbcEngineError extends Error {
   constructor(code: string) {
@@ -211,6 +246,7 @@ export function createPbcState(
     rejected: [],
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -326,18 +362,21 @@ function pbcNextRound(state: PbcState, now: number): PbcState {
     ...p,
     total: p.total + (state.roundPoints?.[p.id] ?? []).reduce((a, b) => a + b, 0),
   }))
+  // Le fil ne garde que la manche qui s'achève : jamais plus de deux manches.
+  const speech = (state.speech ?? []).filter((sp) => sp.round === state.round)
   const nextRound = state.round + 1
   if (nextRound >= state.letters.length) {
     return {
       ...state,
       players,
+      speech,
       phase: 'finished',
       phaseSeq: state.phaseSeq + 1,
       phaseEndsAt: null,
       version: state.version + 1,
     }
   }
-  return enterWrite({ ...state, players, round: nextRound }, now)
+  return enterWrite({ ...state, players, speech, round: nextRound }, now)
 }
 
 // ─── Réducteur ───────────────────────────────────────────────────────────────
@@ -480,6 +519,36 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
         ),
         version: state.version + 1,
       }
+    }
+
+    case 'SAY': {
+      if (state.phase !== 'flush' && state.phase !== 'reveal') throw new PbcEngineError('NOT_SPEECH_PHASE')
+      if (action.moves.length === 0) return state
+      const allowed = PBC_SAY_KINDS_OF_PHASE[state.phase]
+      let speech = state.speech ?? []
+      for (const move of action.moves) {
+        if (!allowed.includes(move.kind)) throw new PbcEngineError('INVALID_KIND')
+        const actor = state.players.find((p) => p.id === move.playerId)
+        if (!actor?.isBot || actor.leftAt) throw new PbcEngineError('NOT_BOT')
+        const target = state.players.find((p) => p.id === move.targetId)
+        if (!target || target.id === actor.id || target.leftAt) throw new PbcEngineError('INVALID_TARGET')
+        if (move.kind === 'stop' && target.id !== state.stopperId) throw new PbcEngineError('INVALID_TARGET')
+        let category: number | undefined
+        if (PBC_CITING_KINDS.includes(move.kind)) {
+          // La case citée doit rapporter : 2 points pour une réponse unique, 1 pour un doublon.
+          const cat = move.category ?? -1
+          const points = state.roundPoints?.[target.id]?.[cat] ?? 0
+          if (!Number.isInteger(cat) || points !== (move.kind === 'twin' ? 1 : 2)) {
+            throw new PbcEngineError('INVALID_CATEGORY')
+          }
+          category = cat
+        }
+        const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === state.round)
+        if (mine.length >= PBC_SPEECH_CAP) throw new PbcEngineError('ALREADY_SPOKE')
+        const said: PbcSpeech = { playerId: actor.id, kind: move.kind, targetId: target.id, round: state.round }
+        speech = [...speech, category === undefined ? said : { ...said, category }]
+      }
+      return { ...state, speech, version: state.version + 1 }
     }
 
     case 'REPLACE_LEFT': {

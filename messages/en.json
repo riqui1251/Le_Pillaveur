@@ -5329,7 +5329,70 @@
         "pointsSr": "{count, plural, one {# point} other {# points}}",
         "handedIn": "paper handed in",
         "playerLeft": "left the table",
-        "contestTargetSr": "{name}’s answer “{answer}”"
+        "contestTargetSr": "{name}’s answer “{answer}”",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "stop": "Already?! You’re a machine, {name}!",
+          "stop_2": "Hey! I wasn’t done, {name} 😤",
+          "stop_3": "{name}, couldn’t you wait two more seconds?",
+          "contest": "“{answer}”? Is that even a thing, {name}? 🤨",
+          "contest_2": "{name}, “{answer}”… you made that up, admit it.",
+          "contest_3": "Hmm. “{answer},” {name}. Shall we vote?",
+          "twin": "“{answer}” twice… {name}, did you copy? 👀",
+          "twin_2": "{name}, “{answer}”? Someone had the exact same idea 👀",
+          "twin_3": "“{answer},” two of you! {name}, was this planned?",
+          "tease": "{name} is sweeping the board… suspicious 🤨",
+          "tease_2": "Can somebody stop {name}?",
+          "tease_3": "{name}, got a dictionary hidden under the table?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "stop": "Already? I needed one more minute, {name}.",
+            "stop_2": "Easy, {name}… some of us are still thinking.",
+            "contest": "Not to nitpick, but “{answer},” {name}… really?",
+            "contest_2": "I have my doubts about “{answer},” {name}."
+          },
+          "farceur": {
+            "stop": "STOP? I was writing a masterpiece, {name}!",
+            "stop_2": "{name} yelled STOP, I yelled for my mum 😱",
+            "contest": "“{answer}”? Lovely bit of imagination, {name} 😜",
+            "contest_2": "{name}, which dictionary has “{answer}” in it? Yours? 📖"
+          },
+          "suiveur": {
+            "stop": "If {name} says STOP, it’s STOP.",
+            "stop_2": "Fine, {name}… pens down, everyone!",
+            "contest": "If the others contest “{answer},” so do I, {name}.",
+            "contest_2": "“{answer}”… I’ll see what the table says, {name}."
+          },
+          "agressif": {
+            "stop": "STOP?! You’ll pay for that, {name} 😤",
+            "stop_2": "{name}, that STOP smells like panic.",
+            "contest": "“{answer}”? Bold move, {name} 😈",
+            "contest_2": "{name}, “{answer}”? Not in a million years 🙅"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

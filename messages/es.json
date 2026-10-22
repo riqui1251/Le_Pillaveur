@@ -5329,7 +5329,70 @@
         "pointsSr": "{count, plural, one {# punto} other {# puntos}}",
         "handedIn": "hoja entregada",
         "playerLeft": "dejó la mesa",
-        "contestTargetSr": "la respuesta «{answer}» de {name}"
+        "contestTargetSr": "la respuesta «{answer}» de {name}",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "stop": "¿¡Ya!? Eres una máquina, {name}.",
+          "stop_2": "¡Eh! Que no había terminado, {name} 😤",
+          "stop_3": "{name}, ¿no podías esperar dos segundos?",
+          "contest": "¿«{answer}»? ¿Eso existe, {name}? 🤨",
+          "contest_2": "{name}, «{answer}»… te lo has inventado, confiesa.",
+          "contest_3": "Mmm. «{answer}», {name}. ¿Votamos?",
+          "twin": "«{answer}» repetido… {name}, ¿has copiado? 👀",
+          "twin_2": "{name}, ¿«{answer}»? Alguien tuvo la misma idea 👀",
+          "twin_3": "¡«{answer}», dos veces! {name}, ¿lo teníais pactado?",
+          "tease": "{name} se lo lleva todo… qué sospechoso 🤨",
+          "tease_2": "¿Alguien puede parar a {name}?",
+          "tease_3": "{name}, ¿escondes un diccionario debajo de la mesa?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "stop": "¿Ya? Me faltaba un minuto, {name}.",
+            "stop_2": "Despacio, {name}… algunos aún estamos pensando.",
+            "contest": "Sin ánimo de discutir, pero «{answer}», {name}… ¿en serio?",
+            "contest_2": "Tengo mis dudas con «{answer}», {name}."
+          },
+          "farceur": {
+            "stop": "¿STOP? ¡Estaba escribiendo una obra maestra, {name}!",
+            "stop_2": "{name} gritó STOP y yo grité ¡mamá! 😱",
+            "contest": "¿«{answer}»? Qué imaginación, {name} 😜",
+            "contest_2": "{name}, ¿en qué diccionario sale «{answer}»? ¿En el tuyo? 📖"
+          },
+          "suiveur": {
+            "stop": "Si {name} dice STOP, es STOP.",
+            "stop_2": "Vale, {name}… ¡bolis abajo todo el mundo!",
+            "contest": "Si los demás impugnan «{answer}», yo también, {name}.",
+            "contest_2": "«{answer}»… a ver qué dice la mesa, {name}."
+          },
+          "agressif": {
+            "stop": "¿¡STOP!? Me las vas a pagar, {name} 😤",
+            "stop_2": "{name}, ese STOP huele a pánico.",
+            "contest": "¿«{answer}»? Hay que tener valor, {name} 😈",
+            "contest_2": "{name}, ¿«{answer}»? Ni en sueños 🙅"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [
