@@ -110,7 +110,7 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
       <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-8 text-center">
         <Dices aria-hidden className="h-24 w-24 text-teal-300" />
         <p className="font-display text-7xl font-bold text-gold">{t('online.finishedTitle')}</p>
-        <p className="text-3xl font-semibold text-white/80">{t('online.totalRolls', { count: state.history.length })}</p>
+        <p className="text-3xl font-semibold text-white/80">{t('online.totalRolls', { count: state.rollCount ?? state.history.length })}</p>
         {lastRoll && total !== null && (
           <div className="flex items-center gap-4 text-4xl font-black tabular-nums">
             <span className="rounded-2xl border-2 border-amber-300/60 bg-amber-500/20 px-5 py-2 text-amber-100">{lastRoll.d12}</span>

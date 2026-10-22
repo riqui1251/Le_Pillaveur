@@ -52,7 +52,10 @@ export type Game1220State = TimedPhaseState & {
   setupReady: string[]
   configs: Config1220[] | null
   lastRoll: RollEntry1220 | null
+  /** Derniers lancers, bornés à HISTORY_LIMIT : ne pas les compter. */
   history: RollEntry1220[]
+  /** Lancers de toute la partie (le bilan de fin le dit), au-delà de l'historique. */
+  rollCount: number
   rematchVotes: string[]
 }
 
@@ -101,6 +104,7 @@ export function createGame1220State(
     configs: null,
     lastRoll: null,
     history: [],
+    rollCount: 0,
     rematchVotes: [],
   }
 }
@@ -205,6 +209,7 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
         rngState: rng.getState(),
         lastRoll: entry,
         history: [entry, ...state.history].slice(0, HISTORY_LIMIT),
+        rollCount: state.rollCount + 1,
       }
     }
 

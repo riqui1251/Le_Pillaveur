@@ -10,6 +10,7 @@ import {
   toGame1220ClientView,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { parseGame1220State } from './server-adapter'
 
 const PLAYERS = [
   { id: 'p1', name: 'Alice' },
@@ -116,6 +117,26 @@ describe('play', () => {
     s = reduceGame1220(s, { type: 'ROLL', playerId: 'p2' })
     expect(s.history).toHaveLength(2)
     expect(s.history[0]).toEqual(s.lastRoll)
+  })
+
+  it('compte TOUS les lancers de la partie, au-delà de l’historique borné (bilan de fin)', () => {
+    let s = readyAll(freshState())
+    expect(s.rollCount).toBe(0)
+    for (let i = 0; i < 20; i++) s = reduceGame1220(s, { type: 'ROLL', playerId: 'p1' })
+    expect(s.history).toHaveLength(15)
+    expect(s.rollCount).toBe(20)
+    s = reduceGame1220(s, { type: 'END', playerId: 'p1' })
+    expect(toGame1220ClientView(s).rollCount).toBe(20)
+  })
+
+  it('une partie sérialisée avant le compteur repart de son historique', () => {
+    let s = readyAll(freshState())
+    for (let i = 0; i < 3; i++) s = reduceGame1220(s, { type: 'ROLL', playerId: 'p1' })
+    const { rollCount: _ignored, ...legacy } = s
+    void _ignored
+    const parsed = parseGame1220State(JSON.stringify(legacy))
+    expect(parsed?.rollCount).toBe(3)
+    expect(reduceGame1220(parsed as Game1220State, { type: 'ROLL', playerId: 'p2' }).rollCount).toBe(4)
   })
 
   it('END termine la partie', () => {
