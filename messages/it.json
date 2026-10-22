@@ -6231,7 +6231,7 @@
           "brag_2": "Allora, {name}, adesso chi ride? 😏",
           "brag_3": "Tieni, {name}, digerisci questa.",
           "cut": "Tagliato! Scusa, {name} 😇",
-          "cut_2": "E zac, un 2! Che sfortuna, {name}.",
+          "cut_2": "E zac, un due! Che sfortuna, {name}.",
           "cut_3": "{name}, questa presa me la tengo io.",
           "ouRien": "{name}, uguale o niente!",
           "ouRien_2": "Pareggio! O rispondi o salti, {name} 😏",
@@ -6265,8 +6265,8 @@
           "farceur": {
             "brag": "Abracadabra, {name}! Tadà 🪄",
             "brag_2": "Sorpresa, {name}! Applausi, prego 🎉",
-            "cut": "Ops, {name}… mi è scivolato il 2 🙃",
-            "cut_2": "Ciao {name}! Passava di qui un 2 👋"
+            "cut": "Ops, {name}… mi è scivolato il due 🙃",
+            "cut_2": "Ciao {name}! Passava di qui un due 👋"
           },
           "prudent": {
             "brag": "Le tenevo in caldo per te, {name}.",

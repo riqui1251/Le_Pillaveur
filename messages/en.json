@@ -6228,10 +6228,10 @@
         "feedAria": "Table chatter",
         "botSay": {
           "brag": "Now that’s heavy. Your go, {name} 😎",
-          "brag_2": "So, {name}, not so cocky now?",
+          "brag_2": "So, {name}, not so smug now?",
           "brag_3": "Chew on that one, {name}.",
           "cut": "Cut! Sorry, {name} 😇",
-          "cut_2": "And here comes a 2! Tough luck, {name}.",
+          "cut_2": "And here comes a two! Tough luck, {name}.",
           "cut_3": "{name}, I’ll be taking that trick.",
           "ouRien": "{name}, match it or skip it!",
           "ouRien_2": "Same rank! Match it or you’re skipped, {name} 😏",
@@ -6265,8 +6265,8 @@
           "farceur": {
             "brag": "Abracadabra, {name}! Ta-da 🪄",
             "brag_2": "Surprise, {name}! Applause, please 🎉",
-            "cut": "Oops, {name}… my 2 slipped 🙃",
-            "cut_2": "Hi {name}! Just a 2 passing through 👋"
+            "cut": "Oops, {name}… my two slipped 🙃",
+            "cut_2": "Hi {name}! Just a two passing through 👋"
           },
           "prudent": {
             "brag": "Kept them warm just for you, {name}.",

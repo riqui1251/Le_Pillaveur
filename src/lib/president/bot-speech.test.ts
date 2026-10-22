@@ -17,7 +17,8 @@ import {
   type PreSpeechKind,
   type PreState,
 } from './engine'
-import { presidentBotSpeech, preTalkChance, type PreSpeechEvent } from './bot-speech'
+import { presidentBotSpeech, preTalkBase, type PreSpeechEvent } from './bot-speech'
+import { reactionTalkChance } from '@/lib/online/reaction-speech'
 import { withPreBotTalk } from './server-adapter'
 
 const NOW = 1_000_000
@@ -84,7 +85,8 @@ describe('le coup d’un bot', () => {
     const lead = play(table({ b1: [c(3), c(5)], b2: [c(12), c(7)] }, 'b1'), 'b1', [c(3)]).after
     const { after, event } = play(lead, 'b2', [c(12)])
     expect(speak(lead, after, event, always(0))).toEqual([{ playerId: 'b2', kind: 'cut', targetId: 'b1' }])
-    expect(speak(lead, after, event, seq(0.99, 0))).toEqual([{ playerId: 'b1', kind: 'grumble', targetId: 'b2' }])
+    // Deux tirages par option : l'orateur, puis son dé de parole.
+    expect(speak(lead, after, event, seq(0, 0.99, 0, 0))).toEqual([{ playerId: 'b1', kind: 'grumble', targetId: 'b2' }])
   })
 
   it('brelan posé : brag, adressé à qui doit répondre', () => {
@@ -162,11 +164,12 @@ describe('fin de manche : la distribution des rôles', () => {
 
   it('les suiveurs et les prudents saluent le Président (hail), les farceurs et agressifs chambrent', () => {
     const { state, after, event } = lastPlay()
-    // b3 (Trou) et b1 (Président) se taisent : Gépéto (farceur) chambre le Trou.
-    expect(speak(state, after, event, seq(0.99, 0.99, 0))).toEqual([{ playerId: 'b2', kind: 'mockTrou', targetId: 'b3' }])
+    // b3 (Trou) et b1 (Président) se taisent : Gépéto (farceur) chambre le Trou, puis plus personne.
+    const rand = () => seq(0, 0.99, 0, 0.99, 0, 0, 0, 0.99, 0, 0.99)
+    expect(speak(state, after, event, rand())).toEqual([{ playerId: 'b2', kind: 'mockTrou', targetId: 'b3' }])
     const humble = { ...state, players: state.players.map((p) => (p.id === 'b2' ? { ...p, name: 'Suzette' } : p)) }
     const ended = play(humble, 'h', [c(5)])
-    expect(speak(humble, ended.after, ended.event, seq(0.99, 0.99, 0))).toEqual([{ playerId: 'b2', kind: 'hail', targetId: 'b1' }])
+    expect(speak(humble, ended.after, ended.event, rand())).toEqual([{ playerId: 'b2', kind: 'hail', targetId: 'b1' }])
   })
 })
 
@@ -194,14 +197,13 @@ describe('plafond, sobriété et anti-triche', () => {
   })
 
   it('les chances suivent le bavardage et le trait, jamais systématiques', () => {
-    const gepeto = botTraitsFor('Gépéto')
-    const bernadette = botTraitsFor('Bernadette')
+    const chance = (kind: PreSpeechKind, name: string) => reactionTalkChance(preTalkBase(kind, botTraitsFor(name)), botTraitsFor(name))
     for (const kind of PRE_SPEECH_KINDS) {
-      expect(preTalkChance(kind, gepeto)).toBeGreaterThan(preTalkChance(kind, bernadette) - 0.21)
-      expect(preTalkChance(kind, gepeto)).toBeLessThan(1)
+      expect(chance(kind, 'Gépéto')).toBeGreaterThan(chance(kind, 'Bernadette'))
+      expect(chance(kind, 'Gépéto')).toBeLessThan(1)
     }
-    expect(preTalkChance('cut', botTraitsFor('Raoul'))).toBeGreaterThan(preTalkChance('cut', botTraitsFor('Suzette')))
-    expect(preTalkChance('grumble', botTraitsFor('Germaine'))).toBeGreaterThan(preTalkChance('grumble', botTraitsFor('Lucien')))
+    expect(chance('cut', 'Raoul')).toBeGreaterThan(chance('cut', 'Suzette'))
+    expect(chance('grumble', 'Germaine')).toBeGreaterThan(chance('grumble', 'Lucien'))
   })
 
   it('invariance : les mains cachées brouillées ⇒ mêmes bulles (le planificateur ne lit que la vue spectateur)', () => {

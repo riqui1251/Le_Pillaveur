@@ -1,5 +1,6 @@
 import { botTraitsFor, type BotTraits } from '@/lib/online/bot-personas'
-import { readSpeechTable, type SpeechPlayer, type SpeechTable } from '@/lib/online/bot-speech'
+import type { SpeechPlayer } from '@/lib/online/bot-speech'
+import { reactionSay, readReactionTable, type ReactionOption } from '@/lib/online/reaction-speech'
 import {
   preIsJoker,
   preLastPlayRank,
@@ -14,7 +15,8 @@ import {
 /**
  * PAROLES DES BOTS DU PRÉSIDENT : au plus une bulle par coup (deux à la fin
  * d'une manche), écrite dans la même écriture que le coup qui la provoque —
- * celui d'un bot comme celui d'un humain. Aucun tick de plus.
+ * celui d'un bot comme celui d'un humain. Aucun tick de plus. Le dé et le
+ * plafond sont ceux des jeux à réactions (reaction-speech.ts : reactionSay).
  *
  * ANTI-FUITE : le planificateur ne lit que la vue PUBLIQUE (la vue spectateur
  * du moteur : mains réduites à un compte, cartes d'échange vides) et le coup
@@ -31,29 +33,26 @@ import {
  *     salue le Président (hail : les suiveurs et les prudents).
  * Une réaction qui vise un humain passe devant : c'est elle qu'il vient lire.
  *
- * Sobriété : chaque candidat parle si un tirage tombe sous sa chance (par
- * point de bavardage, bonus de trait), dans la limite de min(2, bavardage)
- * paroles par manche ; le premier qui parle clôt le coup. Une table sans
- * humain présent se tait : personne ne lit le fil. Les bots ne lisent jamais
- * le fil, les paroles ne pèsent pas sur le jeu.
+ * Sobriété : une option par orateur possible, un dé de parole chacune
+ * (PRE_TALK à bavardage 2, bonus de trait), plafond min(2, bavardage) par
+ * bot et par manche ; le premier qui parle clôt le coup. Une table sans
+ * humain présent se tait. Les bots ne lisent jamais le fil.
  *
  * PUR : `rand` injecté.
  */
 
-/** Chance de parler, par point de bavardage, selon le kind. */
-export const PRE_TALK_PER_BAVARDAGE: Record<PreSpeechKind, number> = {
-  out: 0.2,
-  close: 0.2,
-  cut: 0.15,
-  brag: 0.15,
-  ouRien: 0.08,
-  grumble: 0.1,
-  hail: 0.15,
-  mockTrou: 0.15,
-  sulk: 0.15,
+/** Chances de parler d'un bot de bavardage 2 (cf. reactionTalkChance). */
+export const PRE_TALK: Record<PreSpeechKind, number> = {
+  out: 0.4,
+  close: 0.4,
+  cut: 0.3,
+  brag: 0.3,
+  ouRien: 0.16,
+  grumble: 0.2,
+  hail: 0.3,
+  mockTrou: 0.3,
+  sulk: 0.3,
 }
-/** Jamais systématique : même le plus bavard se tait parfois. */
-export const PRE_TALK_MAX = 0.85
 /** Remarques max à la fin d'une manche (deux auteurs différents). */
 export const PRE_END_REMARKS_MAX = 2
 
@@ -69,17 +68,15 @@ export type PreSpeechEvent =
   | { type: 'close'; playerId: string; cards: readonly number[] }
 
 type Seat = SpeechPlayer & { handCount: number }
+type Option = ReactionOption<PreSpeechKind, Seat>
 
-/** Chance de parler d'un bot pour ce kind : bavardage, puis le bonus de son trait. */
-export function preTalkChance(kind: PreSpeechKind, traits: BotTraits): number {
-  let chance = traits.bavardage * PRE_TALK_PER_BAVARDAGE[kind]
-  const { trait } = traits
-  if (kind === 'cut' && trait === 'agressif') chance += 0.2
-  if (kind === 'ouRien' && (trait === 'farceur' || trait === 'agressif')) chance += 0.15
-  if (kind === 'mockTrou' && (trait === 'farceur' || trait === 'agressif')) chance += 0.2
-  if (kind === 'hail' && (trait === 'suiveur' || trait === 'prudent')) chance += 0.2
-  if (kind === 'grumble' || kind === 'sulk') chance += 0.4 * traits.rancune
-  return Math.min(PRE_TALK_MAX, chance)
+/** La chance de base d'un orateur DÉSIGNÉ, teintée de son caractère : l'agressif coupe, le rancunier râle. */
+export function preTalkBase(kind: PreSpeechKind, traits: BotTraits): number {
+  let base = PRE_TALK[kind]
+  if (kind === 'cut' && traits.trait === 'agressif') base += 0.3
+  if (kind === 'ouRien' && (traits.trait === 'farceur' || traits.trait === 'agressif')) base += 0.2
+  if (kind === 'grumble' || kind === 'sulk') base += 0.6 * traits.rancune
+  return base
 }
 
 /** Le prochain joueur encore en course après `fromId` dans l'ordre de table (lui exclu). */
@@ -110,8 +107,6 @@ function mostCards(view: PrePublicView, exceptId: string): string | null {
   return best?.id ?? null
 }
 
-type Candidate = { say: PreSay; chance: number }
-
 /**
  * Les paroles à joindre à la transition `before` → `after` (vues publiques),
  * provoquée par `event` (null : passe, minuteur, continuer). Au plus une
@@ -123,7 +118,6 @@ export function presidentBotSpeech(
   event: PreSpeechEvent | null,
   rand: () => number
 ): PreSay[] {
-  if (!after.players.some((p) => !p.isBot && !p.leftAt)) return []
   const seats: Seat[] = after.players.map((p) => ({
     id: p.id,
     name: p.name,
@@ -131,49 +125,48 @@ export function presidentBotSpeech(
     alive: !p.leftAt,
     handCount: p.handCount,
   }))
-  const table = readSpeechTable({
-    players: seats,
-    speech: after.speech ?? [],
-    round: after.manche,
-    engineCap: PRE_SPEECH_CAP,
-    isRemark: () => false,
-    isAsk: () => false,
-  })
-  const speaks = (id: string) => {
-    const p = table.byId.get(id)
-    return Boolean(p && p.isBot && p.alive && table.underCap(id))
+  const table = readReactionTable<PreSpeechKind, Seat>(seats, after.speech ?? [], after.manche, PRE_SPEECH_CAP)
+  /** L'option d'un orateur désigné (l'auteur du coup, sa victime, le Trou…). */
+  const own = (playerId: string, kind: PreSpeechKind, targetId: string | null): Option | null => {
+    const speaker = table.byId.get(playerId)
+    if (!speaker || !targetId) return null
+    return { speakers: [speaker], kind, targetId, base: preTalkBase(kind, table.traits(speaker)) }
   }
-  const candidate = (playerId: string, kind: PreSpeechKind, targetId: string | null): Candidate | null => {
-    const author = table.byId.get(playerId)
-    if (!author || !targetId || targetId === playerId || !table.byId.has(targetId)) return null
-    if (!speaks(playerId)) return null
-    return { say: { playerId, kind, targetId }, chance: preTalkChance(kind, botTraitsFor(author.name)) }
-  }
+  const aimsHuman = (o: Option) =>
+    typeof o.targetId === 'string' && table.byId.get(o.targetId)?.isBot === false ? 1 : 0
+  // Tri stable : l'humain visé d'abord, sinon l'ordre de la règle.
+  const ordered = (options: (Option | null)[]) =>
+    options.filter((o): o is Option => o !== null).sort((a, b) => aimsHuman(b) - aimsHuman(a))
 
   const mancheEnded = before.phase === 'playing' && (after.phase === 'interlude' || after.phase === 'finished')
-  const candidates = mancheEnded ? endRemarks(after, table, candidate) : event ? moveReactions(before, after, event, candidate) : []
-  // Tri stable : l'humain visé d'abord, sinon l'ordre de la règle.
-  const aimsHuman = (c: Candidate) => (table.byId.get(c.say.targetId)?.isBot === false ? 1 : 0)
-  const ordered = [...candidates].sort((a, b) => aimsHuman(b) - aimsHuman(a))
-  const max = mancheEnded ? PRE_END_REMARKS_MAX : 1
-  const said: PreSay[] = []
-  for (const { say, chance } of ordered) {
-    if (said.length >= max) break
-    if (said.some((s) => s.playerId === say.playerId)) continue
-    if (rand() < chance) said.push(say)
+  if (mancheEnded) {
+    const options = ordered(endRemarks(after, table.bots, own))
+    const said: PreSay[] = []
+    for (let i = 0; i < PRE_END_REMARKS_MAX; i += 1) {
+      const spoke = new Set(said.map((s) => s.playerId))
+      const left = options
+        .map((o) => ({ ...o, speakers: o.speakers.filter((b) => !spoke.has(b.id)) }))
+        .filter((o) => o.speakers.length > 0)
+      const say = reactionSay(table, left, Infinity, rand)
+      if (!say?.targetId) break
+      said.push({ playerId: say.playerId, kind: say.kind, targetId: say.targetId })
+    }
+    return said
   }
-  return said
+  if (!event) return []
+  const say = reactionSay(table, ordered(moveReactions(before, after, event, own)), Infinity, rand)
+  return say?.targetId ? [{ playerId: say.playerId, kind: say.kind, targetId: say.targetId }] : []
 }
 
-type CandidateOf = (playerId: string, kind: PreSpeechKind, targetId: string | null) => Candidate | null
+type OwnOption = (playerId: string, kind: PreSpeechKind, targetId: string | null) => Option | null
 
 /** Le coup d'un bot (une parole au plus, la plus marquante), puis la victime d'un 2 ou d'une fermeture. */
 function moveReactions(
   before: PrePublicView,
   after: PrePublicView,
   event: PreSpeechEvent,
-  candidate: CandidateOf
-): Candidate[] {
+  own: OwnOption
+): (Option | null)[] {
   const actorId = event.playerId
   const covered = before.lastPlay
   const naturals = event.cards.filter((c) => !preIsJoker(c))
@@ -182,53 +175,34 @@ function moveReactions(
   const victimId = covered && covered.playerId !== actorId ? covered.playerId : null
   const wentOut = after.outOrder.includes(actorId) && !before.outOrder.includes(actorId)
   const cut = event.type === 'play' && rank === PRE_TWO && victimId !== null
-  const out: Candidate[] = []
 
-  const own = wentOut
-    ? candidate(actorId, 'out', mostCards(after, actorId))
+  const mine = wentOut
+    ? own(actorId, 'out', mostCards(after, actorId))
     : event.type === 'close'
-      ? candidate(actorId, 'close', victimId)
+      ? own(actorId, 'close', victimId)
       : cut
-        ? candidate(actorId, 'cut', victimId)
+        ? own(actorId, 'cut', victimId)
         : event.cards.length >= 3
-          ? candidate(actorId, 'brag', answerer(after, actorId))
+          ? own(actorId, 'brag', answerer(after, actorId))
           : covered && rank === preLastPlayRank(covered)
-            ? candidate(actorId, 'ouRien', answerer(after, actorId))
+            ? own(actorId, 'ouRien', answerer(after, actorId))
             : null
-  if (own) out.push(own)
-  if (victimId && (cut || event.type === 'close')) {
-    const grumble = candidate(victimId, 'grumble', actorId)
-    if (grumble) out.push(grumble)
-  }
-  return out
+  const grumble = victimId && (cut || event.type === 'close') ? own(victimId, 'grumble', actorId) : null
+  return [mine, grumble]
 }
 
 /** Fin de manche : le Trou boude, le Président chambre, puis les autres bots selon leur trait. */
-function endRemarks(
-  after: PrePublicView,
-  table: SpeechTable<PreSpeechKind, Seat>,
-  candidate: CandidateOf
-): Candidate[] {
+function endRemarks(after: PrePublicView, bots: readonly Seat[], own: OwnOption): (Option | null)[] {
   const ranking = after.lastRanking ?? []
   if (ranking.length < 2) return []
   const presidentId = ranking[0]
   const trouId = ranking[ranking.length - 1]
-  const out: Candidate[] = []
-  const push = (c: Candidate | null) => {
-    if (c) out.push(c)
-  }
-  push(candidate(trouId, 'sulk', presidentId))
-  push(candidate(presidentId, 'mockTrou', trouId))
-  for (const p of after.players) {
-    if (p.id === presidentId || p.id === trouId) continue
-    const author = table.byId.get(p.id)
-    if (!author?.isBot) continue
-    const { trait } = botTraitsFor(author.name)
-    push(
-      trait === 'agressif' || trait === 'farceur'
-        ? candidate(p.id, 'mockTrou', trouId)
-        : candidate(p.id, 'hail', presidentId)
-    )
-  }
-  return out
+  const others = bots.filter((b) => b.id !== presidentId && b.id !== trouId)
+  const bold = (b: Seat) => ['agressif', 'farceur'].includes(botTraitsFor(b.name).trait)
+  return [
+    own(trouId, 'sulk', presidentId),
+    own(presidentId, 'mockTrou', trouId),
+    { speakers: others.filter(bold), kind: 'mockTrou', targetId: trouId, base: PRE_TALK.mockTrou },
+    { speakers: others.filter((b) => !bold(b)), kind: 'hail', targetId: presidentId, base: PRE_TALK.hail },
+  ]
 }

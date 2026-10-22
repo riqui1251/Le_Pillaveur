@@ -6231,7 +6231,7 @@
           "brag_2": "Alors, {name}, on fait moins le malin ?",
           "brag_3": "Tiens, {name}, digère-moi ça.",
           "cut": "Coupé ! Désolé, {name} 😇",
-          "cut_2": "Et hop, un 2 ! Pas de bol, {name}.",
+          "cut_2": "Et hop, un deux ! Pas de bol, {name}.",
           "cut_3": "{name}, ce pli, je te le prends.",
           "ouRien": "{name}, c’est pareil ou rien !",
           "ouRien_2": "Égalité ! Tu suis ou tu sautes, {name} ? 😏",
@@ -6265,8 +6265,8 @@
           "farceur": {
             "brag": "Abracadabra, {name} ! Et voilà le travail 🪄",
             "brag_2": "Tadaaa ! Applaudis, {name} 🎉",
-            "cut": "Oups, {name}… mon 2 a glissé 🙃",
-            "cut_2": "Coucou {name} ! C’est le 2 qui passe 👋"
+            "cut": "Oups, {name}… mon deux a glissé 🙃",
+            "cut_2": "Coucou {name} ! C’est le deux qui passe 👋"
           },
           "prudent": {
             "brag": "Je les gardais au chaud pour toi, {name}.",

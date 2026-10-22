@@ -6231,7 +6231,7 @@
           "brag_2": "¿Qué, {name}? ¿Ya no vas tan sobrado?",
           "brag_3": "Toma, {name}, digiere esto.",
           "cut": "¡Cortado! Lo siento, {name} 😇",
-          "cut_2": "¡Y zas, un 2! Mala suerte, {name}.",
+          "cut_2": "¡Y zas, un dos! Mala suerte, {name}.",
           "cut_3": "{name}, esta baza me la quedo yo.",
           "ouRien": "{name}, ¡igual o nada!",
           "ouRien_2": "¡Empate! O igualas o pasas, {name} 😏",
@@ -6265,8 +6265,8 @@
           "farceur": {
             "brag": "¡Abracadabra, {name}! Tachán 🪄",
             "brag_2": "¡Sorpresa, {name}! Aplausos, por favor 🎉",
-            "cut": "Uy, {name}… se me escurrió el 2 🙃",
-            "cut_2": "¡Hola, {name}! Pasaba un 2 por aquí 👋"
+            "cut": "Uy, {name}… se me escurrió el dos 🙃",
+            "cut_2": "¡Hola, {name}! Pasaba un dos por aquí 👋"
           },
           "prudent": {
             "brag": "Las guardaba calentitas para ti, {name}.",

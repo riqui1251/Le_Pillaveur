@@ -25,6 +25,7 @@ const PLAYERS = [
   { id: 'b1', name: 'Raoul', isBot: true },
   { id: 'b2', name: 'Bernadette', isBot: true },
   { id: 'b3', name: 'Gépéto', isBot: true },
+  { id: 'b4', name: 'Marcel', isBot: true },
 ]
 const sp = (playerId: string, kind: PreSpeechKind, targetId: string, round = 1): PreSpeech => ({
   playerId,
@@ -33,7 +34,11 @@ const sp = (playerId: string, kind: PreSpeechKind, targetId: string, round = 1):
   round,
 })
 
-function render(speech: PreSpeech[], { locale = 'fr', variant = 'phone' as 'phone' | 'tv', manche = 1 } = {}, errors: unknown[] = []) {
+function render(
+  speech: PreSpeech[],
+  { locale = 'fr', variant = 'phone' as 'phone' | 'tv', manche = 1, soft = false } = {},
+  errors: unknown[] = []
+) {
   return renderToStaticMarkup(
     createElement(
       IntlProvider,
@@ -43,6 +48,7 @@ function render(speech: PreSpeech[], { locale = 'fr', variant = 'phone' as 'phon
         iconOf: (p) => (p.isBot ? '🤖' : '🦊'),
         meId: variant === 'tv' ? undefined : 'h',
         variant,
+        soft,
       })
     )
   )
@@ -70,6 +76,17 @@ describe('PresidentSpeechFeed', () => {
     const html = render([sp('b1', 'cut', 'h', 0), sp('b2', 'hail', 'b1', 1)])
     expect(bubbles(html)).toHaveLength(1)
     expect(bubbles(html)[0]).toContain('Bernadette')
+  })
+
+  it('« Sans alcool » : le tic qui trinque (Marcel) se tait, la phrase reste', () => {
+    for (const locale of LOCALES) {
+      const game = (catalogue(locale) as { games: { president: { game: { botTic: Record<string, string> } } } }).games.president.game
+      const [alcool] = bubbles(render([sp('b4', 'brag', 'h')], { locale }))
+      const [sober] = bubbles(render([sp('b4', 'brag', 'h')], { locale, soft: true }))
+      expect(alcool, locale).toContain(game.botTic.marcel)
+      expect(sober, locale).not.toContain(game.botTic.marcel)
+      expect(alcool.replace(` ${game.botTic.marcel}`, ''), locale).toBe(sober)
+    }
   })
 
   it('la bulle qui vise le spectateur est surlignée sur son téléphone', () => {

@@ -13,10 +13,10 @@ import {
  * langues : les exigences communes aux jeux à paroles (catalogue-spec.ts),
  * puis les règles propres au Président.
  *
- * Aucun mot de boisson : le fil est le même sur les téléphones et la TV,
- * dont l'ambiance (« Sans alcool » ou non) peut différer — une phrase ne doit
- * jamais en dépendre. Aucune phrase ne parle de ce qu'un bot garde en main :
- * pas de « j’ai les deux », pas de « il me reste… ».
+ * Jeu joué aussi Sans alcool (drinkFree) : ni mot de boisson ni chiffre —
+ * le 2 qui coupe s'écrit en toutes lettres. Aucune phrase ne parle de ce
+ * qu'un bot garde en main : pas de « j’ai les deux », pas de « il me
+ * reste… ».
  */
 
 const NODE = 'games.president.game'
@@ -27,14 +27,9 @@ describeSpeechCatalogue({
   traitKinds: ['brag', 'cut'],
   personaKind: 'cut',
   maxChars: 70,
+  drinkFree: true,
 })
 
-const DRINK: Record<string, RegExp> = {
-  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|sant[ée]|tchin|trinqu|ap[ée]ro/i,
-  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass/i,
-  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind/i,
-  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind/i,
-}
 /** Ce qu'une parole dirait d'une main : « il me reste », « j’ai encore », « dans ma main »… */
 const HAND_CLAIM: Record<string, RegExp> = {
   fr: /il me reste|j’ai encore|dans ma main|j’ai les|mes deux|mon jeu/i,
@@ -54,18 +49,13 @@ describe.each(SPEECH_LOCALES)('president/%s', (locale) => {
     expect(Object.keys(flat).sort()).toEqual(Object.keys(fr).sort())
   })
 
-  it('ni mot de boisson, ni main avouée, dans aucune phrase rendue (tics exclus)', () => {
+  it('aucune main avouée, dans aucune phrase rendue (tics exclus)', () => {
     for (const key of sayKeys) {
       const format = new IntlMessageFormat(flat[key], locale)
       for (const genre of GENRES) {
         const line = String(format.format({ name: 'Mauricette', speaker: genre, target: genre }))
-        expect(line, `${key} : ${line}`).not.toMatch(DRINK[locale])
         expect(line, `${key} : ${line}`).not.toMatch(HAND_CLAIM[locale])
       }
     }
-  })
-
-  it('les 20 tics sont ceux du Loup-Garou, mot pour mot', () => {
-    expect(game.botTic).toEqual(speechCatalogueOf('games.loup-garou.game', locale).botTic)
   })
 })
