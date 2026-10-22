@@ -5347,7 +5347,85 @@
         "handCount": "{count, plural, one {# carta in mano} other {# carte in mano}}",
         "outPosition": "Mano vuota · posizione {rank}",
         "passed": "ha passato",
-        "playerLeft": "ha lasciato il tavolo"
+        "playerLeft": "ha lasciato il tavolo",
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "brag": "Questa sì che pesa. Tocca a te, {name} 😎",
+          "brag_2": "Allora, {name}, adesso chi ride? 😏",
+          "brag_3": "Tieni, {name}, digerisci questa.",
+          "cut": "Tagliato! Scusa, {name} 😇",
+          "cut_2": "E zac, un 2! Che sfortuna, {name}.",
+          "cut_3": "{name}, questa presa me la tengo io.",
+          "ouRien": "{name}, uguale o niente!",
+          "ouRien_2": "Pareggio! O rispondi o salti, {name} 😏",
+          "ouRien_3": "Stesso valore, {name}. Tocca a te seguire.",
+          "close": "Poker! Grazie dell’assist, {name}.",
+          "close_2": "Mi mancava solo quella, {name} 😁",
+          "close_3": "Chiudo io! Questa presa è mia, {name}.",
+          "out": "Niente più carte! In bocca al lupo, {name} 😎",
+          "out_2": "Io esco. Divertiti, {name}!",
+          "out_3": "Mano vuota! {name}, ti guardo soffrire.",
+          "grumble": "Sul serio, {name}? Mi tagli?!",
+          "grumble_2": "{name}, la mia bella presa… me la pagherai.",
+          "grumble_3": "Non è carino, {name}. Per niente 😤",
+          "hail": "Chapeau, {name}! La corona ti sta benissimo 👑",
+          "hail_2": "Rispetto, {name}. {target, select, f {Signora Presidente} m {Signor Presidente} other {Eccellenza}} 🎩",
+          "hail_3": "{name} al potere! Ci inchiniamo 🙇",
+          "mockTrou": "Allora, {name}, bella vista da laggiù? 😏",
+          "mockTrou_2": "{name}, le tue due carte migliori, per favore 😇",
+          "mockTrou_3": "In fondo al Trou, {name}! Fatti una casetta 🏠",
+          "sulk": "Goditela, {name}. La ruota gira.",
+          "sulk_2": "{name}, ridammi le mie carte! 😭",
+          "sulk_3": "{speaker, select, f {Ultima} m {Ultimo} other {Tutto in fondo}}… goditela finché dura, {name}."
+        },
+        "botSayTrait": {
+          "agressif": {
+            "brag": "E BAM! In ginocchio, {name}.",
+            "brag_2": "Batti questa, {name}? Ne dubito 😈",
+            "cut": "Tagliato netto, {name}. Avanti il prossimo!",
+            "cut_2": "{name}, la tua presa? Confiscata."
+          },
+          "farceur": {
+            "brag": "Abracadabra, {name}! Tadà 🪄",
+            "brag_2": "Sorpresa, {name}! Applausi, prego 🎉",
+            "cut": "Ops, {name}… mi è scivolato il 2 🙃",
+            "cut_2": "Ciao {name}! Passava di qui un 2 👋"
+          },
+          "prudent": {
+            "brag": "Le tenevo in caldo per te, {name}.",
+            "brag_2": "La pazienza paga, {name}.",
+            "cut": "Dovevo tagliare, {name}. Mi spiace.",
+            "cut_2": "Scusa, {name}, ma questa presa è mia."
+          },
+          "suiveur": {
+            "brag": "Niente male, eh, {name}? 😊",
+            "brag_2": "{name}, gioco come i grandi!",
+            "cut": "Tagliano tutti, quindi anch’io, {name}!",
+            "cut_2": "Taglio… si fa così, {name}?"
+          }
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
+        }
       },
       "tutorial": {
         "steps": [

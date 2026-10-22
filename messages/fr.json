@@ -5347,7 +5347,85 @@
         "handCount": "{count, plural, one {# carte en main} other {# cartes en main}}",
         "outPosition": "Main vide · position {rank}",
         "passed": "a passé",
-        "playerLeft": "a quitté la table"
+        "playerLeft": "a quitté la table",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "brag": "Ça, c’est du lourd. À toi, {name} 😎",
+          "brag_2": "Alors, {name}, on fait moins le malin ?",
+          "brag_3": "Tiens, {name}, digère-moi ça.",
+          "cut": "Coupé ! Désolé, {name} 😇",
+          "cut_2": "Et hop, un 2 ! Pas de bol, {name}.",
+          "cut_3": "{name}, ce pli, je te le prends.",
+          "ouRien": "{name}, c’est pareil ou rien !",
+          "ouRien_2": "Égalité ! Tu suis ou tu sautes, {name} ? 😏",
+          "ouRien_3": "Même hauteur, {name}. À toi de suivre !",
+          "close": "Carré ! Merci pour la passe, {name}.",
+          "close_2": "Il ne me manquait que celle-là, {name} 😁",
+          "close_3": "Je ferme ! Ce pli est pour moi, {name}.",
+          "out": "Plus de cartes ! Bon courage, {name} 😎",
+          "out_2": "Je sors. Amuse-toi bien, {name} !",
+          "out_3": "Main vide ! {name}, je te regarde souffrir.",
+          "grumble": "Sérieux, {name} ? Tu me coupes ?!",
+          "grumble_2": "{name}, mon beau pli… tu vas me le payer.",
+          "grumble_3": "Pas cool, {name}. Vraiment pas cool 😤",
+          "hail": "Chapeau bas, {name} ! La couronne te va bien 👑",
+          "hail_2": "Respect, {name}. {target, select, f {Madame la Présidente} m {Monsieur le Président} other {Votre Excellence}} 🎩",
+          "hail_3": "{name} au pouvoir ! On s’incline 🙇",
+          "mockTrou": "Alors, {name}, la vue est belle d’en bas ? 😏",
+          "mockTrou_2": "{name}, tes deux meilleures cartes, s’il te plaît 😇",
+          "mockTrou_3": "Bienvenue au fond du Trou, {name} !",
+          "sulk": "Profite bien, {name}. La roue tourne.",
+          "sulk_2": "{name}, rends-moi mes cartes ! 😭",
+          "sulk_3": "{speaker, select, f {Dernière} m {Dernier} other {Tout en bas}}… savoure tant que ça dure, {name}."
+        },
+        "botSayTrait": {
+          "agressif": {
+            "brag": "Et BIM ! À genoux, {name}.",
+            "brag_2": "Tu suis ça, {name} ? J’en doute 😈",
+            "cut": "Coupé net, {name}. Au suivant !",
+            "cut_2": "{name}, ton pli ? Confisqué."
+          },
+          "farceur": {
+            "brag": "Abracadabra, {name} ! Et voilà le travail 🪄",
+            "brag_2": "Tadaaa ! Applaudis, {name} 🎉",
+            "cut": "Oups, {name}… mon 2 a glissé 🙃",
+            "cut_2": "Coucou {name} ! C’est le 2 qui passe 👋"
+          },
+          "prudent": {
+            "brag": "Je les gardais au chaud pour toi, {name}.",
+            "brag_2": "Patience récompensée, {name}.",
+            "cut": "Il fallait bien couper, {name}. Navré.",
+            "cut_2": "Désolé, {name}, mais ce pli est à moi."
+          },
+          "suiveur": {
+            "brag": "Pas mal, hein, {name} ? 😊",
+            "brag_2": "{name}, je fais comme les grands !",
+            "cut": "Tout le monde coupe, alors moi aussi, {name} !",
+            "cut_2": "Je coupe… c’est bien comme ça, {name} ?"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [

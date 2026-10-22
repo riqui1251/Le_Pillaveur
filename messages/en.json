@@ -5347,7 +5347,85 @@
         "handCount": "{count, plural, one {# card in hand} other {# cards in hand}}",
         "outPosition": "Hand empty · position {rank}",
         "passed": "passed",
-        "playerLeft": "left the table"
+        "playerLeft": "left the table",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "brag": "Now that’s heavy. Your go, {name} 😎",
+          "brag_2": "So, {name}, not so cocky now?",
+          "brag_3": "Chew on that one, {name}.",
+          "cut": "Cut! Sorry, {name} 😇",
+          "cut_2": "And here comes a 2! Tough luck, {name}.",
+          "cut_3": "{name}, I’ll be taking that trick.",
+          "ouRien": "{name}, match it or skip it!",
+          "ouRien_2": "Same rank! Match it or you’re skipped, {name} 😏",
+          "ouRien_3": "Equal again, {name}. Your move!",
+          "close": "Four of a kind! Thanks for the setup, {name}.",
+          "close_2": "That’s the one I was missing, {name} 😁",
+          "close_3": "Closed! This trick is mine, {name}.",
+          "out": "No cards left! Good luck, {name} 😎",
+          "out_2": "I’m out. Have fun, {name}!",
+          "out_3": "Empty hand! {name}, I’ll watch you suffer.",
+          "grumble": "Seriously, {name}? You cut me?!",
+          "grumble_2": "{name}, my lovely trick… you’ll pay for that.",
+          "grumble_3": "Not cool, {name}. Not cool at all 😤",
+          "hail": "Hats off, {name}! The crown suits you 👑",
+          "hail_2": "Well done, {name}. {target, select, f {Madam President} m {Mr President} other {Your Excellency}} 🎩",
+          "hail_3": "{name} in power! We bow 🙇",
+          "mockTrou": "So, {name}, nice view from down there? 😏",
+          "mockTrou_2": "{name}, your two best cards, please 😇",
+          "mockTrou_3": "Welcome to the bottom of the Trou, {name}!",
+          "sulk": "Enjoy it, {name}. The wheel turns.",
+          "sulk_2": "{name}, give me back my cards! 😭",
+          "sulk_3": "{speaker, select, f {Dead last} m {Dead last} other {Rock bottom}}… savour it while it lasts, {name}."
+        },
+        "botSayTrait": {
+          "agressif": {
+            "brag": "BAM! On your knees, {name}.",
+            "brag_2": "Can you top that, {name}? Doubt it 😈",
+            "cut": "Cut clean, {name}. Next!",
+            "cut_2": "{name}, your trick? Confiscated."
+          },
+          "farceur": {
+            "brag": "Abracadabra, {name}! Ta-da 🪄",
+            "brag_2": "Surprise, {name}! Applause, please 🎉",
+            "cut": "Oops, {name}… my 2 slipped 🙃",
+            "cut_2": "Hi {name}! Just a 2 passing through 👋"
+          },
+          "prudent": {
+            "brag": "Kept them warm just for you, {name}.",
+            "brag_2": "Patience pays off, {name}.",
+            "cut": "I had to cut, {name}. Sorry.",
+            "cut_2": "Apologies, {name}, but this trick is mine."
+          },
+          "suiveur": {
+            "brag": "Not bad, huh, {name}? 😊",
+            "brag_2": "{name}, I’m playing like the big kids!",
+            "cut": "Everyone’s cutting, so me too, {name}!",
+            "cut_2": "I cut… is that how it works, {name}?"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

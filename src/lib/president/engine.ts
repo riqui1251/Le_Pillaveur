@@ -1,6 +1,7 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { personaForBotName } from '@/lib/online/bot-personas'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * PRÉSIDENT — moteur PUR, serveur-autoritaire.
@@ -109,6 +110,48 @@ export type PreTrickPlay = { playerId: string; cards: number[] }
 /** Un pli terminé : la séquence des poses et son vainqueur. */
 export type PreTrickEntry = { winnerId: string | null; plays: PreTrickPlay[] }
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.president.game),
+ * structurée, sans texte : elle naît dans la même écriture que le coup qui la
+ * provoque (bot-speech.ts, appelé par l'adaptateur), aucun tick de plus.
+ *   • son propre coup : brag (brelan ou carré posé), cut (le 2 qui coupe la
+ *     pose d'un autre), ouRien (pose égale qui verrouille le pli), close
+ *     (carré fermé hors tour), out (main vidée) ;
+ *   • le coup d'un autre : grumble (sa pose coupée ou fermée) ;
+ *   • la fin de manche : hail (vive le Président), mockTrou (on chambre le
+ *     Trou), sulk (le Trou boude).
+ * Le kind ne dit que ce que la table a vu : rien sur une main.
+ */
+export type PreSpeechKind =
+  | 'brag'
+  | 'cut'
+  | 'ouRien'
+  | 'close'
+  | 'out'
+  | 'grumble'
+  | 'hail'
+  | 'mockTrou'
+  | 'sulk'
+export type PreSpeech = BotSpeech<PreSpeechKind>
+
+export const PRE_SPEECH_KINDS = [
+  'brag',
+  'cut',
+  'ouRien',
+  'close',
+  'out',
+  'grumble',
+  'hail',
+  'mockTrou',
+  'sulk',
+] as const satisfies readonly PreSpeechKind[]
+
+/** Paroles max par bot et par manche ; le bavardage du persona borne en dessous. */
+export const PRE_SPEECH_CAP = 2
+
+/** Une parole à écrire : son auteur (un bot), son kind, le joueur qu'elle nomme. */
+export type PreSay = { playerId: string; kind: PreSpeechKind; targetId: string }
+
 export type PreState = TimedPhaseState & {
   version: number
   phase: PrePhase
@@ -141,6 +184,12 @@ export type PreState = TimedPhaseState & {
   lastExchange: PreExchange | null
   rematchVotes: string[]
   rngState: number
+  /**
+   * PUBLIC — paroles des bots, celles de la manche en cours et de la
+   * précédente au plus. Optionnel : un état sérialisé avant son arrivée n'en
+   * a pas (parsePreState complète).
+   */
+  speech?: PreSpeech[]
 }
 
 export type PreAction =
@@ -442,7 +491,34 @@ export function createPreState(
     lastExchange: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
+}
+
+/**
+ * Les paroles `says` ajoutées au fil, dans la manche courante. Appelé sur
+ * l'état qui SORT d'une réduction, dans la même écriture : pas de version de
+ * plus. Refuse (INVALID_SPEECH, ALREADY_SPOKE) un kind inconnu, un auteur qui
+ * n'est pas un bot à table, une cible absente ou soi-même, un plafond
+ * atteint ; l'adaptateur garde alors le coup sans parole. Le fil ne garde que
+ * la manche courante et la précédente : l'élagage n'a lieu qu'à la première
+ * parole d'une manche, avant qu'elle n'ait de bulle à l'écran.
+ */
+export function withPreSpeech(state: PreState, says: readonly PreSay[]): PreState {
+  if (says.length === 0) return state
+  const round = state.manche
+  let speech = (state.speech ?? []).filter((sp) => sp.round >= round - 1)
+  for (const say of says) {
+    if (!(PRE_SPEECH_KINDS as readonly string[]).includes(say.kind)) throw new PreEngineError('INVALID_SPEECH')
+    const author = playerById(state, say.playerId)
+    if (!author || !author.isBot || author.leftAt) throw new PreEngineError('INVALID_SPEECH')
+    const target = playerById(state, say.targetId)
+    if (!target || target.id === author.id) throw new PreEngineError('INVALID_SPEECH')
+    const said = speech.filter((sp) => sp.playerId === author.id && sp.round === round).length
+    if (said >= PRE_SPEECH_CAP) throw new PreEngineError('ALREADY_SPOKE')
+    speech = [...speech, { playerId: author.id, kind: say.kind, targetId: target.id, round }]
+  }
+  return { ...state, speech }
 }
 
 // ─── Transitions internes ────────────────────────────────────────────────────

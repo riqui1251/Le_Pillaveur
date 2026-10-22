@@ -5347,7 +5347,85 @@
         "handCount": "{count, plural, one {# carta en la mano} other {# cartas en la mano}}",
         "outPosition": "Mano vacía · posición {rank}",
         "passed": "ha pasado",
-        "playerLeft": "ha dejado la mesa"
+        "playerLeft": "ha dejado la mesa",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "brag": "Eso sí que pesa. Te toca, {name} 😎",
+          "brag_2": "¿Qué, {name}? ¿Ya no vas tan sobrado?",
+          "brag_3": "Toma, {name}, digiere esto.",
+          "cut": "¡Cortado! Lo siento, {name} 😇",
+          "cut_2": "¡Y zas, un 2! Mala suerte, {name}.",
+          "cut_3": "{name}, esta baza me la quedo yo.",
+          "ouRien": "{name}, ¡igual o nada!",
+          "ouRien_2": "¡Empate! O igualas o pasas, {name} 😏",
+          "ouRien_3": "Mismo valor, {name}. Te toca seguir.",
+          "close": "¡Póker! Gracias por el pase, {name}.",
+          "close_2": "Solo me faltaba esa, {name} 😁",
+          "close_3": "¡Cierro! Esta baza es mía, {name}.",
+          "out": "¡Sin cartas! Mucho ánimo, {name} 😎",
+          "out_2": "Yo me salgo. ¡Diviértete, {name}!",
+          "out_3": "¡Mano vacía! {name}, te veré sufrir.",
+          "grumble": "¿En serio, {name}? ¿Me cortas a mí?",
+          "grumble_2": "{name}, mi preciosa baza… me las pagarás.",
+          "grumble_3": "Feo, {name}. Muy feo 😤",
+          "hail": "¡Chapó, {name}! La corona te sienta bien 👑",
+          "hail_2": "Respeto, {name}. {target, select, f {Señora presidenta} m {Señor presidente} other {Su excelencia}} 🎩",
+          "hail_3": "¡{name} al poder! Nos inclinamos 🙇",
+          "mockTrou": "¿Qué tal las vistas desde abajo, {name}? 😏",
+          "mockTrou_2": "{name}, tus dos mejores cartas, por favor 😇",
+          "mockTrou_3": "¡Al fondo del Trou, {name}! Ya tienes casa 🏠",
+          "sulk": "Disfrútalo, {name}. La rueda gira.",
+          "sulk_2": "{name}, ¡devuélveme mis cartas! 😭",
+          "sulk_3": "{speaker, select, f {La última} m {El último} other {Al fondo}}… disfrútalo mientras dure, {name}."
+        },
+        "botSayTrait": {
+          "agressif": {
+            "brag": "¡Y PUM! De rodillas, {name}.",
+            "brag_2": "¿Superas eso, {name}? Lo dudo 😈",
+            "cut": "Cortado en seco, {name}. ¡Siguiente!",
+            "cut_2": "{name}, ¿tu baza? Confiscada."
+          },
+          "farceur": {
+            "brag": "¡Abracadabra, {name}! Tachán 🪄",
+            "brag_2": "¡Sorpresa, {name}! Aplausos, por favor 🎉",
+            "cut": "Uy, {name}… se me escurrió el 2 🙃",
+            "cut_2": "¡Hola, {name}! Pasaba un 2 por aquí 👋"
+          },
+          "prudent": {
+            "brag": "Las guardaba calentitas para ti, {name}.",
+            "brag_2": "La paciencia tiene premio, {name}.",
+            "cut": "Tenía que cortar, {name}. Lo siento.",
+            "cut_2": "Perdona, {name}, pero esta baza es mía."
+          },
+          "suiveur": {
+            "brag": "No está mal, ¿eh, {name}? 😊",
+            "brag_2": "{name}, ¡juego como los mayores!",
+            "cut": "Todos cortan, así que yo también, {name}.",
+            "cut_2": "Corto… ¿se hace así, {name}?"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [

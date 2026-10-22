@@ -1,11 +1,13 @@
 "use client"
 
+import type { ReactNode } from 'react'
 import { Crown } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName, type SpeechGenre } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { genreOf, genreOfId } from '@/components/online/bot-speech/bot-speech-feed'
+import { PresidentSpeechFeed } from '@/components/online/president/PresidentSpeechFeed'
 import { rematchCounter } from '@/components/online/end-screen'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import {
@@ -40,6 +42,9 @@ const ROLE_BADGES: Record<string, string> = {
 
 /** Plis précédents affichés : un bandeau d'une ligne, le reste est sur les téléphones. */
 const HISTORY_SHOWN = 3
+
+/** Le fil se serre avant le tapis : les plus anciennes bulles sortent par le haut. */
+const FEED_CLIP = 'flex min-h-0 shrink flex-col justify-end overflow-hidden'
 
 function isRed(card: number): boolean {
   if (preIsJoker(card)) return false
@@ -102,6 +107,7 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
         : role === 'vicePresident'
           ? t('roles.vicePresident', { genre })
           : t('roles.viceTrou')
+  const speechFeed = <PresidentSpeechFeed view={state} iconOf={iconOf} variant="tv" />
 
   if (state.phase === 'countdown') {
     return (
@@ -116,7 +122,17 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
   }
 
   if (state.phase === 'interlude' || state.phase === 'finished') {
-    return <Ranking room={room} state={state} soft={soft} iconOf={iconOf} roleLabel={roleLabel} nameOf={nameOf} />
+    return (
+      <Ranking
+        room={room}
+        state={state}
+        soft={soft}
+        iconOf={iconOf}
+        roleLabel={roleLabel}
+        nameOf={nameOf}
+        speechFeed={speechFeed}
+      />
+    )
   }
 
   const lastPlay = state.lastPlay
@@ -175,6 +191,9 @@ export function TvPresident({ room, state }: { room: TvRoomDto; state: PreClient
             <p className="text-center text-5xl font-black text-white/80">{t('freeTrick')}</p>
           )}
         </div>
+
+        {/* Paroles des bots de la manche, monté même vide (région aria-live). */}
+        <div className={cn(FEED_CLIP, 'max-h-[8rem]')}>{speechFeed}</div>
 
         {shownHistory.length > 0 && (
           <div className="flex min-w-0 flex-col gap-2">
@@ -268,6 +287,7 @@ function Ranking({
   iconOf,
   roleLabel,
   nameOf,
+  speechFeed,
 }: {
   room: TvRoomDto
   state: PreClientView
@@ -275,6 +295,8 @@ function Ranking({
   iconOf: (p: PrePlayerView) => string
   roleLabel: (role: string, genre: SpeechGenre) => string
   nameOf: (id: string | null) => string
+  /** Paroles de la manche close : le Trou boude, on salue le Président. */
+  speechFeed: ReactNode
 }) {
   const t = useTranslations('games.president.game')
   const finished = state.phase === 'finished'
@@ -341,6 +363,8 @@ function Ranking({
           )
         })}
       </div>
+
+      <div className={cn(FEED_CLIP, 'max-h-[7rem] w-full max-w-3xl')}>{speechFeed}</div>
 
       {!finished && <p className="max-w-[64rem] text-center text-xl font-semibold text-white/80">{t('exchangeInfo')}</p>}
 

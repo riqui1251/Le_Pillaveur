@@ -7,12 +7,14 @@ import {
   reducePre,
   toPreClientView,
   toPreSpectatorView,
+  withPreSpeech,
   PreEngineError,
   PRE_DEFAULT_MANCHES,
   PRE_MIN_PLAYERS,
   PRE_MAX_PLAYERS,
   type PreState,
 } from './engine'
+import { presidentBotSpeech, type PreSpeechEvent } from './bot-speech'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -76,6 +78,7 @@ export function parsePreState(json: string | null): PreState | null {
       passedIds: raw.passedIds ?? [],
       outOrder: raw.outOrder ?? [],
       rematchVotes: raw.rematchVotes ?? [],
+      speech: raw.speech ?? [],
     }
   } catch {
     return null
@@ -93,6 +96,28 @@ export type PreRoomActionInput =
 
 export type PreRoomActionResult = { ok: true; state: PreState } | { ok: false; error: string }
 
+/**
+ * Les paroles des bots jointes à une transition (bot-speech.ts), lues sur les
+ * vues SPECTATEUR : le planificateur ne voit aucune main. Écrites dans l'état
+ * qui sort du coup, même écriture. Une parole refusée par le moteur ne coûte
+ * jamais le coup : il passe sans elle.
+ */
+export function withPreBotTalk(
+  before: PreState,
+  after: PreState,
+  event: PreSpeechEvent | null,
+  rand: () => number = Math.random
+): PreState {
+  const says = presidentBotSpeech(toPreSpectatorView(before), toPreSpectatorView(after), event, rand)
+  if (says.length === 0) return after
+  try {
+    return withPreSpeech(after, says)
+  } catch (e) {
+    if (e instanceof PreEngineError) return after
+    throw e
+  }
+}
+
 export function applyPreRoomAction(
   state: PreState,
   userId: string,
@@ -100,26 +125,14 @@ export function applyPreRoomAction(
 ): PreRoomActionResult {
   try {
     switch (input.type) {
-      case 'play':
-        return {
-          ok: true,
-          state: reducePre(state, {
-            type: 'PLAY',
-            playerId: userId,
-            cards: input.cards,
-            now: Date.now(),
-          }),
-        }
-      case 'close':
-        return {
-          ok: true,
-          state: reducePre(state, {
-            type: 'CLOSE',
-            playerId: userId,
-            cards: input.cards,
-            now: Date.now(),
-          }),
-        }
+      case 'play': {
+        const next = reducePre(state, { type: 'PLAY', playerId: userId, cards: input.cards, now: Date.now() })
+        return { ok: true, state: withPreBotTalk(state, next, { type: 'play', playerId: userId, cards: input.cards }) }
+      }
+      case 'close': {
+        const next = reducePre(state, { type: 'CLOSE', playerId: userId, cards: input.cards, now: Date.now() })
+        return { ok: true, state: withPreBotTalk(state, next, { type: 'close', playerId: userId, cards: input.cards }) }
+      }
       case 'pass':
         return {
           ok: true,
@@ -130,11 +143,11 @@ export function applyPreRoomAction(
           ok: true,
           state: reducePre(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
         }
-      case 'advance':
-        return {
-          ok: true,
-          state: reducePre(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now: Date.now() }),
-        }
+      case 'advance': {
+        // Minuteur : la pose d'office n'est pas un choix, seule la fin de manche fait parler.
+        const next = reducePre(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now: Date.now() })
+        return { ok: true, state: withPreBotTalk(state, next, null) }
+      }
       case 'bot':
         return applyPreBotAction(state)
       case 'replace-left':
@@ -183,8 +196,12 @@ export function preSpectatorViewJson(state: PreState): string {
 
 // ─── Bots ────────────────────────────────────────────────────────────────────
 
-/** Le bot au tour pose le plus petit combo valide, sinon passe ; en interlude, il continue. */
-export function applyPreBotAction(state: PreState): PreRoomActionResult {
+/**
+ * Le bot au tour pose le plus petit combo valide, sinon passe ; en interlude,
+ * il continue. Sa pose ou sa fermeture porte ses paroles (withPreBotTalk) ;
+ * `sayRand` ne tire que les paroles, le coup reste celui de prePickBotPlay.
+ */
+export function applyPreBotAction(state: PreState, sayRand: () => number = Math.random): PreRoomActionResult {
   try {
     // FERMETURE hors tour : un bot qui possède les cartes manquantes du rang
     // au sommet du pli les claque — prioritaire sur le tour courant.
@@ -200,10 +217,8 @@ export function applyPreBotAction(state: PreState): PreRoomActionResult {
         )
         if (closer) {
           const cards = closer.hand.filter((c) => preRankOf(c) === needed.rank)
-          return {
-            ok: true,
-            state: reducePre(state, { type: 'CLOSE', playerId: closer.id, cards, now: Date.now() }),
-          }
+          const next = reducePre(state, { type: 'CLOSE', playerId: closer.id, cards, now: Date.now() })
+          return { ok: true, state: withPreBotTalk(state, next, { type: 'close', playerId: closer.id, cards }, sayRand) }
         }
       }
     }
@@ -215,10 +230,8 @@ export function applyPreBotAction(state: PreState): PreRoomActionResult {
     if (state.phase === 'playing') {
       const play = prePickBotPlay(state, actor.id)
       if (play) {
-        return {
-          ok: true,
-          state: reducePre(state, { type: 'PLAY', playerId: actor.id, cards: play, now: Date.now() }),
-        }
+        const next = reducePre(state, { type: 'PLAY', playerId: actor.id, cards: play, now: Date.now() })
+        return { ok: true, state: withPreBotTalk(state, next, { type: 'play', playerId: actor.id, cards: play }, sayRand) }
       }
       return {
         ok: true,
