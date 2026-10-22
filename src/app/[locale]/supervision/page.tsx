@@ -113,6 +113,7 @@ import { accountsCoverageSince, weekFigures } from '@/lib/supervision/week'
 import { methodGroups, resolveMessage, type MethodGroup, type MethodParams } from '@/lib/supervision/method'
 import { parisDayToDate } from '@/lib/supervision/paris-day'
 import { RETENTION_RUN_STALE_MS, retentionRunStatus } from '@/lib/supervision/retention-run'
+import { acknowledgeQueueItem } from '@/lib/supervision/queue-ack'
 import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -4713,23 +4714,16 @@ function SupervisionDashboard() {
     const item = overview?.queue.find((q) => q.id === id)
     if (!item || queueBusyId) return
     setQueueBusyId(id)
+    setError(null)
     try {
-      if (item.kind === 'feedback') {
-        await fetch(`/api/admin/feedback/${item.targetId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ status: 'resolved' }),
-        })
-      } else {
-        await fetch(`/api/admin/users/${item.targetId}/ack-name-flag`, {
-          method: 'POST',
-          credentials: 'include',
-        })
-      }
+      // Retiré de la file seulement une fois acquitté : un refus (droits,
+      // compte disparu) faisait disparaître l'élément jusqu'au rafraîchissement.
+      await acknowledgeQueueItem(item, t('apiErrors.modifyDenied'))
       setOverview((prev) => (prev ? { ...prev, queue: prev.queue.filter((q) => q.id !== id) } : prev))
       void loadLive(true)
       if (item.kind === 'feedback') void loadFeedback(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tErrors('generic'))
     } finally {
       setQueueBusyId(null)
     }
