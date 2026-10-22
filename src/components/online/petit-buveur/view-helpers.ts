@@ -1,11 +1,12 @@
 import type {
+  DuelNote,
   EnginePending,
   EnginePlayer,
   EngineState,
   LastOutcome,
   OutcomeNote,
 } from '@/lib/petit-buveur/engine'
-import { CASES_INTERACTIVE_TARGET, CASES_NO_SELF_TARGET } from '@/lib/petit-buveur/types'
+import { CASES_INTERACTIVE_TARGET, CASES_NO_SELF_TARGET, type EngineCase } from '@/lib/petit-buveur/types'
 
 /**
  * Logique pure de l'écran Petit Buveur EN LIGNE : qui décide, quelle fenêtre
@@ -23,13 +24,15 @@ export function deciderIdOf(view: Pick<EngineView, 'phase' | 'pending' | 'player
   return view.players[view.currentPlayer]?.id ?? null
 }
 
-export type ChoiceKind = 'target' | 'verdict' | 'side' | 'chance' | 'teleport' | 'confirm'
+export type ChoiceKind = 'target' | 'verdict' | 'side' | 'duel' | 'chance' | 'teleport' | 'confirm'
 
 /**
  * Fenêtre à ouvrir pour la décision en attente. Lit `pending.needsTarget`,
- * jamais `needsTarget(type)` : une méta-case dépend de la case rejouée.
+ * jamais `needsTarget(type)` : une méta-case dépend de la case rejouée. Case
+ * cachée (cible à l'aveugle) : `needsTarget` seul, « Moi » compris.
  */
 export function choiceOf(pending: EnginePending): { kind: ChoiceKind; allowSelf: boolean } {
+  if (pending.stage === 'duel') return { kind: 'duel', allowSelf: false }
   if (pending.stage === 'verdict') return { kind: 'verdict', allowSelf: false }
   if (pending.stage === 'side') return { kind: 'side', allowSelf: false }
   if (pending.needsTarget) return { kind: 'target', allowSelf: true }
@@ -149,6 +152,37 @@ export function noteMessage(note: OutcomeNote, nameOf: (id: string) => string, a
     case 'no-effect':
       return { key: 'online.notes.noEffect', values: {} }
   }
+}
+
+/** Issue d'un duel (clé sous games.petit-buveur), les mêmes phrases que le jeu local. */
+export function duelMessage(duel: DuelNote, challengerName: string, opponentName: string): NoteMessage {
+  const [winner, loser] = duel.challengerWins ? [challengerName, opponentName] : [opponentName, challengerName]
+  if (duel.loserProtected) return { key: 'game.outcomes.duelLoserProtected', values: { winner, loser } }
+  return {
+    key: duel.challengerWins ? 'game.outcomes.duelChallengerWins' : 'game.outcomes.duelOpponentWins',
+    values: { challenger: challengerName, opponent: opponentName },
+  }
+}
+
+type Translate = (key: string, values?: Record<string, string | number>) => string
+
+/**
+ * Consigne d'une case (clé `caseDescriptions.*` sous games.petit-buveur),
+ * comme `formatCaseDescription` du jeu local. Le texte d'un défi est résolu
+ * par son index (`defiText`, variante Soft comprise) ; sans texte, pas de
+ * consigne.
+ */
+export function caseDescription(
+  c: Pick<EngineCase, 'type' | 'effect' | 'gorgeeCulSec' | 'defiIndex'>,
+  t: Translate,
+  defiText: (index: number | undefined) => string | null | undefined
+): string | null {
+  if (c.type === 'defi') {
+    const challenge = defiText(c.defiIndex)
+    return challenge ? t('caseDescriptions.defi', { challenge, count: c.effect }) : null
+  }
+  if (c.type === 'gorgée' && c.gorgeeCulSec) return t('caseDescriptions.gorgéeCulSec')
+  return t(`caseDescriptions.${c.type}`, { count: c.effect })
 }
 
 type DefiItem = { text: string }

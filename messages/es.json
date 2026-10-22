@@ -3922,9 +3922,6 @@
         "rollDice": "Lanzar el dado",
         "continueCase": "Continuar",
         "chooseTarget": "Elige un objetivo para {case}",
-        "teleportPrompt": "Teletransporte — intercambia tu posición con…",
-        "teleportLeader": "El líder",
-        "teleportLast": "El último",
         "you": "(tú)",
         "waitingFor": "Esperando a {name}…",
         "winner": "¡{name} ganó!",
@@ -3940,8 +3937,8 @@
           "wheelDrinks": "¡{count} trago(s)!",
           "pfWin": "Apuesta ganada — nadie bebe",
           "pfLose": "¡{name} bebe {count} trago(s)!",
-          "pile": "CARA",
-          "face": "CRUZ",
+          "pile": "CRUZ",
+          "face": "CARA",
           "deHonteSafe": "¡Salvado!",
           "deHonteDrink": "¡2 tragos!",
           "deHonteForward": "¡Avanza una casilla!",
@@ -4192,8 +4189,8 @@
         "grappinLeader": "🪝 {actor} ya está a la cabeza, no es posible luchar.",
         "grappinJoin": "🪝 ¡Lucha! {actor} se une a {target} (cuadro {case}).",
         "pont": "🌉 ¡Puente ({side})! {count} jugador(es) en el cuadrado {case} {direction} de un cuadrado.",
-        "pontPile": "pila",
-        "pontFace": "rostro",
+        "pontPile": "cruz",
+        "pontFace": "cara",
         "pontAdvance": "avance",
         "pontBack": "da un paso atrás",
         "loterieCancelled": "🎰 Lotería cancelada (no hay suficientes jugadores).",
@@ -4214,10 +4211,10 @@
         "diceLabel": "Dado: {value}"
       },
       "coinFlip": {
-        "pile": "Pila",
-        "face": "Rostro",
-        "won": "Sorteo: {result} — ¡el objetivo gana!",
-        "lost": "Empate: {result}: el objetivo pierde y bebe."
+        "pile": "Cruz",
+        "face": "Cara",
+        "won": "Tirada: {result} — ¡el objetivo gana!",
+        "lost": "Tirada: {result} — el objetivo pierde y bebe."
       },
       "game": {
         "rollDice": "Tira el dado",
@@ -4478,7 +4475,7 @@
           },
           {
             "title": "En tu turno",
-            "body": "Tira el dado en tu turno, descubre el efecto de tu casilla y a veces elige un objetivo para un efecto que afecta a otro jugador."
+            "body": "Tira el dado en tu turno. A menudo eliges un objetivo a ciegas: el efecto de tu casilla solo se revela después de tu elección. En una casilla ocupada, puedes retar a un jugador a un duelo."
           },
           {
             "title": "¿Y los tragos?",
@@ -4519,7 +4516,7 @@
           "outcomeDrink": "🎲 Dado de la vergüenza ({roll}): ¡{player} toma 2 prendas!"
         },
         "coinFlip": {
-          "lost": "Sorteo: {result} — el objetivo pierde y toma una prenda."
+          "lost": "Tirada: {result} — el objetivo pierde y toma una prenda."
         },
         "wheel": {
           "sips": "{count, plural, one {# prenda} other {# prendas}}"

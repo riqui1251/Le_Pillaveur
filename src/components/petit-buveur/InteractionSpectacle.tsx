@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Shield } from 'lucide-react'
+import { Shield, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { drinkIcon } from './drink-feedback'
@@ -11,7 +11,8 @@ import { DiceFace } from './DiceOverlay'
 import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
- * Spectacle des tirages interactifs EN LIGNE — roue, pièce, dé de la honte.
+ * Spectacle des tirages interactifs EN LIGNE — roue, pièce, dé de la honte,
+ * duel sur case partagée.
  *
  * Le serveur a déjà décidé du résultat (`lastInteraction` public dans l'état) ;
  * ce composant ne fait que le mettre en scène, chez TOUS les joueurs en même
@@ -37,6 +38,13 @@ export type SpectacleLabels = {
   deHonteBack: string
   /** 6 au dé de la honte sur la case 1 : le pion ne peut pas reculer. */
   deHonteCannotBack?: string
+  /** Duel : gabarits avec {winner} et {loser} (le challenger gagne / perd / perdant protégé). */
+  duelWinnerStays?: string
+  duelOpponentWins?: string
+  duelLoserProtected?: string
+  /** Duel : secteurs de la roue, du point de vue du challenger. */
+  duelWinner?: string
+  duelLoser?: string
 }
 
 /**
@@ -54,6 +62,7 @@ export const SPECTACLE_OUTCOME_HOLD_MS = 2200
 /** Gorgées infligées par le tirage (0 = safe), toutes variantes confondues. */
 export function interactionDrinks(inter: LastInteraction): number {
   if (inter.kind === 'de-honte') return inter.value === 3 || inter.value === 4 ? 2 : 0
+  if (inter.kind === 'duel') return 0
   return inter.drinks
 }
 
@@ -61,14 +70,25 @@ export function interactionDrinks(inter: LastInteraction): number {
  * `actorFromPosition` : index de l'acteur AVANT l'effet du tirage. À 0, le 6
  * du dé de la honte ne fait pas reculer (règle 14) : jamais de recul annoncé.
  * Sans libellé dédié, « sauvé » reste vrai (il ne s'est rien passé).
+ * Duel : `targetName` est l'adversaire, `actorName` le challenger.
  */
 export function outcomeText(
   inter: LastInteraction,
   labels: SpectacleLabels,
   targetName: string,
-  actorFromPosition?: number
+  actorFromPosition?: number,
+  actorName = ''
 ): string {
   switch (inter.kind) {
+    case 'duel': {
+      const [winner, loser] = inter.challengerWins ? [actorName, targetName] : [targetName, actorName]
+      const template = inter.loserProtected
+        ? labels.duelLoserProtected
+        : inter.challengerWins
+          ? labels.duelWinnerStays
+          : labels.duelOpponentWins
+      return (template ?? '{winner}').replace('{winner}', winner).replace('{loser}', loser)
+    }
     case 'roue':
     case 'roue-defis':
       return inter.drinks > 0 ? labels.wheelDrinks.replace('{count}', String(inter.drinks)) : labels.wheelSafe
@@ -153,6 +173,70 @@ function SpinningWheel({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-suit-red" aria-hidden /> <span aria-hidden>{drinkGlyph}</span> {legendDrink}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+const DUEL_SEGMENTS = 12
+
+/**
+ * Roue du duel, comme celle du jeu local : douze secteurs, un sur deux
+ * « gagnant » pour le challenger (secteurs pairs, en or), l'autre « perdant »
+ * (rouge). Elle s'arrête sur l'issue décidée par le serveur.
+ */
+export function duelSegment(inter: Extract<LastInteraction, { kind: 'duel' }>): number {
+  const spread = (inter.actorId.length + inter.opponentId.length) % (DUEL_SEGMENTS / 2)
+  return 2 * spread + (inter.challengerWins ? 0 : 1)
+}
+
+function DuelWheel({
+  segment,
+  reduced,
+  legendWinner,
+  legendLoser,
+}: {
+  segment: number
+  reduced: boolean
+  legendWinner: string
+  legendLoser: string
+}) {
+  const segAngle = 360 / DUEL_SEGMENTS
+  const finalRotation = 360 * 5 - (segment * segAngle + segAngle / 2)
+  const gradient = useMemo(() => {
+    const stops = Array.from({ length: DUEL_SEGMENTS }, (_, i) => {
+      const color = i % 2 === 0 ? 'rgb(var(--gold-rgb))' : 'rgb(var(--suit-red-rgb))'
+      return `${color} ${i * segAngle}deg ${(i + 1) * segAngle}deg`
+    })
+    return `conic-gradient(${stops.join(', ')})`
+  }, [segAngle])
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative">
+        <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 drop-shadow" aria-hidden>
+          <svg width="28" height="28" viewBox="0 0 28 28">
+            <polygon points="4,4 24,4 14,22" style={{ fill: 'rgb(var(--cream-rgb))' }} />
+          </svg>
+        </div>
+        <motion.div
+          initial={{ rotate: 0 }}
+          animate={{ rotate: reduced ? finalRotation % 360 : finalRotation }}
+          transition={reduced ? { duration: 0 } : { duration: 4.5, ease: [0.12, 0.68, 0.16, 1] }}
+          className="relative h-40 w-40 rounded-full border-4 border-gold/60 shadow-2xl"
+          style={{ backgroundImage: gradient }}
+        >
+          <span className="absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-gold/60 bg-felt-deep text-gold">
+            <Swords aria-hidden className="h-5 w-5" />
+          </span>
+        </motion.div>
+      </div>
+      <div className="flex items-center gap-4 rounded-full border border-gold/20 bg-felt-deep/90 px-3 py-1 text-xs font-semibold text-cream/80">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-gold" aria-hidden /> {legendWinner}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-suit-red" aria-hidden /> {legendLoser}
         </span>
       </div>
     </div>
@@ -308,6 +392,20 @@ export function InteractionSpectacle({
             {current.kind === 'de-honte' && (
               <ShameDieSpectacle key={lastSeenRef.current} value={current.value} reduced={reduced} />
             )}
+            {current.kind === 'duel' && (
+              <>
+                <p className="max-w-[18rem] truncate text-center text-sm font-semibold text-cream">
+                  {actorName} <span aria-hidden>⚔️</span> {targetName}
+                </p>
+                <DuelWheel
+                  key={lastSeenRef.current}
+                  segment={duelSegment(current)}
+                  reduced={reduced}
+                  legendWinner={labels.duelWinner ?? ''}
+                  legendLoser={labels.duelLoser ?? ''}
+                />
+              </>
+            )}
 
             <AnimatePresence>
               {showOutcome && (
@@ -322,7 +420,7 @@ export function InteractionSpectacle({
                       : 'border-emerald-400/40 bg-emerald-700/70 text-emerald-50'
                   )}
                 >
-                  {outcomeText(current, labels, targetName, currentFrom)}
+                  {outcomeText(current, labels, targetName, currentFrom, actorName)}
                 </motion.p>
               )}
             </AnimatePresence>

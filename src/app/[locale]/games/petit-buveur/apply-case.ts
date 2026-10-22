@@ -6,6 +6,7 @@ import {
   outcomeBombe,
   outcomeCannotRecul,
   outcomeCaseBase,
+  outcomeChainLinked,
   outcomeCompose,
   outcomeCopie,
   outcomeCurseApplied,
@@ -57,6 +58,8 @@ export type ApplyResult = {
   drinks: DrinkEntry[]
   /** Miroir inversé posé pendant ce tour : la fin du tour ne le décompte pas. */
   mirrorLinked?: boolean
+  /** Défi en chaîne posé pendant ce tour : la fin du tour ne le décompte pas. */
+  chainLinked?: boolean
 }
 
 const DEFAULT_CURSE_TURNS = 3
@@ -328,4 +331,150 @@ export function resolveTeleport(
       params: { rank },
     })
   )
+}
+
+// ─── Cases à fenêtre dédiée (le joueur a fait son choix) ────────────────────
+
+type ModalContext = Pick<ApplyContext, 'actorIndex' | 'boardSize' | 't'>
+
+const DEFAULT_VOTE_DRINKS = 3
+const DEFAULT_PILE_FACE_DRINKS = 2
+const DEFAULT_CHAIN_TURNS = 5
+const SHAME_DICE_DRINKS = 2
+
+/** Vote : le joueur désigné boit, sauf s'il est protégé par la case d'un autre. */
+export function applyVote(caseToApply: Case, players: GamePlayer[], votedId: string, ctx: ModalContext): ApplyResult {
+  const updated = players.map(p => ({ ...p }))
+  const drinks: DrinkEntry[] = []
+  const actor = updated[ctx.actorIndex]
+  const voted = updated.find(p => p.id === votedId)
+  if (!actor || !voted) return { players: updated, outcome: outcomeCaseBase(), drinks }
+  const count = caseToApply.effect || DEFAULT_VOTE_DRINKS
+  if (addDrinks(updated, voted.id, count, { sourceId: actor.id }, drinks)) {
+    return { players: updated, outcome: outcomeProtectedTarget(ctx.t, voted.id), drinks }
+  }
+  return { players: updated, outcome: outcomeDrinks(voted.id, count), drinks }
+}
+
+/** Dé de la honte : 1–2 rien, 3–4 l'acteur boit 2, 5 il avance d'une case, 6 il recule (pas depuis le départ). */
+export function applyShameDice(roll: number, players: GamePlayer[], ctx: ModalContext): ApplyResult {
+  const updated = players.map(p => ({ ...p }))
+  const drinks: DrinkEntry[] = []
+  const actor = updated[ctx.actorIndex]
+  if (!actor) return { players: updated, outcome: outcomeCaseBase(), drinks }
+  if (roll === 6 && actor.position === 0) {
+    return { players: updated, outcome: outcomeCannotRecul(actor.id), drinks }
+  }
+  let key = 'shameDice.outcomeBack'
+  if (roll <= 2) {
+    key = 'shameDice.outcomeSafe'
+  } else if (roll <= 4) {
+    key = 'shameDice.outcomeDrink'
+    addDrinks(updated, actor.id, SHAME_DICE_DRINKS, { sourceId: actor.id }, drinks)
+  } else if (roll === 5) {
+    key = 'shameDice.outcomeAdvance'
+    actor.position = clamp(actor.position + 1, ctx.boardSize)
+  } else {
+    actor.position -= 1
+  }
+  return { players: updated, outcome: outcomeI18n(key, { params: { roll }, playerRefs: { player: actor.id } }), drinks }
+}
+
+/** Pile ou face : la cible a choisi `side`, la pièce tombe sur `flip` ; perdu, elle boit (sauf protégée par un autre). */
+export function applyPileFace(
+  caseToApply: Case,
+  players: GamePlayer[],
+  targetId: string,
+  side: 'pile' | 'face',
+  flip: 'pile' | 'face',
+  ctx: ModalContext
+): ApplyResult {
+  const updated = players.map(p => ({ ...p }))
+  const drinks: DrinkEntry[] = []
+  const actor = updated[ctx.actorIndex]
+  const target = updated.find(p => p.id === targetId)
+  if (!actor || !target) return { players: updated, outcome: outcomeCaseBase(), drinks }
+  const { t } = ctx
+  if (side === flip) {
+    return {
+      players: updated,
+      outcome: outcomeI18n('game.outcomes.pileFaceWin', {
+        playerRefs: { player: target.id },
+        params: { choice: t(`coinFlip.${side}`), result: t(`coinFlip.${flip}`) },
+      }),
+      drinks,
+    }
+  }
+  const count = caseToApply.effect || DEFAULT_PILE_FACE_DRINKS
+  if (addDrinks(updated, target.id, count, { sourceId: actor.id }, drinks)) {
+    return { players: updated, outcome: outcomeProtectedTarget(t, target.id), drinks }
+  }
+  return {
+    players: updated,
+    outcome: outcomeI18n('game.outcomes.pileFaceLose', {
+      playerRefs: { player: target.id },
+      params: { result: t(`coinFlip.${flip}`), count },
+    }),
+    drinks,
+  }
+}
+
+/** Défi en chaîne : l'acteur se lie à la cible pour N tours d'initiateur (jamais soi, bloqué si elle est protégée). */
+export function applyChainLink(caseToApply: Case, players: GamePlayer[], targetId: string, ctx: ModalContext): ApplyResult {
+  const updated = players.map(p => ({ ...p }))
+  const drinks: DrinkEntry[] = []
+  const actor = updated[ctx.actorIndex]
+  const target = updated.find(p => p.id === targetId)
+  if (!actor || !target || target.id === actor.id) return { players: updated, outcome: outcomeCaseBase(), drinks }
+  if (isShielded(target, actor.id)) {
+    return { players: updated, outcome: outcomeProtectedTarget(ctx.t, target.id), drinks }
+  }
+  const turns = caseToApply.effect || DEFAULT_CHAIN_TURNS
+  actor.linkedTo = target.id
+  actor.linkedTurns = turns
+  return { players: updated, outcome: outcomeChainLinked(actor.id, target.id, turns), drinks, chainLinked: true }
+}
+
+/**
+ * Défi / Question (ou défi de la roue) jugé par le joueur au tour : raté, la
+ * cible boit ; réussi, personne. Une cible protégée par un autre n'arrive pas
+ * jusqu'ici : la case l'annonce protégée sans arbitrage.
+ */
+export function applyChallengeResult(
+  players: GamePlayer[],
+  targetId: string,
+  drinksIfFailed: number,
+  completed: boolean,
+  ctx: Pick<ModalContext, 'actorIndex'>
+): Pick<ApplyResult, 'players' | 'drinks'> {
+  const updated = players.map(p => ({ ...p }))
+  const drinks: DrinkEntry[] = []
+  const actor = updated[ctx.actorIndex]
+  if (!completed) addDrinks(updated, targetId, drinksIfFailed, { sourceId: actor?.id }, drinks)
+  return { players: updated, drinks }
+}
+
+/** Chance « Avancer de 2 cases ». */
+export function applyChanceAdvance(players: GamePlayer[], ctx: ModalContext): ApplyResult {
+  const updated = players.map(p => ({ ...p }))
+  const actor = updated[ctx.actorIndex]
+  if (!actor) return { players: updated, outcome: outcomeCaseBase(), drinks: [] }
+  actor.position = clamp(actor.position + 2, ctx.boardSize)
+  return {
+    players: updated,
+    outcome: outcomeI18n('game.outcomes.chanceAdvance', {
+      playerRefs: { player: actor.id },
+      params: { case: actor.position + 1 },
+    }),
+    drinks: [],
+  }
+}
+
+/** Roue des gorgées : l'acteur boit la valeur du secteur tiré (0 = sauvé). Sa propre case : jamais bloquée. */
+export function applyWheelDrinks(value: number, players: GamePlayer[], actorIndex: number): Pick<ApplyResult, 'players' | 'drinks'> {
+  const updated = players.map(p => ({ ...p }))
+  const drinks: DrinkEntry[] = []
+  const actor = updated[actorIndex]
+  if (actor && value > 0) addDrinks(updated, actor.id, value, { sourceId: actor.id }, drinks)
+  return { players: updated, drinks }
 }

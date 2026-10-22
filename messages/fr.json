@@ -3922,9 +3922,6 @@
         "rollDice": "Lancer le dé",
         "continueCase": "Continuer",
         "chooseTarget": "Choisis une cible pour {case}",
-        "teleportPrompt": "Téléport — échanger ta position avec…",
-        "teleportLeader": "Le leader",
-        "teleportLast": "Le dernier",
         "you": "(vous)",
         "waitingFor": "En attente de {name}…",
         "winner": "{name} a gagné !",
@@ -4478,7 +4475,7 @@
           },
           {
             "title": "À ton tour",
-            "body": "Lance le dé quand c’est ton tour, découvre l’effet de ta case et parfois choisis une cible pour un effet qui touche un autre joueur."
+            "body": "Lance le dé quand c’est ton tour. Souvent, tu choisis une cible à l’aveugle : l’effet de ta case n’est révélé qu’après ton choix. Sur une case occupée, tu peux défier un joueur en duel."
           },
           {
             "title": "Et les gorgées ?",
