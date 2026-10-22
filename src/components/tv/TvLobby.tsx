@@ -88,7 +88,9 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
   // devient un « +N » plutôt que de pousser la liste hors de l'écran.
   const overflow = members.length > capacity ? members.length - (capacity - 1) : 0
   const shown = overflow > 0 ? members.slice(0, capacity - 1) : members
-  const readyCount = members.filter((m) => m.isReady || m.isHost).length
+  // L'hôte lance au lieu de se dire prêt : compté et affiché prêt, comme sur les téléphones.
+  const seatReady = (m: TvRoomDto['members'][number]) => m.isReady || m.isHost
+  const readyCount = members.filter(seatReady).length
   const rows = Math.min(ROWS[density], Math.ceil((shown.length + (overflow > 0 ? 1 : 0)) / COLUMNS[density]))
 
   return (
@@ -135,7 +137,7 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
               className={cn(
                 'flex min-w-0 items-center rounded-2xl border',
                 ROW_CLASS[density],
-                m.isReady ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-white/10 bg-white/5'
+                seatReady(m) ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-white/10 bg-white/5'
               )}
             >
               {/* Couronne sur le coin de l'icône, comme la table du téléphone : le nom garde sa largeur. */}
@@ -166,12 +168,12 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
                 <span
                   className={cn(
                     'shrink-0 rounded-full px-4 py-1 text-xl font-bold',
-                    m.isReady ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/80'
+                    seatReady(m) ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/80'
                   )}
                 >
-                  {m.isReady ? t('ready') : t('notReady')}
+                  {seatReady(m) ? t('ready') : t('notReady')}
                 </span>
-              ) : m.isReady ? (
+              ) : seatReady(m) ? (
                 <Check role="img" aria-label={t('ready')} className="h-7 w-7 shrink-0 text-emerald-300" />
               ) : (
                 <Hourglass role="img" aria-label={t('notReady')} className="h-6 w-6 shrink-0 text-white/70" />

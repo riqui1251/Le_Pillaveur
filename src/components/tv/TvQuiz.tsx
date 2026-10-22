@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { MedalDot } from '@/components/online/MedalDot'
+import { rematchCounter, type RematchCounter } from '@/components/online/end-screen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -73,7 +74,9 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
 
   if (state.phase === 'finished') {
-    return <QuizPodium ranking={ranking} rematchVotes={state.rematchVotes?.length ?? 0} soft={soft} iconOf={iconOf} />
+    // Même quorum que les téléphones (OnlineEndScreen) : les membres de la table et leurs seuls votes.
+    const rematch = rematchCounter(room.members, state.rematchVotes ?? [], null)
+    return <QuizPodium ranking={ranking} rematch={rematch} soft={soft} iconOf={iconOf} />
   }
 
   if (state.phase === 'countdown') {
@@ -289,12 +292,12 @@ function QuizPlayerRow({
 
 function QuizPodium({
   ranking,
-  rematchVotes,
+  rematch,
   soft,
   iconOf,
 }: {
   ranking: QuizPlayerView[]
-  rematchVotes: number
+  rematch: RematchCounter
   soft: boolean
   iconOf: (p: QuizPlayerView) => string
 }) {
@@ -305,7 +308,6 @@ function QuizPodium({
   const cols = count <= 6 ? 1 : count <= 12 ? 2 : 3
   const rows = Math.ceil(count / cols)
   const row = count <= 6 ? 'h-16 text-3xl' : count <= 12 ? 'h-14 text-2xl' : 'h-12 text-xl'
-  const humans = ranking.filter((p) => !p.isBot).length
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-8 py-4">
@@ -347,9 +349,9 @@ function QuizPodium({
           </li>
         ))}
       </ol>
-      {rematchVotes > 0 && (
+      {rematch.count > 0 && (
         <p className="text-2xl font-bold text-white/80">
-          {t('rematchPending')} <span className="tabular-nums">{rematchVotes}/{humans}</span>
+          {t('rematchPending')} <span className="tabular-nums">{rematch.count}/{rematch.total}</span>
         </p>
       )}
     </div>

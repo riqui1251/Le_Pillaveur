@@ -71,6 +71,24 @@ describe('TvQuiz — cas limites', () => {
     expect(finished.some((r) => r.view.rematchVotes.length > 0 && r.html.includes('Revanche en cours'))).toBe(true)
   })
 
+  it('revanche : même quorum que les téléphones (membres de la table), pas les votes de ceux qui sont partis', () => {
+    const step = steps.find((s) => {
+      const view = JSON.parse(s.room!.gameStateJson!) as QuizClientView
+      return view.phase === 'finished' && view.rematchVotes.length >= 2
+    })!
+    const view = JSON.parse(step.room!.gameStateJson!) as QuizClientView
+    const [gone, ...stay] = view.rematchVotes
+    const members = step.room!.members.filter((m) => m.userId !== gone)
+    const html = renderToStaticMarkup(
+      createElement(
+        NextIntlClientProvider,
+        { locale: 'fr', messages: fr as unknown as AbstractIntlMessages, timeZone: 'Europe/Paris' } as ComponentProps<typeof NextIntlClientProvider>,
+        createElement(TvQuiz, { room: { ...step.room!, members }, state: view })
+      )
+    )
+    expect(html).toMatch(new RegExp(`>${stay.length}(<!-- -->)?/(<!-- -->)?${members.length}<`))
+  })
+
   it('n’éteint jamais le texte des choix ni les joueurs partis par une opacité globale', () => {
     for (const step of steps) {
       expect(render(step).html).not.toMatch(/\bopacity-(30|60)\b/)
