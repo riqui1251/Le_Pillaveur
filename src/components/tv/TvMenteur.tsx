@@ -176,9 +176,11 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
                 <PlayerAvatarGlyph value={iconOf(p)} />
               </span>
               <span className="min-w-0 flex-1 truncate text-3xl font-bold text-cream">{p.name}</span>
-              <span className="flex shrink-0 items-center gap-2 text-2xl font-bold text-amber-200">
-                <Beer aria-hidden className="h-7 w-7 text-amber-300" /> {p.sipsTotal}
-              </span>
+              {!soft && (
+                <span className="flex shrink-0 items-center gap-2 text-2xl font-bold text-amber-200">
+                  <Beer aria-hidden className="h-7 w-7 text-amber-300" /> {p.sipsTotal}
+                </span>
+              )}
             </li>
           ))}
         </ol>
@@ -284,7 +286,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
                       </span>
                     ))}
                   </span>
-                  {p && p.sipsTotal > 0 && (
+                  {!soft && p && p.sipsTotal > 0 && (
                     <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xl font-bold text-amber-200">
                       <Beer aria-hidden className="h-6 w-6 text-amber-300" /> {p.sipsTotal}
                     </span>
@@ -409,7 +411,7 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
                   <span className="flex items-center gap-1.5 text-white/80">
                     <Dices aria-hidden className="h-6 w-6" /> {p.diceCount}
                   </span>
-                  {p.sipsTotal > 0 && (
+                  {!soft && p.sipsTotal > 0 && (
                     <span className="flex items-center gap-1.5 text-amber-200">
                       <Beer aria-hidden className="h-6 w-6 text-amber-300" /> {p.sipsTotal}
                     </span>

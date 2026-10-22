@@ -67,6 +67,8 @@ export function parseGame1220State(json: string | null): Game1220State | null {
       rematchVotes: raw.rematchVotes ?? [],
       phaseSeq: raw.phaseSeq ?? 0,
       phaseEndsAt: raw.phaseEndsAt ?? null,
+      // Partie lancée avant le compteur : l'historique (borné) est le mieux connu.
+      rollCount: typeof raw.rollCount === 'number' ? raw.rollCount : (raw.history ?? []).length,
     }
   } catch {
     return null
