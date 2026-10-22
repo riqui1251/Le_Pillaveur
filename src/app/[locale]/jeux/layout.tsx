@@ -49,14 +49,21 @@ export default async function JeuxLayout({
     <>
       {/* Mêmes container/gouttières que HubShell : le titre doit s'aligner
           au pixel près sur la grille rendue juste en dessous. */}
-      <div className="container relative mx-auto max-w-6xl px-4 pt-5 sm:px-6 sm:pt-7">
-        <header className="space-y-1.5">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+      {/* En-tête serré : à 375×667 il prenait 6 lignes (h1 sur deux, intro
+          sur quatre) avant le premier réglage. Le h1 garde son texte entier
+          (51 caractères, priorité 1.0 au sitemap) et tient en deux lignes
+          courtes ; l'intro est coupée à deux lignes À L'ÉCRAN seulement — le
+          texte reste entier dans le HTML. */}
+      <div className="container relative mx-auto max-w-6xl px-4 pt-3 sm:px-6 sm:pt-7">
+        <header className="space-y-1">
+          <h1 className="font-display text-lg font-bold leading-tight tracking-tight text-cream sm:text-3xl">
             <span className="bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent">
               {t('h1')}
             </span>
           </h1>
-          <p className="max-w-2xl text-sm text-white/65">{t('intro')}</p>
+          <p className="line-clamp-2 max-w-2xl text-[13px] leading-snug text-cream/80 sm:line-clamp-none sm:text-sm">
+            {t('intro')}
+          </p>
         </header>
       </div>
       {children}

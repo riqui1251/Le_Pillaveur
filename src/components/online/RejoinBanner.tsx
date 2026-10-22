@@ -89,17 +89,17 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
   if (!rejoinable) return null
 
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-3 backdrop-blur-md">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 animate-pulse items-center justify-center rounded-full bg-emerald-500/20">
-          <GameIconById id={rejoinable.gameId} className="h-4 w-4 text-emerald-200" />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 motion-safe:animate-pulse">
+          <GameIconById id={rejoinable.gameId} surface="felt" className="h-5 w-5" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-emerald-100">{t('title')}</p>
           {/* Rebours local : la feuille se réveille seule au changement de
               seconde et s'arrête à l'échéance — c'est le serveur qui remplace,
               à son rythme, et le prochain sondage retirera la bannière. */}
-          <p className="text-xs text-emerald-200/70">
+          <p className="text-xs text-emerald-200/80">
             <PhaseCountdown endsAt={rejoinable.deadlineAt}>
               {({ seconds }) => t('botCountdown', { seconds })}
             </PhaseCountdown>
@@ -107,12 +107,13 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
         </div>
       </div>
       <Button
-        size="sm"
+        variant="primary"
+        size="game"
         disabled={joining}
         onClick={() => onJoin(rejoinable.roomId)}
-        className="h-11 shrink-0 rounded-xl bg-emerald-600 px-4 text-white hover:bg-emerald-500"
+        className="shrink-0 gap-1.5 rounded-xl"
       >
-        <Play className="mr-1 h-3.5 w-3.5" />
+        <Play className="h-4 w-4" />
         {t('cta')}
       </Button>
     </div>

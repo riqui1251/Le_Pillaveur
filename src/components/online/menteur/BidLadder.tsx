@@ -51,8 +51,8 @@ export function BidLadder({ bids, players, iconOf, variant, limit, titled = fals
       {titled && (
         <p
           className={cn(
-            'text-center font-semibold uppercase tracking-wide text-white/70',
-            tv ? 'text-lg' : 'text-[11px]'
+            'text-center font-semibold uppercase tracking-wide',
+            tv ? 'text-lg text-white/70' : 'text-xs text-cream/80'
           )}
         >
           {t('bidsTitle')}
@@ -63,7 +63,7 @@ export function BidLadder({ bids, players, iconOf, variant, limit, titled = fals
         className={cn('flex flex-wrap items-center justify-center', tv ? 'gap-3' : 'gap-1')}
       >
         {start > 0 && (
-          <li aria-hidden className={cn('font-bold', tv ? 'text-2xl text-white/70' : 'text-xs text-white/50')}>
+          <li aria-hidden className={cn('font-bold', tv ? 'text-2xl text-white/70' : 'text-xs text-cream/70')}>
             …
           </li>
         )}
@@ -84,11 +84,17 @@ export function BidLadder({ bids, players, iconOf, variant, limit, titled = fals
                 // et avatar emoji débordaient (348 px pour 317 utiles) et
                 // l'enchère en cours passait seule à la ligne dès 5 joueurs.
                 tv ? 'px-4 py-1.5 text-2xl' : 'px-1 py-0.5 text-xs',
+                // Téléphone aux couleurs du feutre (or pour la dernière) ; la
+                // TV garde l'orange de son plateau.
                 bluff
-                  ? 'border-red-400/50 bg-red-500/10 text-white'
+                  ? cn('border-red-400/50 bg-red-500/10', tv ? 'text-white' : 'text-cream')
                   : index === lastIndex
-                    ? 'border-orange-400/60 bg-orange-500/20 text-white'
-                    : 'border-white/10 bg-white/5 text-white/80'
+                    ? tv
+                      ? 'border-orange-400/60 bg-orange-500/20 text-white'
+                      : 'border-gold/60 bg-gold/20 text-cream'
+                    : tv
+                      ? 'border-white/10 bg-white/5 text-white/80'
+                      : 'border-gold/20 bg-felt-deep/70 text-cream/80'
               )}
             >
               <span className="sr-only">{t('bidChipAria', { name, qty: bid.qty, face: bid.face })}</span>
@@ -100,10 +106,10 @@ export function BidLadder({ bids, players, iconOf, variant, limit, titled = fals
                   </span>
                 )}
                 <span className="tabular-nums">{bid.qty}</span>
-                <span className="text-white/60">×</span>
+                <span className={tv ? 'text-white/60' : 'text-cream/70'}>×</span>
                 <CssDie face={bid.face} size={tv ? 'md' : 'xs'} rem={dieRem} />
                 {bluff && (
-                  <span className={cn('text-red-300', tv ? 'ml-1 text-xl' : 'ml-0.5 text-[11px]')}>
+                  <span className={cn('text-red-300', tv ? 'ml-1 text-xl' : 'ml-0.5 text-xs')}>
                     {t('bluffMark')}
                   </span>
                 )}

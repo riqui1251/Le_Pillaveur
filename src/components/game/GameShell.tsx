@@ -6,11 +6,14 @@ import { Link } from "@/i18n/navigation"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FullscreenButton } from "@/components/ui/fullscreen-button"
+import { useFullscreenLayoutContext } from "@/components/providers/FullscreenLayoutProvider"
 import { cn } from "@/lib/utils"
-import { gameActionBarPadding } from "@/components/game/GameFixedActionBar"
+import { gameActionBarPadding, useGameBottomBarInset } from "@/components/game/GameFixedActionBar"
 
 export interface GameShellProps {
   title: string
+  /** Ligne courte sous le titre (manche, joueur du tour…), en contenu inline. */
+  headerSubtitle?: React.ReactNode
   children: React.ReactNode
   backHref?: string
   onBack?: () => void
@@ -24,8 +27,12 @@ export interface GameShellProps {
   contentClassName?: string
 }
 
+const BACK_BUTTON_CLASS =
+  "shrink-0 border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold"
+
 export function GameShell({
   title,
+  headerSubtitle,
   children,
   backHref = "/jeux",
   onBack,
@@ -41,6 +48,8 @@ export function GameShell({
   contentClassName,
 }: GameShellProps) {
   const t = useTranslations('common')
+  const { isFullscreen } = useFullscreenLayoutContext()
+  const actionBarInset = useGameBottomBarInset("pr-3 sm:pr-4")
   const surfaceStyle = {
     "--game-max-w": typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
   } as React.CSSProperties
@@ -53,36 +62,50 @@ export function GameShell({
         className
       )}
     >
-      <header className="safe-top sticky top-0 z-30 border-b border-gold/20 bg-felt-deep/90 backdrop-blur-xl">
+      {/* Accroché SOUS la barre du site (Navbar sticky z-40, h-14 puis
+          sm:h-[3.75rem]) : à top-0, l'en-tête passait dessous et ses boutons
+          devenaient intouchables. En plein écran, c'est .content-container
+          qui défile, sous la Navbar : là, top-0 colle déjà sous elle. */}
+      <header
+        className={cn(
+          "sticky z-30 border-b border-gold/20 bg-felt-deep/90 backdrop-blur-xl",
+          isFullscreen ? "top-0" : "top-14 sm:top-[3.75rem]"
+        )}
+      >
         <div
-          className="game-surface flex items-center gap-2 py-2 pl-14 pr-3 sm:pr-4"
+          className="game-surface flex items-center gap-2 px-3 py-1.5 sm:px-4"
           style={surfaceStyle}
         >
           {onBack ? (
             <Button
               variant="ghost"
-              size="icon"
+              size="gameIcon"
               onClick={onBack}
               aria-label={t('back')}
-              className="shrink-0 rounded-xl border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold"
+              className={BACK_BUTTON_CLASS}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           ) : (
-            <Link href={backHref} aria-label={t('back')} className="shrink-0">
-              <Button variant="ghost" size="icon" className="rounded-xl border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold">
+            <Button asChild variant="ghost" size="gameIcon" className={BACK_BUTTON_CLASS}>
+              <Link href={backHref} aria-label={t('back')}>
                 <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           )}
 
-          <h1 className="min-w-0 flex-1 truncate text-center font-display text-lg font-bold text-gold sm:text-xl">
-            {title}
-          </h1>
+          <div className="min-w-0 flex-1 text-center">
+            <h1 className="truncate font-display text-lg font-bold text-gold sm:text-xl">
+              {title}
+            </h1>
+            {headerSubtitle && (
+              <p className="truncate text-xs font-medium text-cream/70">{headerSubtitle}</p>
+            )}
+          </div>
 
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-2">
             {headerRight}
-            {showFullscreen && <FullscreenButton />}
+            {showFullscreen && <FullscreenButton className={cn("h-11 w-11 rounded-xl", BACK_BUTTON_CLASS)} />}
           </div>
         </div>
       </header>
@@ -100,9 +123,9 @@ export function GameShell({
       </main>
 
       {actionBar && (
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
           <div
-            className="game-surface flex items-center gap-2 px-3 py-3 sm:px-4"
+            className={cn("game-surface flex items-center gap-2 pl-3 pt-3 sm:pl-4", actionBarInset)}
             style={surfaceStyle}
           >
             {actionBar}

@@ -4,8 +4,8 @@ import { Fragment, useState, useEffect, useCallback, useId, useMemo, useRef, typ
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion'
-import { Dice6, Trophy, ArrowRight, RefreshCw, Home, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Leaf, Volume2, VolumeX, Tv } from 'lucide-react'
+import { motion, AnimatePresence, useMotionValue, useReducedMotion, animate } from 'framer-motion'
+import { Dice6, Trophy, ArrowRight, RefreshCw, Home, Target, Link2, CircleDot, Sparkles, Swords, History, Shuffle, User, Check, Beer, Leaf, Volume2, VolumeX, Tv, ChevronDown, ChevronRight, Shield, Crown, Flag } from 'lucide-react'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PetitBuveurCastEffect, PetitBuveurCastReveal, PetitBuveurCastStage } from '@/lib/cast-types'
@@ -26,6 +26,9 @@ import { cn } from '@/lib/utils'
 import { EndConfetti } from '@/components/online/EndConfetti'
 import { MedalDot } from '@/components/online/MedalDot'
 import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
+import { GameShell } from '@/components/game/GameShell'
+import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
+import { EndActionDock } from '@/components/game/EndActionDock'
 import { recordWinnerStats } from '@/lib/petit-buveur/local-stats'
 // Plateau (grille, cases, pions) : la feuille suit le composant — servie avec
 // ce morceau seulement, pas avec chaque page de /games (idem PetitBuveurOnline).
@@ -97,6 +100,7 @@ import {
   boardHighlightClass,
   boardHighlights,
   buildLocalCastState,
+  castChanges,
   castEffectOf,
   LOCAL_DICE_RESULT_MS,
   LOCAL_DICE_ROLL_MS,
@@ -110,13 +114,16 @@ import {
 import { ShameDice, getDeHonteOutcomeLabel, buildDeHonteDescription } from './shame-dice'
 import { CoinFlip, getPileFaceOutcomeLabel, type CoinSide } from './coin-flip'
 import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/DiceOverlay'
-import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
 import { useSteppedPositions } from '@/components/petit-buveur/useSteppedPositions'
 import { useDrinkDeltas, FloatingDrinkBadge, PulsingCount, drinkIcon } from '@/components/petit-buveur/drink-feedback'
 import { useGameSounds } from '@/hooks/useGameSounds'
 import { isSoundMuted } from '@/lib/sound/game-sounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
-import { getCaseMeta, getCaseFamilyStyle } from '@/lib/petit-buveur/case-families'
+import { CaseToken } from '@/components/petit-buveur/CaseToken'
+import { PbPawn, pbPawnColumns, pbPawnSize } from '@/components/petit-buveur/PbPawn'
+import { PbDifficultyIcon, PbEffectIcon, PB_EFFECT_STYLE, pbEffectKindOf } from '@/components/petit-buveur/effects'
+import { PbDialogClose, allowEscapeClose } from '@/components/petit-buveur/PbDialogClose'
+import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 
 // Vérifier si le navigateur supporte certaines fonctionnalités avancées
 const checkBrowserSupport = () => {
@@ -140,7 +147,6 @@ interface PendingChallenge {
 
 interface ActiveEffectItem {
   id: string
-  icon: string
   title: string
   description: string
   remainingTurns: number
@@ -169,15 +175,36 @@ type WheelSegment = {
 
 const DEFI_WHEEL_DRINKS = 2
 
-const DIFFICULTY_EMOJI: Record<Difficulty, string> = {
-  facile: '🌱',
-  normal: '🌟',
-  difficile: '🔥',
-  extreme: '💀',
-}
+const DIFFICULTIES: readonly Difficulty[] = ['facile', 'normal', 'difficile', 'extreme']
 
 const resolveDifficulty = (value: Difficulty | undefined): Difficulty =>
-  value && value in DIFFICULTY_EMOJI ? value : 'normal'
+  value && DIFFICULTIES.includes(value) ? value : 'normal'
+
+/** Encre sur or (7,2:1) ou crème sur feutre : le chiffre d'un secteur reste lisible sur sa couleur. */
+const INK = '#24201A'
+const CREAM = 'rgb(var(--cream-rgb))'
+
+/**
+ * Secteur de la roue des gorgées : palier de couleur du thème, et la valeur
+ * écrite dessus. La teinte glissait de 5° par gorgée (« 3 » et « 4 »
+ * indiscernables) et rien n'était écrit.
+ */
+function wheelTier(value: number): { fill: string; ink: string } {
+  if (value === 0) return { fill: '#047857', ink: CREAM }
+  if (value <= 4) return { fill: 'rgb(var(--gold-rgb))', ink: INK }
+  if (value <= 8) return { fill: '#B8862F', ink: INK }
+  return { fill: 'rgb(var(--suit-red-rgb))', ink: CREAM }
+}
+
+/** Roue des défis : gorgées en rouge, sauvé en vert, défis en or et cuivre alternés. */
+function defiTier(kind: DefiWheelSegmentKind | undefined, index: number): { fill: string; ink: string } {
+  if (kind === 'drink') return { fill: 'rgb(var(--suit-red-rgb))', ink: CREAM }
+  if (kind === 'safe') return { fill: '#047857', ink: CREAM }
+  return index % 2 === 0 ? { fill: 'rgb(var(--gold-rgb))', ink: INK } : { fill: '#B8862F', ink: INK }
+}
+
+/** Initiale d'un joueur pour les secteurs du duel. */
+const initialOf = (name: string | undefined) => (name?.trim().charAt(0) || '?').toUpperCase()
 
 function tWithHtml(
   t: PetitBuveurT,
@@ -243,13 +270,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const debMessages = useMemo(() => t.raw('game.messages.deb') as string[], [t])
   const drinkingMessages = useMemo(() => t.raw('game.messages.drinking') as string[], [t])
 
-  const difficultyNames = useMemo(() => ({
-    facile: `${DIFFICULTY_EMOJI.facile} ${t('difficultyLabels.facile')}`,
-    normal: `${DIFFICULTY_EMOJI.normal} ${t('difficultyLabels.normal')}`,
-    difficile: `${DIFFICULTY_EMOJI.difficile} ${t('difficultyLabels.difficile')}`,
-    extreme: `${DIFFICULTY_EMOJI.extreme} ${t('difficultyLabels.extreme')}`,
-  }), [t])
-
   const generateWheelSegments = useCallback((): WheelSegment[] => {
     const n = 15
     const arr: WheelSegment[] = []
@@ -299,7 +319,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   )
   
   // État pour stocker les capacités du navigateur
-  const [browserCapabilities, setBrowserCapabilities] = useState({
+  const [, setBrowserCapabilities] = useState({
     advancedAnimations: true,
     backgroundClipText: true,
     isMobile: false,
@@ -418,6 +438,8 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [showTargetDialog, setShowTargetDialog] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [showVictoryScreen, setShowVictoryScreen] = useState(false);
+  /** Détail des effets en cours (feuille ouverte depuis la rangée de pastilles). */
+  const [showEffectsSheet, setShowEffectsSheet] = useState(false);
 
   // Source de vérité synchrone : les résolutions partent souvent d'un setTimeout
   // (fermeture d'un rendu antérieur) et liraient sinon un état périmé.
@@ -445,6 +467,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const [boardSnapKey, setBoardSnapKey] = useState(0)
   const snapBoard = () => setBoardSnapKey(k => k + 1)
   const { positions: shownPositions } = useSteppedPositions(positionsById, { snapKey: boardSnapKey })
+  // Le pion qui marche reste à l'écran : sous les effets et le classement, il
+  // sautait de case en case sans que personne le voie.
+  const reducedMotion = useReducedMotion()
+  const boardCellRefs = useRef<(HTMLDivElement | null)[]>([])
+  const activeShownCase = players[currentPlayer] ? shownPosition(players[currentPlayer], shownPositions) : null
+  useEffect(() => {
+    if (activeShownCase == null) return
+    boardCellRefs.current[activeShownCase]?.scrollIntoView({
+      block: 'nearest',
+      behavior: reducedMotion ? 'auto' : 'smooth',
+    })
+  }, [activeShownCase, reducedMotion])
   const drinksById = useMemo(() => {
     const rec: Record<string, number> = {}
     for (const p of players) rec[p.id] = p.drinks
@@ -552,9 +586,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   const focusDialogOnMount = useCallback((el: HTMLElement | null) => {
     el?.focus({ preventScroll: true })
   }, [])
-  const headerRef = useRef<HTMLElement | null>(null)
-  const mainRef = useRef<HTMLElement | null>(null)
-  const footerRef = useRef<HTMLElement | null>(null)
+  const shellRef = useRef<HTMLDivElement | null>(null)
   const customModalOpen =
     showDuelDialog ||
     showTargetDialog ||
@@ -563,9 +595,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     (showVictoryScreen && Boolean(winner)) ||
     (showNotification && Boolean(caseNotification))
   useEffect(() => {
-    for (const el of [headerRef.current, mainRef.current, footerRef.current]) {
-      if (el) el.inert = customModalOpen
-    }
+    if (shellRef.current) shellRef.current.inert = customModalOpen
   })
 
   // Détection des fonctionnalités du navigateur au chargement
@@ -1140,7 +1170,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (isPlayerProtected(player)) {
         items.push({
           id: `prot-${player.id}`,
-          icon: '🛡️',
           title: t('game.effects.protection'),
           description: t('game.effects.protectionDesc'),
           remainingTurns: getProtectionRemainingRounds(player),
@@ -1151,7 +1180,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (player.cursed > 0) {
         items.push({
           id: `curse-${player.id}`,
-          icon: '👻',
           title: t('game.effects.curse'),
           description: t('game.effects.curseDesc'),
           remainingTurns: player.cursed,
@@ -1163,7 +1191,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         const linked = players.find(p => p.id === player.linkedTo)
         items.push({
           id: `link-${player.id}`,
-          icon: '🔗',
           title: t('game.effects.chain'),
           description: t('game.effects.chainDesc'),
           remainingTurns: player.linkedTurns,
@@ -1175,7 +1202,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (player.skipNextTurn) {
         items.push({
           id: `skip-${player.id}`,
-          icon: '⏭️',
           title: t('game.effects.skipTurn'),
           description: t('game.effects.skipTurnDesc'),
           remainingTurns: 1,
@@ -1186,7 +1212,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (player.anchored) {
         items.push({
           id: `anchor-${player.id}`,
-          icon: '⚓',
           title: t('game.effects.anchor'),
           description: t('game.effects.anchorDesc'),
           remainingTurns: 1,
@@ -1198,7 +1223,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         const mirrorTarget = players.find(p => p.id === player.mirrorDrinkTargetId)
         items.push({
           id: `mirror-${player.id}`,
-          icon: '🪞',
           title: t('game.effects.mirror'),
           description: mirrorTarget
             ? t('game.effects.mirrorDescOneWay', { a: player.name, b: mirrorTarget.name })
@@ -1228,18 +1252,18 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       if (e.id.startsWith('link-')) {
         const linked = players.find(p => p.id === e.player.linkedTo)
         if (linked) {
-          return `🔗 ${formatPlayerNameHtml(e.player)} → ${formatPlayerNameHtml(linked)} (${t('game.turnsRemaining', { count: e.player.linkedTurns })})`
+          return `${formatPlayerNameHtml(e.player)} → ${formatPlayerNameHtml(linked)} · ${e.title} (${t('game.turnsRemaining', { count: e.player.linkedTurns })})`
         }
       }
       if (e.id.startsWith('prot-')) {
-        return `🛡️ ${tWithHtml(t, 'game.effects.protectedStatus', { player: formatPlayerNameHtml(e.player) })}`
+        return tWithHtml(t, 'game.effects.protectedStatus', { player: formatPlayerNameHtml(e.player) })
       }
       if (e.id.startsWith('curse-')) {
-        return `👻 ${tWithHtml(t, 'game.effects.cursedStatus', { player: formatPlayerNameHtml(e.player) }, { count: e.player.cursed })}`
+        return tWithHtml(t, 'game.effects.cursedStatus', { player: formatPlayerNameHtml(e.player) }, { count: e.player.cursed })
       }
       // Miroir inversé, passe-tour, ancre : jamais affichés comme une malédiction.
       const linked = e.linkedPlayer ? ` → ${formatPlayerNameHtml(e.linkedPlayer)}` : ''
-      return `${e.icon} ${formatPlayerNameHtml(e.player)}${linked} · ${e.title}`
+      return `${formatPlayerNameHtml(e.player)}${linked} · ${e.title}`
     })
     return buildEffectsSummaryHtml(t, lines)
   }, [players, t])
@@ -2043,109 +2067,133 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     ) : (
       <span
         className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded-md border border-gold/20 bg-black/25 font-bold tabular-nums text-cream/60',
-          size === 'sm' ? 'h-5 min-w-[1.25rem] px-1 text-[10px]' : 'h-6 min-w-[1.5rem] px-1.5 text-xs'
+          'inline-flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border border-gold/20 bg-black/25 text-xs font-bold tabular-nums text-cream/80',
+          size === 'sm' ? 'px-1' : 'px-1.5'
         )}
       >
         {index + 1}
       </span>
     )
 
-  /** Bandeau classement compact (réutilisé dans les modales de ciblage). */
-  const renderCompactRanking = () => (
-    <div className="rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
-      <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
-        {t('game.ranking')}
-      </p>
-      <ul className="space-y-1">
-        {getPlayerRanking().map((player, index) => {
-          const isActive = players[currentPlayer]?.id === player.id
-          return (
-            <li
-              key={player.id}
-              className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm ${
-                isActive ? 'bg-gold/[0.15]' : ''
-              }`}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                {renderRankBadge(index, 'sm')}
-                <PlayerIcon player={player} size="sm" className="h-5 w-5 shrink-0 text-xs" />
-                <PlayerName
-                  player={player}
-                  className={`truncate font-medium ${isActive ? 'text-gold' : 'text-cream'}`}
-                />
-              </span>
-              <span className="shrink-0 text-[11px] text-cream/60">
-                {t('game.caseLabel', { number: shownCaseNumber(player) })}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
-  )
-
-  const renderPlayerChip = (player: GamePlayer, size: 'sm' | 'md' = 'sm') => {
-    const textSize = size === 'md' ? 'text-sm' : 'text-xs'
-    const iconSize = size === 'md' ? 'h-8 w-8 text-base' : 'h-6 w-6 text-sm'
-    return (
-      <div className="flex min-w-0 items-center gap-1.5">
-        <PlayerIcon player={player} size={size} className={`${iconSize} shrink-0`} />
-        <PlayerName player={player} className={`${textSize} max-w-[6rem] truncate font-semibold text-cream sm:max-w-[8rem]`} />
-      </div>
-    )
-  }
-
-  const renderActiveEffectCard = (effect: ActiveEffectItem) => (
-    <div
-      key={effect.id}
-      className={`rounded-xl border p-3 ${effect.accentClass}`}
+  /** Rang du joueur dans la table : couleur de son pion, la même que sur la TV. */
+  const playerIndexOf = (id: string) => Math.max(0, players.findIndex(p => p.id === id))
+  const renderPawn = (
+    player: GamePlayer,
+    size: number,
+    opts?: { active?: boolean; className?: string; children?: ReactNode }
+  ) => (
+    <PbPawn
+      icon={player.preferences?.icon ? <PlayerAvatarGlyph value={player.preferences.icon} /> : initialOf(player.name)}
+      colorIndex={playerIndexOf(player.id)}
+      size={size}
+      active={opts?.active}
+      className={opts?.className}
     >
-      <div className="flex items-start gap-3">
-        <span className="text-2xl leading-none" aria-hidden="true">{effect.icon}</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-            <span className="font-display text-sm font-bold text-cream">{effect.title}</span>
-            <span className="shrink-0 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-[11px] font-semibold text-gold">
-              {t('game.effects.turnsLeft', { count: effect.remainingTurns })}
-            </span>
-          </div>
-          {effect.linkedPlayer ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {renderPlayerChip(effect.player, 'md')}
-              <span className="shrink-0 text-base font-bold text-gold" aria-hidden="true">→</span>
-              {renderPlayerChip(effect.linkedPlayer, 'md')}
-            </div>
-          ) : (
-            <div className="mt-1">{renderPlayerChip(effect.player)}</div>
-          )}
-          <p className="mt-1.5 text-xs leading-relaxed text-cream/60">{effect.description}</p>
-        </div>
-      </div>
+      {opts?.children}
+    </PbPawn>
+  )
+
+  /** Cible des dialogues « Qui cibler ? » et défi en chaîne : une ligne de 56 px (pion, nom, case). */
+  const renderTargetTile = (player: GamePlayer, onPick: () => void) => (
+    <button
+      key={player.id}
+      type="button"
+      onClick={onPick}
+      className="flex h-14 w-full items-center gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 text-left text-cream transition-all hover:border-gold/60 hover:bg-gold/[0.15] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+    >
+      {renderPawn(player, 28)}
+      <PlayerName player={player} className="min-w-0 flex-1 truncate text-[15px] font-semibold" />
+      <span className="shrink-0 rounded-full border border-gold/20 bg-black/25 px-2 py-0.5 text-xs font-medium text-cream/80">
+        {t('game.caseLabel', { number: player.position + 1 })}
+      </span>
+    </button>
+  )
+
+  const renderPlayerChip = (player: GamePlayer) => (
+    <div className="flex min-w-0 items-center gap-1.5">
+      {renderPawn(player, 20)}
+      <PlayerName player={player} className="max-w-[7rem] truncate text-sm font-semibold text-cream sm:max-w-[9rem]" />
     </div>
   )
 
-  const renderActiveEffectsSection = (className = '') => {
-    const items = collectActiveEffects()
-    if (items.length === 0) return null
+  const renderActiveEffectCard = (effect: ActiveEffectItem) => {
+    const kind = pbEffectKindOf(effect.id)
     return (
-      <div className={`rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 ${className}`}>
-        <div className="mb-3 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 shrink-0 text-gold" />
-          <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.effects.activeTitle')}</span>
-          <span className="rounded-lg border border-gold/30 bg-gold/10 px-2 py-0.5 font-display text-[11px] font-bold text-gold">
-            {items.length}
-          </span>
-        </div>
-        <div className="space-y-2">
-          {items.map(effect => renderActiveEffectCard(effect))}
+      <div
+        key={effect.id}
+        className={cn('rounded-xl border p-3', kind ? PB_EFFECT_STYLE[kind].chip : effect.accentClass)}
+      >
+        <div className="flex items-start gap-3">
+          {kind && <PbEffectIcon kind={kind} className="mt-0.5 h-6 w-6" />}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+              <span className="font-display text-base font-bold text-cream">{effect.title}</span>
+              <span className="shrink-0 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-xs font-semibold text-gold">
+                {t('game.effects.turnsLeft', { count: effect.remainingTurns })}
+              </span>
+            </div>
+            {effect.linkedPlayer ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {renderPlayerChip(effect.player)}
+                <span className="shrink-0 text-base font-bold text-gold" aria-hidden="true">→</span>
+                {renderPlayerChip(effect.linkedPlayer)}
+              </div>
+            ) : (
+              <div className="mt-1.5">{renderPlayerChip(effect.player)}</div>
+            )}
+            <p className="mt-1.5 text-sm leading-snug text-cream/70">{effect.description}</p>
+          </div>
         </div>
       </div>
     )
   }
 
-  const renderActiveEffectsPanel = () => renderActiveEffectsSection('mt-4')
+  /**
+   * Effets en cours sous le plateau : une rangée de pastilles (pion, icône,
+   * tours restants) qui ouvre le détail. Les cartes de 110 px par effet
+   * repoussaient le plateau hors de l'écran dès qu'un effet était actif.
+   */
+  const renderEffectsRow = (effects: ActiveEffectItem[]) => {
+    if (effects.length === 0) return null
+    return (
+      <button
+        type="button"
+        onClick={() => setShowEffectsSheet(true)}
+        aria-haspopup="dialog"
+        className="flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-gold/20 bg-felt-deep/70 px-3 py-2 text-left transition-colors hover:bg-felt-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+      >
+        <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+        <span className="sr-only">{t('game.effects.activeTitle')} :</span>
+        <span className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          {effects.map(effect => {
+            const kind = pbEffectKindOf(effect.id)
+            return (
+              <span
+                key={effect.id}
+                className={cn(
+                  'inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border pl-1.5 pr-2 text-sm font-semibold text-cream',
+                  kind ? PB_EFFECT_STYLE[kind].chip : effect.accentClass
+                )}
+              >
+                {renderPawn(effect.player, 18)}
+                {kind && <PbEffectIcon kind={kind} className="h-4 w-4" />}
+                <span className="truncate">{effect.player.name}</span>
+                <span className="sr-only">
+                  {effect.title} · {t('game.effects.turnsLeft', { count: effect.remainingTurns })}
+                </span>
+                <span aria-hidden className="rounded-full bg-black/30 px-1.5 text-xs tabular-nums">
+                  {effect.remainingTurns}
+                </span>
+              </span>
+            )
+          })}
+        </span>
+        <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-cream/70" />
+      </button>
+    )
+  }
 
+  /** Action précédente, sous le plateau : une ligne, le détail se déplie. */
   const renderLastActionHistory = () => {
     if (!lastActionHistory) return null
     const { actorId, targetId, caseType, turnNumber } = lastActionHistory
@@ -2156,36 +2204,32 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     const effectHtml = buildLastActionHtml(lastActionHistory, notificationCtx)
 
     return (
-      <div className="mt-2 rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
-        <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <History className="h-3.5 w-3.5 shrink-0 text-gold/75" />
-          <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
-            {t('game.history.title')}
+      <details className="group rounded-2xl border border-gold/20 bg-felt-deep/70">
+        <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-2.5 rounded-2xl px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold [&::-webkit-details-marker]:hidden">
+          <History aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+          <CaseToken caseType={caseType} size={24} />
+          <span className="min-w-0 flex-1 text-sm leading-snug text-cream">
+            <span className="sr-only">{t('game.history.title')} · </span>
+            <span className="text-cream/70">{t('game.turn', { count: turnNumber })} · </span>
+            <PlayerName player={actor} className="font-semibold" />
+            <span className="text-cream/70"> · </span>
+            <span className="font-semibold text-gold">{caseLabel}</span>
+            {target && (
+              <>
+                <span className="text-cream/70"> → </span>
+                <PlayerName player={target} className="font-semibold" />
+              </>
+            )}
           </span>
-          <span className="text-[11px] text-cream/60">{t('game.turn', { count: turnNumber })}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-          <PlayerName player={actor} className="font-semibold text-cream" />
-          <span className="text-cream/50">·</span>
-          <span className="font-medium text-gold">{caseLabel}</span>
-          {target ? (
-            <>
-              <span className="text-cream/50">→</span>
-              <PlayerName player={target} className="font-semibold text-cream" />
-            </>
-          ) : (
-            <span className="text-[11px] text-cream/60">{t('game.history.selfTarget')}</span>
-          )}
-        </div>
+          <ChevronDown aria-hidden className="h-4 w-4 shrink-0 text-cream/70 transition-transform group-open:rotate-180" />
+        </summary>
         <div
-          className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-cream/60 [&_.player-name-special]:align-baseline [&_strong]:text-cream"
+          className="border-t border-gold/20 px-3 pb-3 pt-2 text-[13px] leading-snug text-cream/80 [&_.player-name-special]:align-baseline [&_strong]:text-cream"
           dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(effectHtml) }}
         />
-      </div>
+      </details>
     )
   }
-
-  const renderActiveEffectsChips = () => renderActiveEffectsSection('mt-3')
 
   const handleChainPlayerSelect = (targetPlayerId: string) => {
     setShowChainDialog(false)
@@ -2228,59 +2272,24 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     recordLastAction(currentPlayerObj, 'defi-chaine', chainOutcome, targetPlayerObj)
   }
 
-  const renderPlayerToken = (player: GamePlayer, playersOnCaseCount: number) => {
+  const renderBoardPawn = (player: GamePlayer, onCase: number) => {
     const isActive = player.id === players[currentPlayer]?.id
-    const iconSize =
-      playersOnCaseCount === 1
-        ? 'h-full w-full min-h-[1.75rem] min-w-[1.75rem] text-xl sm:text-2xl'
-        : playersOnCaseCount <= 2
-          ? 'h-[95%] w-[95%] text-base sm:text-xl'
-          : playersOnCaseCount <= 4
-            ? 'h-[92%] w-[92%] text-sm sm:text-lg'
-            : 'h-[88%] w-[88%] text-xs sm:text-base'
     return (
-      <motion.div
+      <motion.span
         key={player.id}
         layoutId={`pb-token-${player.id}`}
         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-        className={cn(
-          'flex h-full w-full items-center justify-center',
-          isActive ? 'z-10' : 'z-0',
-          !isActive && playersOnCaseCount > 1 && 'opacity-90'
-        )}
+        className={cn('relative flex items-center justify-center', isActive ? 'z-10' : 'z-0')}
       >
-        <PlayerIcon
-          player={player}
-          size="md"
-          className={cn(
-            iconSize,
-            isActive && 'scale-110 ring-2 ring-gold rounded-full'
-          )}
-        />
-      </motion.div>
+        {renderPawn(player, pbPawnSize(onCase), {
+          active: isActive,
+          children: (
+            <FloatingDrinkBadge placement="above" deltas={drinkDeltas.filter(d => d.playerId === player.id)} />
+          ),
+        })}
+      </motion.span>
     )
   }
-
-  // Fonction pour rendu conditionnel des animations
-  const renderAnimatedComponent = (component: React.ReactNode, animationProps = {}) => {
-    if (browserCapabilities.isMobile || !browserCapabilities.advancedAnimations) {
-      // Version simplifiée pour mobile sans animation
-      return <div className="mobile-friendly-animation">{component}</div>;
-    }
-    
-    // Version complète avec animation pour desktop
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ duration: 0.3 }}
-        {...animationProps}
-      >
-        {component}
-      </motion.div>
-    );
-  };
 
   // Fonctions utilitaires pour la roue des gorgées
   const toRad = (deg: number) => (Math.PI / 180) * deg
@@ -2329,20 +2338,6 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     osc.start(now)
     osc.stop(now + 0.08)
   }
-
-  const colorForDuelSegment = (v: number): string => (v === 1 ? '#10b981' : '#ef4444')
-
-  // Couleur basée sur la valeur (0 = SAFE → vert; 1..12 → jaune→orange→rouge)
-  const colorForValue = (v: number): string => {
-    if (v === 0) return '#10b981' // SAFE vert
-    const ratio = Math.max(0, Math.min(1, v / 12))
-    const hue = 60 - 60 * ratio // 60 (jaune) → 0 (rouge)
-    const saturation = 85
-    const lightness = 55 - 10 * ratio // plus élevé = plus sombre
-    return `hsl(${hue}deg ${saturation}% ${lightness}%)`
-  }
-
-
 
   // Fonction pour faire tourner la roue
   const spinWheel = async () => {
@@ -2617,7 +2612,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   if (!gameStarted) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-cream/70">
-        <p className="text-sm text-cream/50">{t('game.loading')}</p>
+        <p className="text-sm text-cream/70">{t('game.loading')}</p>
       </div>
     )
   }
@@ -2630,264 +2625,251 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     return 'pb-board-case'
   }
 
-  const showDiceActionBar = !hasBlockingDialog() && !(showNotification && caseNotification)
+  const currentGamePlayer = players[currentPlayer]
+  const activeEffects = collectActiveEffects()
+  const diffKey = resolveDifficulty(gameDifficulty)
+  const headerButtonClass = 'border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold'
+  // Le nom du joueur dans le bouton : un seul téléphone circule, c'était
+  // souvent le mauvais joueur qui lançait.
+  const rollLabel = isDiceRolling
+    ? t('game.rolling')
+    : hasBlockingDialog() || (showNotification && caseNotification)
+      ? t('game.actionInProgress')
+      : currentGamePlayer
+        ? t('game.rollDiceFor', { name: currentGamePlayer.name })
+        : t('game.rollDice')
+
+  // Barre du pouce, gardée pendant les fenêtres (elles la recouvrent) : la
+  // retirer faisait sauter le plateau. À l'écran de fin, le dock la remplace.
+  const actionBar = winner ? undefined : (
+    <>
+      {currentGamePlayer && (
+        <span
+          aria-hidden
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-gold/60 bg-gold/[0.15]"
+        >
+          {renderPawn(currentGamePlayer, 30)}
+        </span>
+      )}
+      <Button
+        type="button"
+        variant="primary"
+        size="gameLg"
+        onClick={rollDice}
+        disabled={!canRollDice()}
+        className="min-w-0 flex-1 touch-manipulation select-none gap-2"
+      >
+        <span className="truncate">{rollLabel}</span>
+        <Dice6 aria-hidden className={cn('h-5 w-5 shrink-0', isDiceRolling && 'motion-safe:animate-spin')} />
+      </Button>
+    </>
+  )
 
   return (
-    /* grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée (en-tête)
-       étire la colonne implicite au-delà du viewport → débordement mobile. */
-    <div className="relative grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden bg-felt text-cream">
-      {/* En-tête */}
-      <header ref={headerRef} className="relative z-30 shrink-0 border-b border-gold/20 bg-felt-deep/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <button
-            onClick={onGameEnd}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-black/20 text-cream/70 transition-all hover:text-gold"
-            aria-label={t('game.back')}
-          >
-            ←
-          </button>
-          <h1 className="min-w-0 flex-1 truncate text-center font-display text-base font-bold text-gold sm:text-lg">
-            {t('game.title')}
-          </h1>
-          <span className="shrink-0 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1 text-[11px] font-semibold text-gold">
-            {difficultyNames[gameDifficulty]}
-          </span>
-          <button
-            onClick={toggleMuted}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-black/20 text-cream/70 transition-all hover:text-gold"
-            aria-label={muted ? t('game.soundOn') : t('game.soundOff')}
-          >
-            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </button>
-          <button
-            onClick={toggleCast}
-            aria-pressed={castActive}
-            aria-label={tTv('castToTv')}
-            className={cn(
-              'flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-bold transition-all',
-              castActive ? 'border-gold/60 bg-gold/[0.15] text-gold' : 'border-gold/20 bg-black/20 text-cream/70 hover:text-gold',
-            )}
-          >
-            <Tv className="h-4 w-4 shrink-0" /> {tTv('castShort')}
-          </button>
-        </div>
-        {castActive && castCode && (
-          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2 border-t border-gold/20 bg-gold/10 px-4 py-1.5 text-center text-xs text-cream">
-            <Tv className="h-3.5 w-3.5 shrink-0 text-gold" /> {tTv('castHint')}{' '}
-            <span className="font-mono text-sm font-black tracking-widest text-gold">{castCode}</span>
-          </div>
-        )}
-      </header>
-
-      {/* Zone scrollable : plateau + classement uniquement (barre d'action en footer fixe) */}
-      <main ref={mainRef} className="relative min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-        <div className="mx-auto flex w-full max-w-3xl flex-col space-y-3 px-3 py-3 pb-4 sm:px-4">
-      {/* HUD tour + joueur actif */}
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-3">
-        <span className="shrink-0 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1 font-display text-xs font-bold text-gold">
-          {t('game.turn', { count: turnCount })}
-        </span>
-        <div className="min-w-0 flex-1 text-center">
-          <p className="mb-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.turnOf')}</p>
-          <div className="truncate font-display font-bold text-cream">
-            <PlayerName player={players[currentPlayer]} />
-          </div>
-        </div>
-        <span className="shrink-0 font-display text-xs font-medium text-gold">
-          {players[currentPlayer] ? shownCaseNumber(players[currentPlayer]) : '—'}/{boardSize}
-        </span>
-      </div>
-
-      {renderLastActionHistory()}
-
-      {/* Case actuelle — carte flip teintée par la famille de case */}
-      {caseNotification && !showNotification && !showTargetDialog && !showDuelDialog && !showWheel && !showChanceDialog && !showExchangeDialog && !showChainDialog && !showTeleportDialog && !showVoteDialog && !showDeHonteDialog && !showPileFaceDialog && (
-        <CaseRevealCard
-          className="mt-3"
-          caseType={caseNotification.case.type}
-          label={getCaseTypeLabel(caseNotification.case.type, t)}
-          revealKey={`${turnCount}:${caseNotification.case.type}:${pendingPosition ?? ''}`}
-          headerExtra={
-            <span className="text-sm font-semibold text-cream/70">
-              {t('game.caseLabel', { number: players[currentPlayer]?.position != null ? players[currentPlayer].position + 1 : '—' })}
-            </span>
+    <>
+      {/* Enveloppe rendue inerte quand une fenêtre maison est ouverte (les
+          fenêtres vivent hors d'elle) : sinon Tab atteint « ← » sous le voile. */}
+      <div ref={shellRef} className="flex min-h-0 w-full flex-1 flex-col">
+        <GameShell
+          title={t('game.title')}
+          headerSubtitle={
+            <>
+              {t('game.turn', { count: turnCount })} ·{' '}
+              <PbDifficultyIcon difficulty={diffKey} className="inline h-3.5 w-3.5 align-[-2px] text-gold" />{' '}
+              {t(`difficultyLabels.${diffKey}`)}
+            </>
           }
-        >
-          <div
-            className="mt-2 max-h-28 overflow-y-auto text-sm leading-relaxed text-cream/90 [&_strong]:text-gold"
-            dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(activeNotificationHtml) }}
-          />
-        </CaseRevealCard>
-      )}
-
-      {collectActiveEffects().length > 0 && !showNotification && renderActiveEffectsChips()}
-
-      {/* Plateau */}
-      <div className="pb-board">
-        <div className="pb-board-grid grid grid-cols-6 gap-2 sm:gap-2.5">
-        {Array.from({ length: boardSize }).map((_, index) => {
-          const playersOnCase = players.filter(p => shownPosition(p, shownPositions) === index)
-          const isStart = index === 0
-          const isFinish = index === boardSize - 1
-          const gridCols = playersOnCase.length > 4
-            ? 'grid-cols-3'
-            : playersOnCase.length > 2
-              ? 'grid-cols-2'
-              : 'grid-cols-1'
-
-          return (
-            <div
-              key={index}
-              className={cn(
-                'relative flex aspect-square items-center justify-center rounded-lg sm:rounded-xl min-h-[2.75rem] sm:min-h-[3.25rem]',
-                getBoardCaseBaseClass(index),
-                boardHighlightClass(index, highlights),
-                isFinish && 'min-h-[3.25rem] sm:min-h-[4rem]'
-              )}
-            >
-              {!isFinish && (
-                <span className={cn(
-                  'absolute left-0.5 top-0.5 z-[1] pb-board-case-num text-[11px] font-semibold sm:left-1 sm:top-1 sm:text-xs',
-                  isStart ? 'text-emerald-400/70' : 'text-cream/75'
-                )}>
-                  {isStart ? '🏁' : index + 1}
-                </span>
-              )}
-              {isFinish && playersOnCase.length === 0 && (
-                <span className="pb-board-finish-icon text-3xl sm:text-4xl" aria-hidden>🏆</span>
-              )}
-              {isFinish && playersOnCase.length > 0 && (
-                <span className="absolute right-0.5 top-0.5 z-[1] pb-board-finish-icon text-base sm:text-lg" aria-hidden>🏆</span>
-              )}
-              <div className={cn(
-                'pb-board-players absolute inset-0 grid place-items-center gap-0.5 p-1 sm:p-1.5',
-                gridCols,
-                isFinish && playersOnCase.length === 0 && 'hidden'
-              )}>
-                {playersOnCase.map((player) => renderPlayerToken(player, playersOnCase.length))}
-              </div>
-            </div>
-          )
-        })}
-        </div>
-      </div>
-
-      {/* Classement — défilement horizontal */}
-      <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-        <div className="mb-2.5 flex items-center gap-2">
-          <Trophy className="h-3.5 w-3.5 text-gold" />
-          <h3 className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.ranking')}</h3>
-        </div>
-        <div className="flex gap-2 overflow-x-auto p-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {getPlayerRanking().map((player, index) => {
-            const isActive = players[currentPlayer]?.id === player.id
-            const rankBorder =
-              index === 0
-                ? 'border-gold/50 bg-gold/10'
-                : index === 1
-                  ? 'border-cream/30 bg-black/20'
-                  : index === 2
-                    ? 'border-[#D3A275]/40 bg-[#8C5F35]/20'
-                    : 'border-gold/20 bg-black/20'
-            return (
-              <div
-                key={player.id}
+          onBack={onGameEnd}
+          maxWidth={768}
+          contentClassName="gap-3 px-0 pt-3 sm:px-4"
+          headerRight={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="gameIcon"
+                onClick={toggleMuted}
+                aria-label={muted ? t('game.soundOn') : t('game.soundOff')}
+                className={headerButtonClass}
+              >
+                {muted ? <VolumeX aria-hidden className="h-5 w-5" /> : <Volume2 aria-hidden className="h-5 w-5" />}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="gameIcon"
+                onClick={toggleCast}
+                aria-pressed={castActive}
+                aria-label={tTv('castToTv')}
                 className={cn(
-                  'relative flex w-[8.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[9.5rem] sm:p-2.5',
-                  isActive
-                    ? 'border-gold/60 bg-gold/[0.15] shadow-[inset_0_0_0_1px_rgb(var(--gold-rgb)/0.35)]'
-                    : rankBorder
+                  headerButtonClass,
+                  castActive && 'border-gold/60 bg-gold/[0.15] text-gold hover:bg-gold/20'
                 )}
               >
-                <FloatingDrinkBadge deltas={drinkDeltas.filter((d) => d.playerId === player.id)} />
-                {renderRankBadge(index)}
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center gap-1.5">
-                    <PlayerIcon player={player} size="sm" className="h-6 w-6 shrink-0 text-sm" />
-                    <PlayerName player={player} className="min-w-0 truncate text-xs font-semibold text-cream" />
+                <Tv aria-hidden className="h-5 w-5" />
+              </Button>
+            </>
+          }
+          actionBar={actionBar}
+        >
+          {castActive && castCode && (
+            <div className="flex items-center justify-center gap-2 rounded-2xl border border-gold/30 bg-gold/10 px-3 py-2 text-center text-sm text-cream">
+              <Tv aria-hidden className="h-4 w-4 shrink-0 text-gold" /> {tTv('castHint')}{' '}
+              <span className="font-mono text-base font-black tracking-widest text-gold">{castCode}</span>
+            </div>
+          )}
+
+          {/* Plateau EN TÊTE : le pion qui marche reste sous les yeux (rien au-dessus
+              ne le repousse sous le pli, même avec des effets en cours). */}
+          <div className="pb-board">
+            <div className="pb-board-grid grid grid-cols-6 gap-1.5 sm:gap-2.5">
+              {Array.from({ length: boardSize }).map((_, index) => {
+                const playersOnCase = players.filter(p => shownPosition(p, shownPositions) === index)
+                const isStart = index === 0
+                const isFinish = index === boardSize - 1
+
+                return (
+                  <div
+                    key={index}
+                    ref={el => {
+                      boardCellRefs.current[index] = el
+                    }}
+                    className={cn(
+                      'relative flex aspect-square min-h-[2.75rem] scroll-mb-28 scroll-mt-32 items-center justify-center rounded-lg sm:min-h-[3.25rem] sm:rounded-xl',
+                      getBoardCaseBaseClass(index),
+                      boardHighlightClass(index, highlights)
+                    )}
+                  >
+                    {!isFinish && (
+                      <span
+                        className={cn(
+                          'pb-board-case-num absolute left-0.5 top-0.5 z-[3] font-semibold sm:left-1 sm:top-1',
+                          isStart && 'text-xs text-emerald-300'
+                        )}
+                      >
+                        {isStart ? <Flag aria-hidden className="h-3 w-3" /> : index + 1}
+                      </span>
+                    )}
+                    {isFinish && playersOnCase.length === 0 && (
+                      <Trophy aria-hidden className="pb-board-finish-icon h-7 w-7 text-gold sm:h-9 sm:w-9" />
+                    )}
+                    {isFinish && playersOnCase.length > 0 && (
+                      <Trophy aria-hidden className="pb-board-finish-icon absolute right-0.5 top-0.5 z-[3] h-4 w-4 text-gold" />
+                    )}
+                    {playersOnCase.length > 0 && (
+                      <div
+                        className={cn(
+                          'pb-board-players absolute inset-0 grid place-content-center place-items-center gap-0.5 p-1',
+                          pbPawnColumns(playersOnCase.length)
+                        )}
+                      >
+                        {playersOnCase.map(player => renderBoardPawn(player, playersOnCase.length))}
+                      </div>
+                    )}
                   </div>
-                  <span className="flex items-center gap-1.5 text-[10px] font-medium text-cream/60">
-                    {t('game.caseLabel', { number: shownCaseNumber(player) })}
-                    <DrinkGlyph className="h-3 w-3" /> <PulsingCount value={player.drinks} />
-                  </span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Case actuelle — carte flip teintée par la famille de case */}
+          {caseNotification && !showNotification && !showTargetDialog && !showDuelDialog && !showWheel && !showChanceDialog && !showExchangeDialog && !showChainDialog && !showTeleportDialog && !showVoteDialog && !showDeHonteDialog && !showPileFaceDialog && (
+            <CaseRevealCard
+              caseType={caseNotification.case.type}
+              label={getCaseTypeLabel(caseNotification.case.type, t)}
+              revealKey={`${turnCount}:${caseNotification.case.type}:${pendingPosition ?? ''}`}
+              headerExtra={
+                <span className="text-sm font-semibold text-cream/80">
+                  {t('game.caseLabel', { number: currentGamePlayer?.position != null ? currentGamePlayer.position + 1 : '—' })}
+                </span>
+              }
+            >
+              <div
+                className="mt-2 max-h-28 overflow-y-auto text-sm leading-relaxed text-cream/90 [&_strong]:text-gold"
+                dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(activeNotificationHtml) }}
+              />
+            </CaseRevealCard>
+          )}
+
+          {!showNotification && renderEffectsRow(activeEffects)}
+
+          {renderLastActionHistory()}
+
+          {/* Classement — défilement horizontal */}
+          <div className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+            <div className="mb-2.5 flex items-center gap-2">
+              <Trophy aria-hidden className="h-4 w-4 text-gold" />
+              <h2 className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.ranking')}</h2>
+            </div>
+            <div className="flex gap-2 overflow-x-auto p-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {getPlayerRanking().map((player, index) => {
+                const isActive = currentGamePlayer?.id === player.id
+                const rankBorder =
+                  index === 0
+                    ? 'border-gold/50 bg-gold/10'
+                    : index === 1
+                      ? 'border-cream/30 bg-black/20'
+                      : index === 2
+                        ? 'border-[#D3A275]/40 bg-[#8C5F35]/20'
+                        : 'border-gold/20 bg-black/20'
+                return (
+                  <div
+                    key={player.id}
+                    className={cn(
+                      'relative flex w-[9rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[10rem] sm:p-2.5',
+                      isActive
+                        ? 'border-gold/60 bg-gold/[0.15] shadow-[inset_0_0_0_1px_rgb(var(--gold-rgb)/0.35)]'
+                        : rankBorder
+                    )}
+                  >
+                    {renderRankBadge(index)}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-1.5">
+                        {renderPawn(player, 18)}
+                        <PlayerName player={player} className="min-w-0 truncate text-sm font-semibold text-cream" />
+                      </div>
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-cream/80">
+                        {t('game.caseLabel', { number: shownCaseNumber(player) })}
+                        <DrinkGlyph aria-hidden className="h-3.5 w-3.5" /> <PulsingCount value={player.drinks} />
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </GameShell>
       </div>
 
-        </div>
-      </main>
-
-      {showDiceActionBar && (
-        <footer
-          ref={footerRef}
-          className="relative z-40 border-t border-gold/20 bg-felt-deep/90 px-3 py-3 backdrop-blur-xl pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4"
-          aria-label={t('game.turnActions')}
+      {/* Détail des effets en cours */}
+      <Dialog open={showEffectsSheet && activeEffects.length > 0} onOpenChange={setShowEffectsSheet}>
+        <DialogContent
+          showCloseButton={false}
+          onEscapeKeyDown={allowEscapeClose}
+          className="max-h-[85dvh] overflow-y-auto sm:max-w-md"
         >
-          <div className="mx-auto flex w-full max-w-lg items-stretch gap-2 sm:max-w-3xl sm:gap-3">
-            {players[currentPlayer] && (
-              <div
-                className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-gold/60 bg-gold/[0.15] px-3 py-2.5 sm:px-4 sm:py-3"
-                aria-label={`${t('game.turnOf')} ${players[currentPlayer].name}`}
-              >
-                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 sm:text-xs">
-                  {t('game.turnShort')}
-                </span>
-                <div className="flex items-center gap-2">
-                  <PlayerIcon
-                    player={players[currentPlayer]}
-                    size="md"
-                    className="h-8 w-8 shrink-0 text-base sm:h-9 sm:w-9 sm:text-lg"
-                  />
-                  <PlayerName
-                    player={players[currentPlayer]}
-                    className="max-w-[5.5rem] truncate font-display text-sm font-bold text-cream sm:max-w-[7.5rem] sm:text-base"
-                  />
-                </div>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={rollDice}
-              disabled={!canRollDice()}
-              className="min-w-0 flex-1 touch-manipulation select-none rounded-2xl bg-amber-500 py-3.5 text-base font-bold text-black shadow-none transition-all hover:bg-amber-400 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-lg"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <span>
-                  {isDiceRolling
-                    ? t('game.rolling')
-                    : showNotification && caseNotification
-                      ? t('game.validateEffect')
-                      : hasBlockingDialog()
-                        ? t('game.actionInProgress')
-                        : t('game.rollDice')}
-                </span>
-                <Dice6 className={`h-5 w-5 ${isDiceRolling ? 'animate-spin' : ''}`} />
-              </span>
-            </button>
-          </div>
-        </footer>
-      )}
+          <PbDialogClose label={tCommon('close')} />
+          <DialogHeader>
+            <DialogTitle className="flex min-h-[44px] items-center gap-2 pr-12 font-display text-cream">
+              <Sparkles aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              {t('game.effects.activeTitle')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">{activeEffects.map(effect => renderActiveEffectCard(effect))}</div>
+        </DialogContent>
+      </Dialog>
 
-      {/* Mise en scène du lancer de dé + flash de changement de tour */}
+      {/* Mise en scène du lancer de dé + « Passe le téléphone à… » au changement de joueur */}
       <DiceOverlay
         state={diceOverlay}
         onSkip={() => diceSkipRef.current?.()}
         skipLabel={t('game.tapToSkip')}
       />
-      <TurnOverlay
-        activeKey={gameStarted && !winner && !diceOverlay ? players[currentPlayer]?.id ?? null : null}
-        icon={
-          players[currentPlayer] ? (
-            <PlayerIcon player={players[currentPlayer]} size="lg" className="h-16 w-16 text-4xl" />
-          ) : (
-            ''
-          )
-        }
-        name={players[currentPlayer]?.name ?? ''}
-        labelOf={`${t('game.turnOf')} ${players[currentPlayer]?.name ?? ''}`}
+      <PassPhoneOverlay
+        playerKey={!diceOverlay ? currentGamePlayer?.id ?? null : null}
+        name={currentGamePlayer?.name ?? ''}
+        avatar={currentGamePlayer ? renderPawn(currentGamePlayer, 64) : undefined}
+        enabled={gameStarted && !winner}
       />
 
       {/* Duel sur case partagée (avant le ciblage) */}
@@ -2921,7 +2903,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     {t('game.caseLabel', { number: duelBoardPosition + 1 })} ·{' '}
                     <PlayerName player={players[currentPlayer]} className="font-semibold text-gold" />
                   </p>
-                  <p className="mt-2 max-w-[18rem] text-xs text-cream/60">
+                  <p className="mt-2 max-w-[18rem] text-sm text-cream/70">
                     {t('game.duel.rules')}
                   </p>
                 </div>
@@ -2945,16 +2927,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                             onClick={() => startDuelWithOpponent(player.id)}
                             className="flex flex-col items-center gap-2 rounded-xl border border-gold/20 bg-black/20 p-3 text-cream transition-all hover:border-gold/60 hover:bg-gold/[0.15] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                           >
-                            <PlayerIcon player={player} size="lg" className="h-12 w-12 text-2xl" />
+                            {renderPawn(player, 40)}
                             <PlayerName player={player} className="max-w-full truncate text-center text-sm font-semibold" />
                           </button>
                         ))}
                     </div>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="quiet"
+                      size="game"
                       onClick={skipDuelAndTarget}
-                      className="mt-5 h-11 w-full rounded-2xl border border-gold/25 bg-black/20 font-semibold text-cream/80 shadow-none hover:bg-black/30 hover:text-cream"
+                      className="mt-5 w-full"
                     >
                       {t('game.duel.skip')}
                     </Button>
@@ -2963,14 +2946,22 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
                 {duelPhase === 'wheel' && duelOpponentId && (
                   <div className="mt-4 flex flex-col items-center gap-5">
-                    <p className="text-center text-sm">
+                    {/* Chaque joueur a SA couleur sur la roue (or / bleu jeton) et son
+                        initiale sur ses secteurs : le vert contre rouge à 1,5:1 ne
+                        disait pas qui gagnait, et se confondait chez un daltonien. */}
+                    <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-sm">
                       {renderSlots(translateWithSlots(t, 'game.duel.vs', ['a', 'b']), {
-                        a: <PlayerName player={players[currentPlayer]} className="font-semibold text-gold" />,
+                        a: (
+                          <span className="inline-flex max-w-[10rem] items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-1 font-semibold text-[#24201A]">
+                            <span aria-hidden className="font-display font-bold">{initialOf(players[currentPlayer]?.name)}</span>
+                            <span className="truncate">{players[currentPlayer]?.name}</span>
+                          </span>
+                        ),
                         b: (
-                          <PlayerName
-                            player={players.find(p => p.id === duelOpponentId)!}
-                            className="font-semibold text-cream"
-                          />
+                          <span className="inline-flex max-w-[10rem] items-center gap-1.5 rounded-full bg-chip-blue px-2.5 py-1 font-semibold text-cream">
+                            <span aria-hidden className="font-display font-bold">{initialOf(players.find(p => p.id === duelOpponentId)?.name)}</span>
+                            <span className="truncate">{players.find(p => p.id === duelOpponentId)?.name}</span>
+                          </span>
                         ),
                       })}
                     </p>
@@ -2992,15 +2983,36 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                             const anglePerSegment = 360 / Math.max(duelWheelSegments.length, 1)
                             const start = -90 + i * anglePerSegment
                             const end = start + anglePerSegment
+                            const mid = start + anglePerSegment / 2
                             const path = arcPath(100, 100, 95, start, end)
+                            const label = polar(100, 100, 68, mid)
+                            const challengerSide = seg.value === 1
                             return (
                               <g key={seg.id}>
-                                <path d={path} fill={colorForDuelSegment(seg.value)} opacity={0.95} />
+                                <path
+                                  d={path}
+                                  style={{ fill: challengerSide ? 'rgb(var(--gold-rgb))' : 'rgb(var(--chip-blue-rgb))' }}
+                                />
                                 <path
                                   d={`M 100 100 L ${polar(100, 100, 95, start).x} ${polar(100, 100, 95, start).y}`}
-                                  stroke="rgb(var(--felt-deep-rgb))"
+                                  style={{ stroke: 'rgb(var(--felt-deep-rgb))' }}
                                   strokeWidth={1.2}
                                 />
+                                <text
+                                  x={label.x}
+                                  y={label.y}
+                                  transform={`rotate(${mid + 90} ${label.x} ${label.y})`}
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  className="font-display"
+                                  style={{ fill: challengerSide ? INK : CREAM, fontSize: 20, fontWeight: 700 }}
+                                >
+                                  {initialOf(
+                                    challengerSide
+                                      ? players[currentPlayer]?.name
+                                      : players.find(p => p.id === duelOpponentId)?.name
+                                  )}
+                                </text>
                               </g>
                             )
                           })}
@@ -3012,9 +3024,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
                     {!duelWheelResult && (
                       <Button
+                        variant="primary"
+                        size="gameLg"
                         disabled={duelWheelSpinning}
                         onClick={spinDuelWheel}
-                        className="mx-auto w-full max-w-xs rounded-2xl bg-amber-500 py-4 text-base font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+                        className="mx-auto w-full max-w-xs"
                       >
                         {duelWheelSpinning ? t('game.duel.spinning') : t('game.duel.spin')}
                       </Button>
@@ -3022,14 +3036,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
                     {duelWheelResult && (
                       <div className="w-full rounded-xl border border-gold/40 bg-gold/[0.12] px-4 py-4 text-center">
-                        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.duel.result')}</p>
-                        <p className="mt-1 font-display text-2xl font-bold text-gold">{duelWheelResult.label}</p>
-                        <p className="mt-2 text-sm text-cream/70">
+                        <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.duel.result')}</p>
+                        <p className="mt-2 text-base font-semibold text-cream">
                           {duelResultLine()}
                         </p>
                         <Button
+                          variant="primary"
+                          size="gameLg"
                           onClick={finishDuelAndTarget}
-                          className="mt-4 w-full max-w-xs rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+                          className="mt-4 w-full max-w-xs"
                         >
                           {t('game.duel.applyCase')}
                         </Button>
@@ -3037,7 +3052,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     )}
 
                     {!duelWheelResult && !duelWheelSpinning && (
-                      <Button type="button" variant="ghost" onClick={() => setDuelPhase('pick')} className="text-xs text-cream/70 hover:bg-black/20 hover:text-gold">
+                      <Button type="button" variant="quiet" size="game" onClick={() => setDuelPhase('pick')} className="w-full max-w-xs">
                         {t('game.duel.changeOpponent')}
                       </Button>
                     )}
@@ -3049,14 +3064,17 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         )}
       </AnimatePresence>
 
-      {/* Sélection du joueur à cibler */}
+      {/* Sélection du joueur à cibler — feuille du bas qui tient dans l'écran :
+          en-tête d'une ligne, cibles qui défilent, Aléatoire / Moi collés en
+          bas. Sans max-h ni défilement, le titre et la consigne partaient
+          au-dessus du viewport dès 4 joueurs. */}
       <AnimatePresence>
       {showTargetDialog && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -3066,67 +3084,45 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               role="dialog"
               aria-modal="true"
               aria-labelledby={dialogTitleId('target')}
+              aria-describedby={dialogTitleId('target-hint')}
               tabIndex={-1}
               ref={focusDialogOnMount}
-              className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
+              className="z-[100] flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
             >
-              <div className="px-5 pb-5 pt-5">
-                <div className="mb-5 flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gold/10 ring-1 ring-gold/30">
-                    <Target className="h-6 w-6 text-gold" />
-                  </div>
-                  <h3 id={dialogTitleId('target')} className="font-display text-lg font-bold text-cream">{t('game.target.title')}</h3>
-                  <p className="mt-1 max-w-[18rem] text-sm text-cream/70">
-                    {t('game.target.hint')}
-                  </p>
-                  <div className="mt-3 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-gold/40 bg-gold/10 text-2xl text-gold">
-                    ?
-                  </div>
+              <div className="shrink-0 border-b border-gold/20 px-4 pb-3 pt-4">
+                <div className="flex items-center gap-2.5">
+                  <Target aria-hidden className="h-6 w-6 shrink-0 text-gold" />
+                  <h2 id={dialogTitleId('target')} className="font-display text-lg font-bold text-cream">{t('game.target.title')}</h2>
                 </div>
+                <p id={dialogTitleId('target-hint')} className="mt-1 text-sm text-cream/70">
+                  {t('game.target.hint')}
+                </p>
+              </div>
 
-                {renderCompactRanking()}
+              <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-2 overflow-y-auto overscroll-contain px-4 py-3 min-[400px]:grid-cols-2">
+                {players
+                  .filter(p => p.id !== players[currentPlayer].id)
+                  .map(player => renderTargetTile(player, () => handleTargetSelection(player.id)))}
+              </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {players
-                    .filter(p => p.id !== players[currentPlayer].id)
-                    .map(player => (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => handleTargetSelection(player.id)}
-                        className="flex flex-col items-center gap-2 rounded-xl border border-gold/20 bg-black/20 p-3 text-cream transition-all hover:border-gold/60 hover:bg-gold/[0.15] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                      >
-                        <PlayerIcon player={player} size="lg" className="h-12 w-12 text-2xl" />
-                        <PlayerName player={player} className="max-w-full truncate text-center text-sm font-semibold" />
-                        <span className="rounded-full border border-gold/20 bg-black/25 px-2 py-0.5 text-[10px] font-medium text-cream/70">
-                          {t('game.caseLabel', { number: player.position + 1 })}
-                        </span>
-                      </button>
-                    ))}
-                </div>
-
-                <div className="mt-5 space-y-2 border-t border-gold/20 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={selectRandomPlayer}
-                    className="h-11 w-full gap-2 rounded-2xl border border-gold/25 bg-black/20 font-semibold text-cream/80 shadow-none hover:bg-black/30 hover:text-cream"
-                  >
-                    <Shuffle className="h-4 w-4 text-gold" />
-                    {t('game.target.random')}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => handleTargetSelection(players[currentPlayer].id)}
-                    className="h-11 w-full gap-2 rounded-2xl border border-gold/30 bg-gold/10 text-cream shadow-none hover:bg-gold/20"
-                  >
-                    <User className="h-4 w-4 opacity-90" />
-                    <span className="flex min-w-0 items-center gap-1 truncate">
-                      {t('game.target.me')}
-                      <PlayerName player={players[currentPlayer]} className="font-semibold" />
-                    </span>
-                  </Button>
-                </div>
+              <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-gold/20 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
+                <Button type="button" variant="quiet" size="game" onClick={selectRandomPlayer} className="min-w-0 gap-2">
+                  <Shuffle aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                  <span className="truncate">{t('game.target.random')}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="quiet"
+                  size="game"
+                  onClick={() => handleTargetSelection(players[currentPlayer].id)}
+                  className="min-w-0 gap-2"
+                >
+                  <User aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                  <span className="flex min-w-0 items-center gap-1 truncate">
+                    {t('game.target.me')}
+                    <PlayerName player={players[currentPlayer]} className="truncate font-semibold" />
+                  </span>
+                </Button>
               </div>
             </motion.div>
           </motion.div>
@@ -3142,10 +3138,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             {t('game.dialogs.teleportPrompt')}
           </p>
           <div className="grid grid-cols-1 gap-3 py-2">
-            <Button onClick={() => applyTeleportChoice('leader')} className="rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40">
+            <Button variant="primary" size="game" onClick={() => applyTeleportChoice('leader')} className="w-full whitespace-normal leading-tight">
               {t('game.dialogs.teleportLeader', { name: getLeader(players).name })}
             </Button>
-            <Button onClick={() => applyTeleportChoice('last')} variant="secondary" className="rounded-2xl border border-gold/25 bg-black/20 font-bold text-cream/80 shadow-none hover:bg-black/30 hover:text-cream">
+            <Button variant="quiet" size="game" onClick={() => applyTeleportChoice('last')} className="w-full whitespace-normal leading-tight">
               {t('game.dialogs.teleportLast', { name: getLastPlayer(players).name })}
             </Button>
           </div>
@@ -3164,10 +3160,13 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             {players.map(player => (
               <Button
                 key={player.id}
+                variant="quiet"
+                size="game"
                 onClick={() => applyVoteTarget(player.id)}
-                className="rounded-xl border border-gold/20 bg-black/20 text-cream shadow-none hover:border-gold/60 hover:bg-gold/[0.15]"
+                className="min-w-0 justify-start gap-2 px-3"
               >
-                <PlayerName player={player} />
+                {renderPawn(player, 22)}
+                <PlayerName player={player} className="truncate" />
               </Button>
             ))}
           </div>
@@ -3198,7 +3197,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full rounded-xl border border-gold/40 bg-gold/[0.12] px-4 py-3 text-center"
               >
-                <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+                <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
                   {t('game.resultHeading')}
                 </p>
                 <p className="mt-1 font-display text-3xl font-bold tabular-nums text-gold">{deHonteResult}</p>
@@ -3211,20 +3210,24 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
           {deHonteResult != null && !deHonteRolling ? (
             <Button
+              variant="primary"
+              size="gameLg"
               onClick={applyDeHonteOutcome}
-              className="w-full rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+              className="w-full"
             >
               {t('game.continue')}
             </Button>
           ) : (
             <Button
+              variant="primary"
+              size="gameLg"
               onClick={rollDeHonte}
               disabled={deHonteRolling}
-              className="w-full rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+              className="w-full"
             >
               {deHonteRolling ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Dice6 className="h-5 w-5 animate-spin" />
+                  <Dice6 aria-hidden className="h-5 w-5 motion-safe:animate-spin" />
                   {t('game.dialogs.diceRolling')}
                 </span>
               ) : (
@@ -3258,24 +3261,25 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
           {!pileFaceChoice ? (
             <div className="grid grid-cols-2 gap-3 py-2">
               <Button
+                variant="quiet"
                 onClick={() => startPileFaceFlip('pile')}
-                className="h-auto flex-col gap-1 rounded-2xl border border-gold/25 bg-black/20 py-4 font-bold text-cream shadow-none hover:border-gold/60 hover:bg-gold/[0.15]"
+                className="h-auto flex-col gap-1 rounded-2xl py-4 text-base"
               >
-                <span className="text-2xl">1</span>
+                <span aria-hidden className="font-display text-2xl font-bold text-gold">1</span>
                 {t('coinFlip.pile')}
               </Button>
               <Button
+                variant="quiet"
                 onClick={() => startPileFaceFlip('face')}
-                variant="secondary"
-                className="h-auto flex-col gap-1 rounded-2xl border border-gold/25 bg-black/20 py-4 font-bold text-cream shadow-none hover:border-gold/60 hover:bg-gold/[0.15]"
+                className="h-auto flex-col gap-1 rounded-2xl py-4 text-base"
               >
-                <span className="text-2xl">👤</span>
+                <Crown aria-hidden className="h-7 w-7 text-gold" />
                 {t('coinFlip.face')}
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-center text-xs text-cream/60">
+              <p className="text-center text-sm text-cream/80">
                 {t('game.dialogs.coinChoice', {
                   choice:
                     pileFaceChoice === 'pile'
@@ -3302,7 +3306,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     {getPileFaceOutcomeLabel(pileFaceChoice, pileFaceFlipResult, t).label}
                   </p>
                   {pileFaceChoice !== pileFaceFlipResult && (
-                    <p className="mt-1 text-xs text-cream/60">
+                    <p className="mt-1 text-sm text-cream/80">
                       {t('game.dialogs.drinksToTake', { count: pendingCase?.effect || 2 })}
                     </p>
                   )}
@@ -3311,14 +3315,16 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
               {!pileFaceFlipping && pileFaceFlipResult ? (
                 <Button
+                  variant="primary"
+                  size="gameLg"
                   onClick={applyPileFaceOutcome}
-                  className="w-full rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+                  className="w-full"
                 >
                   {t('game.continue')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight aria-hidden className="ml-2 h-5 w-5" />
                 </Button>
               ) : (
-                <p className="text-center text-xs text-cream/60 animate-pulse">
+                <p className="text-center text-sm text-cream/80 motion-safe:animate-pulse">
                   {t('game.dialogs.coinSpinning')}
                 </p>
               )}
@@ -3338,13 +3344,15 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               {t('game.dialogs.chancePrompt')}
             </p>
             <div className="grid grid-cols-1 gap-3">
-              <Button 
+              <Button
+                variant="primary"
+                size="game"
                 onClick={() => {
                   setShowChanceDialog(false);
                   // Relancer le dé avec la fonction spéciale
                   rerollDice();
                 }}
-                className="rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+                className="w-full"
               >
                 {t('game.dialogs.chanceReroll')}
               </Button>
@@ -3370,7 +3378,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     advanceToNextPlayer()
                   }
                 }}
-                className="rounded-2xl bg-chip-blue font-bold text-cream shadow-none hover:bg-chip-blue/90"
+                variant="quiet"
+                size="game"
+                className="w-full"
               >
                 {t('game.dialogs.chanceAdvance')}
               </Button>
@@ -3379,14 +3389,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </DialogContent>
       </Dialog>
 
-      {/* Défi en chaîne — sélection du partenaire */}
+      {/* Défi en chaîne — sélection du partenaire (même feuille que « Qui cibler ? ») */}
       <AnimatePresence>
         {showChainDialog && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -3396,46 +3406,30 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               role="dialog"
               aria-modal="true"
               aria-labelledby={dialogTitleId('chain')}
+              aria-describedby={dialogTitleId('chain-hint')}
               tabIndex={-1}
               ref={focusDialogOnMount}
-              className="z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
+              className="z-[100] flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
             >
-              <div className="px-5 pb-5 pt-5">
-                <div className="mb-4 flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gold/10 ring-1 ring-gold/30">
-                    <Link2 className="h-6 w-6 text-gold" />
-                  </div>
-                  <h3 id={dialogTitleId('chain')} className="font-display text-lg font-bold text-cream">{t('game.dialogs.chainTitle')}</h3>
-                  <p className="mt-1 max-w-[18rem] text-sm text-cream/70">
-                    {t('game.dialogs.chainPrompt', { count: pendingCase?.effect || 5 })}
-                  </p>
-                  <p className="mt-2 text-xs text-gold">
-                    {renderSlots(translateWithSlots(t, 'game.dialogs.chainChooser', ['player']), {
-                      player: <PlayerName player={players[currentPlayer]} className="font-semibold" />,
-                    })}
-                  </p>
+              <div className="shrink-0 border-b border-gold/20 px-4 pb-3 pt-4">
+                <div className="flex items-center gap-2.5">
+                  <Link2 aria-hidden className="h-6 w-6 shrink-0 text-gold" />
+                  <h2 id={dialogTitleId('chain')} className="font-display text-lg font-bold text-cream">{t('game.dialogs.chainTitle')}</h2>
                 </div>
+                <p id={dialogTitleId('chain-hint')} className="mt-1 text-sm text-cream/70">
+                  {t('game.dialogs.chainPrompt', { count: pendingCase?.effect || 5 })}
+                </p>
+                <p className="mt-1 text-sm text-gold">
+                  {renderSlots(translateWithSlots(t, 'game.dialogs.chainChooser', ['player']), {
+                    player: <PlayerName player={players[currentPlayer]} className="font-semibold" />,
+                  })}
+                </p>
+              </div>
 
-                {renderCompactRanking()}
-
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {players
-                    .filter(p => p.id !== players[currentPlayer].id)
-                    .map(player => (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => handleChainPlayerSelect(player.id)}
-                        className="flex flex-col items-center gap-2 rounded-xl border border-gold/20 bg-black/20 p-3 text-cream transition-all hover:border-gold/60 hover:bg-gold/[0.15] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-                      >
-                        <PlayerIcon player={player} size="lg" className="h-12 w-12 text-2xl" />
-                        <PlayerName player={player} className="max-w-full truncate text-center text-sm font-semibold" />
-                        <span className="rounded-full border border-gold/20 bg-black/25 px-2 py-0.5 text-[10px] font-medium text-cream/70">
-                          {t('game.caseLabel', { number: player.position + 1 })}
-                        </span>
-                      </button>
-                    ))}
-                </div>
+              <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-2 overflow-y-auto overscroll-contain px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 min-[400px]:grid-cols-2">
+                {players
+                  .filter(p => p.id !== players[currentPlayer].id)
+                  .map(player => renderTargetTile(player, () => handleChainPlayerSelect(player.id)))}
               </div>
             </motion.div>
           </motion.div>
@@ -3476,9 +3470,12 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     })
                     recordLastAction(currentPlayerObj, 'echange', exchangeOutcome, targetPlayerObj)
                   }}
-                  className="rounded-xl border border-gold/20 bg-black/20 p-3 font-bold text-cream shadow-none hover:border-gold/60 hover:bg-gold/[0.15]"
+                  variant="quiet"
+                  size="game"
+                  className="min-w-0 justify-start gap-2 px-3"
                 >
-                  <PlayerName player={player} />
+                  {renderPawn(player, 22)}
+                  <PlayerName player={player} className="truncate" />
                 </Button>
               ))}
             </div>
@@ -3486,7 +3483,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </DialogContent>
       </Dialog>
 
-      {/* Roue des gorgées */}
+      {/* Roue des gorgées / des défis */}
       <AnimatePresence>
         {showWheel && (
           <motion.div
@@ -3508,63 +3505,87 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
               className="z-[100] max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
             >
               <div className="p-5">
-                <div className="mb-4 flex flex-col items-center text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-gold/30 bg-gold/10">
-                    <CircleDot className="h-6 w-6 text-gold" />
+                <div className="mb-4 flex items-center gap-3">
+                  <CircleDot aria-hidden className="h-6 w-6 shrink-0 text-gold" />
+                  <div className="min-w-0">
+                    <h2 id={dialogTitleId('wheel')} className="font-display text-lg font-bold text-cream">
+                      {wheelMode === 'defis' ? t('game.wheel.defis') : t('game.wheel.drinks')}
+                    </h2>
+                    <p className="text-sm text-cream/70">
+                      {t('game.wheel.turnOf', { player: players[currentPlayer]?.name ?? '' })}
+                    </p>
                   </div>
-                  <h2 id={dialogTitleId('wheel')} className="font-display text-lg font-bold text-cream">
-                    {wheelMode === 'defis' ? t('game.wheel.defis') : t('game.wheel.drinks')}
-                  </h2>
-                  <p className="mt-1 text-sm text-cream/60">
-                    {t('game.wheel.turnOf', { player: players[currentPlayer]?.name ?? '' })}
-                  </p>
                 </div>
 
-                <div className="mt-4 flex flex-col items-center gap-5">
-                  <div className="relative h-56 w-56 sm:h-64 sm:w-64">
+                <div className="flex flex-col items-center gap-5">
+                  <div className="relative h-60 w-60 sm:h-64 sm:w-64">
                     {/* Flèche fixe (pointeur résultat) */}
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 drop-shadow">
-                      <svg width="28" height="28" viewBox="0 0 28 28">
-                        <polygon points="14,0 24,16 4,16" style={{ fill: 'rgb(var(--gold-rgb))' }} />
-                        <rect x="12.5" y="16" width="3" height="8" rx="1.5" style={{ fill: 'rgb(var(--gold-rgb))' }} />
+                    <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 drop-shadow">
+                      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden>
+                        <polygon points="14,0 24,16 4,16" style={{ fill: 'rgb(var(--cream-rgb))' }} />
+                        <rect x="12.5" y="16" width="3" height="8" rx="1.5" style={{ fill: 'rgb(var(--cream-rgb))' }} />
                       </svg>
                     </div>
 
-                    {/* Roue animée */}
+                    {/* Roue animée : chaque secteur porte sa valeur (gorgées, SAFE ou numéro du défi). */}
                     <motion.div
-                      className="absolute inset-0 rounded-full ring-2 ring-gold/40 shadow-[0_8px_30px_rgba(0,0,0,0.35)] overflow-visible"
+                      className="absolute inset-0 overflow-visible rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.35)] ring-2 ring-gold/40"
                       style={{ originX: 0.5, originY: 0.5, rotate: wheelRotation }}
                       ref={wheelRef}
                     >
-                      <svg viewBox="0 0 200 200" width="100%" height="100%">
-                        {/* Fond */}
+                      <svg viewBox="0 0 200 200" width="100%" height="100%" aria-hidden>
                         <circle cx="100" cy="100" r="98" style={{ fill: 'rgb(var(--felt-deep-rgb))' }} />
-                        {/* Segments */}
                         {wheelSegments.map((seg, i) => {
                           const anglePerSegment = 360 / Math.max(wheelSegments.length, 1)
                           const start = -90 + i * anglePerSegment
                           const end = start + anglePerSegment
+                          const mid = start + anglePerSegment / 2
                           const path = arcPath(100, 100, 95, start, end)
+                          const tier = wheelMode === 'defis' ? defiTier(seg.kind, i) : wheelTier(seg.value)
+                          const label = polar(100, 100, 72, mid)
+                          const rotation = `rotate(${mid + 90} ${label.x} ${label.y})`
+                          const isSafe = wheelMode === 'defis' ? seg.kind === 'safe' : seg.value === 0
                           return (
                             <g key={seg.id}>
-                              <path d={path} fill={colorForValue(seg.value)} opacity={0.95} />
-                              {/* séparateur */}
-                              <path d={`M 100 100 L ${polar(100,100,95,start).x} ${polar(100,100,95,start).y}`} style={{ stroke: 'rgb(var(--felt-deep-rgb))' }} strokeWidth={1.2} />
+                              <path d={path} style={{ fill: tier.fill }} />
+                              <path
+                                d={`M 100 100 L ${polar(100, 100, 95, start).x} ${polar(100, 100, 95, start).y}`}
+                                style={{ stroke: 'rgb(var(--felt-deep-rgb))' }}
+                                strokeWidth={1.2}
+                              />
+                              {isSafe && wheelMode === 'drinks' ? (
+                                <g transform={rotation} style={{ color: tier.ink }}>
+                                  <Shield x={label.x - 8} y={label.y - 8} width={16} height={16} strokeWidth={2.5} />
+                                </g>
+                              ) : (
+                                <text
+                                  x={label.x}
+                                  y={label.y}
+                                  transform={rotation}
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  className="font-display"
+                                  style={{ fill: tier.ink, fontSize: 15, fontWeight: 700 }}
+                                >
+                                  {wheelMode === 'defis' ? i + 1 : seg.value}
+                                </text>
+                              )}
                             </g>
                           )
                         })}
-                        {/* Moyeu */}
-                        <circle cx="100" cy="100" r="10" style={{ fill: 'rgb(var(--cream-rgb))' }} />
-                        <circle cx="100" cy="100" r="4" style={{ fill: 'rgb(var(--gold-rgb))' }} />
+                        <circle cx="100" cy="100" r="12" style={{ fill: 'rgb(var(--cream-rgb))' }} />
+                        <circle cx="100" cy="100" r="5" style={{ fill: 'rgb(var(--felt-deep-rgb))' }} />
                       </svg>
                     </motion.div>
                   </div>
 
                   {!wheelResult && (
                     <Button
+                      variant="primary"
+                      size="gameLg"
                       disabled={wheelSpinning}
                       onClick={spinWheel}
-                      className="mx-auto w-full max-w-xs rounded-2xl bg-amber-500 py-4 text-base font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
+                      className="mx-auto w-full max-w-xs"
                     >
                       {wheelSpinning ? t('game.wheel.spinning') : t('game.wheel.spin')}
                     </Button>
@@ -3572,11 +3593,14 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
 
                   {wheelResult && (
                     <div className="w-full rounded-xl border border-gold/30 bg-gold/10 px-4 py-4 text-center">
-                      <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.duel.result')}</p>
+                      <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.duel.result')}</p>
                       <p className="mt-1 font-display text-2xl font-bold text-gold">{wheelResult.label}</p>
+                      <p className="mt-1 text-sm font-semibold text-cream">{players[currentPlayer]?.name}</p>
                       <Button
+                        variant="primary"
+                        size="gameLg"
                         onClick={finishWheelModal}
-                        className="mt-4 w-full max-w-xs rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400"
+                        className="mt-4 w-full max-w-xs"
                       >
                         {t('game.continue')}
                       </Button>
@@ -3584,24 +3608,29 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   )}
                 </div>
 
-                {/* Légende des couleurs */}
-                {wheelSegments.length > 0 && !wheelSpinning && (
-                  <div className="mt-4 rounded-xl border border-gold/20 bg-black/20 px-3 py-2">
-                    <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.wheel.legend')}</p>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
-                      {Object.entries(wheelSegments.reduce<Record<string, { color: string; count: number }>>((acc, s) => {
-                        const key = s.label
-                        const color = colorForValue(s.value)
-                        if (!acc[key]) acc[key] = { color, count: 0 }
-                        acc[key].count += 1
-                        return acc
-                      }, {})).map(([label, info]) => (
-                        <div key={label} className="flex items-center gap-1.5">
-                          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: info.color }} />
-                          <span className="text-cream/70">{label}{info.count > 1 ? ` ×${info.count}` : ''}</span>
-                        </div>
-                      ))}
-                    </div>
+                {/* Roue des défis : un numéro par secteur, le défi en clair ici
+                    (visible aussi pendant que la roue tourne). La roue des
+                    gorgées écrit ses valeurs sur la roue, sans légende. */}
+                {wheelMode === 'defis' && wheelSegments.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
+                    <p className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.wheel.legend')}</p>
+                    <ol className="space-y-1 text-sm">
+                      {wheelSegments.map((seg, i) => {
+                        const tier = defiTier(seg.kind, i)
+                        return (
+                          <li key={seg.id} className="flex items-start gap-2">
+                            <span
+                              aria-hidden
+                              className="mt-px inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded px-1 font-display text-xs font-bold tabular-nums"
+                              style={{ backgroundColor: tier.fill, color: tier.ink }}
+                            >
+                              {i + 1}
+                            </span>
+                            <span className="text-cream/80">{seg.label}</span>
+                          </li>
+                        )
+                      })}
+                    </ol>
                   </div>
                 )}
               </div>
@@ -3610,74 +3639,70 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         )}
       </AnimatePresence>
 
-      {/* Écran de victoire */}
+      {/* Écran de victoire — feuille ancrée en bas sur téléphone : un bandeau
+          d'avis qui arrive tard la fait grandir vers le haut, sans recentrer
+          la carte ni bouger « Rejouer », collé au bas de la carte. */}
       <AnimatePresence>
         {showVictoryScreen && winner && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             {/* z-[2] : le rideau reste au-dessus de la carte animée, comme avec react-confetti. */}
             <EndConfetti rain pieces={200} className="z-[2]" />
             <motion.div
-              initial={{ scale: 0.85, y: 30 }}
-              animate={{ scale: 1, y: 0 }}
+              initial={reducedMotion ? { opacity: 0 } : { scale: 0.85, y: 30 }}
+              animate={reducedMotion ? { opacity: 1 } : { scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
               role="dialog"
               aria-modal="true"
               aria-labelledby={`${dialogTitleId('victory')} ${dialogTitleId('victory-name')}`}
               tabIndex={-1}
               ref={focusDialogOnMount}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
+              className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
             >
-              <div className="p-6">
-                {/* Trophée animé */}
+              <div className="p-6 pb-4">
+                {/* Trophée : deux rebonds, pas de boucle (réduire les animations les coupe) */}
                 <div className="mb-4 flex flex-col items-center gap-3">
                   <motion.div
-                    animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                    animate={reducedMotion ? undefined : { scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
+                    transition={{ duration: 1.5, repeat: 2, repeatDelay: 1.5 }}
                     className="flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/40 bg-gold/[0.15] text-gold"
                   >
-                    <Trophy className="h-10 w-10" />
+                    <Trophy aria-hidden className="h-10 w-10" />
                   </motion.div>
                   <div className="text-center">
-                    <p id={dialogTitleId('victory')} className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.victory.winner')}</p>
+                    <p id={dialogTitleId('victory')} className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.victory.winner')}</p>
                     <h2 id={dialogTitleId('victory-name')} className="mt-1 font-display text-2xl font-bold">
-                      <PlayerName player={winner} className="text-cream" />
+                      <PlayerName player={winner} className="text-gold" />
                     </h2>
-                    <p className="mt-0.5 text-sm text-cream/60">{t('game.victory.wonGame')}</p>
+                    <p className="mt-0.5 text-sm text-cream/70">{t('game.victory.wonGame')}</p>
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
+                <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
                   <div className="text-center">
                     <p className="font-display text-lg font-bold text-gold">{turnCount}</p>
-                    <p className="text-[11px] text-cream/60">{t('game.victory.turns')}</p>
+                    <p className="text-xs text-cream/70">{t('game.victory.turns')}</p>
                   </div>
                   <div className="text-center">
                     <p className="font-display text-lg font-bold text-gold">{players.length}</p>
-                    <p className="text-[11px] text-cream/60">{t('game.victory.players')}</p>
+                    <p className="text-xs text-cream/70">{t('game.victory.players')}</p>
                   </div>
                   <div className="text-center">
-                    {(() => {
-                      const diffKey = resolveDifficulty(gameDifficulty)
-                      return (
-                        <>
-                          <p className="text-xl leading-none" aria-hidden>{DIFFICULTY_EMOJI[diffKey]}</p>
-                          <p className="mt-1 font-display text-sm font-bold text-gold">{t(`difficultyLabels.${diffKey}`)}</p>
-                        </>
-                      )
-                    })()}
-                    <p className="mt-0.5 text-[11px] text-cream/60">{t('game.victory.difficulty')}</p>
+                    <p className="flex items-center justify-center gap-1 font-display text-sm font-bold text-gold">
+                      <PbDifficultyIcon difficulty={diffKey} className="h-4 w-4" />
+                      {t(`difficultyLabels.${diffKey}`)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-cream/70">{t('game.victory.difficulty')}</p>
                   </div>
                 </div>
 
-                {/* {t('game.finalRanking')} */}
-                <div className="mb-5 space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-                  <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.finalRanking')}</p>
+                <div className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                  <p className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.finalRanking')}</p>
                   {getPlayerRanking().map((player, index) => (
                     <div
                       key={player.id}
@@ -3689,35 +3714,30 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         {renderRankBadge(index, 'sm')}
-                        <PlayerIcon player={player} size="sm" className="h-7 w-7 shrink-0 text-sm" />
+                        {renderPawn(player, 22)}
                         <PlayerName player={player} className="truncate text-sm font-semibold text-cream" />
                       </div>
-                      <div className="flex shrink-0 gap-3 text-xs text-cream/60">
-                        <span>{player.drinks}{drinkIcon(ambiance)}</span>
+                      <div className="flex shrink-0 gap-3 text-xs text-cream/80">
+                        <span>{player.drinks} {drinkIcon(ambiance)}</span>
                         <span>{t('game.caseLabel', { number: shownCaseNumber(player) })}</span>
                       </div>
                     </div>
                   ))}
                 </div>
-
-                <FirstGameFeedbackCard mode="local" gameId="petit-buveur" className="mb-5" />
-
-                {/* Actions */}
-                <div className="flex flex-col gap-2.5">
-                  <button
-                    onClick={resetGame}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 font-bold text-black shadow-none transition-all hover:bg-amber-400"
-                  >
-                    <RefreshCw className="h-4 w-4" /> {t('game.replay')}
-                  </button>
-                  <button
-                    onClick={onGameEnd}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gold/25 bg-black/20 py-3 text-sm font-semibold text-cream/80 transition-all hover:bg-black/30 hover:text-cream"
-                  >
-                    <Home className="h-4 w-4" /> {t('game.backToMenu')}
-                  </button>
-                </div>
               </div>
+
+              <EndActionDock
+                mode="sticky"
+                className="px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]"
+                feedback={<FirstGameFeedbackCard variant="banner" mode="local" gameId="petit-buveur" />}
+              >
+                <Button variant="primary" size="gameLg" onClick={resetGame} className="w-full">
+                  <RefreshCw aria-hidden className="mr-2 h-5 w-5" /> {t('game.replay')}
+                </Button>
+                <Button variant="quiet" size="game" onClick={onGameEnd} className="w-full">
+                  <Home aria-hidden className="mr-2 h-4 w-4" /> {t('game.backToMenu')}
+                </Button>
+              </EndActionDock>
             </motion.div>
           </motion.div>
         )}
@@ -3740,9 +3760,11 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                     onClick={() => {
                       resumeGame();
                     }}
-                    className="w-full rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400"
+                    variant="primary"
+                    size="game"
+                    className="w-full"
                   >
-                    <RefreshCw className="mr-2 h-4 w-4" />
+                    <RefreshCw aria-hidden className="mr-2 h-4 w-4" />
                     {t('game.save.resume')}
                   </Button>
                   <Button
@@ -3750,8 +3772,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                       deleteSave();
                       setShowSaveDialog(false);
                     }}
-                    variant="outline"
-                    className="w-full rounded-2xl border-gold/25 bg-black/20 font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
+                    variant="quiet"
+                    size="game"
+                    className="w-full"
                   >
                     <Home className="mr-2 h-4 w-4" />
                     {t('game.save.newGame')}
@@ -3764,8 +3787,10 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                   {t('game.save.none')}
                 </p>
                 <Button
+                  variant="primary"
+                  size="game"
                   onClick={() => setShowSaveDialog(false)}
-                  className="w-full rounded-2xl bg-amber-500 font-bold text-black shadow-none hover:bg-amber-400"
+                  className="w-full"
                 >
                   {t('game.close')}
                 </Button>
@@ -3775,107 +3800,194 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
         </DialogContent>
       </Dialog>
 
-      {/* Effet de la case — centré, au-dessus de la barre d'action */}
+      {/* Effet de la case — feuille ancrée en bas : la case en titre, le verdict
+          NOMMÉ (qui boit combien) en tête sur une carte crème, et « Suivant »
+          dans un pied collé, jamais à défiler pour l'atteindre. */}
       <AnimatePresence>
-        {showNotification && caseNotification && (
+        {showNotification && caseNotification && (() => {
+          const caseType = caseNotification.case.type
+          const landing = castLandingRef.current
+          const changes = landing ? castChanges(landing.players, players) : []
+          const drinkers = changes
+            .filter(c => c.drinks > 0)
+            .map(c => ({ change: c, player: players.find(p => p.id === c.playerId) }))
+            .filter((d): d is { change: typeof d.change; player: GamePlayer } => Boolean(d.player))
+          const movers = changes
+            .filter(c => c.to !== c.from)
+            .map(c => ({ change: c, player: players.find(p => p.id === c.playerId) }))
+            .filter((d): d is { change: typeof d.change; player: GamePlayer } => Boolean(d.player))
+          const caseNumber = landing?.caseNumber ?? (currentGamePlayer ? currentGamePlayer.position + 1 : null)
+          return (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[110] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
               transition={{ type: 'spring', damping: 26, stiffness: 320 }}
               role="dialog"
               aria-modal="true"
               aria-labelledby={dialogTitleId('effect')}
               tabIndex={-1}
               ref={focusDialogOnMount}
-              className="max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
+              className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
             >
-              <div className="p-5">
-                <div className="mb-4 flex flex-col items-center text-center">
-                  <motion.div
-                    initial={{ scale: 0, rotate: -25 }}
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <motion.span
+                    initial={reducedMotion ? false : { scale: 0, rotate: -25 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ type: 'spring', stiffness: 360, damping: 15, delay: 0.05 }}
-                    className={cn(
-                      'mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border text-3xl',
-                      getCaseFamilyStyle(caseNotification.case.type).border,
-                      getCaseFamilyStyle(caseNotification.case.type).bg
-                    )}
+                    className="inline-flex"
                     aria-hidden
                   >
-                    {getCaseMeta(caseNotification.case.type).icon}
-                  </motion.div>
-                  <h2 id={dialogTitleId('effect')} className="font-display text-lg font-bold text-cream">{t('game.effectTitle')}</h2>
-                  <p className="mt-1 text-sm text-cream/60">
-                    <span
-                      className={cn(
-                        'mr-1 inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold',
-                        getCaseFamilyStyle(caseNotification.case.type).chip
+                    <CaseToken caseType={caseType} size={48} />
+                  </motion.span>
+                  <div className="min-w-0 flex-1">
+                    <h2 id={dialogTitleId('effect')} className="font-display text-2xl font-bold leading-tight text-gold">
+                      <span className="sr-only">{t('game.effectTitle')} : </span>
+                      {getCaseTypeLabel(caseType, t)}
+                    </h2>
+                    <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1 text-sm text-cream/80">
+                      {caseNumber != null && <span>{t('game.caseLabel', { number: caseNumber })}</span>}
+                      {currentGamePlayer && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <PlayerName player={currentGamePlayer} className="font-semibold text-cream" />
+                        </>
                       )}
-                    >
-                      {getCaseTypeLabel(caseNotification.case.type, t)}
-                    </span>
-                    {players[currentPlayer] && (
-                      <>
-                        {' '}· <PlayerName player={players[currentPlayer]} className="font-semibold text-gold" />
-                      </>
-                    )}
-                  </p>
+                    </p>
+                  </div>
                 </div>
+
+                {drinkers.length > 0 && (
+                  <div className="mb-3 rounded-2xl bg-cream p-4 text-[#24201A] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)]">
+                    {drinkers.length === 1 ? (
+                      <div className="flex items-center gap-3">
+                        {renderPawn(drinkers[0].player, 36)}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-bold">{drinkers[0].player.name}</p>
+                          <p className="text-sm text-[#6B6455]">
+                            {t('game.verdict.drinks', { count: drinkers[0].change.drinks })}
+                          </p>
+                        </div>
+                        <span className="font-display text-5xl font-bold leading-none tabular-nums">
+                          {drinkers[0].change.drinks}
+                        </span>
+                        <DrinkGlyph aria-hidden className="h-7 w-7 shrink-0" />
+                      </div>
+                    ) : (
+                      <ul className="flex flex-wrap gap-2">
+                        {drinkers.map(({ change, player }) => (
+                          <li
+                            key={player.id}
+                            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#24201A]/20 bg-[#24201A]/[0.06] py-1 pl-1 pr-2.5 text-sm font-bold"
+                          >
+                            {renderPawn(player, 20)}
+                            <span className="truncate">{player.name}</span>
+                            <span className="font-display text-lg leading-none tabular-nums">{change.drinks}</span>
+                            <DrinkGlyph aria-hidden className="h-4 w-4 shrink-0" />
+                            <span className="sr-only">{t('game.verdict.drinks', { count: change.drinks })}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {movers.length > 0 && (
+                  <ul className="mb-3 flex flex-wrap gap-2">
+                    {movers.map(({ change, player }) => (
+                      <li
+                        key={player.id}
+                        className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-chip-blue/60 bg-chip-blue/30 py-1 pl-1 pr-2.5 text-sm font-semibold text-cream"
+                      >
+                        {renderPawn(player, 20)}
+                        <span className="truncate">{player.name}</span>
+                        <span aria-hidden>→</span>
+                        <span className="whitespace-nowrap">{t('game.caseLabel', { number: change.to + 1 })}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 <div className="rounded-xl border border-gold/20 bg-black/20 p-4 text-left">
                   <div
-                    className="text-sm leading-relaxed text-cream/90 [&_strong]:text-gold [&_span]:inline-flex"
+                    className="text-base leading-relaxed text-cream [&_span]:inline-flex [&_strong]:text-gold"
                     dangerouslySetInnerHTML={{ __html: getCaseEffectMainHtml(activeNotificationHtml) }}
                   />
                 </div>
 
-                {renderActiveEffectsPanel()}
+                {/* Les effets en cours restent sous le plateau : ici, une ligne suffit. */}
+                {activeEffects.length > 0 && (
+                  <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-cream/80">
+                    <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                    <span className="font-semibold">{t('game.effects.activeTitle')}</span>
+                    {activeEffects.map(effect => {
+                      const kind = pbEffectKindOf(effect.id)
+                      return (
+                        <span key={effect.id} className="inline-flex items-center gap-1">
+                          {kind && <PbEffectIcon kind={kind} className="h-4 w-4" />}
+                          <span className="sr-only">{effect.title} :</span>
+                          {effect.player.name}
+                        </span>
+                      )
+                    })}
+                  </p>
+                )}
+              </div>
 
+              <div className="shrink-0 border-t border-gold/20 bg-felt-deep/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
                 {pendingChallenge ? (
-                  <div className="mt-5 space-y-2">
-                    <p className="text-center text-xs font-medium text-cream/60">
+                  <>
+                    <p className="mb-2 text-center text-sm font-semibold text-cream/80">
                       {t('game.challengeQuestion')}
                     </p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <button
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
                         type="button"
+                        variant="primary"
+                        size="gameLg"
                         onClick={() => resolveChallengeChoice(true)}
-                        className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-700/30 py-3.5 font-bold text-emerald-100 transition-all hover:bg-emerald-700/40 active:scale-[0.98]"
+                        className="min-w-0 gap-2 whitespace-normal px-3 leading-tight"
                       >
-                        <Check className="h-4 w-4 shrink-0" />
+                        <Check aria-hidden className="h-5 w-5 shrink-0" />
                         {t('game.challengeSuccess')}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="danger"
+                        size="gameLg"
                         onClick={() => resolveChallengeChoice(false)}
-                        className="flex items-center justify-center gap-2 rounded-2xl border border-suit-red/50 bg-suit-red/[0.15] py-3.5 font-bold text-cream transition-all hover:bg-suit-red/25 active:scale-[0.98]"
+                        className="min-w-0 gap-2 whitespace-normal px-3 leading-tight"
                       >
-                        <DrinkGlyph className="h-4 w-4 shrink-0" />
+                        <DrinkGlyph aria-hidden className="h-5 w-5 shrink-0" />
                         {t('game.challengeDrink', { count: pendingChallenge.drinks })}
-                      </button>
+                      </Button>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <button
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="gameLg"
                     onClick={handleNextButtonClick}
-                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-500 py-3.5 font-bold text-black shadow-none transition-all hover:bg-amber-400"
+                    className="w-full gap-2"
                   >
                     {t('game.next')}
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                    <ArrowRight aria-hidden className="h-5 w-5" />
+                  </Button>
                 )}
               </div>
             </motion.div>
           </motion.div>
-        )}
+          )
+        })()}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

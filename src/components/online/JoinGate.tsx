@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { LogIn, UserPlus } from 'lucide-react'
@@ -31,6 +31,7 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
   const [pseudo, setPseudo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const titleId = useId()
 
   const handleGuest = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,49 +97,52 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-gold/25 bg-felt-deep p-6 shadow-2xl">
-        <p className="text-center font-display text-xl font-bold text-cream">{t('title')}</p>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="w-full max-w-sm rounded-2xl border border-gold/25 bg-felt-deep p-6 text-cream shadow-2xl"
+      >
+        <h2 id={titleId} className="text-center font-display text-xl font-bold text-cream">{t('title')}</h2>
         <p className="mx-auto mt-2 w-fit rounded-xl border border-[#D8CCAE] bg-cream px-4 py-1.5 font-mono text-2xl font-black tracking-[0.3em] text-[#24201A]">
           {code}
         </p>
-        <p className="mt-3 text-center text-sm leading-relaxed text-white/60">{t('subtitle')}</p>
+        <p className="mt-3 text-center text-sm leading-relaxed text-cream/80">{t('subtitle')}</p>
 
         <form onSubmit={handleGuest} className="mt-5 space-y-3">
           <Input
             value={pseudo}
             onChange={(e) => setPseudo(e.target.value)}
             placeholder={t('pseudoPlaceholder')}
+            aria-label={t('pseudoPlaceholder')}
             maxLength={30}
             required
             autoFocus
-            className="border-white/10 bg-white/[0.05] text-center text-white"
+            className="h-12 border-gold/25 bg-black/20 text-center text-base text-cream placeholder:text-cream/60"
           />
           {error && (
-            <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>
+            <p role="alert" className="rounded-lg bg-red-500/[0.15] px-3 py-2 text-sm text-red-300">{error}</p>
           )}
           <Button
             type="submit"
+            variant="primary"
+            size="game"
             disabled={loading || pseudo.trim().length === 0}
-            className="h-11 w-full bg-amber-500 text-black hover:bg-amber-400"
+            className="w-full"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             {loading ? tCommon('loading') : t('guestCta')}
           </Button>
-          <p className="text-center text-xs leading-snug text-white/40">{t('guestHintDevice')}</p>
+          <p className="text-center text-xs leading-snug text-cream/70">{t('guestHintDevice')}</p>
         </form>
 
         <div className="mt-4 flex items-center gap-3" aria-hidden>
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="text-xs uppercase tracking-wide text-white/35">{t('or')}</span>
-          <span className="h-px flex-1 bg-white/10" />
+          <span className="h-px flex-1 bg-gold/20" />
+          <span className="text-xs uppercase tracking-wide text-cream/60">{t('or')}</span>
+          <span className="h-px flex-1 bg-gold/20" />
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleLogin}
-          className="mt-4 h-11 w-full border-white/[0.15] bg-transparent text-white/80 hover:bg-white/[0.06] hover:text-white"
-        >
+        <Button type="button" variant="quiet" size="game" onClick={handleLogin} className="mt-4 w-full">
           <LogIn className="mr-2 h-4 w-4" />
           {t('loginCta')}
         </Button>
@@ -146,7 +150,7 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
         <button
           type="button"
           onClick={onDismiss}
-          className="mt-2 min-h-[44px] w-full text-center text-xs text-white/35 underline underline-offset-2 hover:text-white/60"
+          className="mt-2 min-h-[44px] w-full text-center text-xs text-cream/70 underline underline-offset-2 hover:text-cream"
         >
           {t('dismiss')}
         </button>

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
-import { PlayingCard, suitIsRed } from '@/components/ui/PlayingCard'
+import { PlayingCard } from '@/components/ui/PlayingCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import {
   COLLECTION_SLUGS,
@@ -159,7 +159,7 @@ export default async function CollectionPage({
       <div className="container relative mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6 sm:pt-6">
         <Link
           href="/jeux"
-          className="inline-flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white/80"
+          className="inline-flex min-h-[44px] items-center gap-2 text-sm text-cream/70 transition-colors hover:text-cream"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {tHub('soloBanner.showAll')}
@@ -176,16 +176,15 @@ export default async function CollectionPage({
           </h1>
           {/* L'intro éditoriale : ce que Google lit, et ce que le joueur qui
               arrive d'une recherche attend avant la grille. */}
-          <p className="mt-3 text-pretty text-sm leading-relaxed text-white/70 sm:text-base">
+          <p className="mt-3 text-pretty text-sm leading-relaxed text-cream/80 sm:text-base">
             {t(`${collection}.intro`)}
           </p>
-          <p className="mt-3 text-xs text-white/45">{tCommon('gameCount', { count: games.length })}</p>
+          <p className="mt-3 text-xs text-cream/70">{tCommon('gameCount', { count: games.length })}</p>
         </header>
 
         <section aria-label={t(`${collection}.title`)} className="mt-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {games.map((game) => {
-              const red = game.suit ? suitIsRed(game.suit) : false
               const players = playersLine(game, t)
               return (
                 <Link
@@ -204,24 +203,24 @@ export default async function CollectionPage({
                     )}
                   >
                     <article className="flex h-full flex-col items-center px-3 pb-3 pt-5 text-center">
-                      <div className={cn(red ? 'text-suit-red' : 'text-[#24201A]')}>
-                        <GameIconById id={game.id} className="h-8 w-8" />
-                      </div>
+                      <GameIconById id={game.id} surface="card" className="h-9 w-9" />
                       <h2 className="mt-1.5 line-clamp-2 font-display text-sm font-bold leading-tight text-[#24201A]">
                         {tCatalog(`${game.id}.title`)}
                       </h2>
-                      {players && <p className="mt-0.5 text-[10px] font-bold text-[#6B6455]">{players}</p>}
+                      {players && <p className="mt-0.5 text-[11px] font-bold text-[#4A443A]">{players}</p>}
                       <p className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-[#4A443A]">
                         {tCatalog(`${game.id}.description`)}
                       </p>
                       <div className="mt-auto flex flex-wrap items-center justify-center gap-1 pt-2">
                         {game.onlineReady && (
-                          <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800">
+                          <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-800">
                             {tCatalogTags('online')}
                           </span>
                         )}
+                        {/* `/10` : le `/8` d'avant ne générait rien, le badge
+                            « Local » n'avait pas de fond. */}
                         {!game.onlineOnly && (
-                          <span className="rounded-full bg-[#24201A]/8 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#4A443A]">
+                          <span className="rounded-full bg-[#24201A]/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#4A443A]">
                             {tCatalogTags('local')}
                           </span>
                         )}
@@ -236,7 +235,7 @@ export default async function CollectionPage({
 
         {/* Les autres collections : le maillage entre les quatre pages. */}
         <nav aria-label={tChips('chipsLabel')} className="mt-8 border-t border-white/10 pt-5">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">{tChips('chipsLabel')}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-cream/70">{tChips('chipsLabel')}</p>
           <ul className="flex flex-wrap gap-2">
             {others.map((slug: CollectionSlug) => (
               <li key={slug}>

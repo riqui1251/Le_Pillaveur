@@ -50,3 +50,13 @@ export function nextSecondTickMs(endsAt: number, now: number): number {
   const rest = (((endsAt - now) % 1000) + 1000) % 1000
   return Math.max(COUNTDOWN_MIN_TICK_MS, rest === 0 ? 1000 : rest)
 }
+
+/**
+ * Chiffre du chrono de phase : « 0:23 », « 1:05 ». Toujours minutes:secondes,
+ * même sous la minute — le « 0: » dit « c'est un temps » d'un coup d'œil, là
+ * où un « 23 » seul se confond avec un score ou un compte de joueurs.
+ */
+export function formatCountdown(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}

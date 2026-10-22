@@ -10,6 +10,7 @@ import { onlineProgressionMark } from '@/hooks/useOnlineProgression'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { Button } from '@/components/ui/button'
+import { EndActionDock } from '@/components/game/EndActionDock'
 import { cn } from '@/lib/utils'
 import { shareLink } from '@/lib/native-share'
 import { isMultiHumanTable } from '@/lib/rematch-night'
@@ -19,6 +20,7 @@ import { endShareClipboardText, endShareUrl, mayBringTableBack, rematchCounter }
 // Avis de première partie : chargé à part et sans rendu serveur — il ne
 // s'affiche qu'une fois dans la vie d'un compte, inutile d'alourdir les
 // dix-huit écrans de fin, et sa décision lit le stockage de l'appareil.
+// Rendu en bandeau dans le dock d'actions, juste au-dessus de « Rejouer ».
 const FirstGameFeedbackCard = dynamic(
   () => import('@/components/feedback/FirstGameFeedbackCard').then((m) => m.FirstGameFeedbackCard),
   { ssr: false }
@@ -40,14 +42,22 @@ const RematchNightCard = dynamic(
  * l'état moteur au lieu du quorum réel de la relance. Ici, le jeu ne fournit
  * plus que ce qui lui est propre — le titre (`header`) et son contenu
  * (`ranking` : rôles du Loup-Garou, podium du Quiz, grille des Mots Codés…) —
- * et l'écran rend, dans l'ordre : ce contenu, l'XP, l'avis de première partie
- * (une seule fois dans la vie d'un compte), puis la barre d'actions (Rejouer,
- * Retour à la table, Partager, Quitter la table). Un avis décidé tard se pose
- * SOUS la barre, pour ne pas la décaler sous le pouce. À une table de
- * plusieurs humains, la carte « On remet ça ? » (amis + rappel du vendredi —
- * elle s'efface quand l'avis est dû) vient SOUS la barre, toujours : elle
- * revient à chaque fin de partie, « Rejouer » garde sa place (seule la barre
- * fixe du Quiz, qui ne bouge pas, la laisse au-dessus).
+ * et l'écran rend, dans l'ordre : ce contenu, l'XP, la carte « On remet
+ * ça ? » (tables de plusieurs humains : amis + rappel du vendredi — elle
+ * s'efface quand l'avis est dû), puis le DOCK d'actions (EndActionDock) :
+ * le bandeau d'avis de première partie (une seule fois dans la vie d'un
+ * compte), puis Rejouer, Retour à la table, Partager, Quitter la table.
+ *
+ * Le dock est fixe en zone pouce (variante page) ou collé au bas de la carte
+ * (variante sheet) : à 8 joueurs, « Rejouer » tombait à un écran et demi de
+ * défilement, et glissait encore sous le pli quand l'XP et les succès
+ * arrivaient. Ancré par le bas, le dock grandit vers le haut : un avis
+ * décidé tard s'ouvre au-dessus de « Rejouer » sans le déplacer.
+ *
+ * Rejouer est l'action principale de tous les jeux : encre sur or, la même
+ * partout. Les jeux ne passent plus de couleur (`rematchClassName` est
+ * ignoré) : leur couleur reste dans leur en-tête — un dégradé par jeu sous
+ * l'encre tombait à 2,2-4:1.
  *
  * Logique pure (compteur des présents, lien partagé) : ./end-screen.ts.
  */
@@ -82,8 +92,15 @@ const COPIED_FEEDBACK_MS = 2000
 /** Un échec de copie reste plus longtemps : il faut le temps de le lire. */
 const COPY_FAILED_FEEDBACK_MS = 4000
 
-const SECONDARY_BUTTON =
-  'h-12 min-w-0 whitespace-normal rounded-2xl border-white/[0.15] bg-white/5 px-3 text-sm font-semibold leading-tight text-white/80 hover:bg-white/10 hover:text-white'
+/** Actions secondaires : libellé sur deux lignes plutôt que tronqué à 375 px. */
+const SECONDARY_BUTTON = 'min-w-0 whitespace-normal px-3 leading-tight'
+
+/**
+ * Rejouer déjà voté : un ÉTAT, pas un bouton grisé (l'opacité du bouton
+ * désactivé faisait tomber « En attente des autres » à 2,4:1).
+ */
+const REMATCH_VOTED =
+  'border border-emerald-400/40 bg-emerald-500/[0.15] text-emerald-100 shadow-none hover:bg-emerald-500/[0.15] active:scale-100'
 
 export type OnlineEndScreenProps = {
   /** Titre propre au jeu (trophée, vainqueur, sous-titre…), rendu en tête. */
@@ -113,9 +130,17 @@ export type OnlineEndScreenProps = {
    * (Petit Buveur, Toucher-Coulé) — le jeu garde son voile et ses confettis.
    */
   variant?: 'page' | 'sheet'
-  /** Barre d'actions fixe en zone pouce (Quiz). */
+  /**
+   * Variante page : dock d'actions fixe en zone pouce (défaut). Gardé pour
+   * compatibilité ; false le colle au bas du conteneur qui défile au lieu
+   * de l'écran. Les jeux n'ont pas à le passer.
+   */
   fixedActions?: boolean
-  /** Couleur du bouton Rejouer (dégradé du jeu). */
+  /**
+   * @deprecated Ignoré : Rejouer prend toujours la variante `primary` (encre
+   * sur or). Un dégradé de jeu sous l'encre, ou du blanc sur or, tombait
+   * sous 4,5:1. À retirer des appels.
+   */
   rematchClassName?: string
   className?: string
 }
@@ -133,8 +158,7 @@ export function OnlineEndScreen({
   won = false,
   confetti = false,
   variant = 'page',
-  fixedActions = false,
-  rematchClassName,
+  fixedActions = true,
   className,
 }: OnlineEndScreenProps) {
   const t = useTranslations('onlineLobby')
@@ -181,12 +205,6 @@ export function OnlineEndScreen({
   // écran sert aussi à l'avis de 1re partie, monté en différé — sans ce
   // repère, il refaisait la même requête à chaque fin de partie.
   const [progressionSince] = useState(onlineProgressionMark)
-  // Apparition de l'écran, et emplacement SOUS la barre d'actions : un avis
-  // de 1re partie décidé tard (relecture de la progression) s'y pose au lieu
-  // de décaler la barre sous le pouce (cf. FirstGameFeedbackCard). Vide, il
-  // est masqué (`empty:hidden`) : ni marge ni écart de plus.
-  const [shownAt] = useState(() => Date.now())
-  const [lateSlot, setLateSlot] = useState<HTMLDivElement | null>(null)
 
   // « On remet ça ? » : au moins deux comptes humains à la table (membres
   // réels de la salle, bots exclus). Verrouillé dès que c'est vrai : un
@@ -236,25 +254,32 @@ export function OnlineEndScreen({
       )}
       {onRematch && (
         <Button
-          onClick={() => void runRematch(onRematch)}
-          disabled={counter.waiting || rematchPending || leaving}
+          variant="primary"
+          size="gameLg"
+          // Voté ou vote en route : le bouton reste focalisable (un bouton
+          // désactivé perdait le focus) et le toucher ne repart pas — le
+          // verrou de useGuardedAction couvre le vote en route.
+          onClick={() => {
+            if (!counter.waiting) void runRematch(onRematch)
+          }}
+          disabled={leaving}
+          aria-disabled={counter.waiting || rematchPending || undefined}
           aria-busy={rematchPending || undefined}
-          className={cn(
-            'h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 text-base font-bold',
-            rematchClassName
-          )}
+          className={cn('w-full whitespace-normal leading-tight', counter.waiting && REMATCH_VOTED)}
         >
           {rematchPending ? (
-            <Loader2 aria-hidden className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 aria-hidden className="mr-2 h-5 w-5 shrink-0 animate-spin" />
+          ) : counter.waiting ? (
+            <Check aria-hidden className="mr-2 h-5 w-5 shrink-0 text-emerald-300" />
           ) : (
-            <RefreshCw aria-hidden className="mr-2 h-4 w-4" />
+            <RefreshCw aria-hidden className="mr-2 h-5 w-5 shrink-0" />
           )}
           {counter.waiting
             ? t('end.rematchWaiting', { count: counter.count, total: counter.total })
             : t('end.rematch')}
           {/* D'autres ont déjà voté : le compte se voit AVANT de voter. */}
           {!counter.iVoted && counter.total > 1 && counter.count > 0 && (
-            <span className="ml-2 rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold tabular-nums">
+            <span className="ml-2 rounded-full bg-[#24201A]/10 px-2 py-0.5 text-xs font-bold tabular-nums">
               {counter.count}/{counter.total}
             </span>
           )}
@@ -265,7 +290,8 @@ export function OnlineEndScreen({
           onClick={() => void runBack(backToTable)}
           disabled={backPending || leaving}
           aria-busy={backPending || undefined}
-          variant="outline"
+          variant="quiet"
+          size="game"
           className={cn(SECONDARY_BUTTON, 'w-full text-base')}
         >
           {backPending ? (
@@ -280,7 +306,8 @@ export function OnlineEndScreen({
         <Button
           onClick={() => void share()}
           disabled={sharePending}
-          variant="outline"
+          variant="quiet"
+          size="game"
           className={SECONDARY_BUTTON}
         >
           {copied ? (
@@ -296,7 +323,8 @@ export function OnlineEndScreen({
           onClick={() => void runLeave(onLeave)}
           disabled={leavePending}
           aria-busy={leavePending || undefined}
-          variant="outline"
+          variant="quiet"
+          size="game"
           className={SECONDARY_BUTTON}
         >
           {leavePending ? (
@@ -319,33 +347,40 @@ export function OnlineEndScreen({
     </div>
   )
 
+  const feedback = gameId ? (
+    <FirstGameFeedbackCard
+      variant="banner"
+      mode="online"
+      gameId={gameId}
+      progressionSince={progressionSince}
+    />
+  ) : null
+
+  // La carte « On remet ça ? » reste dans le flux, SOUS le contenu : le dock
+  // étant fixe (ou collé au bas de la carte), elle ne repousse plus rien. Elle
+  // revient à chaque fin de partie à plusieurs : dans le dock, elle volerait
+  // la zone du pouce à « Rejouer » — la revanche du soir même est LA boucle
+  // qui marche à plusieurs.
+  const rematchNight = rematchRoomId ? (
+    <RematchNightCard
+      roomId={rematchRoomId}
+      progressionSince={progressionSince}
+      className={variant === 'sheet' ? 'mb-4' : 'max-w-sm'}
+    />
+  ) : null
+
   if (variant === 'sheet') {
     return (
       <div className={cn('flex flex-col', className)}>
         {header}
         {ranking}
         {xp}
-        {gameId && (
-          <FirstGameFeedbackCard
-            mode="online"
-            gameId={gameId}
-            progressionSince={progressionSince}
-            shownAt={shownAt}
-            lateSlot={lateSlot}
-            className="mb-4"
-          />
-        )}
-        {actions}
-        {/* Sous les actions, toujours : dans une carte de modale, rien ne
+        {rematchNight}
+        {/* Collé au bas de la carte qui défile : dans une modale, rien ne
             doit repousser « Rejouer » hors de vue. */}
-        {rematchRoomId && (
-          <RematchNightCard
-            roomId={rematchRoomId}
-            progressionSince={progressionSince}
-            className="mt-4"
-          />
-        )}
-        <div ref={setLateSlot} className="mt-4 empty:hidden" />
+        <EndActionDock mode="sticky" feedback={feedback}>
+          {actions}
+        </EndActionDock>
       </div>
     )
   }
@@ -357,7 +392,7 @@ export function OnlineEndScreen({
   return (
     <div
       className={cn(
-        'relative flex flex-1 flex-col items-center justify-center gap-5 p-6 text-white',
+        'relative flex flex-1 flex-col items-center justify-center gap-5 p-6 text-cream',
         className
       )}
     >
@@ -365,61 +400,12 @@ export function OnlineEndScreen({
       {header}
       {ranking}
       {xp}
-      {/* Entre l'XP et les actions, jamais DANS les actions : la barre fixe
-          du Quiz réserve une hauteur calculée pour ses seuls boutons. */}
-      {gameId && (
-        <FirstGameFeedbackCard
-          mode="online"
-          gameId={gameId}
-          progressionSince={progressionSince}
-          shownAt={shownAt}
-          // Barre fixe (Quiz) : une carte tardive n'y décale rien, elle reste ici.
-          lateSlot={fixedActions ? null : lateSlot}
-          className="max-w-sm"
-        />
-      )}
-      {/* Barre fixe (Quiz) : la carte « On remet ça ? » peut rester au-dessus,
-          elle ne déplace pas une barre qui ne bouge pas. Ailleurs, elle passe
-          SOUS les actions (ci-dessous) : contrairement à l'avis de 1re partie
-          (une fois dans la vie d'un compte), elle revient à CHAQUE fin de
-          partie à plusieurs tant qu'un geste reste à faire — au-dessus, elle
-          repousserait « Rejouer » sous le pli à chaque fois, alors que la
-          revanche du soir même est LA boucle qui marche à plusieurs. */}
-      {rematchRoomId && fixedActions && (
-        <RematchNightCard
-          roomId={rematchRoomId}
-          progressionSince={progressionSince}
-          className="max-w-sm"
-        />
-      )}
-      {fixedActions ? (
-        <>
-          {/* Réserve pour la barre fixe (zone sûre comprise) : deux rangées,
-              une de plus avec « Retour à la table », et la ligne d'erreur. */}
-          <div
-            aria-hidden
-            className="shrink-0"
-            style={{
-              height: `calc(${7 + (backToTable ? 4 : 0) + (error ? 3.5 : 0)}rem + env(safe-area-inset-bottom))`,
-            }}
-          />
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
-            <div className="mx-auto w-full max-w-sm">{actions}</div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="w-full max-w-sm">{actions}</div>
-          {rematchRoomId && (
-            <RematchNightCard
-              roomId={rematchRoomId}
-              progressionSince={progressionSince}
-              className="max-w-sm"
-            />
-          )}
-          <div ref={setLateSlot} className="w-full max-w-sm empty:hidden" />
-        </>
-      )}
+      {rematchNight}
+      {/* Le dock réserve lui-même sa hauteur (espaceur mesuré) : rien ne
+          passe dessous, zone sûre et bandeau d'avis compris. */}
+      <EndActionDock mode={fixedActions ? 'fixed' : 'sticky'} feedback={feedback}>
+        {actions}
+      </EndActionDock>
     </div>
   )
 }

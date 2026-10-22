@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { TargetGrid, type TargetGridPlayer } from '../TargetGrid'
 import type { EspionQuestionId } from '@/lib/espion/data/questions'
@@ -8,63 +7,68 @@ import type { EspionQuestionId } from '@/lib/espion/data/questions'
 /**
  * Poser une question : la cible d'abord (TargetGrid, sans celui qui vient de
  * m'interroger), puis trois questions parmi les moins posées de la manche.
- * Le choix vit ici le temps de la saisie ; le parent referme la feuille quand
- * la phase ou mes propres échanges changent, pas à chaque parole de bot.
+ * La cible est tenue par le parent : « Retour » et « Annuler » vivent dans la
+ * barre du bas, sous le pouce, et la feuille se referme quand la phase ou mes
+ * propres échanges changent, pas à chaque parole de bot.
  */
 export function AskSheet({
   title,
   targets,
   excludeIds,
+  excludedMeta,
   iconOf,
   selfId,
   questionsFor,
-  asksLeft,
+  targetId,
+  onTargetChange,
   disabled,
   onAsk,
-  onCancel,
 }: {
   title: string
   targets: readonly TargetGridPlayer[]
   excludeIds: string[]
+  /** Pourquoi une cible est grisée (« vient de t'interroger »), sous son nom. */
+  excludedMeta?: string
   iconOf: (p: TargetGridPlayer) => string
   selfId: string
   /** Les questions proposées pour cette cible (trois au plus). */
   questionsFor: (targetId: string) => EspionQuestionId[]
-  asksLeft: { n: number; max: number }
+  targetId: string | null
+  onTargetChange: (targetId: string | null) => void
   disabled: boolean
   onAsk: (targetId: string, questionId: EspionQuestionId) => void
-  onCancel: () => void
 }) {
   const t = useTranslations('games.espion.game')
-  const [targetId, setTargetId] = useState<string | null>(null)
   const target = targets.find((p) => p.id === targetId)
 
   return (
-    <div className="space-y-2 rounded-2xl border border-gold/30 bg-felt-deep/[0.85] p-3">
-      <p className="text-center text-sm font-bold text-cream">{title}</p>
+    <div className="space-y-3 rounded-2xl border border-gold/30 bg-felt-deep/80 p-3">
+      <p className="text-center font-display text-base font-bold text-gold">{title}</p>
       {!target ? (
         <>
-          <p className="text-center text-xs font-semibold text-white/60">{t('askWho')}</p>
+          <p className="text-center text-sm text-cream/80">{t('askWho')}</p>
           <TargetGrid
             players={targets}
             iconOf={iconOf}
-            onPick={setTargetId}
+            onPick={onTargetChange}
             disabled={disabled}
             excludeIds={excludeIds}
+            meta={excludedMeta ? (p) => (excludeIds.includes(p.id) ? excludedMeta : null) : undefined}
             youLabel={t('you')}
             selfId={selfId}
           />
         </>
       ) : (
         <>
-          <p className="text-center text-xs font-semibold text-white/60">{t('askWhich', { name: target.name })}</p>
-          <div className="space-y-1.5">
+          <p className="text-center text-sm text-cream/80">{t('askWhich', { name: target.name })}</p>
+          <div className="space-y-2">
             {questionsFor(target.id).map((questionId) => (
               <button
                 key={questionId}
+                type="button"
                 onClick={() => onAsk(target.id, questionId)}
                 disabled={disabled}
-                className="w-full rounded-xl border border-[#D8CCAE] bg-cream px-3 py-2.5 text-left text-sm font-bold text-[#24201A] shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)] transition-all active:scale-95 disabled:opacity-50"
+                className="flex min-h-[3rem] w-full items-center rounded-xl border border-[#D8CCAE] bg-cream px-3 py-2 text-left text-sm font-bold leading-snug text-[#24201A] shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep active:scale-95 disabled:opacity-50"
               >
                 <span className="block first-letter:uppercase">{t(`qa.${questionId}.q`)}</span>
               </button>
@@ -72,13 +76,6 @@ export function AskSheet({
           </div>
         </>
       )}
-      <p className="text-center text-[11px] text-white/40">{t('asksLeft', asksLeft)}</p>
-      <button
-        onClick={() => (target ? setTargetId(null) : onCancel())}
-        className="w-full text-center text-[11px] font-semibold text-white/40"
-      >
-        {t('cancel')}
-      </button>
     </div>
   )
 }

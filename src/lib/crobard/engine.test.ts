@@ -119,6 +119,29 @@ describe('DRAW_STROKE / CLEAR', () => {
   })
 })
 
+describe('UNDO_STROKE', () => {
+  const stroke = (x: number) => ({ points: [x, 0, x, 1], color: '#000', width: 3 })
+
+  it('retire le DERNIER trait, et lui seul', () => {
+    const s = make(4)
+    const a = reduceCrobard(s, { type: 'DRAW_STROKE', playerId: s.drawerId, stroke: stroke(0.1) })
+    const ab = reduceCrobard(a, { type: 'DRAW_STROKE', playerId: s.drawerId, stroke: stroke(0.2) })
+    const undone = reduceCrobard(ab, { type: 'UNDO_STROKE', playerId: s.drawerId })
+    expect(undone.strokes).toEqual(a.strokes)
+    expect(undone.version).toBe(ab.version + 1)
+  })
+
+  it('réservé au dessinateur, en phase de dessin, sur une toile non vide', () => {
+    const s = make(4)
+    const guesser = s.players.find((p) => p.id !== s.drawerId)!.id
+    const withStroke = reduceCrobard(s, { type: 'DRAW_STROKE', playerId: s.drawerId, stroke: stroke(0.5) })
+    expect(() => reduceCrobard(withStroke, { type: 'UNDO_STROKE', playerId: guesser })).toThrow('NOT_DRAWER')
+    expect(() => reduceCrobard(s, { type: 'UNDO_STROKE', playerId: s.drawerId })).toThrow('NOTHING_TO_UNDO')
+    const roundEnd = reduceCrobard(withStroke, { type: 'ADVANCE', claimedKey: phaseKey(withStroke), now: T0 + CROBARD_DRAWING_MS })
+    expect(() => reduceCrobard(roundEnd, { type: 'UNDO_STROKE', playerId: s.drawerId })).toThrow('NOT_DRAWING_PHASE')
+  })
+})
+
 describe('GUESS', () => {
   function makeWithKnownWord() {
     const players = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { ArrowLeft, ArrowRight, Bot, Gamepad2, Users } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
-import { PlayingCard, suitIsRed } from '@/components/ui/PlayingCard'
+import { PlayingCard } from '@/components/ui/PlayingCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { getGameById, type GameMeta } from '@/lib/games'
 import { RULES_GAME_IDS, RULES_META, type RulesGameId } from '@/lib/rules/rules-content'
@@ -156,7 +156,6 @@ export default async function RulesIndexPage({
         <section aria-label={t('title')} className="mt-6">
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {entries.map(({ id, game }) => {
-              const red = game.suit ? suitIsRed(game.suit) : false
               const { minPlayers, maxPlayers } = game
               return (
                 <li key={id}>
@@ -176,9 +175,7 @@ export default async function RulesIndexPage({
                     >
                       <article className="flex h-full flex-col px-5 pb-4 pt-5">
                         <div className="flex items-center gap-3">
-                          <span className={cn('shrink-0', red ? 'text-suit-red' : 'text-[#24201A]')}>
-                            <GameIconById id={id} className="h-8 w-8" />
-                          </span>
+                          <GameIconById id={id} surface="card" className="h-8 w-8 shrink-0" />
                           <h2 className="font-display text-lg font-bold leading-tight text-[#24201A]">
                             {tCatalog(`${id}.title`)}
                           </h2>

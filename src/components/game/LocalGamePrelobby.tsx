@@ -2,7 +2,7 @@
 
 import { useId, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { ArrowLeft, ChevronDown } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Users } from 'lucide-react'
 import type { Player } from '@/lib/players'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGame } from '@/lib/games-i18n'
@@ -12,11 +12,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { resolveNextGamePath } from '@/lib/next-game-path'
 import { enterLocalPlay } from '@/lib/local-play-client'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
+import { Button } from '@/components/ui/button'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
-
-const PRIMARY_BUTTON =
-  'w-full rounded-2xl bg-amber-500 py-4 text-base font-bold text-black hover:bg-amber-400 disabled:opacity-40'
 
 interface LocalGamePrelobbyProps {
   gameId: string
@@ -34,6 +33,12 @@ interface LocalGamePrelobbyProps {
  * Pré-lobby commun des jeux locaux « un seul téléphone ». Le layout parent
  * (games/layout.tsx) fournit la coquille feutre + filet or : ni fond ni
  * min-h ici.
+ *
+ * L'action du moment (« Commencer la partie », ou « Sélectionner les joueurs »
+ * tant qu'il en manque) vit dans une barre FIXE en bas, dans la zone du
+ * pouce : en fin de flux, après l'en-tête, les joueurs et les options du jeu,
+ * elle tombait vers 840-900 px à 375×667, hors de l'écran du joueur qui
+ * reçoit le téléphone.
  */
 export function LocalGamePrelobby({
   gameId,
@@ -65,15 +70,22 @@ export function LocalGamePrelobby({
       .then(() => router.push(playersHref))
   }
 
+  const needMore = players.length < min
+  const empty = players.length === 0
+  const tall = !needMore && Boolean(secondaryAction)
+
+  // Lien « Modifier » de la section Joueurs. À 0 joueur il n'existe pas : le
+  // bouton de la barre fait exactement la même chose, et le même geste
+  // apparaissait deux fois, flèche « retour » en prime.
   const playersLinkClass =
-    'inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-gold hover:text-gold-strong'
+    'inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-gold hover:text-gold-strong'
   const playersLinkContent = (
     <>
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-      {tPlayers('selectTitle')}
+      {tCommon('modify')}
+      <ChevronRight className="h-4 w-4" aria-hidden />
     </>
   )
-  const playersLink = isVisitor ? (
+  const playersLink = empty ? undefined : isVisitor ? (
     <button type="button" onClick={goToPlayers} className={playersLinkClass}>
       {playersLinkContent}
     </button>
@@ -83,23 +95,40 @@ export function LocalGamePrelobby({
     </Link>
   )
 
-  const needMore = players.length < min
+  const selectContent = (
+    <>
+      <Users className="mr-2 h-5 w-5" aria-hidden />
+      {tPlayers('selectTitle')}
+    </>
+  )
 
   return (
-    <div className="mx-auto w-full max-w-lg px-1 py-4 sm:py-8">
-      <header className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10 text-gold">
-          <GameIconById id={gameId} className="h-8 w-8" />
+    // Pas de `py`/`sm:py-*` : un `sm:py-8` l'emportait dès 640 px sur le
+    // padding de la barre fixe, qui recouvrait alors la fin du pré-lobby.
+    <div className={cn('mx-auto w-full max-w-lg px-1 pt-4 sm:pt-8', gameActionBarPadding(tall ? 'tall' : 'default'))}>
+      <header className="flex items-center gap-3">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-gold/30 bg-felt-deep">
+          <GameIconById id={gameId} surface="felt" className="h-8 w-8" />
         </div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-cream">{game?.title}</h1>
-        <p className="mx-auto mt-2 max-w-sm text-sm leading-snug text-cream/70">
-          {description ?? game?.description}
-        </p>
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-cream">{game?.title}</h1>
+          <p className="mt-0.5 text-[13px] leading-snug text-cream/70">{description ?? game?.description}</p>
+        </div>
       </header>
 
-      <div className="mt-6 space-y-4">
-        <PrelobbySection label={`${tCommon('players')} — ${players.length}`} action={playersLink}>
-          {players.length > 0 ? (
+      <div className="mt-5 space-y-4">
+        <PrelobbySection
+          label={empty ? tCommon('players') : `${tCommon('players')} — ${players.length}`}
+          action={playersLink}
+        >
+          {empty ? (
+            // Places vides en pointillé : la table attend ses joueurs.
+            <div aria-hidden className="mb-2 flex flex-wrap gap-2">
+              {Array.from({ length: Math.min(min, 3) }, (_, i) => (
+                <span key={i} className="h-9 w-24 rounded-full border border-dashed border-gold/40" />
+              ))}
+            </div>
+          ) : (
             <div className="flex flex-wrap gap-2">
               {players.map((p) => (
                 <span
@@ -111,47 +140,54 @@ export function LocalGamePrelobby({
                 </span>
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-cream/60">
-              {tPlayers('selectionStatus.needMore', { min, current: 0 })}
+          )}
+          {/* Le seul endroit qui dit ce qui manque (il était répété dans un
+              encadré or juste au-dessus du bouton). */}
+          {needMore && (
+            <p className={cn('text-sm text-cream/80', !empty && 'mt-3')}>
+              {tPlayers('selectionStatus.needMore', { min, current: players.length })}
             </p>
           )}
         </PrelobbySection>
 
         {children}
-
-        {needMore ? (
-          <>
-            <div className="rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-center text-sm text-gold">
-              {tPlayers('selectionStatus.needMore', { min, current: players.length })}
-            </div>
-            {isVisitor ? (
-              <button type="button" onClick={goToPlayers} className={PRIMARY_BUTTON}>
-                {tPlayers('selectTitle')}
-              </button>
-            ) : (
-              <Link href={playersHref} className={cn(PRIMARY_BUTTON, 'block text-center')}>
-                {tPlayers('selectTitle')}
-              </Link>
-            )}
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={onStart} disabled={startDisabled} className={PRIMARY_BUTTON}>
-              {startLabel ?? tPlayers('startGame')}
-            </button>
-            {secondaryAction}
-          </>
-        )}
       </div>
 
       <Link
         href="/jeux"
-        className="mx-auto mt-6 flex w-fit min-h-[44px] items-center gap-1.5 text-sm text-cream/60 transition-colors hover:text-cream"
+        className="mx-auto mt-6 flex w-fit min-h-[44px] items-center gap-1.5 text-sm text-cream/70 transition-colors hover:text-cream"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
         {tCommon('backToGames')}
       </Link>
+
+      <GameFixedActionBar maxWidthClass="max-w-lg">
+        {needMore ? (
+          isVisitor ? (
+            <Button type="button" variant="primary" size="gameLg" onClick={goToPlayers} className="w-full">
+              {selectContent}
+            </Button>
+          ) : (
+            <Button asChild variant="primary" size="gameLg" className="w-full">
+              <Link href={playersHref}>{selectContent}</Link>
+            </Button>
+          )
+        ) : (
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="primary"
+              size="gameLg"
+              onClick={onStart}
+              disabled={startDisabled}
+              className="w-full"
+            >
+              {startLabel ?? tPlayers('startGame')}
+            </Button>
+            {secondaryAction}
+          </div>
+        )}
+      </GameFixedActionBar>
     </div>
   )
 }
@@ -166,8 +202,10 @@ interface PrelobbySectionProps {
 export function PrelobbySection({ label, action, children, className }: PrelobbySectionProps) {
   return (
     <section className={cn('rounded-2xl border border-gold/15 bg-felt-deep/70 p-4', className)}>
+      {/* Intertitre en 12 px or plein (6,7:1) : en 11 px à 75 %, il tombait
+          sous 4,5:1 sur le feutre. */}
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+        <h2 className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
           {label}
         </h2>
         {action}
@@ -194,13 +232,13 @@ export function PrelobbyDisclosure({ label, open, onToggle, children, className 
   const panelId = useId()
   return (
     <section className={cn('rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2', className)}>
-      <h2 className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
+      <h2 className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={open}
           aria-controls={panelId}
-          className="flex min-h-[44px] w-full items-center justify-between gap-3 text-left transition-colors hover:text-gold"
+          className="flex min-h-[44px] w-full items-center justify-between gap-3 text-left transition-colors hover:text-cream"
         >
           {label}
           <ChevronDown

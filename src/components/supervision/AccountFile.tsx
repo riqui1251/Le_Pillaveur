@@ -1125,7 +1125,7 @@ function RecentGamesSection({ activity, userId }: { activity: AccountActivity; u
             return (
               <li key={g.id} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-                  <GameIconById id={g.gameId} className="h-4 w-4 shrink-0 text-gold" />
+                  <GameIconById id={g.gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
                   <span className="min-w-0 text-sm font-medium text-white">{gameTitle(g.gameId)}</span>
                   <span className="text-xs text-white/45">{dateTime(g.startedAt)}</span>
                   <span
@@ -1194,7 +1194,7 @@ function GamesSection({ activity }: { activity: AccountActivity }) {
   const gameLabel = (gameId: string) => (
     <>
       <span aria-hidden className="mr-1.5 inline-block align-[-3px]">
-        <GameIconById id={gameId} className="block h-4 w-4 text-gold" />
+        <GameIconById id={gameId} surface="feltGold" className="block h-5 w-5" />
       </span>
       {gameTitle(gameId)}
     </>
@@ -1310,7 +1310,7 @@ function GamesSection({ activity }: { activity: AccountActivity }) {
                       <tr key={gameId} className="text-white/80">
                         <td className="px-3 py-2">
                           <span className="flex items-center gap-2">
-                            <GameIconById id={gameId} className="h-4 w-4 shrink-0 text-gold" />
+                            <GameIconById id={gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
                             <span className="text-white">{gameTitle(gameId)}</span>
                           </span>
                         </td>

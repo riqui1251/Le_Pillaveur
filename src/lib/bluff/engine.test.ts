@@ -122,22 +122,53 @@ describe('SUBMIT_FAKE', () => {
     expect(timedOut.candidates).toHaveLength(2)
   })
 
-  it('un bluff identique (normalisé) à la vraie réponse est remplacé par un leurre', () => {
+  it('refuse un bluff déjà pris (normalisé) : la vraie réponse ou le bluff d’un autre', () => {
     const s = make(4)
     const currentPrompt = s.roundPrompts[s.promptIdx]
-    let next = s
-    for (const p of bluffActive(s)) {
-      next = reduceBluff(next, {
-        type: 'SUBMIT_FAKE',
-        playerId: p.id,
-        text: p.id === 'p0' ? currentPrompt.answer.toLowerCase() : `bluff-${p.id}`, // collision volontaire (casse différente)
-        now: T0,
-      })
-    }
+    expect(() =>
+      reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p0', text: ` ${currentPrompt.answer.toUpperCase()} `, now: T0 })
+    ).toThrow('FAKE_TAKEN')
+    let next = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p1', text: 'Kyôto', now: T0 })
+    expect(() =>
+      reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p2', text: 'kyoto', now: T0 })
+    ).toThrow('FAKE_TAKEN')
+    // Le refus ne consomme rien : le joueur réessaie avec un autre texte.
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p0', text: 'Sapporo', now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p2', text: 'Kobe', now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p3', text: 'Nara', now: T0 })
     expect(next.phase).toBe('vote')
-    const p0Candidate = next.candidates.find((c) => c.authorId === 'p0')
-    expect(p0Candidate?.text).not.toBe(currentPrompt.answer.toLowerCase())
-    expect(currentPrompt.decoys).toContain(p0Candidate?.text)
+    for (const p of bluffActive(next)) {
+      const view = toBluffClientView(next, p.id)
+      const mine = view.voteOptions?.find((o) => o.candidateId === view.myCandidateId)
+      expect(mine?.text).toBe(next.pendingFakes[p.id])
+    }
+  })
+
+  it('le bluff d’un bot qui tombe sur un texte pris prend un leurre libre, jamais celui d’un humain', () => {
+    const players = [
+      { id: 'p0', name: 'P0' },
+      { id: 'p1', name: 'P1' },
+      { id: 'p2', name: 'P2' },
+      { id: 'bot-1', name: 'Bot', isBot: true },
+    ]
+    const raw = createBluffState(players, PROMPTS, 'seed', T0 - BLUFF_COUNTDOWN_MS, 3)
+    const s = reduceBluff(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    const currentPrompt = s.roundPrompts[s.promptIdx]
+    // Le bot bluffe la vraie réponse AVANT l'humain qui prend le premier leurre.
+    let next = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'bot-1', text: currentPrompt.answer, now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p0', text: currentPrompt.decoys[0], now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p1', text: 'bluff-p1', now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p2', text: 'bluff-p2', now: T0 })
+    expect(next.phase).toBe('vote')
+    const textOf = (id: string) => next.candidates.find((c) => c.authorId === id)?.text
+    expect(textOf('p0')).toBe(currentPrompt.decoys[0])
+    expect(textOf('bot-1')).toBe(currentPrompt.decoys[1])
+    const texts = next.candidates.map((c) => c.text.toLowerCase())
+    expect(new Set(texts).size).toBe(texts.length)
+    const view = toBluffClientView(next, 'p0')
+    expect(view.voteOptions?.find((o) => o.candidateId === view.myCandidateId)?.text).toBe(
+      currentPrompt.decoys[0]
+    )
   })
 })
 
@@ -315,6 +346,48 @@ describe('vues anti-triche', () => {
       expect(opt).not.toHaveProperty('authorId')
     }
     expect(voteView.prompt).toBe(s.roundPrompts[s.promptIdx].q)
+  })
+
+  it('des identifiants de candidats opaques : ni la vraie réponse ni un auteur ne s’y lisent', () => {
+    const voting = submitAll(make(4))
+    const ids = toBluffSpectatorView(voting).voteOptions!.map((o) => o.candidateId)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const id of ids) {
+      expect(id).not.toMatch(/real|fake/)
+      for (const p of voting.players) expect(id).not.toContain(p.id)
+    }
+    // Le vote passe toujours par ces identifiants : trouver la vraie rapporte.
+    const realId = voting.candidates.find((c) => c.isReal)!.candidateId
+    let next = voting
+    for (const p of bluffActive(voting)) {
+      next = reduceBluff(next, { type: 'VOTE', playerId: p.id, candidateId: realId, now: T0 })
+    }
+    expect(next.phase).toBe('reveal')
+    expect(next.players.every((p) => p.score === BLUFF_POINTS_FOUND_REAL)).toBe(true)
+  })
+
+  it('désigne au joueur SON bluff pendant le vote, jamais celui des autres ni à la TV', () => {
+    const s = make(4)
+    expect(toBluffClientView(s, 'p0').myCandidateId).toBeNull()
+    const voting = submitAll(s)
+    const own = voting.candidates.find((c) => c.authorId === 'p0')!
+    const view = toBluffClientView(voting, 'p0')
+    expect(view.myCandidateId).toBe(own.candidateId)
+    expect(view.voteOptions?.some((o) => o.candidateId === own.candidateId)).toBe(true)
+    expect(() =>
+      reduceBluff(voting, { type: 'VOTE', playerId: 'p0', candidateId: view.myCandidateId!, now: T0 })
+    ).toThrow('CANNOT_VOTE_OWN_FAKE')
+    expect(toBluffSpectatorView(voting).myCandidateId).toBeNull()
+    // Sans bluff soumis (retardataire), aucun candidat n'est le sien.
+    const late = reduceBluff(
+      reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p1', text: 'bluff-p1', now: T0 }),
+      { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + BLUFF_SUBMIT_MS }
+    )
+    expect(late.phase).toBe('vote')
+    expect(toBluffClientView(late, 'p0').myCandidateId).toBeNull()
+    expect(toBluffClientView(late, 'p1').myCandidateId).toBe(
+      late.candidates.find((c) => c.authorId === 'p1')!.candidateId
+    )
   })
 
   it('révèle tout au reveal ; le spectateur voit la même chose qu’un viewer neutre', () => {

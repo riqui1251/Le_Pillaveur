@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Check, RotateCcw } from 'lucide-react'
@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { Button } from '@/components/ui/button'
 
 type ReplayMate = { userId: string; displayName: string }
 
@@ -48,6 +49,7 @@ export function RecentGamesRow() {
   const [proposal, setProposal] = useState<ReplayProposal | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const fetchedRef = useRef(false)
+  const titleId = useId()
 
   useEffect(() => {
     if (!user || user.playMode !== 'online' || fetchedRef.current) return
@@ -127,10 +129,12 @@ export function RecentGamesRow() {
   const busy = loading || replayingId !== null
 
   return (
-    <div className="mb-4">
-      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-white/35">
+    // Le titre de la rangée est lu au lecteur d'écran seulement : chaque
+    // puce dit déjà « Rejouer », et sa ligne de 24 px repoussait la grille.
+    <section aria-labelledby={titleId} className="mb-3">
+      <h2 id={titleId} className="sr-only">
         {t('title')}
-      </p>
+      </h2>
       <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {entries.map(({ entry, game }) => (
           <button
@@ -138,21 +142,21 @@ export function RecentGamesRow() {
             type="button"
             disabled={busy}
             onClick={() => handleReplay(entry, game.id, game.path, game.title)}
-            className="group flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] py-2 pl-2.5 pr-3 text-left backdrop-blur-md transition-all duration-200 hover:border-amber-400/[0.35] hover:bg-amber-500/10 active:scale-[0.98] disabled:opacity-60"
+            className="group flex min-h-[48px] shrink-0 items-center gap-2.5 rounded-2xl border border-gold/20 bg-felt-deep/70 py-1.5 pl-2 pr-3 text-left transition-all duration-200 hover:border-gold/40 hover:bg-gold/10 active:scale-[0.98] disabled:opacity-60"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-amber-200">
-              <GameIconById id={game.id} className="h-4 w-4" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-felt">
+              <GameIconById id={game.id} surface="felt" className="h-5 w-5" />
             </span>
             <span className="min-w-0">
-              <span className="block max-w-[9rem] truncate text-xs font-semibold text-white">
+              <span className="block max-w-[9rem] truncate text-xs font-semibold text-cream">
                 {game.title}
               </span>
-              <span className="flex items-center gap-1 text-xs text-amber-300/80">
+              <span className="flex items-center gap-1 text-xs text-gold">
                 {replayingId === entry.gameId ? (
                   t('replaying')
                 ) : (
                   <>
-                    <RotateCcw className="h-3 w-3" />
+                    <RotateCcw className="h-3 w-3" aria-hidden />
                     {t('replay')}
                   </>
                 )}
@@ -163,11 +167,11 @@ export function RecentGamesRow() {
       </div>
 
       {proposal && (
-        <div className="mt-2 rounded-2xl border border-amber-400/25 bg-white/[0.05] p-3 backdrop-blur-md">
-          <p className="text-xs font-semibold text-white">
+        <div className="mt-2 rounded-2xl border border-gold/30 bg-felt-deep/90 p-3">
+          <p className="text-sm font-semibold text-cream">
             {t('inviteTitle', { game: proposal.gameTitle })}
           </p>
-          <p className="mt-0.5 text-xs leading-relaxed text-white/50">{t('inviteHint')}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-cream/70">{t('inviteHint')}</p>
           {/* Puces de 36 px, 44 au doigt (.touch-target) : les 8 px d'écart
               font se rejoindre les zones invisibles sans qu'elles se
               chevauchent d'une rangée à l'autre. */}
@@ -181,42 +185,38 @@ export function RecentGamesRow() {
                   aria-pressed={on}
                   disabled={busy}
                   onClick={() => toggleMate(mate.userId)}
-                  className={`touch-target flex h-9 items-center gap-1 rounded-full border px-3 text-xs transition-colors disabled:opacity-60 ${
+                  className={`touch-target flex h-9 items-center gap-1 rounded-full border px-3 text-sm transition-colors disabled:opacity-60 ${
                     on
                       ? 'border-amber-400/50 bg-amber-500/[0.15] text-amber-100'
-                      : 'border-white/10 bg-white/[0.03] text-white/45'
+                      : 'border-gold/20 bg-white/[0.03] text-cream/70 line-through decoration-cream/50'
                   }`}
                 >
-                  {on && <Check className="h-3 w-3" />}
+                  {on && <Check className="h-3.5 w-3.5" aria-hidden />}
                   <span className="max-w-[8rem] truncate">{mate.displayName}</span>
                 </button>
               )
             })}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="game"
               disabled={busy}
               onClick={() => void startReplay(proposal.gameId, proposal.path, selectedIds)}
-              className="h-11 rounded-xl bg-amber-500/90 px-4 text-xs font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-60"
             >
               {replayingId
                 ? t('replaying')
                 : selectedIds.length > 0
                   ? t('inviteConfirm', { count: selectedIds.length })
                   : t('createAlone')}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setProposal(null)}
-              className="h-11 rounded-xl border border-white/10 px-4 text-xs text-white/60 transition-colors hover:text-white disabled:opacity-60"
-            >
+            </Button>
+            <Button type="button" variant="quiet" size="game" disabled={busy} onClick={() => setProposal(null)}>
               {t('cancel')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </section>
   )
 }

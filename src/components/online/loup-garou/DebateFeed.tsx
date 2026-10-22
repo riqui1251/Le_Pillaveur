@@ -11,7 +11,9 @@ import type { LGLineTranslator } from './debate-feed'
  * reste un littéral ici, comme l'exige le relevé des tranches de messages.
  * La bulle d'une accusation qui VISE le spectateur porte « Il t'accuse » —
  * c'est elle qui ouvre « Me défendre » dans la carte parente ; la carte
- * d'interpellation (« tu votes qui ? ») reste hors du fil.
+ * d'interpellation (« tu votes qui ? ») reste hors du fil. Au téléphone, le
+ * lecteur d'écran n'entend que les paroles qui le visent : les bots parlent
+ * toutes les quelques secondes, tout annoncer noyait le joueur.
  */
 export function DebateFeed({
   speeches,
@@ -46,6 +48,7 @@ export function DebateFeed({
       tr={tr}
       feedAria={t('feedAria')}
       aimedBadge={{ kinds: ['suspect'], text: t('accusedYou') }}
+      live={variant === 'phone' ? 'aimed' : 'all'}
     />
   )
 }

@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { ArrowLeft, Users, WifiOff } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { OfflineRetryButton } from '@/components/pwa/OfflineRetryButton'
+import { GameIconById } from '@/components/hub/GameIconById'
 import { offlinePlayableGames } from '@/lib/offline/offline-routes'
 
 /**
@@ -53,8 +54,8 @@ export default async function OfflinePage({
           <WifiOff className="h-8 w-8 text-gold" aria-hidden />
         </span>
         <h1 className="mt-4 font-display text-3xl font-bold text-cream sm:text-4xl">{t('title')}</h1>
-        <p className="mt-2 text-base text-white/75">{t('lead')}</p>
-        <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-white/60">{t('body')}</p>
+        <p className="mt-2 text-base text-cream/80">{t('lead')}</p>
+        <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-cream/70">{t('body')}</p>
 
         {/* useSearchParams (page voulue) réclame sa frontière Suspense : sans
             elle, le rendu statique de la page échouerait au build. */}
@@ -65,7 +66,7 @@ export default async function OfflinePage({
         <section aria-labelledby="offline-games" className="mt-8 text-left">
           <h2
             id="offline-games"
-            className="mb-2 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75"
+            className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold"
           >
             <span className="shrink-0">{t('gamesTitle')}</span>
             <span aria-hidden className="h-px flex-1 bg-gold/15" />
@@ -76,11 +77,9 @@ export default async function OfflinePage({
                 <Link
                   href={game.path}
                   prefetch={false}
-                  className="flex min-h-12 items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/60 px-3 py-2 text-sm font-semibold text-cream transition-colors hover:border-gold/50"
+                  className="flex min-h-[3rem] items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/60 px-3 py-2 text-sm font-semibold text-cream transition-colors hover:border-gold/50"
                 >
-                  <span aria-hidden className="text-lg leading-none">
-                    {game.emoji}
-                  </span>
+                  <GameIconById id={game.id} surface="felt" className="h-6 w-6 shrink-0" />
                   <span className="min-w-0 truncate">{tCatalog(`${game.id}.title`)}</span>
                 </Link>
               </li>
@@ -92,7 +91,7 @@ export default async function OfflinePage({
           <Link
             href="/joueurs"
             prefetch={false}
-            className="inline-flex items-center gap-1.5 text-white/70 transition-colors hover:text-cream"
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-cream/80 transition-colors hover:text-cream"
           >
             <Users className="h-4 w-4" aria-hidden />
             {t('players')}
@@ -100,7 +99,7 @@ export default async function OfflinePage({
           <Link
             href="/jeux"
             prefetch={false}
-            className="inline-flex items-center gap-1.5 text-white/70 transition-colors hover:text-cream"
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-cream/80 transition-colors hover:text-cream"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {t('backToGames')}

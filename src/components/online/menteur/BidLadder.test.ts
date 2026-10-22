@@ -71,7 +71,8 @@ describe('BidLadder', () => {
     expect(html).not.toContain('Riqui a annoncé 1 dé de 2')
     expect(html).toContain('Bernadette a annoncé 3 dés de 3')
     expect(html).toContain('Bernadette a annoncé 5 dés de 6')
-    expect(html.match(/border-orange-400\/60/g)).toHaveLength(1)
+    expect(html.match(/border-gold\/60/g)).toHaveLength(1)
+    expect(html).not.toContain('orange')
     expect(html).toContain('aria-label="Enchères de la manche, de la première à la dernière"')
     // Aucun titre visible pendant les enchères, aucune marque de bluff.
     expect(html).not.toContain('>Enchères de la manche<')
@@ -85,6 +86,8 @@ describe('BidLadder', () => {
     const html = render({ bids: many, variant: 'tv', limit: BID_LADDER_TV })
     expect(chips(html)).toBe(BID_LADDER_TV)
     expect(html).toContain('text-2xl')
+    // La TV garde l'orange de son plateau pour la dernière enchère.
+    expect(html.match(/border-orange-400\/60/g)).toHaveLength(1)
     expect(html).toContain('Raoul a annoncé 7 dés de 6')
     expect(html).toContain('…')
   })

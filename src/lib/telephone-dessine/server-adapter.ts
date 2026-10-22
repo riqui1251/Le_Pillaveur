@@ -3,6 +3,7 @@ import {
   currentTelephoneActorId,
   telephoneActive,
   telephoneActionTypeForRound,
+  telephoneRevealLastLinkIdx,
   reduceTelephone,
   toTelephoneClientView,
   toTelephoneSpectatorView,
@@ -47,11 +48,18 @@ export function parseTelephoneState(json: string | null): TelephoneState | null 
   try {
     const raw = JSON.parse(json) as TelephoneState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
+    const revealOrder = raw.revealOrder ?? []
     return {
       ...raw,
       rematchVotes: raw.rematchVotes ?? [],
       submittedIds: raw.submittedIds ?? [],
-      revealOrder: raw.revealOrder ?? [],
+      revealOrder,
+      // Révélation lancée avant le dévoilement maillon par maillon : la table
+      // voyait déjà la chaîne entière, elle la garde entière.
+      revealLinkIdx:
+        typeof raw.revealLinkIdx === 'number'
+          ? raw.revealLinkIdx
+          : telephoneRevealLastLinkIdx({ chains: raw.chains ?? {}, revealOrder }, raw.revealIdx ?? 0),
       // Parties LANCÉES avant l'horloge de révélation : leur reveal n'a pas
       // d'échéance et resterait suspendu au seul meneur. On lui en pose une
       // à la première relecture — la table repart toute seule.
@@ -71,8 +79,8 @@ export type TelephoneRoomActionInput =
   | { type: 'clear' }
   | { type: 'submit'; strokes?: Stroke[] }
   | { type: 'advance'; phaseKey: string }
-  | { type: 'continue' }
-  | { type: 'previous' }
+  | { type: 'continue'; phaseKey?: string }
+  | { type: 'previous'; phaseKey?: string }
   | { type: 'bot' }
   | { type: 'replace-left'; graceMs: number }
 
@@ -126,12 +134,22 @@ export function applyTelephoneRoomAction(
       case 'continue':
         return {
           ok: true,
-          state: reduceTelephone(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
+          state: reduceTelephone(state, {
+            type: 'CONTINUE',
+            playerId: userId,
+            now: Date.now(),
+            claimedKey: input.phaseKey,
+          }),
         }
       case 'previous':
         return {
           ok: true,
-          state: reduceTelephone(state, { type: 'PREVIOUS', playerId: userId, now: Date.now() }),
+          state: reduceTelephone(state, {
+            type: 'PREVIOUS',
+            playerId: userId,
+            now: Date.now(),
+            claimedKey: input.phaseKey,
+          }),
         }
       case 'bot':
         return applyTelephoneBotAction(state)

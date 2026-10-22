@@ -367,7 +367,7 @@ export function OnlineRankingBoard({
     return (
       <div className="space-y-4">
         {periodTabs}
-        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center">
+        <div className="rounded-2xl border border-dashed border-white/[0.15] bg-white/[0.02] px-6 py-10 text-center">
           <Beer className="mx-auto mb-2 h-7 w-7 text-amber-300/60" />
           <p className="text-sm text-white/50">{t('empty')}</p>
         </div>
@@ -428,7 +428,7 @@ export function OnlineRankingBoard({
                   : 'border-gold/25 text-cream/70 hover:border-gold/50 hover:text-cream'
               )}
             >
-              <GameIconById id={id} className="h-3.5 w-3.5" />
+              <GameIconById id={id} surface="feltGold" className="h-5 w-5 shrink-0" />
               {game?.title ?? id}
             </button>
           )
@@ -461,7 +461,7 @@ export function OnlineRankingBoard({
           return (
             <BoardCard
               key={`${id}-${period}`}
-              icon={<GameIconById id={id} className="h-4 w-4" />}
+              icon={<GameIconById id={id} surface="feltGold" className="h-5 w-5 shrink-0" />}
               title={game?.title ?? id}
               board={boardFor(id)}
               fullGameId={id}

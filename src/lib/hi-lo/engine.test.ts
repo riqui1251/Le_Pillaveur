@@ -17,6 +17,7 @@ import {
   startHiLoGame,
   toHiLoSave,
   traverseeTarget,
+  upcomingHiLoPlayerId,
   type CardSuit,
   type CardValue,
   type HiLoCard,
@@ -366,6 +367,77 @@ describe('mode traversée', () => {
     expect(advance.state.gameOver).toBe(true)
     expect(advance.end).not.toBeNull()
     expect(advance.state.currentCard).toEqual(card('7'))
+  })
+})
+
+describe('verdict nommé et joueur suivant', () => {
+  /** Gorgées ajoutées par le tirage, lues dans le bilan : la référence du verdict. */
+  function addedDrinks(before: HiLoState, after: HiLoState): Record<string, number> {
+    const added: Record<string, number> = {}
+    for (const [id, drinks] of Object.entries(after.gameResults)) {
+      const delta = drinks - (before.gameResults[id] || 0)
+      if (delta) added[id] = delta
+    }
+    return added
+  }
+
+  function penaltyAsDrinks(outcome: NonNullable<ReturnType<typeof resolveHiLoGuess>>): Record<string, number> {
+    return Object.fromEntries((outcome.penalty?.playerIds ?? []).map((id) => [id, outcome.penalty!.drinks]))
+  }
+
+  it('bonne réponse : personne ne boit', () => {
+    expect(resolveHiLoGuess(standard(), 'higher')!.penalty).toBeNull()
+    expect(resolveHiLoGuess(traversee(), 'higher')!.penalty).toBeNull()
+  })
+
+  it('standard : le joueur au tour boit la mise, comme au bilan', () => {
+    const state = standard({ drinkCounter: 4, currentPlayerIndex: 1, gameResults: { bob: 2 } })
+    const outcome = resolveHiLoGuess(state, 'lower')!
+    expect(outcome.penalty).toEqual({ playerIds: ['bob'], drinks: 4 })
+    expect(penaltyAsDrinks(outcome)).toEqual(addedDrinks(state, outcome.resolved))
+  })
+
+  it('traversée : les joueurs encore en jeu boivent, ceux qui sont sortis non', () => {
+    const state = traversee({ activePlayerIds: ['alice', 'chloe'], drinkCounter: 3, correctGuessesInRow: 2 })
+    const outcome = resolveHiLoGuess(state, 'lower')!
+    expect(outcome.penalty).toEqual({ playerIds: ['alice', 'chloe'], drinks: 3 })
+    expect(penaltyAsDrinks(outcome)).toEqual(addedDrinks(state, outcome.resolved))
+  })
+
+  it('égalité non annoncée en traversée : la mise se boit (pas 1 gorgée)', () => {
+    const state = traversee({ deck: [card('7', '♥'), card('2')], drinkCounter: 3 })
+    const outcome = resolveHiLoGuess(state, 'higher')!
+    expect(outcome.penalty).toEqual({ playerIds: TABLE, drinks: 3 })
+    expect(penaltyAsDrinks(outcome)).toEqual(addedDrinks(state, outcome.resolved))
+  })
+
+  it('drapeau d’égalité hérité : 1 gorgée chacun, comme au bilan', () => {
+    const restarted = startHiLoGame({ mode: 'traversee', playerIds: TABLE, previous: { isUnguessedEqual: true } })
+    const state = { ...restarted, currentCard: card('7'), deck: [card('5'), card('2')], drinkCounter: 4 }
+    const outcome = resolveHiLoGuess(state, 'higher')!
+    expect(outcome.penalty).toEqual({ playerIds: TABLE, drinks: 1 })
+    expect(penaltyAsDrinks(outcome)).toEqual(addedDrinks(state, outcome.resolved))
+  })
+
+  it('cinquième carte identique : le joueur au tour boit la mise', () => {
+    const state = standard({ drinkCounter: 3, deck: [card('9', '♥'), card('2')], sameCardCount: { '9-♥': 4 } })
+    const outcome = resolveHiLoGuess(state, 'lower')!
+    expect(outcome.penalty).toEqual({ playerIds: ['alice'], drinks: 3 })
+    expect(penaltyAsDrinks(outcome)).toEqual(addedDrinks(state, outcome.resolved))
+  })
+
+  it('joueur suivant annoncé = celui qui reçoit la main', () => {
+    const miss = resolveHiLoGuess(standard({ currentPlayerIndex: 2 }), 'lower')!.resolved
+    expect(upcomingHiLoPlayerId(miss)).toBe('alice')
+    expect(currentHiLoPlayerId(advanceHiLoTurn(acknowledgeHiLoMiss(miss)).state)).toBe('alice')
+    // Sortie de traversée : même saut historique que le tour suivant (bob sauté).
+    const exit = resolveHiLoGuess(traversee({ deck: [card('7', '♥'), card('2')] }), 'equal')!.resolved
+    expect(upcomingHiLoPlayerId(exit)).toBe('chloe')
+  })
+
+  it('partie finie : plus de joueur suivant', () => {
+    expect(upcomingHiLoPlayerId(standard({ gameOver: true }))).toBeNull()
+    expect(upcomingHiLoPlayerId(traversee({ activePlayerIds: [], showResult: true, nextCard: card('9') }))).toBeNull()
   })
 })
 

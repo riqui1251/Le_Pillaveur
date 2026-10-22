@@ -45,6 +45,18 @@ export const CASE_FAMILY_STYLE: Record<
   },
 }
 
+/**
+ * Anneau du jeton de case (CaseToken) : la famille en couleur pleine autour
+ * d'un centre crème, où l'emoji le plus sombre reste lisible.
+ */
+export const CASE_FAMILY_TOKEN_RING: Record<CaseFamily, string> = {
+  bonus: 'border-emerald-600',
+  malus: 'border-suit-red',
+  move: 'border-chip-blue',
+  interactive: 'border-gold',
+  neutral: 'border-[#6B6455]',
+}
+
 type CaseMeta = { family: CaseFamily; icon: string }
 
 const CASE_META: Record<string, CaseMeta> = {
@@ -77,7 +89,9 @@ const CASE_META: Record<string, CaseMeta> = {
   defi: { family: 'interactive', icon: '🎯' },
   'defi-chaine': { family: 'interactive', icon: '🔗' },
   roue: { family: 'interactive', icon: '🎡' },
-  'roue-defis': { family: 'interactive', icon: '🎡' },
+  // Une icône par case : roue / roue des défis, dé de la honte / double case
+  // et miroir / miroir inversé partageaient la leur.
+  'roue-defis': { family: 'interactive', icon: '📜' },
   'de-honte': { family: 'interactive', icon: '🎲' },
   'pile-face': { family: 'interactive', icon: '🪙' },
   question: { family: 'interactive', icon: '❓' },
@@ -86,19 +100,20 @@ const CASE_META: Record<string, CaseMeta> = {
   copie: { family: 'interactive', icon: '📋' },
   repetition: { family: 'interactive', icon: '🔁' },
   miroir: { family: 'interactive', icon: '🪞' },
-  'miroir-inverse': { family: 'interactive', icon: '🪞' },
+  'miroir-inverse': { family: 'interactive', icon: '🙃' },
   melange: { family: 'interactive', icon: '🌀' },
   inversion: { family: 'interactive', icon: '🔃' },
   rewind: { family: 'interactive', icon: '⏪' },
   loterie: { family: 'interactive', icon: '🎰' },
-  'double-case': { family: 'interactive', icon: '🎲' },
+  'double-case': { family: 'interactive', icon: '✌️' },
 
   // Rien
-  normal: { family: 'neutral', icon: '▫️' },
+  // ▫️ (carré blanc) disparaissait sur le centre crème du jeton.
+  normal: { family: 'neutral', icon: '😌' },
 }
 
 export function getCaseMeta(type: string): CaseMeta {
-  return CASE_META[type] ?? { family: 'neutral', icon: '▫️' }
+  return CASE_META[type] ?? CASE_META.normal
 }
 
 export function getCaseFamilyStyle(type: string) {

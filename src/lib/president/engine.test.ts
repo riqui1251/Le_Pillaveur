@@ -4,6 +4,8 @@ import {
   createPreState,
   currentPreActorId,
   preCanPlay,
+  preComboIssue,
+  preOuRien,
   prePickBotPlay,
   preRankOf,
   reducePre,
@@ -101,6 +103,29 @@ describe('président — règles de pose', () => {
     expect(state.lastPlay).toBeNull()
     expect(state.trickRun).toBeNull()
     expect(state.currentTurnId).toBe('p4')
+  })
+
+  it('preComboIssue : la vue d’un joueur dit pourquoi sa sélection ne passe pas', () => {
+    let state = rigged(
+      { p1: [c(9), c(3)], p2: [c(9, 1), c(4), c(4, 1)], p3: [c(9, 3), c(7)], p4: [c(9, 2), c(5)] },
+      'p1'
+    )
+    // Pli libre : tout combo homogène passe.
+    expect(preComboIssue(toPreClientView(state, 'p1'), [c(3)])).toBeNull()
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
+    const view = toPreClientView(state, 'p2')
+    expect(preComboIssue(view, [c(4), c(4, 1)])).toBe('WRONG_SIZE')
+    expect(preComboIssue(view, [c(4)])).toBe('TOO_LOW')
+    expect(preComboIssue(view, [c(9, 1)])).toBeNull()
+    expect(preComboIssue(view, [c(4), c(9, 1)])).toBe('MIXED_RANKS')
+    // Même verdict que le moteur, main comprise.
+    expect(preComboIssue(view, [c(4)])).toBe(preCanPlay(state, 'p2', [c(4)]))
+    // L'égal verrouille : la vue suivante exige le même rang.
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(9, 1)], now: NOW })
+    const locked = toPreClientView(state, 'p3')
+    expect(preOuRien(locked)).toBe(9)
+    expect(preComboIssue(locked, [c(7)])).toBe('MUST_MATCH_RANK')
+    expect(preComboIssue(locked, [c(9, 3)])).toBeNull()
   })
 
   it('« ou rien » : personne ne peut égaler → le pli revient à l’égaliseur', () => {

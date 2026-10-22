@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { PhaseCountdown } from './PhaseCountdown'
 
 /**
@@ -14,7 +14,8 @@ import { PhaseCountdown } from './PhaseCountdown'
  *
  * Même horloge que le texte (réveil au changement de seconde, par le rendu
  * personnalisé de PhaseCountdown). Jamais « 0 » : la phase suivante arrive
- * avant que le joueur ne le lise.
+ * avant que le joueur ne le lise. Animations réduites : le chiffre change
+ * en fondu, sans le zoom qui bondit chaque seconde.
  */
 export function PhaseCountdownLaunch({
   endsAt,
@@ -25,6 +26,7 @@ export function PhaseCountdownLaunch({
   /** Classes du chiffre (taille, couleur du jeu). */
   className?: string
 }) {
+  const reduceMotion = useReducedMotion()
   return (
     <PhaseCountdown endsAt={endsAt}>
       {({ seconds }) => {
@@ -33,10 +35,10 @@ export function PhaseCountdownLaunch({
           <AnimatePresence mode="popLayout">
             <motion.span
               key={secondsLeft}
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.6, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              initial={reduceMotion ? { opacity: 0 } : { scale: 0.4, opacity: 0 }}
+              animate={reduceMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { scale: 1.6, opacity: 0 }}
+              transition={reduceMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 300, damping: 20 }}
               className={className}
             >
               {secondsLeft}

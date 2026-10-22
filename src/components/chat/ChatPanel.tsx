@@ -143,7 +143,7 @@ function ChatConversation({
 
   if (noRoom) {
     return (
-      <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-white/40">
+      <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-cream/70">
         {t('noRoom')}
       </div>
     )
@@ -153,7 +153,7 @@ function ChatConversation({
     <div className="flex h-[50vh] flex-col">
       <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {messages.length === 0 ? (
-          <p className="pt-10 text-center text-sm text-white/35">{t('empty')}</p>
+          <p className="pt-10 text-center text-sm text-cream/60">{t('empty')}</p>
         ) : (
           messages.map((m) => (
             <div key={m.id} className={cn('flex', m.self ? 'justify-end' : 'justify-start')}>
@@ -161,12 +161,12 @@ function ChatConversation({
                 className={cn(
                   'max-w-[80%] rounded-2xl px-3 py-2',
                   m.self
-                    ? 'rounded-br-sm bg-amber-500/20 text-amber-50'
-                    : 'rounded-bl-sm bg-white/[0.07] text-white/90'
+                    ? 'rounded-br-sm bg-gold/[0.18] text-cream'
+                    : 'rounded-bl-sm bg-white/[0.07] text-cream'
                 )}
               >
                 {!m.self && (
-                  <p className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold text-violet-300">
+                  <p className="mb-0.5 flex items-center gap-1 text-xs font-semibold text-gold">
                     {m.senderIcon && (
                       <span aria-hidden>
                         <PlayerAvatarGlyph value={m.senderIcon} />
@@ -189,14 +189,14 @@ function ChatConversation({
                       }
                       aria-label={t('report')}
                       title={t('report')}
-                      className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white/25 transition-colors hover:bg-red-500/[0.15] hover:text-red-300"
+                      className="touch-target ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-cream/60 transition-colors hover:bg-red-500/[0.15] hover:text-red-300"
                     >
-                      <Flag className="h-3 w-3" />
+                      <Flag className="h-3.5 w-3.5" />
                     </button>
                   </p>
                 )}
                 <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p>
-                <p className={cn('mt-0.5 text-right text-[9px]', m.self ? 'text-amber-200/40' : 'text-white/30')}>
+                <p className={cn('mt-0.5 text-right text-[11px] tabular-nums', m.self ? 'text-amber-100/70' : 'text-cream/60')}>
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -205,11 +205,11 @@ function ChatConversation({
         )}
       </div>
       {sendError && (
-        <p role="status" className="border-t border-white/10 px-3 py-1.5 text-center text-[11px] text-red-300">
+        <p role="status" className="border-t border-gold/20 px-3 py-1.5 text-center text-xs text-red-300">
           {sendError}
         </p>
       )}
-      <div className="flex items-center gap-2 border-t border-white/10 p-2.5">
+      <div className="flex items-center gap-2 border-t border-gold/20 p-2.5">
         <input
           value={draft}
           onChange={(e) => {
@@ -224,14 +224,15 @@ function ChatConversation({
           }}
           maxLength={500}
           placeholder={t('placeholder')}
-          className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-violet-400/50 focus:outline-none"
+          aria-label={t('placeholder')}
+          className="min-h-[44px] min-w-0 flex-1 rounded-xl border border-gold/20 bg-black/20 px-3 py-2 text-sm text-cream placeholder:text-cream/60 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/40"
         />
         <button
           type="button"
           onClick={() => { void send() }}
           disabled={!draft.trim() || sending}
           aria-label={t('send')}
-          className="touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white transition-colors hover:bg-violet-500 disabled:opacity-40"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-[#24201A] transition-colors hover:bg-amber-400 disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
         </button>
@@ -322,9 +323,9 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
             role="dialog"
             aria-modal="true"
             aria-label={t('title')}
-            className="fixed left-3 right-3 top-16 z-[61] mx-auto max-w-sm overflow-hidden rounded-2xl border border-white/10 bg-[#0c0b12]/98 shadow-2xl backdrop-blur-xl sm:left-16 sm:right-auto sm:top-[4.25rem] sm:w-96 sm:max-w-[24rem]"
+            className="fixed left-3 right-3 top-16 z-[61] mx-auto max-w-sm overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep/95 text-cream shadow-2xl backdrop-blur-xl sm:left-16 sm:right-auto sm:top-[4.25rem] sm:w-96 sm:max-w-[24rem]"
           >
-            <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-br from-violet-600/15 to-transparent px-4 py-3">
+            <div className="flex items-center justify-between border-b border-gold/20 px-4 py-3">
               <div className="flex min-w-0 items-center gap-2">
                 {activeFriend ? (
                   <>
@@ -332,16 +333,16 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                       type="button"
                       onClick={() => setFriendId(null)}
                       aria-label={t('back')}
-                      className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                      className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-cream/70 transition-colors hover:bg-gold/10 hover:text-cream"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
-                    <h2 className="truncate text-sm font-bold text-white">{activeFriend.displayName}</h2>
+                    <h2 className="truncate text-sm font-bold text-cream">{activeFriend.displayName}</h2>
                   </>
                 ) : (
                   <>
-                    <MessageCircle className="h-4 w-4 shrink-0 text-violet-300" />
-                    <h2 className="text-sm font-bold text-white">{t('title')}</h2>
+                    <MessageCircle className="h-4 w-4 shrink-0 text-gold" />
+                    <h2 className="font-display text-base font-bold text-cream">{t('title')}</h2>
                   </>
                 )}
               </div>
@@ -352,7 +353,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                     onClick={() => setConfirmBlockId(activeFriend.userId)}
                     aria-label={t('block')}
                     title={t('block')}
-                    className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-red-500/[0.15] hover:text-red-300"
+                    className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-cream/70 transition-colors hover:bg-red-500/[0.15] hover:text-red-300"
                   >
                     <UserX className="h-4 w-4" />
                   </button>
@@ -361,7 +362,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                   type="button"
                   onClick={onClose}
                   aria-label={tNav('closeMenu')}
-                  className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                  className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-cream/70 transition-colors hover:bg-gold/10 hover:text-cream"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -376,14 +377,14 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                     type="button"
                     onClick={() => void blockActiveFriend()}
                     disabled={blocking}
-                    className="flex-1 rounded-lg bg-red-600 py-1.5 text-xs font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+                    className="min-h-[44px] flex-1 rounded-lg bg-suit-red py-1.5 text-xs font-bold text-cream transition-colors hover:bg-[#9E2F26] disabled:opacity-50"
                   >
                     {t('block')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmBlockId(null)}
-                    className="flex-1 rounded-lg border border-white/[0.15] bg-white/5 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:bg-white/10"
+                    className="min-h-[44px] flex-1 rounded-lg border border-gold/25 bg-felt-deep/60 py-1.5 text-xs font-semibold text-cream transition-colors hover:bg-gold/10"
                   >
                     {tCommon('cancel')}
                   </button>
@@ -392,21 +393,21 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
             )}
 
             {!activeFriend && (
-              <div className="grid grid-cols-2 border-b border-white/10">
+              <div className="grid grid-cols-2 border-b border-gold/20">
                 <button
                   type="button"
                   onClick={() => setTab('game')}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors',
+                    'flex min-h-[44px] items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors',
                     tab === 'game'
-                      ? 'border-b-2 border-violet-400 text-violet-200'
-                      : 'text-white/40 hover:text-white/70'
+                      ? 'border-b-2 border-gold text-gold'
+                      : 'border-b-2 border-transparent text-cream/70 hover:text-cream'
                   )}
                 >
                   <Gamepad2 className="h-3.5 w-3.5" />
                   {t('tabGame')}
                   {(unread?.room ?? 0) > 0 && (
-                    <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                    <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-suit-red px-1 text-[11px] font-bold tabular-nums text-cream">
                       {unread!.room > 9 ? '9+' : unread!.room}
                     </span>
                   )}
@@ -415,16 +416,16 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                   type="button"
                   onClick={() => setTab('friends')}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors',
+                    'flex min-h-[44px] items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors',
                     tab === 'friends'
-                      ? 'border-b-2 border-violet-400 text-violet-200'
-                      : 'text-white/40 hover:text-white/70'
+                      ? 'border-b-2 border-gold text-gold'
+                      : 'border-b-2 border-transparent text-cream/70 hover:text-cream'
                   )}
                 >
                   <Users className="h-3.5 w-3.5" />
                   {t('tabFriends')}
                   {Object.values(unread?.friends ?? {}).some((n) => n > 0) && (
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-suit-red" />
                   )}
                 </button>
               </div>
@@ -448,7 +449,7 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                 onReport={setReportTarget}
               />
             ) : friends.length === 0 ? (
-              <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-white/40">
+              <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-cream/70">
                 {t('noFriends')}
               </div>
             ) : (
@@ -460,18 +461,18 @@ export function ChatPanel({ open, onClose, unread, onRead, friends, refreshFrien
                       <button
                         type="button"
                         onClick={() => setFriendId(f.userId)}
-                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
+                        className="flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-gold/10"
                       >
-                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')} />
-                        <span className={cn('truncate text-sm font-medium', f.isOnline ? 'text-white' : 'text-white/60')}>
+                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-cream/30')} />
+                        <span className={cn('truncate text-sm font-medium', f.isOnline ? 'text-cream' : 'text-cream/70')}>
                           {f.displayName}
                         </span>
                         {(unread?.friends?.[f.userId] ?? 0) > 0 ? (
-                          <span className="ml-auto flex h-4 min-w-[1rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                          <span className="ml-auto flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-suit-red px-1 text-[11px] font-bold tabular-nums text-cream">
                             {unread!.friends[f.userId] > 9 ? '9+' : unread!.friends[f.userId]}
                           </span>
                         ) : (
-                          <MessageCircle className="ml-auto h-3.5 w-3.5 shrink-0 text-white/25" />
+                          <MessageCircle aria-hidden className="ml-auto h-3.5 w-3.5 shrink-0 text-cream/40" />
                         )}
                       </button>
                     </li>

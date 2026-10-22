@@ -19,6 +19,7 @@ import { resolveAmbianceMode, withAmbiance } from './ambiance'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+import { OnlineGameStage } from '@/components/online/OnlineGameStage'
 import { GameShowcase } from '@/components/online/GameShowcase'
 import {
   LocalGamePrelobby,
@@ -117,15 +118,6 @@ export default function PetitBuveurPage() {
     setSessionChecked(true)
   }, [])
 
-  useEffect(() => {
-    if (!gameStarted) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [gameStarted])
-
   const handleGameEnd = () => {
     clearGameSession(GAME_ID)
     setGameStarted(false)
@@ -149,22 +141,22 @@ export default function PetitBuveurPage() {
   // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).
   if (user?.playMode === 'online') {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-y-auto bg-gray-950 sm:top-[3.75rem]">
+      <OnlineGameStage>
         <PetitBuveurOnline />
-      </div>
+      </OnlineGameStage>
     )
   }
 
+  // Partie locale : la coquille commune des jeux (GameShell, en-tête collé
+  // sous la barre du site, action sous le pouce) dans le flux de la page.
   if (gameStarted) {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-hidden bg-felt-deep sm:top-[3.75rem]">
-        <Game
-          players={selectedPlayers}
-          onGameEnd={handleGameEnd}
-          difficulty={difficulty}
-          initialMode={initialMode}
-        />
-      </div>
+      <Game
+        players={selectedPlayers}
+        onGameEnd={handleGameEnd}
+        difficulty={difficulty}
+        initialMode={initialMode}
+      />
     )
   }
 
@@ -204,7 +196,7 @@ export default function PetitBuveurPage() {
       <PrelobbyDisclosure label={t('rulesTitle')} open={showRules} onToggle={() => setShowRules(v => !v)}>
         <div className="space-y-1.5 text-sm text-cream/70">
           {rules.map((rule, i) => (
-            <p key={i} className={i === rules.length - 1 ? 'pt-1 text-xs text-cream/50' : undefined}>
+            <p key={i} className={i === rules.length - 1 ? 'pt-1 text-xs text-cream/70' : undefined}>
               {rule}
             </p>
           ))}

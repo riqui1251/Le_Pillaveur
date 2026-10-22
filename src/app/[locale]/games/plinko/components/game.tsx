@@ -1,20 +1,23 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react'
 import { useTranslations } from 'next-intl'
-import { Volume2, VolumeX, ChevronDown, ChevronsDown, ArrowRight, Tv } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Volume2, VolumeX, ChevronDown, ChevronLeft, ChevronRight, ChevronsDown, Loader2, PartyPopper, RefreshCw, Trophy, Tv } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Player } from '@/types/game'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { GameShell } from '@/components/game/GameShell'
+import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
+import { EndActionDock } from '@/components/game/EndActionDock'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { cn } from '@/lib/utils'
 import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from '@/lib/sound/game-sounds'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import type { PlinkoCastState } from '@/lib/cast-types'
-import { SPECIAL_PIN_COLORS, type SpecialPinType } from '@/lib/plinko-pins'
-import { useReducedMotion } from 'framer-motion'
+import { SPECIAL_PIN_COLORS, SPECIAL_PIN_FAMILIES, SPECIAL_PIN_FAMILY_STYLE, type SpecialPinType } from '@/lib/plinko-pins'
 import {
   applyScoreEffect,
   ballCategory,
@@ -32,7 +35,7 @@ import {
   type LiveBalls,
   type LivePinHit,
 } from '../plinko-live'
-import { LiveEffectsBar, LiveSlotValues, PinBubbleLayer, type PinBubble } from './live-feedback'
+import { LiveEffectsBar, LiveSlotValues, PinBubbleLayer, PinDot, type PinBubble } from './live-feedback'
 
 // --- MODIFICATION: Exporter le type DifficultyLevel ---
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
@@ -60,7 +63,7 @@ const DIFFICULTY_SETTINGS: Record<DifficultyLevel, { range: { min: number; max: 
 // Nombre de rangées d'obstacles (valeur desktop par défaut)
 const ROWS = 8;
 
-// --- NOUVEAU: Configuration du nombre de pins par rangée --- 
+// --- NOUVEAU: Configuration du nombre de pins par rangée ---
 // const generateRandomPinsConfig = () => {
 //   const config = new Map<number, number>();
 //   for (let row = 0; row < ROWS; row++) {
@@ -86,9 +89,10 @@ const PHYSICS_OVERLAP_PUSH_MULTIPLIER = 1.1; // Pour mieux séparer après colli
 // Desktop (>= sm): tailles précédentes
 const VISUAL_BALL_SIZE_CLASS = 'w-4 h-4 sm:w-5 sm:h-5';
 const VISUAL_NORMAL_PIN_SIZE_CLASS = 'w-2.5 h-2.5 sm:w-3.5 sm:h-3.5';
-// Pins spéciaux agrandis (16px mobile / 20px desktop) : place pour le glyphe et
-// alignement avec la hitbox de collision (déjà ~16/20px, cf. specialSumRadius).
-const VISUAL_SPECIAL_PIN_SIZE_CLASS = 'w-4 h-4 sm:w-5 sm:h-5';
+// Pins spéciaux à 24 px, glyphe de 13-14 px : à 16 px avec un glyphe de 9 px,
+// ils se lisaient comme des confettis. La hitbox suit ce diamètre (specialSumRadiusPx).
+const VISUAL_SPECIAL_PIN_SIZE_CLASS = 'w-6 h-6 text-[13px] sm:text-sm';
+const SPECIAL_PIN_DIAMETER_PX = 24;
 // Paramètres de départ des balles
 const DROP_START_X_MIN = 10;
 const DROP_START_X_MAX = 90;
@@ -105,7 +109,7 @@ const TARGET_NUM_SLOTS = 10;
 const MIN_NORMAL_PIN_DISTANCE_PERCENT = 5;
 
 // --- Configuration des Pins Spéciaux ---
-// --- MODIFICATION: Calculer le nombre de pins spéciaux comme 30% des pins normaux --- 
+// --- MODIFICATION: Calculer le nombre de pins spéciaux comme 30% des pins normaux ---
 const SPECIAL_PINS_PERCENTAGE = 0.35;
 const MAX_ROUND_DRINKS = 2; // Plafond tournées générales par partie
 
@@ -155,7 +159,7 @@ interface SpecialPin extends PinPosition {
   id: string;
   type: SpecialPinType;
   hitByBallIds: Set<string>; // Gardé pour info: quelles balles ont touché
-  usedThisTurn: boolean; 
+  usedThisTurn: boolean;
 }
 
 interface PinPosition {
@@ -178,7 +182,7 @@ interface BallAnimationData {
         multiplierCount: number;
         sipsToAdd: number;
         sipsToSubtract: number;
-        hitCountPerPin: Map<string, number>; 
+        hitCountPerPin: Map<string, number>;
         effectsReset: boolean;
         jackpotHit: boolean;
         gravityFlipUntilMs?: number;
@@ -195,7 +199,7 @@ interface BallAnimationData {
     // effectLog: string[]; // SUPPRIMÉ
 }
 
-// --- Interface pour l'état interne de l'animation --- 
+// --- Interface pour l'état interne de l'animation ---
 interface AnimationState {
     red: BallAnimationData | null;
     green: BallAnimationData | null;
@@ -221,6 +225,14 @@ type ResultDisplayPhase = 'tournees' | 'details' | 'final';
 
 const PIN_BUBBLE_MS = 900;
 
+// Le flash « Passe le téléphone » attend que le lanceur ait vu ses balles
+// arriver ; le résultat, lui, reste affiché jusqu'au lancer suivant.
+const PASS_PHONE_DELAY_MS = 1500;
+
+const HEADER_BUTTON_CLASS = 'border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold';
+// Pendant la chute, une pastille d'état lisible plutôt qu'un bouton or délavé à 40 %.
+const FALLING_CLASS = 'disabled:border disabled:border-gold/20 disabled:bg-black/20 disabled:text-cream/80 disabled:opacity-100 disabled:shadow-none';
+
 const IDLE_LIVE_BALLS: LiveBalls = createLiveBalls();
 
 // Génération statique des pins
@@ -243,7 +255,7 @@ const generateStaticNormalPins = (rows: number, minPinsPerRow: number, maxPinsPe
     const pinsInRow = config.get(row) || DEFAULT_PINS_PER_ROW_FALLBACK(row);
     const rowY = (row + 1) * (100 / (rows + 1));
     const spacing = 100 / (pinsInRow + 1);
-    
+
     for (let i = 0; i < pinsInRow; i++) {
       pins.push({
         x: spacing * (i + 1),
@@ -251,35 +263,35 @@ const generateStaticNormalPins = (rows: number, minPinsPerRow: number, maxPinsPe
       });
     }
   }
-  
+
   // Assurer un pin au point de départ
   const startPinY = (0 + 1) * (100 / (rows + 1));
   const startPinX = 50;
   const proximityThreshold = MIN_NORMAL_PIN_DISTANCE_PERCENT / 2;
   let pinExistsNearStart = false;
-  
+
   for(const pin of pins) {
     if (Math.abs(pin.x - startPinX) < proximityThreshold && Math.abs(pin.y - startPinY) < proximityThreshold) {
       pinExistsNearStart = true;
       break;
     }
   }
-  
+
   // Ne pas dépasser 8 sur la première rangée (mobile) et éviter d'ajouter un 9e pin
   const firstRowPinsCount = pins.filter(p => Math.abs(p.y - startPinY) < 0.1).length;
   if (!pinExistsNearStart && firstRowPinsCount < 8) {
     pins.push({ x: startPinX, y: startPinY });
   }
-  
+
   return pins;
 };
 
 // Génération statique des pins spéciaux
-const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercentage: number): SpecialPin[] => {
+const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercentage: number, boardId: number): SpecialPin[] => {
   const newSpecialPins: SpecialPin[] = [];
   const numNormalPins = normalPins.length;
   if (numNormalPins === 0) return [];
-  
+
   const totalPinsToPlace = Math.round(numNormalPins * specialPinsPercentage);
 
   const normalPinIndices = Array.from({ length: numNormalPins }, (_, i) => i);
@@ -287,7 +299,7 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
     const j = Math.floor(Math.random() * (i + 1));
     [normalPinIndices[i], normalPinIndices[j]] = [normalPinIndices[j], normalPinIndices[i]];
   }
-  
+
   const indicesToReplace = normalPinIndices.slice(0, totalPinsToPlace);
   const staticCounts = { addBall: 0, jackpot: 0, roundDrinks: 0 };
 
@@ -309,7 +321,7 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
     if (type === 'jackpot') staticCounts.jackpot++;
     if (type === 'roundDrinks') staticCounts.roundDrinks++;
     newSpecialPins.push({
-      id: `special-${i}`,
+      id: `special-${boardId}-${i}`,
       x: pin.x,
       y: pin.y,
       type,
@@ -317,13 +329,54 @@ const generateStaticSpecialPins = (normalPins: PinPosition[], specialPinsPercent
       usedThisTurn: false
     });
   });
-  
+
   return newSpecialPins;
 };
 
+interface Board {
+  normalPins: PinPosition[];
+  specialPins: SpecialPin[];
+  slots: number[];
+}
+
+let boardSeq = 0;
+
+// Plateau moins dense sous 640 px de large (6 rangées de 4 à 8 pions).
+const generateBoard = (isMobile: boolean, difficulty: DifficultyLevel): Board => {
+  const rows = isMobile ? 6 : ROWS;
+  const minPins = isMobile ? 4 : 5;
+  const maxPins = isMobile ? 8 : 12;
+  const specialPct = isMobile ? 0.25 : SPECIAL_PINS_PERCENTAGE;
+  const normalPins = generateStaticNormalPins(rows, minPins, maxPins);
+  const specialPins = generateStaticSpecialPins(normalPins, specialPct, ++boardSeq);
+  const { min, max } = DIFFICULTY_SETTINGS[difficulty].range;
+  const slots = Array.from({ length: TARGET_NUM_SLOTS }, () => Math.floor(Math.random() * (max - min + 1)) + min);
+  return { normalPins, specialPins, slots };
+};
+
+function isKeyboardFocus(el: Element): boolean {
+  try {
+    return el.matches(':focus-visible')
+  } catch {
+    return false // navigateur sans :focus-visible : le clic (Entrée, Espace) ouvre l'infobulle
+  }
+}
+
+function tooltipPosition(x: number, y: number): CSSProperties {
+  // Sous le pion près du haut : au-dessus, la bulle serait rognée par le plateau.
+  const below = y < 25;
+  const top = below ? `calc(${y}% + 16px)` : `calc(${y}% - 16px)`;
+  const ty = below ? '0' : '-100%';
+  if (x < 33) return { left: '2%', top, transform: `translateY(${ty})` };
+  if (x > 67) return { right: '2%', top, transform: `translateY(${ty})` };
+  return { left: `${x}%`, top, transform: `translate(-50%, ${ty})` };
+}
+
 export default function Game({ players, onGameEnd, onRestartGame, difficulty, isCumulativeMode }: GameProps) {
   const t = useTranslations('games.plinko')
+  const tc = useTranslations('common')
   const tTv = useTranslations('tv')
+  const [confirmDialog, confirm] = useConfirmAction()
   const getPinEffect = useCallback((type: SpecialPinType) => t(`pinEffects.${type}`), [t])
   const getPinLabel = useCallback((type: SpecialPinType) => t(`pinLabels.${type}`), [t])
 
@@ -342,9 +395,9 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   const [ballPositions, setBallPositions] = useState<{
     red: { x: number; y: number; color: 'red' | 'green' };
     green: { x: number; y: number; color: 'red' | 'green' };
-  }>({ 
-    red: { x: 50, y: -10, color: 'red' }, 
-    green: { x: 50, y: -10, color: 'green' } 
+  }>({
+    red: { x: 50, y: -10, color: 'red' },
+    green: { x: 50, y: -10, color: 'green' }
   });
   const [extraBalls, setExtraBalls] = useState<BallAnimationData[]>([]);
   const [finalSlotIndices, setFinalSlotIndices] = useState<{
@@ -357,10 +410,17 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     greenSips: number | null;
     extraSips?: number | null;
     player: Player; // joueur qui vient de jouer (l'index courant, lui, a déjà avancé)
+    roundDrinks: number; // tournées générales gagnées à CE lancer
   } | null>(null);
+  // Le dernier joueur a lancé : son résultat reste affiché, la fin attend « Voir les résultats ».
+  const [allPlayed, setAllPlayed] = useState(false);
+  // Joueur du flash « Passe le téléphone », posé un peu après l'arrivée des balles.
+  const [passKey, setPassKey] = useState<string | null>(players[0]?.id ?? null);
+  const passTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (passTimerRef.current) clearTimeout(passTimerRef.current) }, []);
   const [playerResults, setPlayerResults] = useState<Record<string, TurnResult[]>>({});
   const [roundDrinksCount, setRoundDrinksCount] = useState(0);
-  
+
   // États pour l'affichage des résultats
   const [resultDisplayPhase, setResultDisplayPhase] = useState<ResultDisplayPhase>('tournees');
   const [currentPlayerResultIndex, setCurrentPlayerResultIndex] = useState(0);
@@ -400,9 +460,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     return () => { timers.forEach(clearTimeout); timers.clear() }
   }, [])
 
-  // Légende repliée par défaut : les pins portent désormais leur glyphe, la
-  // légende n'est qu'un rappel — et repliée elle ne déborde plus sous le pli mobile.
-  const [legendOpen, setLegendOpen] = useState(false)
+  // Légende ouverte d'entrée, sous le plateau : elle ne liste que les pions présents.
+  const [legendOpen, setLegendOpen] = useState(true)
 
   // Son / vibration (mute partagé avec le reste du site via localStorage)
   const [muted, setMuted] = useState(false)
@@ -424,7 +483,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
   /** État d'affichage poussé à la TV — uniquement des infos publiques (dont le plateau). */
   const buildCastState = useCallback((): PlinkoCastState => {
-    const cp = players[currentPlayerIndex]
+    const cp = allPlayed ? undefined : players[currentPlayerIndex]
     const phase: PlinkoCastState['phase'] = gameOver
       ? 'finished'
       : isAnimating
@@ -460,20 +519,20 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
         }
       }),
       roundDrinks: roundDrinksCount,
-      currentPlayerIndex,
+      // Tout le monde a lancé : l'index sort de la table (comme il avance après chaque
+      // tour) pour que la TV montre le dernier lanceur, sans « ensuite » ni joueur au tour.
+      currentPlayerIndex: allPlayed ? players.length : currentPlayerIndex,
       cumulative: isCumulativeMode,
       live: liveBalls,
       extraSlot: finalSlotIndices.extra,
-      // L'effet de fin de partie ne saute « tournées » qu'au rendu suivant : sans
-      // cette correction, la TV afficherait un instant un écran que le téléphone ne montre pas.
       results: gameOver
         ? {
-            phase: resultDisplayPhase === 'tournees' && roundDrinksCount === 0 ? 'details' : resultDisplayPhase,
+            phase: resultDisplayPhase,
             playerIndex: currentPlayerResultIndex,
           }
         : null,
     }
-  }, [players, currentPlayerIndex, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount, pinPositions, specialPins, isCumulativeMode, liveBalls, resultDisplayPhase, currentPlayerResultIndex])
+  }, [players, currentPlayerIndex, allPlayed, gameOver, isAnimating, turnResult, slotSipValues, finalSlotIndices, playerResults, roundDrinksCount, pinPositions, specialPins, isCumulativeMode, liveBalls, resultDisplayPhase, currentPlayerResultIndex])
 
   const toggleCast = () => {
     if (castActive) void stopCast()
@@ -535,80 +594,16 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     }
   }, [])
 
-  // --- Effet pour nettoyer l'état visuel après un changement de joueur --- 
+
+  // --- MODIFICATION: useEffect pour initialiser/réinitialiser le jeu basé sur les props ---
   useEffect(() => {
-    // Ne rien faire si le jeu est terminé ou si une animation est en cours
-    if (gameOver || isAnimating) {
-        return;
-    }
-
-    // Mettre un court délai avant de nettoyer pour laisser voir le résultat précédent
-    const cleanupTimeout = setTimeout(() => {
-        setTurnResult(null);
-        setFinalSlotIndices({ red: null, green: null, extra: null });
-        setExtraBalls([]);
-        setBallPositions({ red: { x: 50, y: -10, color: 'red' }, green: { x: 50, y: -10, color: 'green' } });
-        setPinTooltip(null);
-        setLiveBalls(null);
-        clearPinBubbles();
-
-        // Régénérer le plateau à chaque nouveau tour
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
-        const isMobile = viewportWidth < 640;
-        const rows = isMobile ? 6 : ROWS;
-        const minPins = isMobile ? 4 : 5;
-        const maxPins = isMobile ? 8 : 12;
-        const specialPct = isMobile ? 0.25 : SPECIAL_PINS_PERCENTAGE;
-        const newNormalPins = generateStaticNormalPins(rows, minPins, maxPins);
-        const newSpecialPins = generateStaticSpecialPins(newNormalPins, specialPct);
-        setPinPositions(newNormalPins);
-        setSpecialPins(newSpecialPins);
-        const { min, max } = DIFFICULTY_SETTINGS[difficulty].range;
-        setSlotSipValues(Array.from({ length: TARGET_NUM_SLOTS }, () =>
-          Math.floor(Math.random() * (max - min + 1)) + min
-        ));
-    }, 1500);
-
-    // Nettoyer le timeout si le composant est démonté ou si l'état change avant la fin
-    return () => clearTimeout(cleanupTimeout);
-  }, [currentPlayerIndex, gameOver, isAnimating, difficulty]);
-  // --- Fin Effet Nettoyage ---
-
-  // --- MODIFICATION: useEffect pour initialiser/réinitialiser le jeu basé sur les props --- 
-  useEffect(() => {
-
-    // Déterminer les paramètres responsive (mobile vs desktop)
     const containerElement = canvasRef.current;
     const viewportWidth = containerElement?.offsetWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1024);
-    const isMobile = viewportWidth < 640;
-    const rows = isMobile ? 6 : ROWS;
-    const minPins = isMobile ? 4 : 5;
-    const maxPins = isMobile ? 8 : 12;
-    const specialPct = isMobile ? 0.25 : SPECIAL_PINS_PERCENTAGE;
-
-    // Générer une nouvelle configuration de pins moins dense sur mobile
-    const newNormalPins = generateStaticNormalPins(rows, minPins, maxPins);
-    const newSpecialPins = generateStaticSpecialPins(newNormalPins, specialPct);
-    
-    setPinPositions(newNormalPins);
-    setSpecialPins(newSpecialPins);
-
-    // Générer uniquement les valeurs des cases selon la difficulté
-    const { min, max } = DIFFICULTY_SETTINGS[difficulty].range;
-    const newSlotValues = Array.from({ length: TARGET_NUM_SLOTS }, () =>
-      Math.floor(Math.random() * (max - min + 1)) + min
-    );
-    setSlotSipValues(newSlotValues);
-  }, [difficulty, gameVersion]); // Ajouter gameVersion comme dépendance
-
-  // À la fin de la partie : ne présenter l'écran « Tournées générales » que s'il
-  // y en a réellement eu ; sinon on saute directement au détail des joueurs.
-  useEffect(() => {
-    if (gameOver) {
-      setResultDisplayPhase(roundDrinksCount > 0 ? 'tournees' : 'details')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameOver])
+    const board = generateBoard(viewportWidth < 640, difficulty);
+    setPinPositions(board.normalPins);
+    setSpecialPins(board.specialPins);
+    setSlotSipValues(board.slots);
+  }, [difficulty, gameVersion]);
 
   // Mémoriser le joueur le plus loin consulté (navigation séquentielle) : sert à
   // n'autoriser les totaux qu'après avoir parcouru tout le monde.
@@ -622,109 +617,59 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     onRestartGame(); // Appeler la fonction originale
   };
 
-  // --- Fonction séparée pour générer TOUS les pins spéciaux --- 
-  // --- RE-RE-RE-MODIFICATION: Les pins spéciaux remplacent aléatoirement des pins normaux --- 
-  const generateSpecialPins = (currentNormalPins: PinPosition[], specialPinsPercentage: number): SpecialPin[] => {
-    const newSpecialPins: SpecialPin[] = [];
-    
-    // 1. Calculer le nombre exact de pins spéciaux (30% des pins normaux)
-    const numNormalPins = currentNormalPins.length;
-    if (numNormalPins === 0) return []; // Sécurité
-    const totalPinsToPlace = Math.round(numNormalPins * specialPinsPercentage);
-
-    // 2. Liste pondérée des types
-
-    // 3. Sélectionner aléatoirement les indices des pins normaux à remplacer
-    const normalPinIndices = Array.from({ length: numNormalPins }, (_, i) => i);
-    // Mélange Fisher-Yates pour obtenir des indices aléatoires sans répétition
-    for (let i = normalPinIndices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [normalPinIndices[i], normalPinIndices[j]] = [normalPinIndices[j], normalPinIndices[i]];
-    }
-    const indicesToReplace = normalPinIndices.slice(0, totalPinsToPlace);
-
-    // 4. Créer les pins spéciaux aux positions sélectionnées avec types aléatoires
-    const addedCounts = { addBall: 0, jackpot: 0, roundDrinks: 0 }; // Suivi pour les limites
-
-    indicesToReplace.forEach((pinIndex, iterationIndex) => {
-        const position = currentNormalPins[pinIndex];
-        if (!position) return; // Sécurité
-
-        let randomType: SpecialPinType;
-        let selectionAttempts = 0;
-        const maxSelectionAttempts = 20;
-        
-        // Choisir un type aléatoire en respectant les limites
-        do {
-            randomType = WEIGHTED_PIN_TYPES[Math.floor(Math.random() * WEIGHTED_PIN_TYPES.length)];
-            selectionAttempts++;
-            if (selectionAttempts > maxSelectionAttempts) break; 
-        } while (
-            (randomType === 'addBall' && addedCounts.addBall >= 1) ||
-            (randomType === 'jackpot' && addedCounts.jackpot >= 1) ||
-            (randomType === 'roundDrinks' && addedCounts.roundDrinks >= 1)
-        );
-
-        if (selectionAttempts > maxSelectionAttempts) {
-             console.warn(`   -> Impossible de choisir un type valide pour l'index ${pinIndex}, pin spécial non créé.`);
-             return; // Ne pas créer ce pin spécial si on ne trouve pas de type valide
-        }
-
-        const newPin: SpecialPin = {
-            id: `s-${randomType}-${iterationIndex}-${Date.now()}`,
-            x: position.x, // Utiliser la position du pin normal
-            y: position.y, // Utiliser la position du pin normal
-            type: randomType,
-            hitByBallIds: new Set<string>(), 
-            usedThisTurn: false 
-        };
-        newSpecialPins.push(newPin);
-
-        if (randomType === 'addBall') addedCounts.addBall++;
-        if (randomType === 'jackpot') addedCounts.jackpot++;
-        if (randomType === 'roundDrinks') addedCounts.roundDrinks++;
-        
-    });
-    
-    return newSpecialPins;
-  }
-  // ----------------------------------------------------------------------------------------------------
-
   const dropBalls = () => {
-    if (isAnimating) return;
+    if (isAnimating || allPlayed) return;
     if (!canvasRef.current) {
       console.warn("Canvas non prêt, lancement annulé.")
       return;
     }
-    
-    const containerElement = canvasRef.current;
-    const viewportWidth = containerElement?.offsetWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1024);
-    const isMobile = viewportWidth < 640;
-    const specialPct = isMobile ? 0.25 : SPECIAL_PINS_PERCENTAGE;
-    const newPinsForTurn = generateSpecialPins(pinPositions, specialPct);
-    setSpecialPins(newPinsForTurn);
-    const currentSpecialPins = newPinsForTurn;
 
-    setExtraBalls([]); 
-    setFinalSlotIndices({ red: null, green: null, extra: null }); 
+    // Le plateau du tour précédent est resté affiché avec son résultat : on ne
+    // le renouvelle qu'à ce geste. Au premier lancer, on joue le plateau montré
+    // (les pions affichés étaient re-tirés au lancer : on lisait un plateau qui n'existait plus).
+    const isMobile = canvasRef.current.offsetWidth < 640;
+    let normalPins = pinPositions;
+    let currentSpecialPins = specialPins;
+    let turnSlotValues = slotSipValues;
+    if (turnResult) {
+      const board = generateBoard(isMobile, difficulty);
+      normalPins = board.normalPins;
+      currentSpecialPins = board.specialPins;
+      turnSlotValues = board.slots;
+      setPinPositions(normalPins);
+      setSpecialPins(currentSpecialPins);
+      setSlotSipValues(turnSlotValues);
+    }
+    setPinTooltip(null);
+    if (passTimerRef.current) {
+      clearTimeout(passTimerRef.current);
+      passTimerRef.current = null;
+    }
+    // Lancé avant le flash : le changement de joueur est noté sans flash (désactivé pendant la chute).
+    setPassKey(players[currentPlayerIndex]?.id ?? null);
+    const roundDrinksAtDrop = roundDrinksCount;
+    let turnRoundDrinkHits = 0;
+
+    setExtraBalls([]);
+    setFinalSlotIndices({ red: null, green: null, extra: null });
     setLiveBalls(createLiveBalls());
     clearPinBubbles();
     setIsAnimating(true);
-    setTurnResult(null); 
+    setTurnResult(null);
     // setTurnEffectLogs(null); // SUPPRIMÉ: Assurer la réinitialisation avant le lancer
     // Positionner les balles pile au-dessus d'un pin de la 1ère rangée (ou 2nde si indisponible)
-    const rowsForStart = pinPositions
+    const rowsForStart = normalPins
       .map(p => p.y)
       .sort((a, b) => a - b);
     const firstRowY = rowsForStart[0];
     const secondRowY = rowsForStart.find(y => y > firstRowY + 0.1);
     const candidateRowY = firstRowY ?? secondRowY ?? 10;
-    const candidatePins = pinPositions.filter(p => Math.abs(p.y - candidateRowY) < 0.1);
+    const candidatePins = normalPins.filter(p => Math.abs(p.y - candidateRowY) < 0.1);
     const chosenPin = candidatePins.length > 0 ? candidatePins[Math.floor(Math.random() * candidatePins.length)] : { x: 50, y: candidateRowY };
     const startX = chosenPin.x;
-    setBallPositions({ 
-      red: { x: startX, y: 0, color: 'red' }, 
-      green: { x: startX, y: 0, color: 'green' } 
+    setBallPositions({
+      red: { x: startX, y: 0, color: 'red' },
+      green: { x: startX, y: 0, color: 'green' }
     });
 
     const animState: AnimationState = {
@@ -748,11 +693,10 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
           guidance: { firstRowHit: false }
           // effectLog: [] // SUPPRIMÉ
       },
-      extra: [] 
+      extra: []
     };
 
     let lastTime = performance.now();
-    let turnSlotValues = slotSipValues;
     // Parties du même point à la même vitesse, les deux balles suivaient une fois sur deux la même
     // trajectoire jusqu'en bas : au premier rebond, la rouge et la verte partent de côtés opposés.
     const firstBounceSide = Math.random() < 0.5 ? -1 : 1;
@@ -760,7 +704,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       ballId === 'red' ? firstBounceSide : ballId === 'green' ? -firstBounceSide : (Math.random() < 0.5 ? -1 : 1);
     const lastCollisionPin = new Map<string, string | null>();
     // --- MODIFICATION: Stocker les données complètes des balles extra finies ---
-    const finishedExtraBallsDataThisTurn: BallAnimationData[] = []; 
+    const finishedExtraBallsDataThisTurn: BallAnimationData[] = [];
     // const finishedExtraBallResultsThisTurn: { color: 'red' | 'green'; sips: number }[] = []; // Supprimé/Remplacé
 
     const animate = (currentTime: number) => {
@@ -789,8 +733,8 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       const newlyAddedBalls: BallAnimationData[] = [];
 
       const processBallFrame = (ballData: BallAnimationData) => {
-        if (!ballData || !ballData.active) return; 
-        nextFrameNeeded = true; 
+        if (!ballData || !ballData.active) return;
+        nextFrameNeeded = true;
 
         const ballId = ballData.id;
         lastCollisionPin.set(ballId, lastCollisionPin.get(ballId) || null);
@@ -850,7 +794,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
         // (indices de rangées non nécessaires ici)
 
-        for (const pin of pinPositions) {
+        for (const pin of normalPins) {
             // Ignorer le pin normal si un pin spécial est à la même position
             if (currentSpecialPins.some(sp => sp.x === pin.x && sp.y === pin.y)) continue;
             const pinId = `n-${pin.x.toFixed(1)}-${pin.y.toFixed(1)}`;
@@ -888,7 +832,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                   ballData.firstPinHit = true;
                 }
                 ballData.velocityX *= 0.995; ballData.velocityY *= 0.995;
-                 break; 
+                 break;
             }
         }
 
@@ -902,7 +846,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                 const dxPxS = (ballData.x / 100) * widthPx - (sPin.x / 100) * widthPx;
                 const dyPxS = (ballData.y / 100) * heightPx - (sPin.y / 100) * heightPx;
                 const distSqPxS = dxPxS * dxPxS + dyPxS * dyPxS;
-                const specialSumRadiusPx = (ballRadiusPx * hitboxScale) + ((pinRadiusPx + 2) * hitboxScale * (isSmBreakpoint ? 1 : 0.85));
+                const specialSumRadiusPx = (ballRadiusPx + SPECIAL_PIN_DIAMETER_PX / 2) * hitboxScale;
                 if (distSqPxS < specialSumRadiusPx * specialSumRadiusPx) {
                     const distPxS = Math.max(0.0001, Math.sqrt(distSqPxS));
                     const nxS = dxPxS / distPxS; const nyS = dyPxS / distPxS;
@@ -952,7 +896,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
                 if (shouldTriggerEffect) {
                     // ballData.effectLog.push(...); // SUPPRIMÉ
-                    
+
                     let needsGlobalStateUpdate = false;
                     let newSlotValuesForShake: number[] | null = null;
                     let roundDrinksIncrement = 0;
@@ -969,7 +913,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                                 const randomVelX = (Math.random() - 0.5) * ADD_BALL_VELOCITY_X_MAGNITUDE;
                                 const newExtraBallData: BallAnimationData = {
                                     id: `extra-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-                                    x: randomStartX, y: 0, 
+                                    x: randomStartX, y: 0,
                                     velocityY: INITIAL_VELOCITY_Y,
                                     velocityX: randomVelX,
                                     active: true, color: ballData.color,
@@ -1038,36 +982,36 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             break;
                         case 'mystery': {
                             const possibleEffects: SpecialPinType[] = ['multiplier', 'addBall', 'addSip', 'subtractSip', 'cancellation', 'colorSwap', 'shake', 'roundDrinks', 'jackpot', 'teleportation'];
-                            const filteredPossibleEffects = possibleEffects.filter(type => type !== 'mystery'); 
+                            const filteredPossibleEffects = possibleEffects.filter(type => type !== 'mystery');
                             const randomEffectIndex = Math.floor(Math.random() * filteredPossibleEffects.length);
                             const triggeredEffect = filteredPossibleEffects[randomEffectIndex];
                             // ballData.effectLog.push(...); // SUPPRIMÉ
                             switch (triggeredEffect) {
-                                case 'addBall': { 
+                                case 'addBall': {
                                     const randomStartX = Math.random() * (ADD_BALL_START_X_MAX - ADD_BALL_START_X_MIN) + ADD_BALL_START_X_MIN;
                                     const randomVelX = (Math.random() - 0.5) * ADD_BALL_VELOCITY_X_MAGNITUDE;
                                     const newExtraBallData: BallAnimationData = {
-                                        id: `extra-mystery-${Date.now()}-${Math.random().toString(16).slice(2)}`, 
-                                        x: randomStartX, 
-                                        y: 0, 
-                                        velocityY: INITIAL_VELOCITY_Y, 
-                                        velocityX: randomVelX, 
-                                        active: true, 
-                                        color: ballData.color, 
-                                        effects: { 
-                                          multiplierCount: 0, 
-                                          sipsToAdd: 0, 
-                                          sipsToSubtract: 0, 
-                                          hitCountPerPin: new Map<string, number>(), 
-                                          effectsReset: false, 
-                                          jackpotHit: false 
+                                        id: `extra-mystery-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                                        x: randomStartX,
+                                        y: 0,
+                                        velocityY: INITIAL_VELOCITY_Y,
+                                        velocityX: randomVelX,
+                                        active: true,
+                                        color: ballData.color,
+                                        effects: {
+                                          multiplierCount: 0,
+                                          sipsToAdd: 0,
+                                          sipsToSubtract: 0,
+                                          hitCountPerPin: new Map<string, number>(),
+                                          effectsReset: false,
+                                          jackpotHit: false
                                         },
                                         // effectLog: [] // SUPPRIMÉ
                                     };
-                                    newlyAddedBalls.push(newExtraBallData); 
+                                    newlyAddedBalls.push(newExtraBallData);
                                     mysteryResolved = 'addBall';
                                     break;
-                                } 
+                                }
                                 // Ajouter d'autres cas pour mystery si nécessaire
                             }
                             break;
@@ -1098,17 +1042,17 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
                     // Mise à jour de l'état global (si nécessaire) ET de l'état du pin touché
                     // Se fait en une seule fois pour éviter les problèmes de mutation
-                    setSpecialPins(prevPins => 
-                        prevPins.map((p, index) => { 
+                    setSpecialPins(prevPins =>
+                        prevPins.map((p, index) => {
                             if (index === specialCollisionPinIndex) {
                                 const updatedHitByBallIds = new Set(p.hitByBallIds);
                                 updatedHitByBallIds.add(ballId);
                                 // Marquer comme utilisé seulement en mode non-cumulatif
-                                const updatedUsedThisTurn = !isCumulativeMode ? true : p.usedThisTurn; 
-                                return { 
-                                    ...p, 
-                                    hitByBallIds: updatedHitByBallIds, 
-                                    usedThisTurn: updatedUsedThisTurn 
+                                const updatedUsedThisTurn = !isCumulativeMode ? true : p.usedThisTurn;
+                                return {
+                                    ...p,
+                                    hitByBallIds: updatedHitByBallIds,
+                                    usedThisTurn: updatedUsedThisTurn
                                 };
                             }
                             return p;
@@ -1191,6 +1135,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
                             setSlotSipValues(newSlotValuesForShake);
                         }
                         if (roundDrinksIncrement > 0) {
+                            turnRoundDrinkHits += roundDrinksIncrement;
                             setRoundDrinksCount(prev => Math.min(MAX_ROUND_DRINKS, prev + roundDrinksIncrement));
                         }
                     }
@@ -1265,7 +1210,7 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
             } else {
                 // <<< MODIFICATION: Stocker toutes les données de la balle extra finie >>>
                 finishedExtraBallsDataThisTurn.push({ ...ballData }); // Copier les données
-                setFinalSlotIndices(prev => ({ ...prev, extra: slotIndex })); 
+                setFinalSlotIndices(prev => ({ ...prev, extra: slotIndex }));
             }
         }
       };
@@ -1282,23 +1227,23 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
       // --- Mise à jour de l'état React pour la position visuelle (inchangé) ---
       if (currentAnimState.red) {
-        setBallPositions(prev => ({ 
-          ...prev, 
-          red: { 
-            x: currentAnimState.red!.x, 
-            y: currentAnimState.red!.y, 
+        setBallPositions(prev => ({
+          ...prev,
+          red: {
+            x: currentAnimState.red!.x,
+            y: currentAnimState.red!.y,
             color: currentAnimState.red!.color // Mettre à jour la couleur
-          } 
+          }
         }));
       }
       if (currentAnimState.green) {
-        setBallPositions(prev => ({ 
-          ...prev, 
-          green: { 
-            x: currentAnimState.green!.x, 
-            y: currentAnimState.green!.y, 
+        setBallPositions(prev => ({
+          ...prev,
+          green: {
+            x: currentAnimState.green!.x,
+            y: currentAnimState.green!.y,
             color: currentAnimState.green!.color // Mettre à jour la couleur
-          } 
+          }
         }));
       }
       setExtraBalls(currentAnimState.extra.filter(b => b.active)); // Mettre à jour les balles extra visibles
@@ -1311,13 +1256,14 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
       if (nextFrameNeeded) {
         animationRefs.current.red = requestAnimationFrame(animate);
       } else {
-        setIsAnimating(false); 
-        animationRefs.current.red = null; 
+        setIsAnimating(false);
+        animationRefs.current.red = null;
         // --- MODIFICATION: Passer les données complètes (avec logs) à handleTurnEnd ---
         handleTurnEnd(
-            currentAnimState.red, 
-            currentAnimState.green, 
-            finishedExtraBallsDataThisTurn // Passer le tableau des balles extra finies
+            currentAnimState.red,
+            currentAnimState.green,
+            finishedExtraBallsDataThisTurn, // Passer le tableau des balles extra finies
+            Math.min(MAX_ROUND_DRINKS, roundDrinksAtDrop + turnRoundDrinkHits) - roundDrinksAtDrop
         );
       }
     };
@@ -1329,18 +1275,19 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   const handleTurnEnd = (
       finalRedData: BallAnimationData | null,
       finalGreenData: BallAnimationData | null,
-      finishedExtraBalls: BallAnimationData[] 
+      finishedExtraBalls: BallAnimationData[],
+      roundDrinksGained: number
     ) => {
     const { redSips: totalRedSips, greenSips: totalGreenSips } = tallyTurn(finalRedData, finalGreenData, finishedExtraBalls);
 
     const currentPlayer = players[currentPlayerIndex];
 
     const extraSipsForDisplay = finishedExtraBalls.reduce((sum, ballData) => sum + (ballData.finalSipResult ?? 0), 0);
-    setTurnResult({ redSips: totalRedSips, greenSips: totalGreenSips, extraSips: extraSipsForDisplay > 0 ? extraSipsForDisplay : null, player: currentPlayer });
+    setTurnResult({ redSips: totalRedSips, greenSips: totalGreenSips, extraSips: extraSipsForDisplay > 0 ? extraSipsForDisplay : null, player: currentPlayer, roundDrinks: roundDrinksGained });
 
     // currentPlayer déjà défini plus haut
     const currentResults = playerResults[currentPlayer.id] || [];
-    
+
     // Collecter tous les powerups de ce tour (nouvelle méthode fiable)
     const turnPowerups: PowerupEvent[] = [];
     if (finalRedData?.powerupEvents) turnPowerups.push(...finalRedData.powerupEvents);
@@ -1351,94 +1298,150 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
 
     setPlayerResults(prev => ({
         ...prev,
-        [currentPlayer.id]: [...currentResults, { 
-            redSips: totalRedSips, 
+        [currentPlayer.id]: [...currentResults, {
+            redSips: totalRedSips,
             greenSips: totalGreenSips,
             powerups: turnPowerups
         }]
     }));
 
     if (currentPlayerIndex === players.length - 1) {
-      setGameOver(true);
+      setAllPlayed(true);
     } else {
+      const nextPlayer = players[currentPlayerIndex + 1];
       setCurrentPlayerIndex(prev => prev + 1);
+      passTimerRef.current = setTimeout(() => {
+        passTimerRef.current = null;
+        setPassKey(nextPlayer.id);
+      }, PASS_PHONE_DELAY_MS);
     }
   };
   // --- Fin de handleTurnEnd ---
 
-  // ── Action bar ─────────────────────────────────────────────────────────────
+  // ── Tour, passage du téléphone, sortie ─────────────────────────────────────
 
   const currentPlayer = players[currentPlayerIndex]
+  const passPlayer = players.find(p => p.id === passKey)
 
   // Annonce lecteur d'écran du résultat du tour (région aria-live plus bas).
   const turnAnnouncement = turnResult
-    ? t('a11y.turnResult', { drinks: turnResult.redSips ?? 0, gives: turnResult.greenSips ?? 0 })
-      + (roundDrinksCount > 0 ? ` ${t('a11y.roundDrinks')}` : '')
+    ? t('a11y.turnResult', { name: turnResult.player.name, drinks: turnResult.redSips ?? 0, gives: turnResult.greenSips ?? 0 })
+      + (turnResult.roundDrinks > 0 ? ` ${t('a11y.roundDrinks')}` : '')
     : ''
 
-  const actionBar = !gameOver ? (
-    <div className="flex w-full items-center gap-2.5">
-      {turnResult ? (
-        // ── État RÉSULTAT : le joueur qui vient de jouer + son score, puis « ensuite » ──
-        <>
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="shrink-0 rounded-full ring-2 ring-gold/40">
-              <PlayerIcon player={turnResult.player} size="md" className="h-9 w-9 text-base" />
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="rounded-lg bg-suit-red/20 px-2 py-1 text-xs font-bold text-red-300">
-                {t('game.drinks')} {turnResult.redSips ?? 0} 🍺
-              </span>
-              <span className="rounded-lg bg-emerald-700/30 px-2 py-1 text-xs font-bold text-emerald-300">
-                {t('game.gives')} {turnResult.greenSips ?? 0} 🍺
-              </span>
-              {roundDrinksCount > 0 && (
-                <span className="rounded-lg border border-gold/30 bg-gold/10 px-2 py-1 text-xs font-bold text-gold">
-                  {t('game.roundDrinksShort')} 🥂
-                </span>
-              )}
-            </div>
-          </div>
+  const gameInProgress = !gameOver && (isAnimating || Object.keys(playerResults).length > 0)
+  const handleBack = async () => {
+    if (gameInProgress) {
+      const ok = await confirm({
+        title: t('game.quitConfirm.title'),
+        description: t('game.quitConfirm.description'),
+        confirmLabel: t('game.quitConfirm.confirm'),
+        cancelLabel: t('game.quitConfirm.cancel'),
+        tone: 'danger',
+      })
+      if (!ok) return
+    }
+    onGameEnd()
+  }
 
-          {/* Qui vient ensuite (l'index a déjà avancé vers currentPlayer) */}
-          <div className="ml-auto flex shrink-0 items-center gap-2 rounded-xl border border-gold/[0.15] bg-black/20 px-2.5 py-1.5">
-            <ArrowRight className="h-4 w-4 shrink-0 text-gold" aria-hidden />
-            <div className="leading-tight">
-              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.nextUp')}</p>
-              <p className="max-w-[92px] truncate font-display text-xs font-bold text-cream"><PlayerName player={currentPlayer} /></p>
-            </div>
-            <PlayerIcon player={currentPlayer} size="sm" className="h-6 w-6 shrink-0 text-xs" />
-          </div>
+  const headerRight = (
+    <>
+      <Button
+        variant="ghost"
+        size="gameIcon"
+        onClick={toggleMute}
+        aria-label={t('a11y.mute')}
+        aria-pressed={muted}
+        className={HEADER_BUTTON_CLASS}
+      >
+        {muted ? <VolumeX aria-hidden className="h-5 w-5" /> : <Volume2 aria-hidden className="h-5 w-5" />}
+      </Button>
+      <Button
+        variant="ghost"
+        size="gameIcon"
+        onClick={toggleCast}
+        aria-label={tTv('castToTv')}
+        aria-pressed={castActive}
+        className={cn(HEADER_BUTTON_CLASS, castActive && 'border-gold/60 bg-gold/[0.15] text-gold hover:bg-gold/20')}
+      >
+        <Tv aria-hidden className="h-5 w-5" />
+      </Button>
+    </>
+  )
+
+  // ── Barre du bas : le geste du moment, sous le pouce ───────────────────────
+
+  // L'écran « Tournées générales » n'est présenté que s'il y en a eu ; posé ici,
+  // au même rendu que la fin, pour ne pas montrer une image de « — » avant de sauter.
+  const showResults = () => {
+    setResultDisplayPhase(roundDrinksCount > 0 ? 'tournees' : 'details')
+    setGameOver(true)
+  }
+
+  const boardActionBar = allPlayed && !isAnimating ? (
+    <Button variant="primary" size="gameLg" className="w-full" onClick={showResults}>
+      <Trophy aria-hidden className="mr-2 h-5 w-5 shrink-0" />
+      {t('game.results.seeResults')}
+    </Button>
+  ) : (
+    <Button
+      variant="primary"
+      size="gameLg"
+      onClick={dropBalls}
+      disabled={isAnimating}
+      className={cn('w-full min-w-0', FALLING_CLASS)}
+    >
+      {isAnimating ? (
+        <>
+          <Loader2 aria-hidden className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" />
+          {t('game.inGame')}
         </>
       ) : (
-        // ── État PRÊT (à lancer) ou EN CHUTE ──
         <>
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="relative flex shrink-0">
-              {!isAnimating && <span className="absolute inset-0 -m-0.5 animate-ping rounded-full bg-gold/40" aria-hidden />}
-              <span className="relative rounded-full ring-2 ring-gold/70">
-                <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-lg" />
-              </span>
-            </span>
-            <div className="min-w-0 leading-tight">
-              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.turnLabel')}</p>
-              <p className="truncate font-display text-base font-bold text-cream"><PlayerName player={currentPlayer} /></p>
-            </div>
-          </div>
-
-          <div className="relative ml-auto shrink-0">
-            {!isAnimating && <span className="pointer-events-none absolute inset-0 animate-ping rounded-2xl bg-gold/25" aria-hidden />}
-            <Button
-              onClick={dropBalls}
-              disabled={isAnimating}
-              className="relative h-11 gap-1.5 rounded-2xl bg-amber-500 px-5 text-base font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
-            >
-              {isAnimating
-                ? <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 animate-pulse rounded-full bg-black/70" />{t('game.inGame')}</span>
-                : <><ChevronsDown className="h-5 w-5 shrink-0" aria-hidden />{t('game.launch')}</>}
-            </Button>
-          </div>
+          <ChevronsDown aria-hidden className="mr-2 h-5 w-5 shrink-0" />
+          <span className="min-w-0 truncate">{t('game.launchFor', { name: currentPlayer?.name ?? '' })}</span>
         </>
+      )}
+    </Button>
+  )
+
+  const isLastResultPlayer = currentPlayerResultIndex >= players.length - 1
+  const allPlayersSeen = maxPlayerResultIndexReached >= players.length - 1
+  const resultsActionBar = resultDisplayPhase === 'tournees' ? (
+    <Button variant="primary" size="gameLg" className="w-full" onClick={() => setResultDisplayPhase('details')}>
+      {roundDrinksCount > 0 ? t('game.results.seeDetails') : t('game.results.seeResults')}
+      <ChevronRight aria-hidden className="ml-1.5 h-5 w-5 shrink-0" />
+    </Button>
+  ) : resultDisplayPhase === 'details' ? (
+    <div className="flex w-full gap-2">
+      <Button
+        variant="quiet"
+        size="gameLg"
+        className="w-14 shrink-0 px-0"
+        aria-label={t('game.results.previous')}
+        disabled={currentPlayerResultIndex === 0}
+        onClick={() => setCurrentPlayerResultIndex(p => Math.max(0, p - 1))}
+      >
+        <ChevronLeft aria-hidden className="h-6 w-6" />
+      </Button>
+      {/* « Joueur suivant » : action principale tant que tout le monde n'a pas été vu */}
+      {!isLastResultPlayer && (
+        <Button
+          variant={allPlayersSeen ? 'quiet' : 'primary'}
+          size="gameLg"
+          className="min-w-0 flex-1 px-3"
+          onClick={() => setCurrentPlayerResultIndex(p => Math.min(players.length - 1, p + 1))}
+        >
+          <span className="min-w-0 truncate">{t('game.results.nextPlayer')}</span>
+          <ChevronRight aria-hidden className="ml-1 h-5 w-5 shrink-0" />
+        </Button>
+      )}
+      {/* Totaux : uniquement après avoir parcouru TOUS les joueurs */}
+      {allPlayersSeen && (
+        <Button variant="primary" size="gameLg" className="min-w-0 flex-1 px-3" onClick={() => setResultDisplayPhase('final')}>
+          <Trophy aria-hidden className="mr-2 h-5 w-5 shrink-0" />
+          <span className="min-w-0 truncate">{t('game.results.totals')}</span>
+        </Button>
       )}
     </div>
   ) : undefined
@@ -1456,475 +1459,446 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
     [slotSipValues, liveView.green.effects, isCumulativeMode],
   )
 
+  // Légende : les seuls types présents sur le plateau affiché, rangés par famille.
+  const legendTypes = useMemo(() => {
+    const present = new Set(specialPins.map(p => p.type))
+    const familyRank = (type: SpecialPinType) => SPECIAL_PIN_FAMILIES.indexOf(SPECIAL_PIN_COLORS[type].family)
+    return ALL_PIN_TYPES.filter(type => present.has(type)).sort((a, b) => familyRank(a) - familyRank(b))
+  }, [specialPins])
+
+  const powerupChip = (type: SpecialPinType, key: number) => {
+    const c = SPECIAL_PIN_COLORS[type]
+    return (
+      <span key={key} className={cn('inline-flex items-center gap-1 rounded-full border py-0.5 pl-1.5 pr-2 text-xs font-semibold', c.border, c.bg, c.fg)} title={getPinEffect(type)}>
+        <span aria-hidden className="flex text-[13px] leading-none">{c.glyph}</span>
+        {getPinLabel(type)}
+      </span>
+    )
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <GameShell title={t('title')} onBack={onGameEnd} maxWidth={920} actionBar={actionBar}>
-      <div className="space-y-4 text-cream">
+    <>
+      {confirmDialog}
+      <PassPhoneOverlay
+        playerKey={passKey}
+        name={passPlayer?.name ?? ''}
+        avatar={passPlayer ? <PlayerIcon player={passPlayer} size="lg" className="h-20 w-20 text-6xl" /> : undefined}
+        enabled={!gameOver && !isAnimating}
+      />
+      <GameShell
+        title={t('title')}
+        headerSubtitle={!gameOver ? t('game.progress', { n: Math.min(currentPlayerIndex + 1, players.length), total: players.length }) : undefined}
+        onBack={() => void handleBack()}
+        headerRight={headerRight}
+        maxWidth={920}
+        actionBar={gameOver ? resultsActionBar : boardActionBar}
+      >
+        <div className="space-y-4 text-cream">
 
-        {/* ── Plateau de jeu ───────────────────────────────────────────── */}
-        {!gameOver && (
-          <>
-            {/* Annonce du résultat pour lecteurs d'écran (invisible à l'œil) */}
-            <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-              {turnAnnouncement}
-            </div>
-
-            {/* File d'attente joueurs + bouton son */}
-            <div className="flex items-center gap-2">
-              <div className="flex flex-1 items-center gap-2 overflow-x-auto pb-1">
-                {players.map((p, i) => {
-                  const distance = ((i - currentPlayerIndex) + players.length) % players.length
-                  if (distance > 2) return null
-                  const isActive = distance === 0
-                  return (
-                    <div key={p.id} className={cn(
-                      'flex shrink-0 items-center gap-1.5 rounded-full border transition-all duration-200',
-                      isActive
-                        ? 'border-gold/60 bg-gold/[0.15] px-2.5 py-1.5'
-                        : 'border-gold/[0.15] bg-black/25 px-2 py-1 opacity-60',
-                    )}>
-                      {isActive && <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-gold" aria-hidden />}
-                      <PlayerIcon player={p} size="sm" className={cn(isActive ? 'h-6 w-6' : 'h-5 w-5', 'text-xs')} />
-                      <span className={cn('font-semibold', isActive ? 'text-sm text-cream' : 'text-xs text-cream/60')}>
-                        <PlayerName player={p} />
-                      </span>
-                      {distance === 1 && <span className="text-[11px] uppercase tracking-wide text-cream/50">{t('game.next')}</span>}
-                    </div>
-                  )
-                })}
+          {/* ── Plateau de jeu ───────────────────────────────────────────── */}
+          {!gameOver && (
+            <>
+              {/* Annonce du résultat pour lecteurs d'écran (invisible à l'œil) */}
+              <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                {turnAnnouncement}
               </div>
-              <button
-                type="button"
-                onClick={toggleMute}
-                aria-label={muted ? t('a11y.unmute') : t('a11y.mute')}
-                aria-pressed={muted}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-gold/[0.15] bg-black/20 text-cream/70 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-              >
-                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={toggleCast}
-                aria-label={tTv('castToTv')}
-                aria-pressed={castActive}
-                className={cn(
-                  'flex h-8 shrink-0 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
-                  castActive
-                    ? 'border-gold/60 bg-gold/[0.15] text-cream'
-                    : 'border-gold/[0.15] bg-black/20 text-cream/70 hover:text-gold',
+
+              {/* File d'attente : le joueur au tour puis les deux suivants (un seul lancer chacun) */}
+              <div className="flex min-h-[2.75rem] items-center gap-2 overflow-x-auto pb-1">
+                {allPlayed ? (
+                  <p className="text-sm font-semibold text-cream/80">{t('game.allPlayed')}</p>
+                ) : (
+                  players.slice(currentPlayerIndex, currentPlayerIndex + 3).map((p, offset) => {
+                    const isActive = offset === 0
+                    return (
+                      <div key={p.id} className={cn(
+                        'flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5',
+                        isActive ? 'border-gold/60 bg-gold/[0.15]' : 'border-gold/20 bg-black/25',
+                      )}>
+                        {isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold motion-safe:animate-pulse" aria-hidden />}
+                        <PlayerIcon player={p} size="sm" className="h-6 w-6 text-xs" />
+                        <span className={cn('text-sm font-semibold', isActive ? 'text-cream' : 'text-cream/80')}>
+                          <PlayerName player={p} />
+                        </span>
+                        {offset === 1 && <span className="text-xs uppercase tracking-wide text-cream/70">{t('game.next')}</span>}
+                      </div>
+                    )
+                  })
                 )}
-              >
-                <Tv className="h-4 w-4 shrink-0" /> {tTv('castShort')}
-              </button>
-            </div>
-
-            {castActive && castCode && (
-              <div className="flex items-center justify-center gap-2 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-center text-xs text-gold">
-                <Tv className="h-4 w-4 shrink-0 text-gold" />
-                <span>
-                  {tTv('castHint')}{' '}
-                  <span className="font-mono text-sm font-black tracking-widest text-cream">{castCode}</span>
-                </span>
               </div>
-            )}
 
-            <div
-              ref={canvasRef}
-              className="relative w-full overflow-hidden rounded-2xl border border-gold/[0.15] bg-felt-deep"
-              style={{ height: 'clamp(360px, 60vh, 550px)' }}
-              onClick={() => setPinTooltip(null)}
-            >
-              {/* Pins normaux */}
-              {pinPositions.map((pin, index) => {
-                const pinId = `n-${pin.x.toFixed(1)}-${pin.y.toFixed(1)}`
-                const isFlashing = (flashingPinsRef.current.get(pinId) ?? 0) > Date.now()
-                return (
-                  <div
-                    key={`pin-${index}`}
-                    className={cn(
-                      `absolute ${VISUAL_NORMAL_PIN_SIZE_CLASS} rounded-full transition-all duration-75`,
-                      isFlashing ? 'bg-gold scale-[2.2] z-30' : 'bg-cream/[0.35]',
-                    )}
-                    style={{ top: `${pin.y}%`, left: `${pin.x}%`, transform: 'translate(-50%, -50%)' }}
-                  />
-                )
-              })}
-
-              {/* Pins spéciaux */}
-              {specialPins.map((pin) => {
-                const colors = SPECIAL_PIN_COLORS[pin.type]
-                const isFlashing = (flashingPinsRef.current.get(pin.id) ?? 0) > Date.now()
-                const isTooltipOpen = pinTooltip?.id === pin.id
-                const openTooltip = () => setPinTooltip({ id: pin.id, x: pin.x, y: pin.y, type: pin.type })
-                return (
-                  <button
-                    key={pin.id}
-                    type="button"
-                    aria-label={`${getPinLabel(pin.type)} — ${getPinEffect(pin.type)}`}
-                    aria-pressed={isTooltipOpen}
-                    className={cn(
-                      // game-grid-cell : neutralise le min tap-target 40/44px que
-                      // globals.css impose à tout <button> sur mobile (sinon le
-                      // pin s'affiche à 40px au lieu de 16/20px).
-                      `game-grid-cell absolute ${VISUAL_SPECIAL_PIN_SIZE_CLASS} flex items-center justify-center rounded-full border-2 cursor-pointer transition-all duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold`,
-                      colors.border, colors.bg,
-                      isFlashing && 'scale-[2.5] brightness-150',
-                    )}
-                    style={{ top: `${pin.y}%`, left: `${pin.x}%`, transform: 'translate(-50%, -50%)', zIndex: isTooltipOpen ? 40 : 25 }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setPinTooltip(prev => prev?.id === pin.id ? null : { id: pin.id, x: pin.x, y: pin.y, type: pin.type })
-                    }}
-                    onFocus={openTooltip}
-                  >
-                    <span
-                      aria-hidden
-                      className="pointer-events-none select-none text-[9px] font-black leading-none text-black/80 drop-shadow-sm sm:text-[11px]"
-                    >
-                      {colors.glyph}
-                    </span>
-                  </button>
-                )
-              })}
-
-              {/* Tooltip pin spécial */}
-              {pinTooltip && (
-                <div
-                  className="pointer-events-none absolute z-50 rounded-xl border border-gold/20 bg-felt-deep px-3 py-2 shadow-2xl"
-                  style={{
-                    left: `${Math.min(82, Math.max(18, pinTooltip.x))}%`,
-                    top: `${Math.max(6, pinTooltip.y - 10)}%`,
-                    transform: 'translate(-50%, -100%)',
-                  }}
-                >
-                  <p className="flex items-center gap-1.5 whitespace-nowrap font-display text-xs font-bold text-cream">
-                    <span aria-hidden className="text-sm leading-none">{SPECIAL_PIN_COLORS[pinTooltip.type].glyph}</span>
-                    {getPinLabel(pinTooltip.type)}
-                  </p>
-                  <p className="mt-0.5 max-w-[180px] text-[10px] leading-tight text-cream/60">{getPinEffect(pinTooltip.type)}</p>
+              {castActive && castCode && (
+                <div className="flex items-center justify-center gap-2 rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-center text-xs text-gold">
+                  <Tv aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                  <span>
+                    {tTv('castHint')}{' '}
+                    <span className="font-mono text-sm font-black tracking-widest text-cream">{castCode}</span>
+                  </span>
                 </div>
               )}
 
-              {/* Bandeau des effets touchés, en surimpression sous les balles */}
-              <LiveEffectsBar live={liveView} idle={isLiveIdle} isCumulativeMode={isCumulativeMode} reduceMotion={reduceMotion} />
-
-              {/* Cases en bas : pendant un tour, valeur finale prévue de chaque balle */}
+              {/* 60vh se mesure barres du navigateur repliées : quand elles sont affichées (iOS,
+                  Android), les cases du bas, où le résultat reste surligné, passaient sous la barre
+                  d'action. D'où 100svh (barres affichées, stable au défilement) moins l'en-tête,
+                  la file d'attente et la barre. */}
               <div
-                role={isLiveIdle ? undefined : 'group'}
-                aria-label={isLiveIdle ? undefined : t('game.live.previewLabel')}
-                className="absolute bottom-0 w-full flex"
+                ref={canvasRef}
+                className="relative h-[clamp(360px,60vh,550px)] w-full overflow-hidden rounded-2xl border border-gold/[0.15] bg-felt-deep supports-[height:100svh]:h-[clamp(360px,min(60vh,calc(100svh_-_18rem_-_env(safe-area-inset-bottom,0px))),550px)]"
+                onClick={() => setPinTooltip(null)}
               >
-                {slotSipValues.map((sips, index) => {
-                  const isRedHit = finalSlotIndices.red === index
-                  const isGreenHit = finalSlotIndices.green === index
-                  const isExtraHit = finalSlotIndices.extra === index
-                  const isHit = isRedHit || isGreenHit || isExtraHit
-                  const isBoth = isRedHit && isGreenHit
+                {/* Pins normaux */}
+                {pinPositions.map((pin, index) => {
+                  const pinId = `n-${pin.x.toFixed(1)}-${pin.y.toFixed(1)}`
+                  const isFlashing = (flashingPinsRef.current.get(pinId) ?? 0) > Date.now()
                   return (
                     <div
-                      key={index}
+                      key={`pin-${index}`}
                       className={cn(
-                        'flex h-11 sm:h-14 items-center justify-center border-t border-x border-gold/[0.15] transition-colors duration-200',
-                        !isLiveIdle && 'flex-col gap-1 px-0.5 sm:gap-1.5',
-                        isBoth ? 'bg-gradient-to-r from-suit-red/60 to-emerald-700/60' : isRedHit ? 'bg-suit-red/60' : isGreenHit ? 'bg-emerald-700/60' : isExtraHit ? 'bg-gold/40' : 'bg-black/30',
+                        `absolute ${VISUAL_NORMAL_PIN_SIZE_CLASS} rounded-full transition-all duration-75`,
+                        isFlashing ? 'bg-gold scale-[2.2] z-30' : 'bg-cream/[0.35]',
                       )}
-                      style={{ width: `${100 / TARGET_NUM_SLOTS}%` }}
-                    >
-                      {isLiveIdle
-                        ? <span className={cn('font-display font-bold text-sm sm:text-base', isHit ? 'text-cream' : 'text-cream/60')}>{sips}</span>
-                        : <LiveSlotValues live={liveView} slot={index} base={sips} redBallValue={liveRedPreview[index]} greenBallValue={liveGreenPreview[index]} />}
-                    </div>
+                      style={{ top: `${pin.y}%`, left: `${pin.x}%`, transform: 'translate(-50%, -50%)' }}
+                    />
                   )
                 })}
-              </div>
 
-              {/* Balle rouge */}
-              {ballPositions.red?.y >= 0 && (
+                {/* Pins spéciaux : couleur de famille, glyphe exact */}
+                {specialPins.map((pin) => {
+                  const colors = SPECIAL_PIN_COLORS[pin.type]
+                  const isFlashing = (flashingPinsRef.current.get(pin.id) ?? 0) > Date.now()
+                  const isTooltipOpen = pinTooltip?.id === pin.id
+                  return (
+                    <button
+                      key={pin.id}
+                      type="button"
+                      aria-label={`${getPinLabel(pin.type)} — ${getPinEffect(pin.type)}`}
+                      aria-pressed={isTooltipOpen}
+                      className={cn(
+                        // game-grid-cell : aucun plancher de taille hérité, le pion garde ses 24 px.
+                        // La zone touchable, elle, déborde à 44 px (::after) : .touch-target poserait
+                        // un position: relative qui disputerait l'absolute du pion.
+                        `game-grid-cell absolute ${VISUAL_SPECIAL_PIN_SIZE_CLASS} after:absolute after:-inset-2.5 after:rounded-full flex cursor-pointer items-center justify-center rounded-full border-2 leading-none shadow-[0_1px_4px_rgba(0,0,0,0.55)] transition-[filter,box-shadow] duration-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-1 focus-visible:ring-offset-felt-deep`,
+                        colors.border, colors.bg,
+                        (isFlashing || isTooltipOpen) && 'ring-2 ring-cream',
+                        isFlashing && 'brightness-125',
+                      )}
+                      style={{ top: `${pin.y}%`, left: `${pin.x}%`, transform: 'translate(-50%, -50%)', zIndex: isTooltipOpen ? 40 : 25 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPinTooltip(prev => prev?.id === pin.id ? null : { id: pin.id, x: pin.x, y: pin.y, type: pin.type })
+                      }}
+                      // Au clavier seulement : Chrome (Android compris) donne le focus au toucher,
+                      // juste avant le clic, qui refermait aussitôt l'infobulle ouverte par le focus.
+                      onFocus={(e) => {
+                        if (isKeyboardFocus(e.currentTarget)) setPinTooltip({ id: pin.id, x: pin.x, y: pin.y, type: pin.type })
+                      }}
+                      onBlur={() => setPinTooltip(prev => (prev?.id === pin.id ? null : prev))}
+                    >
+                      {colors.glyph}
+                    </button>
+                  )
+                })}
+
+                {/* Tooltip pin spécial */}
+                {pinTooltip && (
+                  <div
+                    className="pointer-events-none absolute z-50 w-max max-w-[220px] rounded-xl border border-gold/30 bg-felt-deep px-3 py-2 shadow-2xl"
+                    style={tooltipPosition(pinTooltip.x, pinTooltip.y)}
+                  >
+                    <p className="flex items-center gap-2 font-display text-sm font-bold text-cream">
+                      <PinDot type={pinTooltip.type} />
+                      {getPinLabel(pinTooltip.type)}
+                    </p>
+                    <p className="mt-1 text-xs leading-snug text-cream/80">{getPinEffect(pinTooltip.type)}</p>
+                  </div>
+                )}
+
+                {/* Bandeau des effets touchés, en surimpression sous les balles */}
+                <LiveEffectsBar live={liveView} idle={isLiveIdle} isCumulativeMode={isCumulativeMode} reduceMotion={reduceMotion} />
+
+                {/* Cases en bas : pendant un tour, valeur finale prévue de chaque balle */}
                 <div
-                  className={`absolute ${VISUAL_BALL_SIZE_CLASS} rounded-full z-20`}
-                  style={{
-                    left: `${ballPositions.red.x}%`,
-                    top: `${ballPositions.red.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: ballPositions.red.color === 'red' ? '#ef4444' : '#22c55e',
-                    boxShadow: `0 0 12px ${ballPositions.red.color === 'red' ? 'rgba(239,68,68,0.8)' : 'rgba(34,197,94,0.8)'}`,
-                  }}
-                />
-              )}
-
-              {/* Balle verte */}
-              {ballPositions.green?.y >= 0 && (
-                <div
-                  className={`absolute ${VISUAL_BALL_SIZE_CLASS} rounded-full z-20`}
-                  style={{
-                    left: `${ballPositions.green.x}%`,
-                    top: `${ballPositions.green.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: ballPositions.green.color === 'red' ? '#ef4444' : '#22c55e',
-                    boxShadow: `0 0 12px ${ballPositions.green.color === 'red' ? 'rgba(239,68,68,0.8)' : 'rgba(34,197,94,0.8)'}`,
-                  }}
-                />
-              )}
-
-              {/* Balles extra */}
-              {extraBalls.map((ball) => (
-                <div
-                  key={ball.id}
-                  className={`absolute ${VISUAL_BALL_SIZE_CLASS} rounded-full z-20`}
-                  style={{
-                    left: `${ball.x}%`,
-                    top: `${ball.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: ball.color === 'red' ? '#ef4444' : '#22c55e',
-                    boxShadow: `0 0 12px ${ball.color === 'red' ? 'rgba(239,68,68,0.8)' : 'rgba(34,197,94,0.8)'}`,
-                  }}
-                />
-              ))}
-
-              {/* Bulles d'effet au-dessus des pins touchés par une balle principale */}
-              <PinBubbleLayer bubbles={pinBubbles} reduceMotion={reduceMotion} />
-            </div>
-
-            {/* ── Légende repliable des pins spéciaux ─────────────────────── */}
-            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70">
-              <button
-                type="button"
-                onClick={() => setLegendOpen(o => !o)}
-                aria-expanded={legendOpen}
-                className="flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-              >
-                <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.specialPins')}</span>
-                <ChevronDown className={cn('h-4 w-4 shrink-0 text-cream/60 transition-transform', legendOpen && 'rotate-180')} />
-              </button>
-              {legendOpen && (
-                <div className="grid grid-cols-1 gap-x-4 gap-y-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {ALL_PIN_TYPES.map((type) => {
-                    const colors = SPECIAL_PIN_COLORS[type]
-                    if (!colors) return null
+                  role={isLiveIdle ? undefined : 'group'}
+                  aria-label={isLiveIdle ? undefined : t('game.live.previewLabel')}
+                  className="absolute bottom-0 w-full flex"
+                >
+                  {slotSipValues.map((sips, index) => {
+                    const isRedHit = finalSlotIndices.red === index
+                    const isGreenHit = finalSlotIndices.green === index
+                    const isExtraHit = finalSlotIndices.extra === index
+                    const isHit = isRedHit || isGreenHit || isExtraHit
+                    const isBoth = isRedHit && isGreenHit
                     return (
-                      <div key={type} className="flex items-center gap-2 min-w-0">
-                        <span
-                          aria-hidden
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[8px] font-black leading-none text-black/80 ${colors.border} ${colors.bg}`}
-                        >
-                          {colors.glyph}
-                        </span>
-                        <span className="min-w-0 truncate text-xs text-cream/60">
-                          <span className="font-semibold text-cream/80">{getPinLabel(type)}</span>
-                          <span className="text-cream/50"> · {getPinEffect(type)}</span>
-                        </span>
+                      <div
+                        key={index}
+                        className={cn(
+                          'flex h-11 sm:h-14 items-center justify-center border-t border-x border-gold/[0.15] transition-colors duration-200',
+                          !isLiveIdle && 'flex-col gap-1 px-0.5 sm:gap-1.5',
+                          isBoth ? 'bg-gradient-to-r from-suit-red/60 to-emerald-700/60' : isRedHit ? 'bg-suit-red/60' : isGreenHit ? 'bg-emerald-700/60' : isExtraHit ? 'bg-gold/40' : 'bg-black/30',
+                        )}
+                        style={{ width: `${100 / TARGET_NUM_SLOTS}%` }}
+                      >
+                        {isLiveIdle
+                          ? <span className={cn('font-display font-bold text-sm sm:text-base', isHit ? 'text-cream' : 'text-cream/70')}>{sips}</span>
+                          : <LiveSlotValues live={liveView} slot={index} base={sips} redBallValue={liveRedPreview[index]} greenBallValue={liveGreenPreview[index]} />}
                       </div>
                     )
                   })}
                 </div>
-              )}
-            </div>
-          </>
-        )}
 
-        {/* ── Résultats finaux ──────────────────────────────────────────── */}
-        {gameOver && (
-          <div className="space-y-4">
-            {/* Titre de phase */}
-            <p className="text-center font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">
-              {resultDisplayPhase === 'tournees' && t('game.results.roundDrinksPhase')}
-              {resultDisplayPhase === 'details' && t('game.results.detailsPhase')}
-              {resultDisplayPhase === 'final' && t('game.results.finalPhase')}
-            </p>
+                {/* Balle rouge */}
+                {ballPositions.red?.y >= 0 && (
+                  <div
+                    className={`absolute ${VISUAL_BALL_SIZE_CLASS} rounded-full z-20`}
+                    style={{
+                      left: `${ballPositions.red.x}%`,
+                      top: `${ballPositions.red.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: ballPositions.red.color === 'red' ? '#ef4444' : '#22c55e',
+                      boxShadow: `0 0 12px ${ballPositions.red.color === 'red' ? 'rgba(239,68,68,0.8)' : 'rgba(34,197,94,0.8)'}`,
+                    }}
+                  />
+                )}
 
-            {/* ── Phase tournées ── */}
-            {resultDisplayPhase === 'tournees' && (
-              <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-6 text-center">
-                <p className="font-display text-5xl font-bold text-gold">{roundDrinksCount > 0 ? roundDrinksCount : '—'}</p>
-                <p className="mt-2 text-sm text-cream/60">
-                  {roundDrinksCount > 0
-                    ? t('roundDrinksBanner', {
-                        label: roundDrinksCount === 1 ? t('roundDrinksSingular') : t('roundDrinksPlural'),
-                        count: roundDrinksCount,
-                      })
-                    : t('noRoundDrinks')}
-                </p>
-              </div>
-            )}
+                {/* Balle verte */}
+                {ballPositions.green?.y >= 0 && (
+                  <div
+                    className={`absolute ${VISUAL_BALL_SIZE_CLASS} rounded-full z-20`}
+                    style={{
+                      left: `${ballPositions.green.x}%`,
+                      top: `${ballPositions.green.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: ballPositions.green.color === 'red' ? '#ef4444' : '#22c55e',
+                      boxShadow: `0 0 12px ${ballPositions.green.color === 'red' ? 'rgba(239,68,68,0.8)' : 'rgba(34,197,94,0.8)'}`,
+                    }}
+                  />
+                )}
 
-            {/* ── Phase détails ── */}
-            {resultDisplayPhase === 'details' && (() => {
-              const player = players[currentPlayerResultIndex]
-              const results = playerResults[player?.id] || []
-              return (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2.5 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-                    <PlayerIcon player={player} size="md" className="h-9 w-9 text-lg" />
-                    <span className="font-display font-bold text-cream">
-                      <PlayerName player={player} />
-                    </span>
-                    <span className="ml-auto text-xs text-cream/60">{currentPlayerResultIndex + 1} / {players.length}</span>
-                  </div>
-                  {results.map((result, i) => (
-                    <div key={i} className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-                      <p className="mb-2 text-xs text-cream/60">{t('game.results.turn', { n: i + 1 })}</p>
-                      <div className="flex gap-2 mb-3">
-                        <div className="flex-1 rounded-xl border border-suit-red/30 bg-suit-red/[0.15] p-2 text-center">
-                          <p className="text-xs text-red-300">{t('game.drinks')}</p>
-                          <p className="font-display text-xl font-bold text-red-300">{result.redSips}</p>
+                {/* Balles extra */}
+                {extraBalls.map((ball) => (
+                  <div
+                    key={ball.id}
+                    className={`absolute ${VISUAL_BALL_SIZE_CLASS} rounded-full z-20`}
+                    style={{
+                      left: `${ball.x}%`,
+                      top: `${ball.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: ball.color === 'red' ? '#ef4444' : '#22c55e',
+                      boxShadow: `0 0 12px ${ball.color === 'red' ? 'rgba(239,68,68,0.8)' : 'rgba(34,197,94,0.8)'}`,
+                    }}
+                  />
+                ))}
+
+                {/* Bulles d'effet au-dessus des pins touchés par une balle principale */}
+                <PinBubbleLayer bubbles={pinBubbles} reduceMotion={reduceMotion} />
+
+                {/* Verdict du lancer, NOMMÉ, affiché jusqu'au lancer suivant : le
+                    joueur qui tend déjà le téléphone a le temps de l'annoncer. */}
+                {turnResult && !isAnimating && (
+                  <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[16%] z-40 flex justify-center px-3">
+                    <motion.div
+                      initial={reduceMotion ? false : { opacity: 0, scale: 0.92, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="w-full max-w-[21rem] rounded-2xl border-2 border-gold bg-cream px-4 py-3 text-center text-[#24201A] shadow-[0_18px_40px_-16px_rgba(0,0,0,0.9)]"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <PlayerIcon player={turnResult.player} size="md" className="h-9 w-9 text-xl" />
+                        <p className="min-w-0 truncate font-display text-[28px] font-bold leading-tight">{turnResult.player.name}</p>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-suit-red px-2 py-1.5 text-cream">
+                          <p className="text-xs font-bold uppercase tracking-wider">{t('game.drinks')}</p>
+                          <p className="font-display text-3xl font-bold leading-none tabular-nums">{turnResult.redSips ?? 0}</p>
                         </div>
-                        <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-700/20 p-2 text-center">
-                          <p className="text-xs text-emerald-300">{t('game.gives')}</p>
-                          <p className="font-display text-xl font-bold text-emerald-300">{result.greenSips}</p>
+                        <div className="rounded-xl bg-emerald-700 px-2 py-1.5 text-cream">
+                          <p className="text-xs font-bold uppercase tracking-wider">{t('game.gives')}</p>
+                          <p className="font-display text-3xl font-bold leading-none tabular-nums">{turnResult.greenSips ?? 0}</p>
                         </div>
                       </div>
-                      {result.powerups.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-gold/10">
-                          {result.powerups.map((pu, pi) => {
-                            const c = SPECIAL_PIN_COLORS[pu.type]
-                            return (
-                              <span key={pi} className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${c.border} ${c.bg} text-[#24201A]`} title={getPinEffect(pu.type)}>
-                                {getPinLabel(pu.type)}
-                              </span>
-                            )
-                          })}
-                        </div>
+                      {turnResult.roundDrinks > 0 && (
+                        <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-bold">
+                          <PartyPopper aria-hidden className="h-4 w-4 shrink-0 text-suit-red" />
+                          {t('game.turnRoundDrinks', { count: turnResult.roundDrinks })}
+                        </p>
                       )}
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-
-            {/* ── Phase final ── */}
-            {resultDisplayPhase === 'final' && (
-              <div className="space-y-3">
-                {roundDrinksCount > 0 && (
-                  <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4 text-center">
-                    <p className="font-display text-sm font-semibold text-gold">
-                      {t('game.results.roundDrinksAll', { count: roundDrinksCount })}
-                    </p>
+                    </motion.div>
                   </div>
                 )}
-                {players.map(player => {
-                  const results = playerResults[player.id] || []
-                  const totalRed = results.reduce((s, r) => s + r.redSips, 0)
-                  const totalGreen = results.reduce((s, r) => s + r.greenSips, 0)
-                  const allPowerups = results.flatMap(r => r.powerups)
-                  return (
-                    <div key={player.id} className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
-                      <div className="mb-3 flex items-center gap-2.5">
-                        <PlayerIcon player={player} size="md" />
-                        <span className="font-display font-bold text-cream">
-                          <PlayerName player={player} />
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1 rounded-xl border border-suit-red/30 bg-suit-red/[0.15] p-3 text-center">
-                          <p className="text-xs text-red-300 uppercase tracking-wider">{t('game.drinks')}</p>
-                          <p className="font-display text-2xl font-bold text-red-300">{totalRed}</p>
-                        </div>
-                        <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-700/20 p-3 text-center">
-                          <p className="text-xs text-emerald-300 uppercase tracking-wider">{t('game.gives')}</p>
-                          <p className="font-display text-2xl font-bold text-emerald-300">{totalGreen}</p>
-                        </div>
-                      </div>
-                      {allPowerups.length > 0 && (
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
-                          {allPowerups.map((pu, pi) => {
-                            const c = SPECIAL_PIN_COLORS[pu.type]
-                            return (
-                              <span key={pi} className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${c.border} ${c.bg} text-[#24201A]`} title={getPinEffect(pu.type)}>
-                                {getPinLabel(pu.type)}
-                              </span>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
               </div>
-            )}
 
-            {/* Avis de première partie : sur les totaux seulement — les
-                tournées et le détail par joueur ne sont pas encore la fin. */}
-            {resultDisplayPhase === 'final' && (
-              <FirstGameFeedbackCard mode="local" gameId="plinko" className="mx-auto max-w-md" />
-            )}
+              {/* ── Légende des pins spéciaux du plateau ─────────────────────── */}
+              {legendTypes.length > 0 && (
+                <div className="rounded-2xl border border-gold/20 bg-felt-deep/70">
+                  <button
+                    type="button"
+                    onClick={() => setLegendOpen(o => !o)}
+                    aria-expanded={legendOpen}
+                    aria-controls={legendOpen ? 'plinko-pin-legend' : undefined}
+                    className="flex min-h-[2.75rem] w-full items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                  >
+                    <span className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.specialPins')}</span>
+                    <ChevronDown aria-hidden className={cn('h-5 w-5 shrink-0 text-cream/70 motion-safe:transition-transform', legendOpen && 'rotate-180')} />
+                  </button>
+                  {legendOpen && (
+                    <div id="plinko-pin-legend" className="px-3 pb-3">
+                      <ul className="mb-3 flex flex-wrap gap-x-3 gap-y-1.5">
+                        {SPECIAL_PIN_FAMILIES.map((family) => (
+                          <li key={family} className="flex items-center gap-1.5 text-xs text-cream/80">
+                            <span aria-hidden className={cn('h-3 w-3 shrink-0 rounded-full border', SPECIAL_PIN_FAMILY_STYLE[family].border, SPECIAL_PIN_FAMILY_STYLE[family].bg)} />
+                            {t(`game.pinFamilies.${family}`)}
+                          </li>
+                        ))}
+                      </ul>
+                      <ul className="grid grid-cols-1 gap-x-4 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                        {legendTypes.map((type) => (
+                          <li key={type} className="flex min-w-0 items-start gap-2.5">
+                            <PinDot type={type} size="md" className="mt-0.5" />
+                            <span className="min-w-0">
+                              <span className="block text-sm font-semibold text-cream">{getPinLabel(type)}</span>
+                              <span className="block text-xs leading-snug text-cream/70">{getPinEffect(type)}</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
-            {/* Navigation */}
-            <div className="flex justify-center gap-3 pt-2">
+          {/* ── Résultats finaux ──────────────────────────────────────────── */}
+          {gameOver && (
+            <div className="space-y-4">
+              {/* Titre de phase */}
+              <h2 className="text-center font-display text-2xl font-bold text-gold">
+                {resultDisplayPhase === 'tournees' && t('game.results.roundDrinksPhase')}
+                {resultDisplayPhase === 'details' && t('game.results.detailsPhase')}
+                {resultDisplayPhase === 'final' && t('game.results.finalPhase')}
+              </h2>
+
+              {/* ── Phase tournées ── */}
               {resultDisplayPhase === 'tournees' && (
-                <button
-                  onClick={() => setResultDisplayPhase('details')}
-                  className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
-                >
-                  {roundDrinksCount > 0 ? t('game.results.seeDetails') : t('game.results.seeResults')}
-                </button>
+                <div className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-6 text-center">
+                  <p className="font-display text-5xl font-bold text-gold">{roundDrinksCount > 0 ? roundDrinksCount : '—'}</p>
+                  <p className="mt-2 text-base text-cream/80">
+                    {roundDrinksCount > 0
+                      ? t('roundDrinksBanner', {
+                          label: roundDrinksCount === 1 ? t('roundDrinksSingular') : t('roundDrinksPlural'),
+                          count: roundDrinksCount,
+                        })
+                      : t('noRoundDrinks')}
+                  </p>
+                </div>
               )}
 
+              {/* ── Phase détails ── */}
               {resultDisplayPhase === 'details' && (() => {
-                const isLastPlayer = currentPlayerResultIndex >= players.length - 1
-                const allPlayersSeen = maxPlayerResultIndexReached >= players.length - 1
+                const player = players[currentPlayerResultIndex]
+                const results = playerResults[player?.id] || []
                 return (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex flex-wrap justify-center gap-3">
-                      <button
-                        onClick={() => setCurrentPlayerResultIndex(p => Math.max(0, p - 1))}
-                        disabled={currentPlayerResultIndex === 0}
-                        className="rounded-2xl border border-gold/25 bg-black/20 px-4 py-2.5 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream disabled:opacity-40"
-                      >
-                        {t('game.results.previous')}
-                      </button>
-                      {/* « Joueur suivant » : CTA principal tant que tout le monde n'a pas été vu */}
-                      {!isLastPlayer && (
-                        <button
-                          onClick={() => setCurrentPlayerResultIndex(p => Math.min(players.length - 1, p + 1))}
-                          className={cn(
-                            'rounded-2xl px-5 py-2.5 text-sm',
-                            allPlayersSeen
-                              ? 'border border-gold/25 bg-black/20 font-semibold text-cream/80 hover:bg-black/30 hover:text-cream'
-                              : 'bg-amber-500 font-bold text-black hover:bg-amber-400',
-                          )}
-                        >
-                          {t('game.results.nextPlayer')}
-                        </button>
-                      )}
-                      {/* Totaux : uniquement après avoir parcouru TOUS les joueurs */}
-                      {allPlayersSeen && (
-                        <button
-                          onClick={() => setResultDisplayPhase('final')}
-                          className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
-                        >
-                          {t('game.results.totals')}
-                        </button>
-                      )}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                      <PlayerIcon player={player} size="md" className="h-9 w-9 text-lg" />
+                      <span className="min-w-0 truncate font-display text-lg font-bold text-cream">
+                        <PlayerName player={player} />
+                      </span>
+                      <span className="ml-auto shrink-0 text-sm tabular-nums text-cream/70">{currentPlayerResultIndex + 1} / {players.length}</span>
                     </div>
+                    {results.map((result, i) => (
+                      <div key={i} className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                        {/* Un seul lancer par joueur : « Tour 1 » sous chaque nom ne disait rien (la TV le tait aussi). */}
+                        {results.length > 1 && <p className="mb-2 text-xs text-cream/70">{t('game.results.turn', { n: i + 1 })}</p>}
+                        <div className="mb-3 flex gap-2">
+                          <div className="flex-1 rounded-xl border border-suit-red/30 bg-suit-red/[0.15] p-2 text-center">
+                            <p className="text-xs text-red-300">{t('game.drinks')}</p>
+                            <p className="font-display text-2xl font-bold text-red-300">{result.redSips}</p>
+                          </div>
+                          <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-700/20 p-2 text-center">
+                            <p className="text-xs text-emerald-300">{t('game.gives')}</p>
+                            <p className="font-display text-2xl font-bold text-emerald-300">{result.greenSips}</p>
+                          </div>
+                        </div>
+                        {result.powerups.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 border-t border-gold/10 pt-2">
+                            {result.powerups.map((pu, pi) => powerupChip(pu.type, pi))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                     {!allPlayersSeen && (
-                      <p className="text-xs text-cream/60">{t('game.results.seeAllHint')}</p>
+                      <p className="text-center text-sm text-cream/70">{t('game.results.seeAllHint')}</p>
                     )}
                   </div>
                 )
               })()}
 
+              {/* ── Phase final ── */}
               {resultDisplayPhase === 'final' && (
-                <>
-                  <button
-                    onClick={handleRestartGame}
-                    className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black hover:bg-amber-400"
+                <div className="space-y-3">
+                  {roundDrinksCount > 0 && (
+                    <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4 text-center">
+                      <p className="font-display text-base font-semibold text-gold">
+                        {t('game.results.roundDrinksAll', { count: roundDrinksCount })}
+                      </p>
+                    </div>
+                  )}
+                  {players.map(player => {
+                    const results = playerResults[player.id] || []
+                    const totalRed = results.reduce((s, r) => s + r.redSips, 0)
+                    const totalGreen = results.reduce((s, r) => s + r.greenSips, 0)
+                    const allPowerups = results.flatMap(r => r.powerups)
+                    return (
+                      <div key={player.id} className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+                        <div className="mb-3 flex items-center gap-2.5">
+                          <PlayerIcon player={player} size="md" />
+                          <span className="min-w-0 truncate font-display font-bold text-cream">
+                            <PlayerName player={player} />
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1 rounded-xl border border-suit-red/30 bg-suit-red/[0.15] p-3 text-center">
+                            <p className="text-xs uppercase tracking-wider text-red-300">{t('game.drinks')}</p>
+                            <p className="font-display text-2xl font-bold text-red-300">{totalRed}</p>
+                          </div>
+                          <div className="flex-1 rounded-xl border border-emerald-700/40 bg-emerald-700/20 p-3 text-center">
+                            <p className="text-xs uppercase tracking-wider text-emerald-300">{t('game.gives')}</p>
+                            <p className="font-display text-2xl font-bold text-emerald-300">{totalGreen}</p>
+                          </div>
+                        </div>
+                        {allPowerups.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {allPowerups.map((pu, pi) => powerupChip(pu.type, pi))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {/* Avis de première partie, sur les totaux seulement (les tournées
+                      et le détail par joueur ne sont pas encore la fin), au-dessus de Rejouer. */}
+                  <EndActionDock
+                    voiceGutter={false}
+                    feedback={<FirstGameFeedbackCard variant="banner" mode="local" gameId="plinko" />}
                   >
-                    {t('game.results.newGame')}
-                  </button>
-                  <button
-                    onClick={onGameEnd}
-                    className="rounded-2xl border border-gold/25 bg-black/20 px-5 py-2.5 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
-                  >
-                    {t('game.results.back')}
-                  </button>
-                </>
+                    <Button variant="primary" size="gameLg" className="w-full" onClick={handleRestartGame}>
+                      <RefreshCw aria-hidden className="mr-2 h-5 w-5" />
+                      {tc('replay')}
+                    </Button>
+                    <Button variant="quiet" size="game" className="w-full" onClick={onGameEnd}>
+                      {t('game.results.back')}
+                    </Button>
+                  </EndActionDock>
+                </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-      </div>
-    </GameShell>
+        </div>
+      </GameShell>
+    </>
   )
-} 
+}

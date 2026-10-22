@@ -75,12 +75,12 @@ describe('TV Plinko (jeu local diffusé)', () => {
 
   it('en fin de partie, la TV suit l’écran du téléphone et ne devance pas les totaux', () => {
     const tournees = render('fin-12', 0)
-    expect(tournees).toContain('Tournées Générales')
+    expect(tournees).toContain('Tournées générales')
     expect(tournees).not.toContain('Hugo')
     const detail = render('fin-12', stepIndex('fin-12', 'détail : 1er'))
     expect(detail).toContain('Jean-Baptiste')
     expect(detail).not.toContain('Hugo')
-    expect(detail).not.toContain('Résultats Finaux')
+    expect(detail).not.toContain('Résultats finaux')
     const totals = render('fin-12', stepIndex('fin-12', 'totaux'))
     for (const name of ['Jean-Baptiste', 'Marie-Charlotte', 'Hugo']) expect(totals).toContain(name)
   })
@@ -107,6 +107,6 @@ describe('TV Plinko (jeu local diffusé)', () => {
 
   it('un téléphone sans les champs récents reste affiché', () => {
     expect(render('ancien-telephone', 0)).toContain('Marie-Charlotte')
-    expect(render('ancien-telephone', 1)).toContain('Résultats Finaux')
+    expect(render('ancien-telephone', 1)).toContain('Résultats finaux')
   })
 })

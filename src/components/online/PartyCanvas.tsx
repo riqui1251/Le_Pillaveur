@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Eraser } from 'lucide-react'
+import { Check, Eraser, Trash2, Undo2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { cn } from '@/lib/utils'
 import { compactStroke } from '@/lib/crobard/simplify'
 
@@ -19,6 +21,10 @@ import { compactStroke } from '@/lib/crobard/simplify'
  * trait TERMINÉ part simplifié et arrondi (cf. lib/crobard/simplify.ts) :
  * c'est lui qui est réécrit dans l'état de la salle et retéléchargé par
  * chaque téléphone à chaque nouveau trait.
+ *
+ * Outils : sous la toile par défaut. Un jeu qui veut les poser dans sa barre
+ * fixe du bas (zone du pouce) pilote l'outil avec `usePartyCanvasTool()`, le
+ * passe en `tool` et rend lui-même `<PartyCanvasTools>`.
  */
 
 export type Stroke = {
@@ -28,30 +34,71 @@ export type Stroke = {
   width: number
 }
 
-/** Couleur de fond du canvas — un trait de cette couleur agit comme une gomme. */
-const BG_COLOR = '#f8fafc'
-const COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#020617']
-const WIDTHS = [3, 6, 12] as const
+/**
+ * Couleur de fond du canvas — un trait de cette couleur agit comme une gomme.
+ * Crème de la carte : le blanc froid #f8fafc éblouissait dans une pièce sombre.
+ */
+const BG_COLOR = '#F3EAD3'
+/** Gomme des dessins tracés avant le passage au crème : repeinte en fond actuel. */
+const LEGACY_ERASER = '#f8fafc'
+/** Encres lisibles sur le crème (≥ 4:1), du thème quand il en a une. */
+const COLORS = [
+  { id: 'ink', hex: '#24201A' },
+  { id: 'red', hex: '#B3382E' },
+  { id: 'blue', hex: '#274B8F' },
+  { id: 'green', hex: '#2E7D32' },
+  { id: 'orange', hex: '#C2410C' },
+  { id: 'purple', hex: '#7E22CE' },
+] as const
+const WIDTHS = [
+  { id: 'thin', px: 3 },
+  { id: 'medium', px: 6 },
+  { id: 'thick', px: 12 },
+] as const
+
+export type PartyCanvasTool = {
+  color: string
+  width: number
+  setColor: (color: string) => void
+  setWidth: (width: number) => void
+}
+
+/** Couleur et épaisseur du pinceau, partagées entre la toile et sa barre d'outils. */
+export function usePartyCanvasTool(): PartyCanvasTool {
+  const [color, setColor] = useState<string>(COLORS[0].hex)
+  const [width, setWidth] = useState<number>(WIDTHS[1].px)
+  return { color, width, setColor, setWidth }
+}
 
 export function PartyCanvas({
   strokes,
   readOnly,
   onStrokeComplete,
   onClear,
+  onUndo,
+  tool: controlledTool,
   className,
 }: {
   strokes: Stroke[]
   /** true pour les devineurs / la TV — lecture seule, aucune interaction. */
   readOnly: boolean
   onStrokeComplete?: (stroke: Stroke) => void
+  /** Vide la toile (demandé après confirmation). */
   onClear?: () => void
+  /** Retire le dernier trait. Absent : pas de bouton « Annuler ». */
+  onUndo?: () => void
+  /**
+   * Outil piloté par le jeu (`usePartyCanvasTool`), qui rend alors lui-même
+   * `<PartyCanvasTools>` où il veut. Absent : outils sous la toile.
+   */
+  tool?: PartyCanvasTool
   className?: string
 }) {
-  const t = useTranslations('partyCanvas')
+  const ownTool = usePartyCanvasTool()
+  const tool = controlledTool ?? ownTool
+  const { color, width } = tool
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [color, setColor] = useState<string>(COLORS[COLORS.length - 1])
-  const [width, setWidth] = useState<number>(WIDTHS[1])
   const drawingRef = useRef<number[] | null>(null)
 
   const redraw = useCallback(() => {
@@ -66,7 +113,7 @@ export function PartyCanvas({
 
     const drawStroke = (points: number[], strokeColor: string, strokeWidth: number) => {
       if (points.length < 4) return
-      ctx.strokeStyle = strokeColor
+      ctx.strokeStyle = strokeColor.toLowerCase() === LEGACY_ERASER ? BG_COLOR : strokeColor
       ctx.lineWidth = strokeWidth * (w / 600)
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
@@ -82,6 +129,12 @@ export function PartyCanvas({
     if (drawingRef.current) drawStroke(drawingRef.current, color, width)
   }, [strokes, color, width])
 
+  // Le redimensionnement appelle le DERNIER redraw : celui capturé au montage
+  // repeignait les traits du montage, et un canvas élargi (barre de défilement
+  // qui apparaît, rotation) perdait le dessin jusqu'au trait suivant.
+  const redrawRef = useRef(redraw)
+  redrawRef.current = redraw
+
   useEffect(() => {
     redraw()
   }, [redraw])
@@ -95,13 +148,12 @@ export function PartyCanvas({
       const dpr = Math.min(2, window.devicePixelRatio || 1)
       canvas.width = Math.max(1, Math.round(rect.width * dpr))
       canvas.height = Math.max(1, Math.round(rect.height * dpr))
-      redraw()
+      redrawRef.current()
     }
     resize()
     const ro = new ResizeObserver(resize)
     ro.observe(container)
     return () => ro.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const pointFromEvent = (e: React.PointerEvent<HTMLCanvasElement>): [number, number] => {
@@ -141,79 +193,169 @@ export function PartyCanvas({
 
   return (
     <div className={className}>
+      {/* touch-none seulement pour qui dessine : en lecture seule, la toile
+          occupe la moitié de l'écran et un glissé dessus doit faire défiler. */}
       <div
         ref={containerRef}
-        className="relative aspect-[4/3] w-full touch-none overflow-hidden rounded-2xl border border-white/10 bg-white shadow-inner"
+        className={cn(
+          'relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-gold/30 bg-cream shadow-inner',
+          !readOnly && 'touch-none'
+        )}
       >
         <canvas
           ref={canvasRef}
-          className="h-full w-full touch-none"
+          className={cn('h-full w-full', !readOnly && 'cursor-crosshair touch-none')}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
+          onPointerCancel={handlePointerUp}
         />
       </div>
-      {!readOnly && (
-        // `touch-target` sur chaque pastille : au doigt, la zone touchable monte
-        // à 44px alors que la pastille reste à 28px — la palette ne doit pas
-        // grossir, elle tiendrait sinon sur deux lignes à 360px.
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-1.5">
+      {!readOnly && !controlledTool && (
+        <PartyCanvasTools
+          tool={tool}
+          hasStrokes={strokes.length > 0}
+          onClear={onClear}
+          onUndo={onUndo}
+          className="mt-3"
+        />
+      )}
+    </div>
+  )
+}
+
+/** Pastille de couleur : 40 px dessinés, 44 px au doigt (`touch-target`). */
+const SWATCH =
+  'touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-cream/40 transition-transform motion-reduce:transition-none'
+/** Sélection : anneau d'or décalé (une forme, pas seulement une couleur) + léger grossissement. */
+const SWATCH_ON = 'scale-110 ring-[3px] ring-gold ring-offset-2 ring-offset-felt-deep'
+
+/**
+ * Barre d'outils du dessinateur, en deux rangées pour tenir à 375 px :
+ * gomme + 6 encres, puis épaisseurs, « Annuler » (dernier trait) et
+ * « Tout effacer ». Tout effacer passe par une confirmation : posé à côté de
+ * la grosse épaisseur, un toucher raté vidait le dessin (chez tous les
+ * devineurs au Crobard) sans aucun retour possible.
+ */
+export function PartyCanvasTools({
+  tool,
+  hasStrokes,
+  onClear,
+  onUndo,
+  className,
+}: {
+  tool: PartyCanvasTool
+  /** Au moins un trait sur la toile : sans trait, Annuler et Tout effacer s'éteignent. */
+  hasStrokes: boolean
+  onClear?: () => void
+  onUndo?: () => void
+  className?: string
+}) {
+  const t = useTranslations('partyCanvas')
+  const [confirmDialog, confirm] = useConfirmAction()
+
+  const askClear = async () => {
+    if (!onClear || !hasStrokes) return
+    const ok = await confirm({
+      title: t('clearConfirm.title'),
+      description: t('clearConfirm.description'),
+      confirmLabel: t('clearConfirm.confirm'),
+      cancelLabel: t('clearConfirm.cancel'),
+      tone: 'danger',
+    })
+    if (ok) onClear()
+  }
+
+  const eraserOn = tool.color === BG_COLOR
+
+  return (
+    <div role="group" aria-label={t('toolsLabel')} className={className}>
+      {confirmDialog}
+      <div role="group" aria-label={t('colorsLabel')} className="flex items-center justify-between gap-1">
+        <button
+          type="button"
+          onClick={() => tool.setColor(BG_COLOR)}
+          aria-label={t('eraser')}
+          aria-pressed={eraserOn}
+          title={t('eraser')}
+          className={cn(SWATCH, 'bg-cream text-[#24201A]', eraserOn && SWATCH_ON)}
+        >
+          <Eraser className="h-5 w-5" aria-hidden />
+        </button>
+        {COLORS.map(({ id, hex }) => {
+          const on = tool.color === hex
+          return (
             <button
+              key={id}
               type="button"
-              onClick={() => setColor(BG_COLOR)}
-              aria-label={t('eraser')}
-              title={t('eraser')}
-              className={cn(
-                'touch-target flex h-7 w-7 items-center justify-center rounded-full border-2 bg-white transition-transform',
-                color === BG_COLOR ? 'scale-110 border-emerald-400' : 'border-white/20'
-              )}
+              onClick={() => tool.setColor(hex)}
+              aria-label={t(`colors.${id}`)}
+              aria-pressed={on}
+              title={t(`colors.${id}`)}
+              className={cn(SWATCH, on && SWATCH_ON)}
+              style={{ backgroundColor: hex }}
             >
-              <Eraser className="h-3.5 w-3.5 text-slate-500" />
+              {on && <Check className="h-5 w-5 text-cream" strokeWidth={3} aria-hidden />}
             </button>
-            {COLORS.map((c) => (
+          )
+        })}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <div role="group" aria-label={t('widthsLabel')} className="flex shrink-0 gap-2">
+          {WIDTHS.map(({ id, px }) => {
+            const on = tool.width === px
+            return (
               <button
-                key={c}
+                key={id}
                 type="button"
-                onClick={() => setColor(c)}
-                aria-label={c}
+                onClick={() => tool.setWidth(px)}
+                aria-label={t(`widths.${id}`)}
+                aria-pressed={on}
+                title={t(`widths.${id}`)}
                 className={cn(
-                  'touch-target h-7 w-7 rounded-full border-2 transition-transform',
-                  color === c ? 'scale-110 border-emerald-400' : 'border-white/20'
-                )}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5">
-            {WIDTHS.map((wd) => (
-              <button
-                key={wd}
-                type="button"
-                onClick={() => setWidth(wd)}
-                aria-label={`${wd}px`}
-                className={cn(
-                  'touch-target flex h-7 w-7 items-center justify-center rounded-full border',
-                  width === wd ? 'border-emerald-400 bg-emerald-500/10' : 'border-white/20'
+                  'flex h-12 w-12 items-center justify-center rounded-2xl border-2 transition-colors',
+                  on ? 'border-gold bg-gold/20' : 'border-cream/[0.25] bg-black/20 hover:bg-black/30'
                 )}
               >
-                <span
-                  className="rounded-full bg-white"
-                  style={{ width: Math.min(16, wd + 2), height: Math.min(16, wd + 2) }}
-                />
+                <span className="rounded-full bg-cream" style={{ width: px + 4, height: px + 4 }} />
               </button>
-            ))}
-            <button
-              type="button"
-              onClick={onClear}
-              className="touch-target rounded-lg border border-white/[0.15] bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10"
-            >
-              {t('clear')}
-            </button>
-          </div>
+            )
+          })}
         </div>
-      )}
+        {onUndo && (
+          <Button
+            type="button"
+            variant="quiet"
+            size="game"
+            onClick={onUndo}
+            disabled={!hasStrokes}
+            aria-label={t('undoLabel')}
+            className="min-w-0 flex-1 gap-1.5 px-3"
+          >
+            <Undo2 className="h-5 w-5 shrink-0" aria-hidden />
+            <span className="truncate">{t('undo')}</span>
+          </Button>
+        )}
+        {onClear && (
+          <Button
+            type="button"
+            variant="quiet"
+            size="game"
+            onClick={() => void askClear()}
+            disabled={!hasStrokes}
+            aria-label={t('clear')}
+            title={t('clear')}
+            className={cn(
+              'gap-1.5 border-red-400/40 text-red-300 hover:bg-suit-red/20 hover:text-red-300',
+              onUndo ? 'w-12 shrink-0 px-0' : 'min-w-0 flex-1 px-3'
+            )}
+          >
+            <Trash2 className="h-5 w-5 shrink-0" aria-hidden />
+            {!onUndo && <span className="truncate">{t('clear')}</span>}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

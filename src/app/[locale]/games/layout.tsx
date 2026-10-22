@@ -67,13 +67,15 @@ export default function GamesLayout({
           Les champs de saisie restent sélectionnables (règle `user-select:
           text` dans globals.css) ; le code de table se copie par son bouton. */}
       <div className="flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md border border-gold/20 bg-felt-deep/70 p-2 text-cream shadow-[0_18px_50px_-24px_rgba(0,0,0,0.85)] select-none [-webkit-touch-callout:none] [&_h1]:font-display sm:space-y-6 sm:rounded-xl sm:p-6">
-        {/* Coupure réseau dite au joueur — même condition que le dock vocal
-            (mode en ligne), mais DANS la coquille et en tête : le bandeau
-            prend sa place dans le flux au lieu de flotter par-dessus un
-            bouton. Import statique, à la différence du dock : quelques
-            lignes et une icône, le hook de salle est déjà dans le bundle
-            (OnlineRoomProvider est global). Il ne rend rien hors salle ou
-            tant que la connexion tient. */}
+        {/* Coupure réseau dite au joueur — filet de secours de la coquille :
+            les jeux en ligne vivent dans un calque fixe hors de ce flux, le
+            bandeau à leur place est celui que porte leur cadre (placement
+            `stage`, cf. ConnectionBanner) ; celui-ci se tait alors, laisse
+            passer le toucher, et ne parle que sur la page du jeu de la salle.
+            Import statique, à la différence du dock : quelques lignes et une
+            icône, le hook de salle est déjà dans le bundle (OnlineRoomProvider
+            est global). Il ne rend rien hors salle ou tant que la connexion
+            tient. */}
         {user?.playMode === "online" && <ConnectionBanner />}
         {children}
         {/* Sa voix pour le lecteur d'écran, en DERNIER : une région live doit
@@ -81,10 +83,12 @@ export default function GamesLayout({
             décale aucun frère visible (cf. ConnectionLiveRegion). */}
         {user?.playMode === "online" && <ConnectionLiveRegion />}
       </div>
-      {/* Vocal de salle — apparaît dès qu'on est dans une salle en ligne,
-          pour TOUS les jeux (actuels et futurs), lobby inclus. Le dock se
-          masquait déjà tout seul hors salle : la condition ici ne change donc
-          rien à l'écran, elle évite seulement de TÉLÉCHARGER le morceau. */}
+      {/* Vocal de salle — monté pour TOUS les jeux en ligne (actuels et
+          futurs), lobby inclus, mais il ne se MONTRE que sur la page du jeu de
+          la salle (ou en plein vocal, pour pouvoir raccrocher) : sur un jeu
+          local, ni question du micro ni bulle. Il reste monté d'une page à
+          l'autre — une bascule de jeu ne coupe pas la conversation. La
+          condition ici évite seulement de TÉLÉCHARGER le morceau en local. */}
       {user?.playMode === "online" && <VoiceDock />}
     </div>
   )

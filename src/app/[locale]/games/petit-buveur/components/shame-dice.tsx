@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import type { PetitBuveurT } from '../case-config'
 
@@ -40,12 +40,13 @@ type ShameDiceProps = {
 
 export function ShameDice({ displayValue, isRolling }: ShameDiceProps) {
   const t = useTranslations('games.petit-buveur.shameDice')
+  const reduced = useReducedMotion()
 
   return (
     <motion.div
       className="relative flex items-center justify-center py-2"
       animate={
-        isRolling
+        isRolling && !reduced
           ? {
               rotate: [0, 18, -14, 22, -8, 12, 0],
               scale: [1, 1.08, 0.96, 1.1, 0.98, 1.04, 1],
@@ -54,12 +55,12 @@ export function ShameDice({ displayValue, isRolling }: ShameDiceProps) {
           : { rotate: 0, scale: 1, y: 0 }
       }
       transition={
-        isRolling
+        isRolling && !reduced
           ? { duration: 0.85, ease: 'easeInOut', times: [0, 0.15, 0.3, 0.5, 0.7, 0.85, 1] }
           : { type: 'spring', stiffness: 320, damping: 22 }
       }
     >
-      {isRolling && (
+      {isRolling && !reduced && (
         <motion.div
           className="absolute inset-0 rounded-full bg-gold/20 blur-xl"
           animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.9, 1.15, 0.9] }}

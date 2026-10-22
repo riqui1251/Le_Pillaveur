@@ -41,10 +41,11 @@ import { cn } from '@/lib/utils'
  *    carte ne s'affiche pas du tout ;
  *  - rien à faire (tablée déjà amie, rappel déjà accepté) : pas de carte ;
  *  - décision prise UNE fois ;
- *  - l'écran de fin la pose SOUS ses actions (au-dessus seulement quand la
- *    barre est fixe, Quiz) : elle revient à chaque fin de partie à plusieurs,
- *    elle ne doit ni repousser « Rejouer » sous le pli ni décaler la barre
- *    sous le pouce en arrivant après ses trois lectures.
+ *  - l'écran de fin la pose dans le flux, sous son contenu, jamais dans le
+ *    dock d'actions : elle revient à chaque fin de partie à plusieurs, elle
+ *    ne doit pas voler la zone du pouce à « Rejouer ». Le dock étant fixe
+ *    (ou collé au bas de la carte), son arrivée après ses trois lectures ne
+ *    décale plus rien sous le pouce.
  * Logique pure : src/lib/rematch-night.ts.
  */
 
@@ -82,11 +83,11 @@ const CARD_LINK =
 
 /** Ligne d'état (fait, activé) : reçoit le focus quand le bouton qu'elle remplace disparaît. */
 const STATUS_LINE =
-  'flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-white/5 px-3 text-sm font-semibold text-cream outline-none'
+  'flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-cream/5 px-3 text-sm font-semibold text-cream outline-none'
 
 /** « Non merci » : plus discret que le geste principal, cible tactile de 44 px quand même. */
 const DECLINE_LINK =
-  'inline-flex min-h-[44px] items-center justify-center rounded-lg px-3 text-xs font-semibold text-cream/60 underline underline-offset-2 transition-colors hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:opacity-60'
+  'inline-flex min-h-[44px] items-center justify-center rounded-lg px-3 text-xs font-semibold text-cream/70 underline underline-offset-2 transition-colors hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:opacity-60'
 
 /** Refus du rappel encore valable sur cet appareil ? Stockage indisponible : non. */
 function readReminderDecline(): boolean {
@@ -332,7 +333,7 @@ export function RematchNightCard({
           avant le geste. Et le refus doit être aussi simple que l'accord. */}
       {showReminderButton && (
         <>
-          <p id={`${titleId}-hint`} className="mt-1.5 text-[11px] leading-snug text-cream/60">
+          <p id={`${titleId}-hint`} className="mt-1.5 text-xs leading-snug text-cream/70">
             {t('reminderHint')}
           </p>
           <button type="button" onClick={declineReminder} disabled={reminder.pending} className={DECLINE_LINK}>

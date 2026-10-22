@@ -134,7 +134,7 @@ export function FirstGameFeedbackMeta({
       <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-cream/90">
         {gameId && (
           <span aria-hidden>
-            <GameIconById id={gameId} className="h-4 w-4 shrink-0 text-gold" />
+            <GameIconById id={gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
           </span>
         )}
         <span className="min-w-0 truncate">{gameId ? gameTitle(gameId) : t('unknownGame')}</span>
@@ -317,7 +317,7 @@ export function FirstGameFeedbackPanel() {
                     >
                       <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-cream/90">
                         <span aria-hidden>
-                          <GameIconById id={game.gameId} className="h-4 w-4 shrink-0 text-gold" />
+                          <GameIconById id={game.gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
                         </span>
                         <span className="min-w-0 truncate">{gameTitle(game.gameId)}</span>
                       </span>

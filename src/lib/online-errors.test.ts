@@ -119,6 +119,7 @@ describe('codes d’erreur online', () => {
       STOP_TOO_EARLY: 'stop_too_early',
       INCOMPLETE_STOP: 'incomplete_stop',
       CONTEST_NEEDS_MORE_PLAYERS: 'contest_needs_more_players',
+      FAKE_TAKEN: 'fake_taken',
     } as const
     for (const [nomMoteur, code] of Object.entries(attendus)) {
       expect(resolveOnlineErrorCode(nomMoteur)).toBe(code)

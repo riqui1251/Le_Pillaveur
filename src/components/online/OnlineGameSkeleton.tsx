@@ -34,8 +34,8 @@ export function OnlineGameSkeleton({ gameId }: { gameId: string }) {
       <div className="w-full max-w-lg text-center">
         {game && (
           <header>
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10 text-gold">
-              <GameIconById id={gameId} className="h-8 w-8" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-felt-deep">
+              <GameIconById id={gameId} surface="felt" className="h-9 w-9" />
             </div>
             <h1 className="font-display text-3xl font-bold tracking-tight text-cream">{game.title}</h1>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-snug text-cream/70">{game.description}</p>

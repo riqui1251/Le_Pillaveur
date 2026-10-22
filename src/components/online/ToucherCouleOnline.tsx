@@ -1,17 +1,50 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Anchor, ArrowLeft, Crosshair, Trophy, Waves } from 'lucide-react'
+import { motion, AnimatePresence, useAnimationControls, useReducedMotion } from 'framer-motion'
+import {
+  Anchor,
+  Bomb,
+  Check,
+  Crosshair,
+  Dices,
+  Eraser,
+  Hourglass,
+  Loader2,
+  LogOut,
+  MoveHorizontal,
+  MoveVertical,
+  Skull,
+  TriangleAlert,
+  Trophy,
+  Waves,
+  X,
+} from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { EndConfetti } from './EndConfetti'
 import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseHeader } from './PhaseHeader'
+import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
+import { TurnBanner } from '@/components/game/TurnBanner'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
+import { tcBombCells, tcBombFits, tcCellPx, tcColumnLetter, tcCoord, tcShipCells } from '@/lib/toucher-coule/board'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
@@ -26,8 +59,10 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
  * Écran de jeu Toucher-Coulé EN LIGNE (serveur-autoritaire).
  *
  * La vue reçue est déjà filtrée par le serveur : les navires ennemis non
- * touchés n'arrivent jamais au client. Mobile-first : grilles fluides
- * (colonnes dynamiques selon le mode), gros boutons tactiles.
+ * touchés n'arrivent jamais au client. Mobile-first : une seule grille à la
+ * fois, cases d'au moins 30 px (la grille défile de côté en 12×12 et 14×14),
+ * coordonnées « C4 » en marge, et un tir en deux temps : viser, puis
+ * « Tirer en C4 » dans la barre du bas.
  */
 
 function parseView(json: string | null | undefined): TCClientView | null {
@@ -48,23 +83,222 @@ const TEAM_LABEL: Record<TeamId, string> = { A: 'A', B: 'B' }
  */
 const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
+/** Durée d'un message de tap refusé dans la barre du bas. */
+const NOTICE_MS = 3000
+/** Durée du flash rouge sur les cases d'un placement ou d'une bombe refusés. */
+const REJECT_FLASH_MS = 900
+
+/** Géométrie de la grille : colonne des numéros, ligne des lettres, écart entre cases. */
+const BOARD_LABEL_PX = 16
+const BOARD_HEADER_PX = 18
+const BOARD_GAP_PX = 2
+
+// Le rendu serveur ne mesure rien ; côté client, la grille prend sa taille
+// AVANT la première peinture (pas d'image où elle saute de 30 px à 38 px).
+const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
 function teamAccent(team: TeamId): string {
   return team === 'A' ? 'text-sky-300' : 'text-rose-300'
 }
+
+function vibrate(ms: number) {
+  try {
+    navigator.vibrate?.(ms)
+  } catch {
+    // vibration non supportée — silencieux
+  }
+}
+
+type ShotState = 'hit' | 'miss' | undefined
+
+/** Fond d'une case selon ce qu'elle a reçu : eau, raté, touché, coulé. */
+function shotTone(shot: ShotState, sunk: boolean, ship = false): string {
+  if (sunk) return 'bg-red-950 ring-1 ring-inset ring-red-400/60'
+  if (shot === 'hit') return 'bg-red-600'
+  if (ship) return 'bg-sky-500/80'
+  if (shot === 'miss') return 'bg-black/30'
+  return 'bg-sky-900/60'
+}
+
+/**
+ * Marque d'une case, doublée d'une forme (pas seulement d'une couleur) :
+ * croix pour touché, crâne pour coulé, point pour raté. Les emojis de 11 px
+ * (💥/💀) se confondaient à bout de bras.
+ */
+function ShotMark({ shot, sunk }: { shot: ShotState; sunk: boolean }) {
+  if (sunk) return <Skull aria-hidden className="h-4 w-4 text-red-200" />
+  if (shot === 'hit') return <X aria-hidden strokeWidth={3} className="h-4 w-4 text-cream" />
+  if (shot === 'miss') return <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-cream/70" />
+  return null
+}
+
+/** Pastille de légende : même fond et même marque que la case qu'elle explique. */
+function LegendSwatch({ tone, children }: { tone: string; children?: ReactNode }) {
+  return (
+    <span aria-hidden className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px]', tone)}>
+      {children}
+    </span>
+  )
+}
+
+/**
+ * Grille carrée avec ses repères (lettres en haut, numéros à gauche).
+ *
+ * La taille des cases est CALCULÉE sur la largeur mesurée, en pixels : le
+ * ratio 1:1 par case se déformait sur certains mobiles quand la hauteur de
+ * ligne dérivait. Sous 30 px par case, la grille garde 30 px et défile de
+ * côté, numéros de ligne collés à gauche.
+ */
+function TcBoard({
+  size,
+  label,
+  active = false,
+  scrollHint,
+  renderCell,
+  onPointerLeave,
+}: {
+  size: number
+  label: string
+  /** C'est à ce téléphone d'y viser : liseré or. */
+  active?: boolean
+  scrollHint: string
+  renderCell: (cell: number, coord: string) => ReactNode
+  onPointerLeave?: () => void
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+
+  useIsoLayoutEffect(() => {
+    const el = scrollerRef.current
+    if (!el) return
+    const measure = () => setWidth(el.clientWidth)
+    measure()
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure)
+      return () => window.removeEventListener('resize', measure)
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const { cellPx, overflows } = tcCellPx(width, size, BOARD_GAP_PX, BOARD_LABEL_PX)
+  const indexes = Array.from({ length: size }, (_, i) => i)
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border bg-felt-deep p-1.5 transition-colors',
+        active ? 'border-gold/60 ring-1 ring-gold/40' : 'border-gold/20'
+      )}
+    >
+      <div ref={scrollerRef} role="group" aria-label={label} className="overflow-x-auto overscroll-x-contain">
+        <div
+          className="mx-auto grid w-max"
+          style={{
+            gap: BOARD_GAP_PX,
+            gridTemplateColumns: `${BOARD_LABEL_PX}px repeat(${size}, ${cellPx}px)`,
+            gridTemplateRows: `${BOARD_HEADER_PX}px repeat(${size}, ${cellPx}px)`,
+          }}
+          onPointerLeave={onPointerLeave}
+        >
+          <span aria-hidden className="sticky left-0 z-10 bg-felt-deep" />
+          {indexes.map((col) => (
+            <span
+              key={`c${col}`}
+              aria-hidden
+              className="flex items-end justify-center text-xs font-semibold leading-none text-cream/70"
+            >
+              {tcColumnLetter(col)}
+            </span>
+          ))}
+          {indexes.map((row) => (
+            <Fragment key={`r${row}`}>
+              <span
+                aria-hidden
+                className="sticky left-0 z-10 flex items-center justify-center bg-felt-deep text-xs font-semibold tabular-nums leading-none text-cream/70"
+              >
+                {row + 1}
+              </span>
+              {indexes.map((col) => {
+                const cell = row * size + col
+                return <Fragment key={cell}>{renderCell(cell, tcCoord(cell, size))}</Fragment>
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+      {overflows && (
+        <p className="mt-1.5 flex items-center justify-center gap-1.5 text-xs text-cream/70">
+          <MoveHorizontal aria-hidden className="h-4 w-4 shrink-0" />
+          {scrollHint}
+        </p>
+      )}
+    </div>
+  )
+}
+
+type Notice = { text: string; tone: 'error' | 'info' }
 
 export function ToucherCouleOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.toucher-coule.game')
+  const tc = useTranslations('common')
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
+  const reduceMotion = useReducedMotion()
+  const boardControls = useAnimationControls()
+  const [confirmDialog, confirm] = useConfirmAction()
+  const victoryTitleId = useId()
+  const victoryCardRef = useRef<HTMLDivElement>(null)
+  const mainRef = useRef<HTMLDivElement>(null)
 
   // Placement local (avant validation serveur).
   const [placedShips, setPlacedShips] = useState<number[][]>([])
   const [selectedShip, setSelectedShip] = useState(0)
   const [horizontal, setHorizontal] = useState(true)
+  // Aperçu du bateau sous la souris (ordinateur) : au doigt, pas de survol.
+  const [hoverCell, setHoverCell] = useState<number | null>(null)
   // Bombe (power-up) armée : le prochain tir touche un carré 2×2 au lieu d'une case.
   const [bombArmed, setBombArmed] = useState(false)
+  // Tir en deux temps : la case visée, puis « Tirer en C4 » dans la barre.
+  const [aim, setAim] = useState<number | null>(null)
+  // Cases du tir en route vers le serveur : elles pulsent jusqu'à la réponse.
+  const [pendingCells, setPendingCells] = useState<number[]>([])
+  // Verrou synchrone des intentions (placer, tirer) : deux touchers dans la
+  // même image passeraient tous deux l'état React, et le nouvel essai sur
+  // conflit laisse un creux où `busy` retombe.
+  const intentLockRef = useRef(false)
+
+  // Tap refusé (bord, chevauchement, case déjà jouée…) : dit dans la barre du
+  // bas et montré en rouge sur la grille — le tap ne tombe plus dans le vide.
+  const [notice, setNotice] = useState<Notice | null>(null)
+  const [rejectCells, setRejectCells] = useState<number[]>([])
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rejectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    return () => {
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current)
+    }
+  }, [])
+  const showNotice = useCallback((text: string, tone: Notice['tone'] = 'error') => {
+    setNotice({ text, tone })
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
+    noticeTimerRef.current = setTimeout(() => setNotice(null), NOTICE_MS)
+  }, [])
+  const refuse = useCallback(
+    (cells: number[], text: string) => {
+      showNotice(text)
+      setRejectCells(cells)
+      if (rejectTimerRef.current) clearTimeout(rejectTimerRef.current)
+      rejectTimerRef.current = setTimeout(() => setRejectCells([]), REJECT_FLASH_MS)
+      vibrate(40)
+      if (!reduceMotion) void boardControls.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.32 } })
+    },
+    [boardControls, reduceMotion, showNotice]
+  )
 
   const inGame = room?.gameId === 'toucher-coule' && room.status === 'playing'
   const tutorial = useGameTutorial('toucher-coule', inGame)
@@ -73,8 +307,13 @@ export function ToucherCouleOnline() {
 
   // Nettoie le placement local dès que la bataille démarre (prêt pour un éventuel rematch).
   const phase = view?.phase
+  // Le choix revient au plus grand bateau : sinon la revanche démarrait sur
+  // le dernier posé de la partie d'avant.
   useEffect(() => {
-    if (phase !== 'placement') setPlacedShips([])
+    if (phase === 'placement') return
+    setPlacedShips([])
+    setSelectedShip(0)
+    setHoverCell(null)
   }, [phase])
 
   // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) :
@@ -98,8 +337,13 @@ export function ToucherCouleOnline() {
     graceMs: TC_REJOIN_GRACE_MS,
   })
 
+  // Toute écriture d'état (tir, tour qui passe, départ) remet la visée à zéro :
+  // une cible gardée d'un tour à l'autre partirait sur une grille qui a bougé.
   const stateVersion = room?.stateVersion ?? -1
-  useEffect(() => { setBombArmed(false) }, [stateVersion])
+  useEffect(() => {
+    setBombArmed(false)
+    setAim(null)
+  }, [stateVersion])
 
   // Tick AFK : si le joueur au tour (humain, présent, pas moi) ne tire pas
   // pendant 3 min, n'importe quel autre client demande son remplacement —
@@ -132,6 +376,18 @@ export function ToucherCouleOnline() {
     return () => clearTimeout(timer)
   }, [stateVersion, afkWatchable])
 
+  const finishedNow = view?.phase === 'finished'
+  // L'écran de fin prend le focus : le lecteur d'écran y entre, et le clavier
+  // ne reste pas sur une case de la grille cachée sous le voile. Le plateau
+  // passe inerte : sans ça, Tab sortait de la carte vers les 196 cases.
+  useEffect(() => {
+    if (!finishedNow) return
+    victoryCardRef.current?.focus({ preventScroll: true })
+    const board = mainRef.current
+    board?.setAttribute('inert', '')
+    return () => board?.removeAttribute('inert')
+  }, [finishedNow])
+
   const someoneLeft = Boolean(view?.players.some((p) => !p.isBot && p.leftAt)) && view?.phase !== 'finished'
 
   if (!inGame) {
@@ -140,8 +396,9 @@ export function ToucherCouleOnline() {
 
   if (!view || !user) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-sky-400/30 border-t-sky-400" />
+      <div role="status" className="flex flex-1 items-center justify-center p-6">
+        <Loader2 aria-hidden className="h-8 w-8 animate-spin text-gold" />
+        <span className="sr-only">{tc('loading')}</span>
       </div>
     )
   }
@@ -156,15 +413,31 @@ export function ToucherCouleOnline() {
   const isMyTurn = activeId === user.id
   const finished = view.phase === 'finished'
   const winner = view.winner
+  const coordOf = (cell: number) => tcCoord(cell, size)
 
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
   /** Icône du joueur : portrait du persona pour les bots, icône personnalisée du compte pour les humains. */
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? null
 
-  // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
-  const sendAction = (body: Record<string, unknown>) =>
-    postAction({ ...body, expectedVersion: room.stateVersion })
+  // Intentions du joueur SANS verrou de version : le moteur revalide déjà la
+  // phase, le tour et la case. Le verrou faisait perdre en silence (409 muet)
+  // un « Valider mes bateaux » envoyé pendant que d'autres validaient aussi.
+  // Reste le vrai conflit d'écriture simultanée : un seul nouvel essai, que le
+  // moteur revalide sur l'état frais, puis un message s'il échoue encore.
+  const sendIntent = async (body: Record<string, unknown>) => {
+    if (intentLockRef.current) return null
+    intentLockRef.current = true
+    try {
+      const first = await postAction(body)
+      if (first?.status !== 409) return first
+      const second = await postAction(body)
+      if (second?.status === 409) showNotice(t('actionRaced'))
+      return second
+    } finally {
+      intentLockRef.current = false
+    }
+  }
 
   // ── Aides placement ─────────────────────────────────────────────────────────
   const teammateCells = new Set<number>()
@@ -173,20 +446,24 @@ export function ToucherCouleOnline() {
   }
   const myLocalCells = new Set(placedShips.flat())
   const sizes = config.shipSizesPerPlayer
-  const remainingShips = sizes.map((s, i) => ({ size: s, index: i })).filter((s) => !placedShips[s.index])
+  const placedCount = sizes.filter((_, i) => Boolean(placedShips[i])).length
+  const allShipsPlaced = placedCount === sizes.length
+  const isBlocked = (cells: number[]) => cells.some((c) => teammateCells.has(c) || myLocalCells.has(c))
+  // Placements simultanés : un coéquipier vient de valider un bateau là où j'ai
+  // posé le mien. Le serveur refuserait « Valider » ; on le montre avant.
+  const clashSet = new Set([...myLocalCells].filter((c) => teammateCells.has(c)))
 
   const tryPlaceShip = (origin: number) => {
     const shipSize = sizes[selectedShip]
-    if (shipSize === undefined || placedShips[selectedShip]) return
-    const row = Math.floor(origin / size)
-    const col = origin % size
-    if (horizontal && col + shipSize > size) return
-    if (!horizontal && row + shipSize > size) return
-    const cells: number[] = []
-    for (let i = 0; i < shipSize; i += 1) {
-      cells.push(horizontal ? origin + i : origin + i * size)
+    if (shipSize === undefined || placedShips[selectedShip]) {
+      showNotice(t('allShipsPlaced'), 'info')
+      return
     }
-    if (cells.some((c) => teammateCells.has(c) || myLocalCells.has(c))) return
+    const cells = tcShipCells(origin, shipSize, size, horizontal)
+    if (isBlocked(cells)) {
+      refuse(cells, t('shipOverlap'))
+      return
+    }
     const next = [...placedShips]
     next[selectedShip] = cells
     setPlacedShips(next)
@@ -201,6 +478,7 @@ export function ToucherCouleOnline() {
     delete next[idx]
     setPlacedShips(next)
     setSelectedShip(idx)
+    showNotice(t('shipLifted'), 'info')
     return true
   }
 
@@ -226,11 +504,19 @@ export function ToucherCouleOnline() {
     setPlacedShips(result)
   }
 
-  const allShipsPlaced = sizes.every((_, i) => Boolean(placedShips[i]))
   const confirmPlacement = () => {
-    if (!allShipsPlaced) return
-    void sendAction({ action: 'place', ships: sizes.map((_, i) => placedShips[i]) })
+    if (!allShipsPlaced || busy || clashSet.size > 0) return
+    void sendIntent({ action: 'place', ships: sizes.map((_, i) => placedShips[i]) })
   }
+
+  // Fantôme du bateau sous la souris : or s'il tient, rouge s'il chevauche.
+  const ghostCells =
+    hoverCell !== null && !allShipsPlaced && !myLocalCells.has(hoverCell) && sizes[selectedShip] !== undefined
+      ? tcShipCells(hoverCell, sizes[selectedShip], size, horizontal)
+      : []
+  const ghostSet = new Set(ghostCells)
+  const ghostFits = ghostCells.length > 0 && !isBlocked(ghostCells)
+  const rejectSet = new Set(rejectCells)
 
   // ── Aides bataille ──────────────────────────────────────────────────────────
   const enemyShots = view.shotsAt[enemy] ?? {}
@@ -249,28 +535,54 @@ export function ToucherCouleOnline() {
     }
   }
 
-  /** Vrai si le carré 2×2 ancré sur `cell` tient dans la grille et est entièrement vierge. */
-  const bombFits = (cell: number) => {
-    const row = Math.floor(cell / size)
-    const col = cell % size
-    if (row >= size - 1 || col >= size - 1) return false
-    const cells = [cell, cell + 1, cell + size, cell + size + 1]
-    return cells.every((c) => enemyShots[c] === undefined)
-  }
+  const canAim = isMyTurn && !finished && !busy
+  const canBomb = Boolean(me?.hasBomb) && isMyTurn && !finished
+  const aimCells = aim === null ? [] : bombArmed ? tcBombCells(aim, size) : [aim]
+  const aimSet = new Set(aimCells)
+  const pendingSet = new Set(pendingCells)
+  const firing = pendingCells.length > 0
 
-  const fire = (cell: number) => {
-    if (!isMyTurn || busy || finished) return
+  const aimAt = (cell: number) => {
+    if (!canAim) return
     if (bombArmed) {
-      if (!bombFits(cell)) return
-      setBombArmed(false)
-      void sendAction({ action: 'fire', cell, bomb: true })
+      if (!tcBombFits(cell, size, enemyShots)) {
+        refuse(tcBombCells(cell, size), t('bombNoFit'))
+        return
+      }
+    } else if (enemyShots[cell] !== undefined) {
+      showNotice(t('tapAlreadyShot'))
+      vibrate(40)
       return
     }
-    if (enemyShots[cell] !== undefined) return
-    void sendAction({ action: 'fire', cell })
+    setAim(cell)
+  }
+
+  const toggleBomb = () => {
+    const next = !bombArmed
+    setBombArmed(next)
+    // La case visée reste visée si le carré 2×2 y tient ; sinon on revise.
+    if (next && aim !== null && !tcBombFits(aim, size, enemyShots)) setAim(null)
+  }
+
+  const fireAtAim = async () => {
+    if (aim === null || !canAim || intentLockRef.current) return
+    const cell = aim
+    const bomb = bombArmed
+    if (bomb ? !tcBombFits(cell, size, enemyShots) : enemyShots[cell] !== undefined) return
+    setPendingCells(bomb ? tcBombCells(cell, size) : [cell])
+    const res = await sendIntent(bomb ? { action: 'fire', cell, bomb: true } : { action: 'fire', cell })
+    setPendingCells([])
+    // Échec : la cible reste visée, le joueur peut retirer sans tout refaire.
+    if (res?.ok) {
+      setAim(null)
+      setBombArmed(false)
+    }
   }
 
   const lastShot = view.lastShot
+  const lastShotCells = new Set<number>(
+    lastShot ? (lastShot.bombResults ? lastShot.bombResults.map((r) => r.cell) : [lastShot.cell]) : []
+  )
   const feedMessage = lastShot
     ? lastShot.bombResults
       ? t('feedBomb', {
@@ -284,549 +596,745 @@ export function ToucherCouleOnline() {
           : t(isSoft ? 'feedSunkSoft' : 'feedSunk', { owner: nameOf(lastShot.shipOwnerId) })
     : null
 
-  // Carré garanti : ratio 1:1 sur le CONTENEUR + lignes en 1fr (l'aspect-ratio
-  // par cellule se déforme sur certains mobiles quand la hauteur de ligne dérive).
-  const gridStyle = {
-    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
-    gridTemplateRows: `repeat(${size}, minmax(0, 1fr))`,
-    aspectRatio: '1 / 1',
-  }
   const placementPhase = view.phase === 'placement'
+  const placingNow = placementPhase && Boolean(me) && !me?.placed
+  const showFeed = !placementPhase && Boolean(feedMessage)
+  // Change à chaque tir, et seulement là : un départ ou un retour de joueur
+  // (qui font aussi monter la version) ne rejoue pas le dernier tir.
+  const shotSerial = view.players.reduce((n, p) => n + p.shotsFired, 0)
   // Un seul board à la fois (lisibilité mobile) : la grille ennemie quand mon
   // équipe tire, ma flotte quand l'équipe adverse tire ou pendant l'attente.
   const showEnemyBoard = !placementPhase && (finished || activePlayer?.team === myTeam)
 
+  // Barre du bas : seulement quand CE téléphone a un geste à faire (poser ses
+  // bateaux, tirer). Montée toute la durée de ce geste, pour que sa ligne
+  // d'état soit annoncée quand elle change.
+  const barMode: 'placement' | 'fire' | null = placingNow
+    ? 'placement'
+    : view.phase === 'battle' && isMyTurn
+      ? 'fire'
+      : null
+
   const teamPlayers = (team: TeamId) => view.players.filter((p) => p.team === team)
+  const activeIcon = activePlayer ? iconOf(activePlayer) : null
+
+  const askLeave = async () => {
+    const ok = await confirm({
+      title: t('leaveConfirm.title'),
+      description: t('leaveConfirm.description', { minutes: Math.round(TC_REJOIN_GRACE_MS / 60_000) }),
+      confirmLabel: t('leaveConfirm.confirm'),
+      cancelLabel: t('leaveConfirm.cancel'),
+      tone: 'danger',
+    })
+    if (ok) void leaveRoom()
+  }
+
+  const feedTone = !lastShot
+    ? ''
+    : lastShot.bombResults
+      ? 'border-rose-400/50 bg-rose-500/20 text-rose-100'
+      : lastShot.result === 'miss'
+        ? 'border-sky-400/50 bg-sky-500/20 text-sky-100'
+        : lastShot.result === 'hit'
+          ? 'border-gold/50 bg-gold/20 text-cream'
+          : 'border-red-400/50 bg-red-500/20 text-red-100'
+
+  const noticeLine = notice ? (
+    <span className={cn('font-semibold', notice.tone === 'error' ? 'text-red-300' : 'text-cream')}>{notice.text}</span>
+  ) : actionError ? (
+    <span className="font-semibold text-red-300">{actionError}</span>
+  ) : null
+
+  const barStatus =
+    noticeLine ??
+    (barMode === 'placement'
+      ? clashSet.size > 0
+        ? <span className="font-semibold text-red-300">{t('shipClash')}</span>
+        : t('shipsPlacedCount', { placed: placedCount, total: sizes.length })
+      : barMode === 'fire'
+        ? aim !== null
+          ? bombArmed
+            ? t('bombZone', { from: coordOf(aim), to: coordOf(aimCells[aimCells.length - 1] ?? aim) })
+            : t('aimTarget', { cell: coordOf(aim) })
+          : bombArmed
+            ? t('bombHint')
+            : t('aimPrompt')
+        : undefined)
+
+  const legend = (fleet: boolean) => (
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-cream/80">
+      {fleet && (
+        <span className="flex items-center gap-1.5">
+          <LegendSwatch tone="bg-sky-500/80" />
+          {t('legendShip')}
+        </span>
+      )}
+      <span className="flex items-center gap-1.5">
+        <LegendSwatch tone="bg-red-600">
+          <X strokeWidth={3} className="h-3.5 w-3.5 text-cream" />
+        </LegendSwatch>
+        {t('legendHit')}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <LegendSwatch tone="bg-black/30">
+          <span className="h-1.5 w-1.5 rounded-full bg-cream/70" />
+        </LegendSwatch>
+        {t('legendMiss')}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <LegendSwatch tone="bg-red-950 ring-1 ring-inset ring-red-400/60">
+          <Skull className="h-3.5 w-3.5 text-red-200" />
+        </LegendSwatch>
+        {t('legendSunk')}
+      </span>
+    </div>
+  )
+
+  const boardTitle = (icon: ReactNode, title: string, team: TeamId) => (
+    <div className="flex items-center justify-between gap-2 px-1">
+      <p className="flex items-center gap-1.5 font-display text-base font-bold text-gold">
+        {icon}
+        {title}
+      </p>
+      <span className={cn('shrink-0 text-sm font-bold', teamAccent(team))}>
+        {t('team', { team: TEAM_LABEL[team] })}
+      </span>
+    </div>
+  )
 
   return (
     <>
-    <div className="relative min-h-full bg-gray-950 text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-sky-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute bottom-0 -left-40 h-80 w-80 rounded-full bg-cyan-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
-      </div>
-
-      <div className="relative z-10 mx-auto w-full max-w-lg px-3 py-4 pb-10 sm:px-4">
-        {/* En-tête */}
-        <div className="mb-4 flex items-center gap-3">
-          <button
-            onClick={() => leaveRoom()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label={t('leave')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <h1 className="min-w-0 flex-1 truncate text-center text-base font-bold sm:text-lg">
-            🚢 {t('title')}
-          </h1>
-          <span className="shrink-0 rounded-full border border-sky-400/30 bg-sky-500/15 px-2.5 py-1 text-xs font-semibold text-sky-200">
-            {view.mode} · {size}×{size}
-          </span>
-          <TutorialReopenButton onClick={tutorial.reopen} />
-        </div>
-
-        {/* Tir refusé (case déjà jouée, pas ton tour, expulsion…) — 3 s */}
-        {actionError && (
-          <div className="mb-3 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-            {actionError}
-          </div>
-        )}
-
-        {/* Bandeau de tour / phase */}
-        {!finished && (
-          <div
-            className={cn(
-              'mb-3 rounded-2xl border px-4 py-3 text-center backdrop-blur-md',
-              placementPhase
-                ? 'border-white/10 bg-white/5'
-                : isMyTurn
-                  ? 'border-emerald-400/40 bg-emerald-500/15'
-                  : 'border-white/10 bg-white/5'
+    {confirmDialog}
+    <div
+      ref={mainRef}
+      className={cn(
+        'mx-auto flex w-full max-w-lg flex-col gap-3 px-3 pt-3 text-cream',
+        barMode ? onlineActionBarPadding('tall') : 'pb-8'
+      )}
+    >
+      <PhaseHeader
+        round={t('boardInfo', { mode: view.mode, size })}
+        phase={placementPhase ? (placingNow ? t('phasePlacement') : t('waitingPlacement')) : t('phaseBattle')}
+        status={
+          placementPhase
+            ? t('placedCount', { placed: view.players.filter((p) => p.placed).length, total: view.players.length })
+            : undefined
+        }
+        right={
+          <>
+            <TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />
+            {!finished && (
+              <Button
+                type="button"
+                variant="quiet"
+                size="gameIcon"
+                onClick={() => void askLeave()}
+                aria-label={t('leave')}
+              >
+                <LogOut aria-hidden className="h-5 w-5" />
+              </Button>
             )}
-          >
-            {placementPhase ? (
-              <p className="text-sm font-semibold text-white/80">
-                {me && !me.placed ? t('placementTitle') : t('waitingPlacement')}
-                <span className="ml-2 text-xs font-normal text-white/40">
-                  {t('placedCount', {
-                    placed: view.players.filter((p) => p.placed).length,
-                    total: view.players.length,
-                  })}
-                </span>
+          </>
+        }
+      />
+
+      {/* Refus du serveur hors de la barre (le tour a filé entre-temps) : sans
+          barre montée, c'est le seul endroit où il peut se dire. */}
+      {!barMode && (notice?.tone === 'error' || actionError) && (
+        <p
+          role="alert"
+          className="rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-200"
+        >
+          {notice?.tone === 'error' ? notice.text : actionError}
+        </p>
+      )}
+
+      {view.phase === 'battle' && (
+        <TurnBanner
+          mine={isMyTurn}
+          name={activePlayer?.name}
+          // Sans icône (compte sans avatar), pas de pastille : une case vide de
+          // 36 px décalait le « Au tour de … ».
+          avatar={activeIcon ? <PlayerAvatarGlyph value={activeIcon} /> : undefined}
+          hint={
+            isMyTurn
+              ? t('hitReplay')
+              : activePlayer?.team === myTeam
+                ? t('turnHintMate')
+                : t('turnHintEnemy')
+          }
+          alertOnMine
+        />
+      )}
+
+      {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
+      {someoneLeft && (
+        <div className="space-y-0.5 rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center">
+          {view.players
+            .filter((p) => !p.isBot && p.leftAt)
+            .map((p) => (
+              <p key={p.id} className="text-sm font-semibold text-cream">
+                <PhaseCountdown endsAt={(p.leftAt ?? 0) + TC_REJOIN_GRACE_MS}>
+                  {({ seconds }) => t('waitingReturn', { name: p.name, seconds })}
+                </PhaseCountdown>
               </p>
-            ) : (
-              <>
-                <p className={cn('text-base font-bold', isMyTurn ? 'text-emerald-300' : 'text-white/85')}>
-                  {isMyTurn ? t('yourTurn') : t('turnOf', { name: activePlayer?.name ?? '—' })}
-                  {activePlayer && !isMyTurn && (
-                    <span className={cn('ml-1.5 text-xs font-semibold', teamAccent(activePlayer.team))}>
-                      ({t('team', { team: TEAM_LABEL[activePlayer.team] })})
-                    </span>
-                  )}
-                </p>
-                {isMyTurn && <p className="mt-0.5 text-xs text-emerald-200/60">{t('hitReplay')}</p>}
-              </>
-            )}
-          </div>
-        )}
+            ))}
+        </div>
+      )}
 
-        {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
-        {someoneLeft && (
-          <div className="mb-3 space-y-0.5 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 text-center">
-            {view.players
-              .filter((p) => !p.isBot && p.leftAt)
-              .map((p) => (
-                <p key={p.id} className="text-xs font-semibold text-amber-100">
-                  <PhaseCountdown endsAt={(p.leftAt ?? 0) + TC_REJOIN_GRACE_MS}>
-                    {({ seconds }) => t('waitingReturn', { name: p.name, seconds })}
-                  </PhaseCountdown>
-                </p>
-              ))}
-          </div>
-        )}
+      {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
+          direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
+      {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-200">
+          {afkTarget.id === user.id && <TriangleAlert aria-hidden className="h-4 w-4 shrink-0" />}
+          <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
+            {({ seconds }) =>
+              afkTarget.id === user.id
+                ? t('afkWarningSelf', { seconds })
+                : t('afkWarning', { name: afkTarget.name, seconds })
+            }
+          </PhaseCountdown>
+        </div>
+      )}
 
-        {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
-            direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
-        {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
-          <div className="mb-3 rounded-xl border border-red-400/35 bg-red-500/10 px-3 py-2 text-center">
-            <p className="text-xs font-semibold text-red-100">
-              <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
-                {({ seconds }) =>
-                  afkTarget.id === user.id
-                    ? t('afkWarningSelf', { seconds })
-                    : t('afkWarning', { name: afkTarget.name, seconds })
-                }
-              </PhaseCountdown>
-            </p>
-          </div>
-        )}
-
-        {/* Flash dernier tir */}
-        <AnimatePresence mode="wait">
-          {!placementPhase && feedMessage && (
-            <motion.div
-              key={view.version}
-              initial={{ opacity: 0, y: -6 }}
+      {/* Dernier tir — la région reste montée (hors écran tant qu'elle est
+          vide) pour que chaque nouveau tir soit annoncé. */}
+      <div aria-live="polite" aria-atomic="true" className={showFeed ? undefined : 'sr-only'}>
+        <AnimatePresence mode="wait" initial={false}>
+          {showFeed && (
+            <motion.p
+              key={shotSerial}
+              initial={reduceMotion ? false : { opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className={cn(
-                'mb-3 rounded-xl border px-3 py-2 text-center text-xs font-semibold sm:text-sm',
-                lastShot?.bombResults
-                  ? 'border-rose-400/40 bg-rose-500/15 text-rose-100'
-                  : lastShot?.result === 'miss'
-                    ? 'border-sky-400/30 bg-sky-500/10 text-sky-100'
-                    : lastShot?.result === 'hit'
-                      ? 'border-amber-400/35 bg-amber-500/15 text-amber-100'
-                      : 'border-red-400/40 bg-red-500/15 text-red-100'
-              )}
+              className={cn('rounded-2xl border px-4 py-2 text-center text-sm font-semibold', feedTone)}
             >
               {feedMessage}
-            </motion.div>
+            </motion.p>
           )}
         </AnimatePresence>
+      </div>
 
-        {/* ── PHASE PLACEMENT ── */}
-        {placementPhase && me && !me.placed && (
-          <div className="space-y-3">
-            <p className="text-center text-xs text-white/50">{t('placementHint')}</p>
+      {/* ── PHASE PLACEMENT ── */}
+      {placingNow && (
+        <div className="flex flex-col gap-3">
+          <p className="text-center text-sm text-cream/80">{t('placementHint')}</p>
 
-            {/* Sélecteur de bateaux + orientation */}
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {sizes.map((shipSize, i) => {
-                const isPlaced = Boolean(placedShips[i])
-                const isSelected = selectedShip === i && !isPlaced
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => !isPlaced && setSelectedShip(i)}
-                    disabled={isPlaced}
-                    className={cn(
-                      'flex items-center gap-1 rounded-xl border px-2.5 py-2 transition-all',
-                      isPlaced
-                        ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300/60'
-                        : isSelected
-                          ? 'border-sky-400/60 bg-sky-500/20 text-white shadow-lg shadow-sky-500/20'
-                          : 'border-white/10 bg-white/5 text-white/60 hover:bg-white/10'
-                    )}
-                  >
+          {/* Bateaux à poser */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {sizes.map((shipSize, i) => {
+              const isPlaced = Boolean(placedShips[i])
+              const isSelected = selectedShip === i && !isPlaced
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => !isPlaced && setSelectedShip(i)}
+                  disabled={isPlaced}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'flex h-12 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors',
+                    isPlaced
+                      ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300'
+                      : isSelected
+                        ? 'border-gold bg-gold/20 text-cream ring-2 ring-gold'
+                        : 'border-gold/30 bg-felt-deep/60 text-cream/90 hover:bg-gold/10'
+                  )}
+                >
+                  <span aria-hidden className="flex gap-0.5">
                     {Array.from({ length: shipSize }).map((_, j) => (
                       <span
                         key={j}
                         className={cn(
                           'h-3.5 w-3.5 rounded-[3px]',
-                          isPlaced ? 'bg-emerald-400/50' : isSelected ? 'bg-sky-300' : 'bg-white/30'
+                          isPlaced ? 'bg-emerald-400/60' : isSelected ? 'bg-gold' : 'bg-sky-400/70'
                         )}
                       />
                     ))}
-                    <span className="ml-1 text-xs">{t('shipLabel', { size: shipSize })}</span>
-                  </button>
-                )
-              })}
-            </div>
-            <div className="flex justify-center gap-2">
-              <Button
-                type="button"
-                onClick={() => setHorizontal((h) => !h)}
-                className="rounded-xl border border-white/[0.15] bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
-              >
-                {horizontal ? t('horizontal') : t('vertical')}
-              </Button>
-              <Button
-                type="button"
-                onClick={randomizePlacement}
-                className="rounded-xl border border-white/[0.15] bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20"
-              >
-                {t('random')}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setPlacedShips([])}
-                disabled={placedShips.filter(Boolean).length === 0}
-                className="rounded-xl border border-white/[0.15] bg-white/5 px-3 py-2 text-xs font-semibold text-white/60 hover:bg-white/10 disabled:opacity-40"
-              >
-                {t('clear')}
-              </Button>
-            </div>
+                  </span>
+                  {isPlaced && <Check aria-hidden className="h-4 w-4 shrink-0" />}
+                  {t('shipLabel', { size: shipSize })}
+                  {isPlaced && <span className="sr-only">{t('shipPlacedSr')}</span>}
+                </button>
+              )
+            })}
+          </div>
 
-            {/* Grille de placement */}
-            <div className="rounded-2xl border border-sky-500/20 bg-sky-950/40 p-2">
-              <div className="grid gap-[2px]" style={gridStyle}>
-                {Array.from({ length: size * size }).map((_, cell) => {
-                  const mine = myLocalCells.has(cell)
-                  const mate = teammateCells.has(cell)
-                  return (
-                    <button
-                      key={cell}
-                      type="button"
-                      onClick={() => {
-                        if (removeShipAt(cell)) return
-                        tryPlaceShip(cell)
-                      }}
-                      className={cn(
-                        'game-grid-cell rounded-[3px] transition-colors',
-                        mine
-                          ? 'bg-sky-400'
-                          : mate
-                            ? 'bg-sky-700/70'
-                            : 'bg-white/[0.06] hover:bg-sky-500/30'
-                      )}
-                      aria-label={`${cell}`}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-
+          <div className="grid grid-cols-3 gap-2">
             <Button
-              onClick={confirmPlacement}
-              disabled={!allShipsPlaced || busy}
-              className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-500 py-5 text-base font-bold text-white shadow-lg shadow-sky-500/25 transition-all hover:from-sky-500 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+              type="button"
+              variant="quiet"
+              size="game"
+              onClick={() => setHorizontal((h) => !h)}
+              aria-label={t('orientationAria', { orientation: horizontal ? t('horizontal') : t('vertical') })}
+              className="min-w-0 whitespace-normal px-2 leading-tight"
             >
-              <Anchor className="mr-2 h-4 w-4" />
-              {t('confirmPlacement')}
-              {remainingShips.length > 0 && ` (${sizes.length - remainingShips.length}/${sizes.length})`}
+              {horizontal ? (
+                <MoveHorizontal aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+              ) : (
+                <MoveVertical aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+              )}
+              {horizontal ? t('horizontal') : t('vertical')}
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              size="game"
+              onClick={randomizePlacement}
+              className="min-w-0 whitespace-normal px-2 leading-tight"
+            >
+              <Dices aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+              {t('random')}
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              size="game"
+              onClick={() => {
+                setPlacedShips([])
+                setSelectedShip(0)
+              }}
+              disabled={placedCount === 0}
+              className="min-w-0 whitespace-normal px-2 leading-tight"
+            >
+              <Eraser aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+              {t('clear')}
             </Button>
           </div>
-        )}
 
-        {/* ── PHASE BATAILLE (+ attente de placement une fois validé) ── */}
-        {(!placementPhase || (me && me.placed)) && (
-          <div className="space-y-4">
-            {/* Grille ennemie — affichée quand mon équipe est au tir */}
-            {showEnemyBoard && (
-              <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-rose-300/80">
-                    <Crosshair className="h-3.5 w-3.5" />
-                    {t('enemyWaters')}
-                  </p>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {me?.hasBomb && isMyTurn && !finished && (
+          {boardTitle(<Waves aria-hidden className="h-4 w-4" />, t('yourFleet'), myTeam)}
+          <motion.div animate={boardControls}>
+            <TcBoard
+              size={size}
+              label={t('yourFleet')}
+              active
+              scrollHint={t('boardScrollHint')}
+              onPointerLeave={() => setHoverCell(null)}
+              renderCell={(cell, coord) => {
+                const mine = myLocalCells.has(cell)
+                const mate = teammateCells.has(cell)
+                const ghost = ghostSet.has(cell)
+                const rejected = rejectSet.has(cell)
+                return (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (removeShipAt(cell)) return
+                      tryPlaceShip(cell)
+                    }}
+                    onPointerEnter={(e) => {
+                      if (e.pointerType === 'mouse') setHoverCell(cell)
+                    }}
+                    aria-label={mine ? `${coord}, ${t('legendMine')}` : mate ? `${coord}, ${t('legendMate')}` : coord}
+                    className={cn(
+                      'game-grid-cell rounded-[4px] transition-colors',
+                      rejected || clashSet.has(cell)
+                        ? 'bg-red-500/50 ring-2 ring-inset ring-red-300'
+                        : mine
+                          ? 'bg-sky-400'
+                          : mate
+                            ? 'bg-sky-700 ring-1 ring-inset ring-sky-200/50'
+                            : ghost
+                              ? ghostFits
+                                ? 'bg-gold/40 ring-1 ring-inset ring-gold'
+                                : 'bg-red-500/50'
+                              : 'bg-sky-900/60 hover:bg-sky-700/60'
+                    )}
+                  />
+                )
+              }}
+            />
+          </motion.div>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-cream/80">
+            <span className="flex items-center gap-1.5">
+              <LegendSwatch tone="bg-sky-400" />
+              {t('legendMine')}
+            </span>
+            {teammateCells.size > 0 && (
+              <span className="flex items-center gap-1.5">
+                <LegendSwatch tone="bg-sky-700 ring-1 ring-inset ring-sky-200/50" />
+                {t('legendMate')}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── PHASE BATAILLE (+ attente de placement une fois validé) ── */}
+      {!placingNow && (
+        <div className="flex flex-col gap-3">
+          {showEnemyBoard ? (
+            <>
+              {boardTitle(<Crosshair aria-hidden className="h-4 w-4" />, t('enemyWaters'), enemy)}
+              <motion.div animate={boardControls}>
+                <TcBoard
+                  size={size}
+                  label={t('enemyWaters')}
+                  active={isMyTurn && !finished}
+                  scrollHint={t('boardScrollHint')}
+                  renderCell={(cell, coord) => {
+                    const shot = enemyShots[cell]
+                    const sunk = enemySunkCells.has(cell)
+                    const aimed = aimSet.has(cell)
+                    const pending = pendingSet.has(cell)
+                    const rejected = rejectSet.has(cell)
+                    const state = sunk ? t('legendSunk') : shot === 'hit' ? t('legendHit') : shot === 'miss' ? t('legendMiss') : null
+                    return (
                       <button
                         type="button"
-                        onClick={() => setBombArmed((v) => !v)}
-                        title={t('bombHint')}
+                        disabled={!canAim}
+                        aria-pressed={canAim ? cell === aim : undefined}
+                        aria-label={state ? `${coord}, ${state}` : coord}
+                        onClick={() => aimAt(cell)}
                         className={cn(
-                          'rounded-full border px-2 py-0.5 text-xs font-bold transition-colors',
-                          bombArmed
-                            ? 'border-rose-400 bg-rose-500/25 text-rose-100'
-                            : 'border-white/[0.15] bg-white/10 text-white/70 hover:bg-white/20'
+                          'game-grid-cell relative flex items-center justify-center rounded-[4px] transition-colors',
+                          rejected
+                            ? 'bg-red-500/50 ring-2 ring-inset ring-red-300'
+                            : aimed
+                              ? 'bg-gold/40 ring-[3px] ring-inset ring-gold'
+                              : cn(
+                                  shotTone(shot, sunk),
+                                  canAim && shot === undefined && 'hover:bg-sky-700',
+                                  lastShotCells.has(cell) && lastShot?.targetTeam === enemy && 'ring-2 ring-inset ring-gold/80'
+                                ),
+                          pending && 'motion-safe:animate-pulse'
                         )}
                       >
-                        💣 {t('bombButton')}
+                        {pending ? (
+                          <Loader2 aria-hidden className="h-4 w-4 animate-spin text-cream" />
+                        ) : aimed ? (
+                          cell === aim ? (
+                            bombArmed ? (
+                              <Bomb aria-hidden className="h-4 w-4 text-cream" />
+                            ) : (
+                              <Crosshair aria-hidden className="h-4 w-4 text-cream" />
+                            )
+                          ) : null
+                        ) : (
+                          <ShotMark shot={shot} sunk={sunk} />
+                        )}
                       </button>
-                    )}
-                    <span className={cn('text-xs font-bold', teamAccent(enemy))}>
-                      {t('team', { team: TEAM_LABEL[enemy] })}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    'rounded-2xl border p-2 transition-colors',
-                    isMyTurn && !finished
-                      ? 'border-emerald-400/40 bg-emerald-950/30 shadow-[0_0_24px_rgba(52,211,153,0.1)]'
-                      : 'border-white/10 bg-felt-deep/50'
-                  )}
-                >
-                  {/* Glyphes de case (💥 💀 ·) à 11 px : ce ne sont pas du
-                      texte, et la grille 14×14 ne laisse que ~22 px par case
-                      au téléphone — 11 px y tient sans déformer la case. */}
-                  <div className="grid gap-[2px]" style={gridStyle}>
-                    {Array.from({ length: size * size }).map((_, cell) => {
-                      const shot = enemyShots[cell]
-                      const sunk = enemySunkCells.has(cell)
-                      return (
-                        <button
-                          key={cell}
-                          type="button"
-                          disabled={!isMyTurn || busy || finished || shot !== undefined}
-                          onClick={() => fire(cell)}
-                          className={cn(
-                            'game-grid-cell flex items-center justify-center rounded-[3px] text-[11px] leading-none transition-colors',
-                            sunk
-                              ? 'bg-red-800'
-                              : shot === 'hit'
-                                ? 'bg-red-500/90'
-                                : shot === 'miss'
-                                  ? 'bg-sky-900/70'
-                                  : cn(
-                                      'bg-white/[0.07]',
-                                      isMyTurn &&
-                                        !finished &&
-                                        (bombArmed
-                                          ? 'hover:bg-rose-400/40 active:bg-rose-400/60'
-                                          : 'hover:bg-emerald-400/40 active:bg-emerald-400/60')
-                                    )
-                          )}
-                        >
-                          {sunk ? '💀' : shot === 'hit' ? '💥' : shot === 'miss' ? '·' : ''}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Ma flotte — affichée pendant le placement et quand l'ennemi tire */}
-            {!showEnemyBoard && (
-            <div>
-              <div className="mb-1.5 flex items-center justify-between px-1">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-sky-300/80">
-                  <Waves className="h-3.5 w-3.5" />
-                  {t('yourFleet')}
-                </p>
-                <span className={cn('text-xs font-bold', teamAccent(myTeam))}>
-                  {t('team', { team: TEAM_LABEL[myTeam] })}
-                </span>
-              </div>
-              <div className="rounded-2xl border border-sky-500/20 bg-sky-950/40 p-2">
-                <div className="grid gap-[2px]" style={gridStyle}>
-                  {Array.from({ length: size * size }).map((_, cell) => {
-                    const isShip = myShipCells.has(cell)
-                    const shot = myShots[cell]
-                    const sunk = mySunkCells.has(cell)
-                    return (
-                      <div
-                        key={cell}
-                        className={cn(
-                          'game-grid-cell flex items-center justify-center rounded-[3px] text-[11px] leading-none',
-                          sunk
-                            ? 'bg-red-800'
-                            : isShip && shot === 'hit'
-                              ? 'bg-red-500/90'
-                              : isShip
-                                ? 'bg-sky-500/80'
-                                : shot === 'miss'
-                                  ? 'bg-white/15'
-                                  : 'bg-white/[0.06]'
-                        )}
-                      >
-                        {sunk ? '💀' : shot === 'hit' && isShip ? '💥' : shot === 'miss' ? '·' : ''}
-                      </div>
                     )
-                  })}
-                </div>
-              </div>
-            </div>
-            )}
+                  }}
+                />
+              </motion.div>
+              {legend(false)}
+            </>
+          ) : (
+            <>
+              {boardTitle(<Waves aria-hidden className="h-4 w-4" />, t('yourFleet'), myTeam)}
+              <TcBoard
+                size={size}
+                label={t('yourFleet')}
+                scrollHint={t('boardScrollHint')}
+                renderCell={(cell, coord) => {
+                  const isShip = myShipCells.has(cell)
+                  const shot = myShots[cell]
+                  const sunk = mySunkCells.has(cell)
+                  const state = sunk
+                    ? t('legendSunk')
+                    : shot === 'hit'
+                      ? t('legendHit')
+                      : isShip
+                        ? t('legendShip')
+                        : shot === 'miss'
+                          ? t('legendMiss')
+                          : null
+                  // Seules les cases qui portent quelque chose sont lues : 196
+                  // cases d'eau vide noieraient le lecteur d'écran.
+                  return (
+                    <div
+                      {...(state ? { role: 'img', 'aria-label': `${coord}, ${state}` } : { 'aria-hidden': true })}
+                      className={cn(
+                        'game-grid-cell flex items-center justify-center rounded-[4px]',
+                        shotTone(shot, sunk, isShip),
+                        lastShotCells.has(cell) && lastShot?.targetTeam === myTeam && 'ring-2 ring-inset ring-gold/80'
+                      )}
+                    >
+                      <ShotMark shot={shot} sunk={sunk} />
+                    </div>
+                  )
+                }}
+              />
+              {legend(true)}
+            </>
+          )}
 
-            {/* Légende + équipes/gorgées */}
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-white/45">
-              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-sky-500/80" /> {t('legendShip')}</span>
-              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-red-500/90" /> {t('legendHit')}</span>
-              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-sky-900" /> {t('legendMiss')}</span>
-              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-red-800" /> {t('legendSunk')}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {(['A', 'B'] as const).map((team) => (
-                <div
-                  key={team}
-                  className={cn(
-                    'rounded-xl border p-2.5',
-                    team === 'A' ? 'border-sky-400/25 bg-sky-500/10' : 'border-rose-400/25 bg-rose-500/10'
+          <div className="grid grid-cols-2 gap-2">
+            {(['A', 'B'] as const).map((team) => (
+              <section
+                key={team}
+                aria-label={t('team', { team: TEAM_LABEL[team] })}
+                className={cn(
+                  'min-w-0 rounded-2xl border bg-felt-deep/70 p-2.5',
+                  team === 'A' ? 'border-sky-400/40' : 'border-rose-400/40'
+                )}
+              >
+                <p className={cn('mb-1.5 flex flex-wrap items-center justify-between gap-1 text-sm font-bold', teamAccent(team))}>
+                  <span>{t('team', { team: TEAM_LABEL[team] })}</span>
+                  {team === myTeam && (
+                    <span className="rounded-full bg-cream/10 px-2 py-0.5 text-xs font-semibold text-cream">
+                      {t('yourTeam')}
+                    </span>
                   )}
-                >
-                  <p className={cn('mb-1.5 text-xs font-bold', teamAccent(team))}>
-                    {t('team', { team: TEAM_LABEL[team] })}
-                    {team === myTeam && ' ⭐'}
-                  </p>
-                  <ul className="space-y-1">
-                    {teamPlayers(team).map((p) => (
+                </p>
+                <ul className="space-y-1">
+                  {teamPlayers(team).map((p) => {
+                    const shooting = p.id === activeId
+                    return (
                       <li
                         key={p.id}
                         className={cn(
-                          'flex items-center justify-between gap-1 rounded-md px-1.5 py-0.5 text-xs',
-                          p.id === activeId ? 'bg-emerald-500/15 text-emerald-200' : 'text-white/70'
+                          'flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-sm',
+                          shooting ? 'bg-gold/20 text-cream ring-1 ring-gold/60' : 'text-cream/90',
+                          p.leftAt && 'opacity-60'
                         )}
                       >
-                        <span className="truncate">
-                          <PlayerAvatarGlyph value={iconOf(p)} />{iconOf(p) ? ' ' : ''}
+                        {shooting && <Crosshair aria-hidden className="h-3.5 w-3.5 shrink-0 text-gold" />}
+                        <span className="min-w-0 flex-1 truncate">
+                          <PlayerAvatarGlyph value={iconOf(p)} />
+                          {iconOf(p) ? ' ' : ''}
                           <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                          {p.id === user.id && ' (vous)'}
+                          {p.id === user.id && <span className="text-cream/70"> {t('you')}</span>}
                         </span>
-                        <span className="flex shrink-0 items-center gap-1 text-white/45">
-                          {p.hasBomb && <span aria-hidden title={t('bombButton')}>💣</span>}
-                          {!isSoft && <>{p.drinks}🍺</>}
+                        <span className="flex shrink-0 items-center gap-1 text-xs text-cream/80">
+                          {/* Attente du placement : on voit QUI place encore,
+                              pas seulement « 2/4 joueurs prêts ». */}
+                          {placementPhase &&
+                            (p.placed ? (
+                              <>
+                                <Check aria-hidden className="h-3.5 w-3.5 text-emerald-300" />
+                                <span className="sr-only">{t('playerReadySr')}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Hourglass aria-hidden className="h-3.5 w-3.5 text-cream/70" />
+                                <span className="sr-only">{t('playerPlacingSr')}</span>
+                              </>
+                            ))}
+                          {p.leftAt ? (
+                            <>
+                              <LogOut aria-hidden className="h-3.5 w-3.5" />
+                              <span className="sr-only">{t('playerLeftSr')}</span>
+                            </>
+                          ) : null}
+                          {p.hasBomb && (
+                            <>
+                              <Bomb aria-hidden className="h-3.5 w-3.5 text-gold" />
+                              <span className="sr-only">{t('bombButton')}</span>
+                            </>
+                          )}
+                          {!isSoft && <span>{p.drinks}🍺</span>}
                         </span>
                       </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+                    )
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {barMode && !finished && (
+      <OnlineActionBar status={barStatus} maxWidthClass="max-w-lg">
+        {barMode === 'placement' ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="gameLg"
+            className="w-full"
+            onClick={confirmPlacement}
+            disabled={!allShipsPlaced || busy || clashSet.size > 0}
+          >
+            {busy ? (
+              <Loader2 aria-hidden className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Anchor aria-hidden className="mr-2 h-5 w-5" />
+            )}
+            {t('confirmPlacement')}
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            {canBomb && (
+              <Button
+                type="button"
+                variant="quiet"
+                size="gameLg"
+                aria-pressed={bombArmed}
+                onClick={toggleBomb}
+                disabled={firing}
+                className={cn('shrink-0 px-4', bombArmed && 'border-gold bg-gold/20 text-gold hover:bg-gold/20')}
+              >
+                <Bomb aria-hidden className="mr-2 h-5 w-5" />
+                {t('bombButton')}
+                {bombArmed && <Check aria-hidden className="ml-1.5 h-4 w-4" />}
+              </Button>
+            )}
+            {/* Pendant l'envoi, le bouton reste à pleine lumière (« Tir en
+                cours… » lisible) : le verrou est dans fireAtAim, pas dans
+                l'opacité. */}
+            <Button
+              type="button"
+              variant="danger"
+              size="gameLg"
+              className="min-w-0 flex-1 whitespace-normal leading-tight"
+              disabled={aim === null && !firing}
+              aria-disabled={busy || undefined}
+              aria-busy={firing || undefined}
+              onClick={() => void fireAtAim()}
+            >
+              {firing ? (
+                <Loader2 aria-hidden className="mr-2 h-5 w-5 shrink-0 animate-spin" />
+              ) : bombArmed ? (
+                <Bomb aria-hidden className="mr-2 h-5 w-5 shrink-0" />
+              ) : (
+                <Crosshair aria-hidden className="mr-2 h-5 w-5 shrink-0" />
+              )}
+              {firing
+                ? t('firing')
+                : aim === null
+                  ? t('pickCell')
+                  : bombArmed
+                    ? t('bombAt', { cell: coordOf(aim) })
+                    : t('fireAt', { cell: coordOf(aim) })}
+            </Button>
           </div>
         )}
-      </div>
+      </OnlineActionBar>
+    )}
 
-      {/* Écran de victoire */}
-      <AnimatePresence>
-        {finished && winner && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('victoryTitle', { team: TEAM_LABEL[winner] })}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          >
-            {myTeam === winner && <EndConfetti rain pieces={200} />}
+    {/* Écran de victoire — en PORTAIL : rendu dans la scène (z-20), il restait
+        sous la barre du site quel que soit son z-index. Ancré en bas sur
+        téléphone : un bandeau d'avis tardif fait grandir la carte vers le haut
+        sans déplacer « Rejouer ». */}
+    {typeof document !== 'undefined' &&
+      createPortal(
+        <AnimatePresence>
+          {finished && winner && (
             <motion.div
-              initial={{ scale: 0.85, y: 30 }}
-              animate={{ scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/15 bg-felt-deep/95 shadow-2xl backdrop-blur-md"
+              key="tc-victory"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[110] flex items-end justify-center bg-black/80 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] text-cream sm:items-center sm:p-4"
             >
-              <OnlineEndScreen
-                variant="sheet"
-                className={cn(
-                  'p-6',
-                  winner === 'A'
-                    ? 'bg-gradient-to-br from-sky-600/20 via-transparent to-cyan-600/10'
-                    : 'bg-gradient-to-br from-rose-600/20 via-transparent to-red-600/10'
-                )}
-                won={me?.team === winner}
-                rematchVotes={view.rematchVotes ?? []}
-                onRematch={voteRematch}
-                onLeave={leaveRoom}
-                rematchClassName="from-sky-600 to-cyan-500 text-white shadow-lg shadow-sky-500/25 hover:from-sky-500 hover:to-cyan-400"
-                header={
-                  <div className="mb-4 flex flex-col items-center gap-3">
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                      className={cn(
-                        'flex h-20 w-20 items-center justify-center rounded-2xl text-4xl shadow-xl',
-                        winner === 'A'
-                          ? 'bg-gradient-to-br from-sky-400 to-cyan-500 shadow-sky-500/40'
-                          : 'bg-gradient-to-br from-rose-400 to-red-500 shadow-rose-500/40'
-                      )}
-                    >
-                      <Trophy className="h-10 w-10 text-white" />
-                    </motion.div>
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold text-white">
+              {myTeam === winner && <EndConfetti rain pieces={200} />}
+              {/* Colonne flex, pas grille : le dock « Rejouer » (sticky) ne colle
+                  qu'au bas d'un conteneur qui défile en bloc ou en flex. */}
+              <motion.div
+                ref={victoryCardRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={victoryTitleId}
+                tabIndex={-1}
+                initial={reduceMotion ? false : { scale: 0.92, y: 24 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
+                className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-y-auto rounded-3xl border border-gold/30 bg-felt-deep shadow-2xl outline-none"
+              >
+                <OnlineEndScreen
+                  variant="sheet"
+                  className="shrink-0 px-5 pt-6"
+                  won={me?.team === winner}
+                  rematchVotes={view.rematchVotes ?? []}
+                  onRematch={voteRematch}
+                  onLeave={leaveRoom}
+                  header={
+                    <div className="mb-4 flex flex-col items-center gap-3 text-center">
+                      <motion.div
+                        animate={reduceMotion ? undefined : { scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
+                        transition={{ duration: 1.5, repeat: 1, repeatDelay: 1 }}
+                        className="flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/40 bg-gold/[0.15]"
+                      >
+                        <Trophy aria-hidden className="h-10 w-10 text-gold" />
+                      </motion.div>
+                      <h2 id={victoryTitleId} className="font-display text-2xl font-bold text-gold">
                         {t('victoryTitle', { team: TEAM_LABEL[winner] })}
                       </h2>
                       {!isSoft && (
-                        <p className="mt-1 text-sm text-white/50">
+                        <p className="text-sm text-cream/80">
                           {t('defeatDrinks', { team: TEAM_LABEL[otherTeam(winner)] })}
                         </p>
                       )}
                     </div>
-                  </div>
-                }
-                ranking={
-                  <>
-                    <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-sky-300">{view.turnCount}</p>
-                        <p className="text-xs text-white/40">{t('statTurns')}</p>
+                  }
+                  ranking={
+                    <>
+                      <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                        <div className="text-center">
+                          <p className="text-lg font-bold tabular-nums text-gold">{view.turnCount}</p>
+                          <p className="text-xs text-cream/70">{t('statTurns')}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold tabular-nums text-gold">
+                            {me && me.shotsFired > 0 ? `${Math.round((me.shotsHit / me.shotsFired) * 100)}%` : '—'}
+                          </p>
+                          <p className="text-xs text-cream/70">{t('statAccuracy')}</p>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-sky-300">
-                          {me && me.shotsFired > 0 ? `${Math.round((me.shotsHit / me.shotsFired) * 100)}%` : '—'}
-                        </p>
-                        <p className="text-xs text-white/40">{t('statAccuracy')}</p>
-                      </div>
-                    </div>
 
-                    <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
-                        {t('finalBoard')}
-                      </p>
-                      {[...view.players]
-                        .sort((a, b) =>
-                          isSoft
-                            ? (a.team === winner ? 0 : 1) - (b.team === winner ? 0 : 1) || a.name.localeCompare(b.name)
-                            : b.drinks - a.drinks
-                        )
-                        .map((p) => (
-                          <div
-                            key={p.id}
-                            className={cn(
-                              'flex items-center justify-between rounded-xl px-3 py-2',
-                              p.team === winner ? 'border border-white/10 bg-white/5' : 'bg-white/5 opacity-80'
-                            )}
-                          >
-                            <div className="flex min-w-0 items-center gap-2">
-                              <RankCrest role={cosmetics.get(p.id)?.role} />
-                              <span className={cn('shrink-0 text-xs font-bold', teamAccent(p.team))}>
-                                {TEAM_LABEL[p.team]}
-                              </span>
-                              <span className="truncate text-sm font-semibold text-white">
-                                <PlayerAvatarGlyph value={iconOf(p)} />{iconOf(p) ? ' ' : ''}
-                                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                              </span>
-                              {p.team === winner && <Trophy aria-hidden className="inline h-4 w-4 text-gold" />}
+                      <div className="mb-4 space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gold">
+                          {t('finalBoard')}
+                        </p>
+                        {[...view.players]
+                          .sort((a, b) =>
+                            isSoft
+                              ? (a.team === winner ? 0 : 1) - (b.team === winner ? 0 : 1) || a.name.localeCompare(b.name)
+                              : b.drinks - a.drinks
+                          )
+                          .map((p) => (
+                            <div
+                              key={p.id}
+                              className={cn(
+                                'flex items-center justify-between gap-2 rounded-xl px-3 py-2',
+                                p.team === winner ? 'border border-gold/30 bg-gold/10' : 'bg-black/20'
+                              )}
+                            >
+                              <div className="flex min-w-0 items-center gap-2">
+                                <RankCrest role={cosmetics.get(p.id)?.role} />
+                                <span className={cn('shrink-0 text-sm font-bold', teamAccent(p.team))}>
+                                  {TEAM_LABEL[p.team]}
+                                </span>
+                                <span className="truncate text-sm font-semibold text-cream">
+                                  <PlayerAvatarGlyph value={iconOf(p)} />
+                                  {iconOf(p) ? ' ' : ''}
+                                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+                                </span>
+                                {p.team === winner && <Trophy aria-hidden className="inline h-4 w-4 shrink-0 text-gold" />}
+                              </div>
+                              {!isSoft && <span className="shrink-0 text-sm text-cream/80">{p.drinks}🍺</span>}
                             </div>
-                            {!isSoft && <span className="shrink-0 text-xs text-white/50">{p.drinks}🍺</span>}
-                          </div>
-                        ))}
-                    </div>
-                  </>
-                }
-                xp={
-                  <XpGainBanner
-                    won={me?.team === winner}
-                    playerIds={view.players.map((p) => p.id)}
-                    className="mb-4"
-                  />
-                }
-              />
+                          ))}
+                      </div>
+                    </>
+                  }
+                  xp={
+                    <XpGainBanner
+                      won={me?.team === winner}
+                      playerIds={view.players.map((p) => p.id)}
+                      className="mb-4"
+                    />
+                  }
+                />
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-    <AnimatePresence>
-      {tutorial.open && <GameTutorialModal gameId="toucher-coule" onClose={tutorial.close} />}
-    </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    {/* Même raison que l'écran de fin : dans la scène, la modale d'aide
+        (fixed z-50) passait sous la barre du site. */}
+    {typeof document !== 'undefined' &&
+      createPortal(
+        <AnimatePresence>
+          {tutorial.open && <GameTutorialModal gameId="toucher-coule" onClose={tutorial.close} />}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   )
 }

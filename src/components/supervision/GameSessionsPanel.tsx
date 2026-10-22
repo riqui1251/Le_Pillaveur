@@ -213,7 +213,7 @@ export function GameSessionsPanel({ userId, bare = false }: { userId?: string; b
                   ) : (
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/40" />
                   )}
-                  <GameIconById id={s.gameId} className="h-4 w-4 shrink-0 text-gold" />
+                  <GameIconById id={s.gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
                   <span className="min-w-0 text-sm font-medium text-white">{s.gameTitle}</span>
                   <span className="font-mono text-xs text-white/45">{s.code}</span>
                   <span className="text-xs text-white/45">

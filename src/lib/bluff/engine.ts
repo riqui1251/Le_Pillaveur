@@ -179,12 +179,23 @@ function enterVotePhase(state: BluffState, now: number): BluffState {
   const usedTexts = new Set<string>([realNormalized])
   let decoyIdx = 0
 
+  // Humains d'abord : leurs bluffs, déjà uniques à la saisie (FAKE_TAKEN),
+  // gardent leur texte. Seul celui d'un bot peut tomber sur un texte pris :
+  // l'humain se verrait sinon marquer « Ton bluff » sur un leurre qu'il n'a
+  // pas écrit, et en déduirait que son propre texte est la vraie réponse.
+  const botIds = new Set(state.players.filter((p) => p.isBot).map((p) => p.id))
+  const entries = Object.entries(state.pendingFakes).sort(
+    ([a], [b]) => Number(botIds.has(a)) - Number(botIds.has(b))
+  )
+
   const fakeCandidates: BluffCandidate[] = []
-  for (const [playerId, rawText] of Object.entries(state.pendingFakes)) {
+  for (const [playerId, rawText] of entries) {
     let text = rawText
     // Collision avec la vraie réponse (ou un bluff déjà retenu) → leurre de secours.
     if (usedTexts.has(normalize(text)) && prompt.decoys.length > 0) {
-      text = prompt.decoys[decoyIdx % prompt.decoys.length]
+      text =
+        prompt.decoys.find((d) => !usedTexts.has(normalize(d))) ??
+        prompt.decoys[decoyIdx % prompt.decoys.length]
       decoyIdx += 1
     }
     usedTexts.add(normalize(text))
@@ -200,7 +211,12 @@ function enterVotePhase(state: BluffState, now: number): BluffState {
     { candidateId: 'real', text: prompt.answer, isReal: true, authorId: null },
     ...fakeCandidates,
   ]
-  const shuffled = rng.shuffle(allCandidates)
+  // Identifiants opaques APRÈS le mélange : `real` / `fake-<joueur>` voyagent
+  // dans voteOptions, et trahiraient la vraie réponse et les auteurs à qui
+  // lit le JSON de la salle.
+  const shuffled = rng
+    .shuffle(allCandidates)
+    .map((c, i) => ({ ...c, candidateId: `c${state.phaseSeq}-${i}` }))
 
   return {
     ...state,
@@ -273,6 +289,17 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
       const trimmed = action.text.trim()
       if (trimmed.length < 1 || trimmed.length > BLUFF_FAKE_MAX_LEN) {
         throw new BluffEngineError('INVALID_FAKE')
+      }
+      // Texte déjà pris (vraie réponse ou bluff d'un autre) : refusé à la
+      // saisie pour que chaque humain retrouve SON texte au vote. Les bots
+      // piochent au hasard parmi les leurres : leurs collisions se règlent
+      // à l'entrée en vote.
+      if (!actor.isBot) {
+        const wanted = normalize(trimmed)
+        const taken =
+          wanted === normalize(state.roundPrompts[state.promptIdx].answer) ||
+          Object.values(state.pendingFakes).some((t) => normalize(t) === wanted)
+        if (taken) throw new BluffEngineError('FAKE_TAKEN')
       }
       const pendingFakes = { ...state.pendingFakes, [actor.id]: trimmed }
       const next = { ...state, pendingFakes, version: state.version + 1 }
@@ -428,6 +455,12 @@ export type BluffClientView = Omit<
   prompt: string | null
   myFake: string | null
   myVote: string | null
+  /**
+   * Candidat de SON propre bluff pendant le vote (null sinon, et toujours
+   * null pour la TV) : le téléphone le montre sans le rendre votable, au lieu
+   * d'un toucher refusé par CANNOT_VOTE_OWN_FAKE.
+   */
+  myCandidateId: string | null
   /** Candidats anonymisés (texte seul) — null hors phase de vote. */
   voteOptions: Array<{ candidateId: string; text: string }> | null
 }
@@ -453,6 +486,10 @@ export function toBluffClientView(state: BluffState, viewerId: string): BluffCli
     prompt: currentPrompt,
     myFake: pendingFakes[viewerId] ?? null,
     myVote: pendingVotes[viewerId] ?? null,
+    myCandidateId:
+      state.phase === 'vote' && viewerId
+        ? candidates.find((c) => c.authorId === viewerId)?.candidateId ?? null
+        : null,
     voteOptions:
       state.phase === 'vote'
         ? candidates.map((c) => ({ candidateId: c.candidateId, text: c.text }))

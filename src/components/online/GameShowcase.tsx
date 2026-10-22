@@ -9,6 +9,7 @@ import { Link } from '@/i18n/navigation'
 import { useLocalizedGame } from '@/lib/games-i18n'
 import { hasContentIn } from '@/lib/games'
 import { isRulesGameId } from '@/lib/rules/rules-ids'
+import { cn } from '@/lib/utils'
 
 /**
  * Vitrine d'un jeu EN LIGNE — ce que voit le visiteur hors salle, et ce que
@@ -41,8 +42,6 @@ import { isRulesGameId } from '@/lib/rules/rules-ids'
  * OnlineGameSkeleton, qui tient la place des morceaux chargés à la demande.
  */
 
-/** Bouton principal par défaut — celui de TryBotsGate (or remappé sur amber). */
-const DEFAULT_ACCENT = 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'
 
 export function GameShowcase({
   gameId,
@@ -96,8 +95,10 @@ export function GameShowcase({
     <div className="flex w-full flex-1 flex-col items-center px-3 py-8 sm:py-12">
       <div className="w-full max-w-lg">
         <header className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-gold/10 text-gold">
-            <GameIconById id={gameId} className="h-8 w-8" />
+          {/* Corps crème, accent or : l'icône entière en or sur un fond or
+              à 10 % perdait ses découpes et son accent. */}
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-gold/30 bg-felt-deep">
+            <GameIconById id={gameId} surface="felt" className="h-9 w-9" />
           </div>
           {(game.beta || frOnly) && (
             <p className="mb-2 flex flex-wrap items-center justify-center gap-1.5">
@@ -130,13 +131,13 @@ export function GameShowcase({
             {facts.map((fact) => (
               <li
                 key={fact}
-                className="rounded-full border border-gold/25 px-2.5 py-1 text-xs font-semibold text-cream/75"
+                className="rounded-full border border-gold/25 px-2.5 py-1 text-xs font-semibold text-cream/80"
               >
                 {fact}
               </li>
             ))}
           </ul>
-          {note && <p className="mx-auto mt-4 max-w-sm text-sm leading-snug text-cream/60">{note}</p>}
+          {note && <p className="mx-auto mt-4 max-w-sm text-sm leading-snug text-cream/70">{note}</p>}
         </header>
 
         <div className="mt-6">
@@ -145,11 +146,18 @@ export function GameShowcase({
             // le temps que la session réponde. `role="status"` pour le lecteur
             // d'écran, comme le squelette.
             <div role="status" aria-busy="true" className="space-y-2.5">
-              <Button disabled className={accentClassName ?? DEFAULT_ACCENT}>
-                <Play className="mr-2 h-4 w-4" />
+              {/* Repli : celui de TryBotsGate, encre sur or. `gameLg` : le h-9
+                  du Button écrasait le py-5 du bouton à 36 px. */}
+              <Button
+                disabled
+                variant={accentClassName ? undefined : 'primary'}
+                size="gameLg"
+                className={cn('w-full', accentClassName)}
+              >
+                <Play className="mr-2 h-4 w-4" aria-hidden />
                 {t('pending')}
               </Button>
-              <p className="text-center text-xs font-medium tracking-wide text-cream/60">{tCommon('loading')}</p>
+              <p className="text-center text-xs font-medium tracking-wide text-cream/70">{tCommon('loading')}</p>
             </div>
           ) : (
             children
@@ -170,7 +178,7 @@ export function GameShowcase({
               href={rulesHref}
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-gold underline-offset-4 hover:underline"
             >
-              <BookOpen className="h-4 w-4" />
+              <BookOpen className="h-4 w-4" aria-hidden />
               {t('rulesLink')}
             </Link>
           )}

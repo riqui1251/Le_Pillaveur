@@ -29,8 +29,10 @@ export default async function GameSeoLayout({
     <GameSeo locale={locale} gameId={GAME_ID}>
       {/* Les textes de CE jeu seulement : le layout de langue n'embarque plus
           games.<id> — voir src/i18n/messages-slices.ts. */}
+      {/* Pas de `container` : ses 2 rem de marge de chaque côté ne laissaient
+          que 245 px au jeu sur un écran de 375, et les dés s'y écrasaient. */}
       <ClientMessages messages={gameSlice(await getMessages({ locale }), GAME_ID)}>
-        <div className="container mx-auto py-4">{children}</div>
+        {children}
       </ClientMessages>
     </GameSeo>
   )

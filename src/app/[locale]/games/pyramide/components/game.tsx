@@ -1,13 +1,25 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { motion } from 'framer-motion'
-import { RotateCcw, ArrowDown } from 'lucide-react'
-import useScreenSize from '@/hooks/useScreenSize'
+import { motion, useReducedMotion } from 'framer-motion'
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Eye,
+  EyeOff,
+  FoldHorizontal,
+  RotateCcw,
+  UnfoldHorizontal,
+} from 'lucide-react'
 import { Player as BasePlayer } from '@/lib/players'
-import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { Button } from '@/components/ui/button'
+import { GameShell } from '@/components/game/GameShell'
+import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
+import { EndActionDock } from '@/components/game/EndActionDock'
 import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
 import { isSpecialPlayer, getSpecialEffectClass } from '@/lib/playerUtils'
 import { cn } from '@/lib/utils'
@@ -16,6 +28,7 @@ import {
   type Suit,
   type PreludeStep,
   type PreludeResult,
+  PRELUDE_PENALTY,
   rankValue,
   createDeck,
   shuffleDeck,
@@ -25,7 +38,11 @@ import {
   evaluatePreludeChoice,
   computeTotalsByPlayer,
   computeScoreSummary,
+  computeFunTally,
   buildClassicPyramid,
+  floorOfRow,
+  funFlipperIndex,
+  stakeOfRow,
 } from '@/lib/pyramide/engine'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
@@ -50,7 +67,74 @@ const GAME_SUIT: Record<Suit, GameSuit> = {
   spades: 'spade',
 }
 
+const SUIT_GLYPH: Record<Suit, string> = {
+  hearts: '♥',
+  diamonds: '♦',
+  clubs: '♣',
+  spades: '♠',
+}
+
 const isRedSuit = (suit: Suit) => suit === 'hearts' || suit === 'diamonds'
+
+/** Encre posée sur la carte crème : rouge carreau ou encre pure. */
+const cardInk = (suit: Suit) => (isRedSuit(suit) ? 'text-suit-red' : 'text-[#24201A]')
+
+const cardLabel = (card: Card) => `${card.value}${SUIT_GLYPH[card.suit]}`
+
+const FACE_TEXT = {
+  board: { rank: 'text-lg lg:text-2xl', suit: 'text-sm lg:text-lg' },
+  chip: { rank: 'text-base', suit: 'text-sm' },
+  mini: { rank: 'text-2xl', suit: 'text-base' },
+  large: { rank: 'text-4xl', suit: 'text-2xl' },
+} as const
+
+/**
+ * Face de carte, rang AU CENTRE et en grand, enseigne dessous. Ici c'est la
+ * valeur qui compte (« qui a un 7 ? ») : les coins de PlayingCard, en 10 px,
+ * ne se lisaient pas à bout de bras sur une carte de 40 px.
+ */
+function CardFace({ card, size, className }: { card: Card; size: keyof typeof FACE_TEXT; className?: string }) {
+  const ink = cardInk(card.suit)
+  return (
+    <PlayingCard
+      suit={GAME_SUIT[card.suit]}
+      corners={false}
+      className={cn('flex flex-col items-center justify-center gap-0.5 leading-none', className)}
+    >
+      <span className={cn('font-display font-black', FACE_TEXT[size].rank, ink)}>{card.value}</span>
+      <span aria-hidden className={cn(FACE_TEXT[size].suit, ink)}>{SUIT_GLYPH[card.suit]}</span>
+    </PlayingCard>
+  )
+}
+
+const PRELUDE_STEPS: readonly PreludeStep[] = ['color', 'higherLower', 'insideOutside', 'suit']
+
+/**
+ * Étape du prélude à l'écran. `reveal` : les 4 prédictions sont faites, la
+ * 4e carte et son verdict restent affichés jusqu'au « Passer à … ». Sans
+ * elle, la dernière carte et ses 4 gorgées disparaissaient dans le même
+ * rendu que le passage au joueur suivant.
+ */
+type PreludeUiStep = PreludeStep | 'reveal'
+
+/** Le temps de lire son verdict avant que l'écran dise à qui passer le téléphone. */
+const VERDICT_HOLD_MS = 1600
+
+/**
+ * Clé du passe-téléphone du mode Cartes : le joueur ET le numéro de la carte,
+ * pour qu'un joueur rapide (qui retourne avant le flash) déclenche quand même
+ * celui du suivant.
+ */
+type FunPass = { key: string; playerId: string }
+const makeFunPass = (playerId: string, flipIndex: number): FunPass => ({ key: `${playerId}#${flipIndex}`, playerId })
+/** Verrou de retournement : la carte finit de tourner avant la suivante. */
+const FLIP_LOCK_MS = 500
+
+// Padding bas du flux sous les barres plus hautes que celle prévue par GameShell (5,75 rem).
+const PAD_BOARD =
+  'pb-[calc(10rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))]'
+const PAD_PRELUDE_TWO = 'pb-[calc(9rem+env(safe-area-inset-bottom,0px))]'
+const PAD_PRELUDE_FOUR = 'pb-[calc(11.5rem+env(safe-area-inset-bottom,0px))]'
 
 interface GameProps {
   players: BasePlayer[]
@@ -85,18 +169,21 @@ type PyramideSave = {
   readyToStart: boolean
   preludeDeck: Card[]
   preludeCurrentPlayer: number
-  preludeStep: PreludeStep
+  preludeStep: PreludeUiStep
   preludeResultsByPlayer: Record<string, PreludeResult[]>
   preludeDrinksByPlayer: Record<string, number>
   preludeRevealed: Card[]
-  preludeMessage: string
 }
+
+type Screen = 'prelude' | 'preludeSummary' | 'memorize' | 'board' | 'end'
 
 export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deckCount, cardsToSelect }: GameProps) {
   const t = useTranslations('games.pyramide')
+  const tc = useTranslations('common')
+  const reducedMotion = useReducedMotion()
+  const [confirmDialog, confirm] = useConfirmAction()
   const [pyramid, setPyramid] = useState<Card[][]>([])
   const [gameOver, setGameOver] = useState(false)
-  const [preludeMessage, setPreludeMessage] = useState('')
   const [nextCardToFlip, setNextCardToFlip] = useState<{row: number, col: number} | null>(null)
   const [lastFlippedCard, setLastFlippedCard] = useState<{row: number, col: number} | null>(null)
   const [totalCardsFlipped, setTotalCardsFlipped] = useState(0)
@@ -104,7 +191,11 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   const [currentCard, setCurrentCard] = useState<Card | null>(null)
   const [gameStarted, setGameStarted] = useState(false)
   const [isCardFlipping, setIsCardFlipping] = useState(false)
-  const { isMobile, width, isLandscape } = useScreenSize()
+  const flipLockRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Passe-téléphone du mode Cartes (voir l'effet plus bas). Désarmé = la
+  // prochaine clé sert de point de départ, posée sans attendre.
+  const [funPass, setFunPass] = useState<FunPass | null>(null)
+  const funPassArmedRef = useRef(false)
 
   // États mode classique
   const [classicGamePhase, setClassicGamePhase] = useState<'prelude' | 'preludeSummary' | 'selection' | 'play'>('prelude')
@@ -116,7 +207,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   // Pré-jeu : prédictions en 4 étapes
   const [preludeDeck, setPreludeDeck] = useState<Card[]>([])
   const [preludeCurrentPlayer, setPreludeCurrentPlayer] = useState<number>(0)
-  const [preludeStep, setPreludeStep] = useState<PreludeStep>('color')
+  const [preludeStep, setPreludeStep] = useState<PreludeUiStep>('color')
   const [preludeResultsByPlayer, setPreludeResultsByPlayer] = useState<Record<string, PreludeResult[]>>({})
   const [preludeDrinksByPlayer, setPreludeDrinksByPlayer] = useState<Record<string, number>>({})
   const [preludeRevealed, setPreludeRevealed] = useState<Card[]>([])
@@ -125,6 +216,17 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     isSameLocalTable(s.playerIds, players)
   )
   const { updatePlayerStats } = usePlayers()
+
+  useEffect(() => () => {
+    if (flipLockRef.current) clearTimeout(flipLockRef.current)
+  }, [])
+
+  /** Pose tout de suite la clé de la carte `flipIndex` (reprise, nouvelle donne) : pas de flash différé. */
+  const anchorFunPass = (flipIndex: number) => {
+    if (gameMode !== 'fun' || players.length === 0) return
+    funPassArmedRef.current = true
+    setFunPass(makeFunPass(players[funFlipperIndex(flipIndex, players.length)].id, flipIndex))
+  }
 
   const computePreludeTotals = (): Record<string, number> =>
     computeTotalsByPlayer(players.map(p => p.id), preludeResultsByPlayer)
@@ -165,6 +267,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
   }
 
   const handlePreludeSelection = (choice: string) => {
+    if (preludeStep === 'reveal') return
     const player = players[preludeCurrentPlayer]
     if (!player) return
     const revealed = drawPreludeCard()
@@ -181,70 +284,33 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       ]
     }))
 
-    const suitSym = getSuitSymbol(revealed.suit)
     if (!success) {
       setPreludeDrinksByPlayer(prev => ({
         ...prev,
         [player.id]: (prev[player.id] || 0) + penalty
       }))
     }
-    setPreludeMessage(t('preludeResult', {
-      name: player.name,
-      card: `${revealed.value}${suitSym}`,
-      result: success ? t('preludeSuccess') : t('preludeFail', { count: penalty }),
-    }))
 
-    if (preludeStep === 'color') {
-      setPreludeStep('higherLower')
-    } else if (preludeStep === 'higherLower') {
-      setPreludeStep('insideOutside')
-    } else if (preludeStep === 'insideOutside') {
-      setPreludeStep('suit')
-    } else {
-      proceedAfterPreludeIfNeeded()
-    }
+    const nextIndex = PRELUDE_STEPS.indexOf(preludeStep) + 1
+    setPreludeStep(nextIndex < PRELUDE_STEPS.length ? PRELUDE_STEPS[nextIndex] : 'reveal')
   }
-  
-
-  // ── Taille des cartes ────────────────────────────────────────────────────
-  // Réduire la taille pour les ordinateurs
-  const containerMaxWidth = isMobile ? "100%" : "900px";
-  // Ajuster la taille des cartes : en paysage mobile = plus d'espace, cartes plus grandes
-  const cardWidth = isMobile 
-    ? (isLandscape ? 'w-14 h-20' : (width < 400 ? 'w-10 h-16' : 'w-12 h-20'))
-    : 'w-16 h-24';
-  const cardFontSize = isMobile ? (width < 400 ? 'text-sm' : 'text-base') : 'text-xl';
-  const suitFontSize = isMobile ? (width < 400 ? 'text-base' : 'text-lg') : 'text-2xl';
 
   // Fonction d'initialisation du jeu extraite dans un useCallback pour éviter les re-créations inutiles
   const initializeGame = useCallback(() => {
     if (gameMode === 'fun') {
-      // Mode Fun - pyramide aléatoire
-      // Créer un nouveau jeu de cartes
-      const newDeck = createDeck(1) // Toujours un seul paquet en mode Fun
-      
-      // Mélanger le jeu
-      const shuffledDeck = shuffleDeck(newDeck)
-      
-      // Créer la pyramide de cartes
-      const { pyramidCards, remainingDeck } = createPyramid(shuffledDeck, pyramidHeight)
-      
+      // Mode Cartes : pyramide aléatoire, toujours un seul paquet
+      const shuffledDeck = shuffleDeck(createDeck(1))
+      const { pyramidCards } = createPyramid(shuffledDeck, pyramidHeight)
+
       setPyramid(pyramidCards)
       setCurrentCard(null)
       setGameOver(false)
       setGameStarted(true)
       setIsCardFlipping(false)
-
-      // Calculer le nombre total de cartes dans la pyramide
       setTotalCards(totalCardsForHeight(pyramidHeight))
-
-      // Réinitialiser le compteur de cartes retournées
       setTotalCardsFlipped(0)
-
-      // Définir la première carte à retourner (en bas à gauche)
+      // Première carte à retourner : en bas à gauche
       setNextCardToFlip({ row: pyramidHeight - 1, col: 0 })
-      
-      // Réinitialiser la dernière carte retournée
       setLastFlippedCard(null)
     } else {
       // Mode Classique - Pré-jeu de prédictions avant l'attribution des cartes
@@ -257,7 +323,7 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       setPreludeStep('color')
       setPreludeResultsByPlayer({})
       setPreludeDrinksByPlayer({})
-      setPreludeMessage('')
+      setPreludeRevealed([])
       setReadyToStart(false)
       setCurrentSelectionPlayer(0)
       setSelectedCardsByPlayer({})
@@ -306,13 +372,12 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
       preludeResultsByPlayer,
       preludeDrinksByPlayer,
       preludeRevealed,
-      preludeMessage,
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started, gameStarted, gameOver, pyramid, nextCardToFlip, lastFlippedCard, totalCardsFlipped,
       totalCards, currentCard, classicGamePhase, selectedCardsByPlayer, currentSelectionPlayer,
       availableCardsForSelection, readyToStart, preludeDeck, preludeCurrentPlayer, preludeStep,
-      preludeResultsByPlayer, preludeDrinksByPlayer, preludeRevealed, preludeMessage]);
+      preludeResultsByPlayer, preludeDrinksByPlayer, preludeRevealed]);
 
   /** Évite de compter deux fois la même partie. */
   const gameCountedRef = useRef(false)
@@ -370,49 +435,43 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     setPreludeResultsByPlayer(saved.preludeResultsByPlayer)
     setPreludeDrinksByPlayer(saved.preludeDrinksByPlayer)
     setPreludeRevealed(saved.preludeRevealed)
-    setPreludeMessage(saved.preludeMessage)
     setIsCardFlipping(false)
     setGameStarted(true)
     setStarted(true)
+    // La carte reprise devient le point de départ : sans cela, la clé de la
+    // carte 0 restait en place et un flash partait 1,6 s après la reprise.
+    if (!saved.gameOver) anchorFunPass(saved.totalCardsFlipped)
   }
 
   // Retourner la prochaine carte
   const flipNextCard = () => {
-    if (!nextCardToFlip || isCardFlipping) return
-    setIsCardFlipping(true)
-    
-    // Mettre à jour la pyramide pour retourner la carte
-    const updatedPyramid = [...pyramid]
+    if (!nextCardToFlip || isCardFlipping || gameOver) return
     const { row, col } = nextCardToFlip
-    
-    if (updatedPyramid[row] && updatedPyramid[row][col]) {
-      updatedPyramid[row][col].faceUp = true
-      setPyramid(updatedPyramid)
-      
-      // Mettre à jour le compteur de cartes retournées
-      setTotalCardsFlipped(prev => prev + 1)
-      const card = updatedPyramid[row][col]
-      setCurrentCard(card)
-      setLastFlippedCard({ row, col })
-      
-      // Vérifier si toutes les cartes ont été retournées
-      if (totalCardsFlipped + 1 >= totalCards) {
-        setGameOver(true)
-        setNextCardToFlip(null)
-      } else {
-        // Trouver la prochaine carte à retourner
-        findNextCardToFlip(updatedPyramid, row, col)
-      }
-    }
-    
-    setTimeout(() => {
-      setIsCardFlipping(false)
-    }, 500)
-  }
+    const card = pyramid[row]?.[col]
+    if (!card) return
+    setIsCardFlipping(true)
 
-  // Trouver la prochaine carte à retourner
-  const findNextCardToFlip = (currentPyramid: Card[][], currentRow: number, currentCol: number) => {
-    setNextCardToFlip(findNextCardToFlipPure(currentPyramid, currentRow, currentCol))
+    const flipped: Card = { ...card, faceUp: true }
+    const updatedPyramid = pyramid.map((cards, r) =>
+      r === row ? cards.map((c, ci) => (ci === col ? flipped : c)) : cards
+    )
+    setPyramid(updatedPyramid)
+    setTotalCardsFlipped(prev => prev + 1)
+    setCurrentCard(flipped)
+    setLastFlippedCard({ row, col })
+
+    if (totalCardsFlipped + 1 >= totalCards) {
+      setGameOver(true)
+      setNextCardToFlip(null)
+    } else {
+      setNextCardToFlip(findNextCardToFlipPure(updatedPyramid, row, col))
+    }
+
+    if (flipLockRef.current) clearTimeout(flipLockRef.current)
+    flipLockRef.current = setTimeout(() => {
+      flipLockRef.current = null
+      setIsCardFlipping(false)
+    }, FLIP_LOCK_MS)
   }
 
   const computeScores = () => {
@@ -427,27 +486,27 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     }
   }
 
-  // Obtenir la couleur de la carte en fonction de sa couleur
-  const getCardColor = (suit: Suit): string => {
-    return isRedSuit(suit) ? 'text-suit-red' : 'text-[#24201A]'
-  }
-
-  // Obtenir le symbole de la couleur
-  const getSuitSymbol = (suit: Suit): string => {
-    switch (suit) {
-      case 'hearts': return '♥'
-      case 'diamonds': return '♦'
-      case 'clubs': return '♣'
-      case 'spades': return '♠'
-    }
-  }
-
   // Réinitialiser le jeu
   const resetGame = () => {
     session.clear()
     gameCountedRef.current = false
+    // Nouvelle donne : « passe à {premier joueur} » tout de suite, pas après le délai de lecture d'un verdict.
+    anchorFunPass(0)
     setStarted(true)
     initializeGame()
+  }
+
+  // Une partie de 30 à 45 min, prélude et mémorisation compris : un faux
+  // toucher pendant que le téléphone change de main ne doit pas l'effacer.
+  const askRestart = async () => {
+    const ok = await confirm({
+      title: tc('confirmRestart.title'),
+      description: tc('confirmRestart.description'),
+      confirmLabel: tc('confirmRestart.confirm'),
+      cancelLabel: tc('confirmRestart.cancel'),
+      tone: 'danger',
+    })
+    if (ok) resetGame()
   }
 
   const startClassicGame = () => {
@@ -463,568 +522,726 @@ export default function Game({ players, onGameEnd, pyramidHeight, gameMode, deck
     // Construire la pyramide en excluant les valeurs déjà mémorisées
     const pyramidCards = buildClassicPyramid(availableCardsForSelection, allSelectedCards, pyramidHeight);
 
-    // Mettre à jour les états du jeu
     setPyramid(pyramidCards);
-
-    // Calculer le nombre total de cartes dans la pyramide
     setTotalCards(totalCardsForHeight(pyramidHeight));
-
-    // Réinitialiser le compteur de cartes retournées
     setTotalCardsFlipped(0);
-
-    // Définir la première carte à retourner (en bas à gauche)
+    // Première carte à retourner : en bas à gauche
     setNextCardToFlip({ row: pyramidHeight - 1, col: 0 });
   };
 
+  const setMemorizedCardsFaceUp = (playerId: string, faceUp: boolean) => {
+    setSelectedCardsByPlayer(prev => ({ ...prev, [playerId]: (prev[playerId] || []).map(c => ({ ...c, faceUp })) }))
+  }
+
+  const finishMemorization = () => {
+    const pid = players[currentSelectionPlayer]?.id
+    if (pid) setMemorizedCardsFaceUp(pid, false)
+    if (currentSelectionPlayer < players.length - 1) {
+      setCurrentSelectionPlayer(prev => prev + 1)
+    } else {
+      setReadyToStart(true)
+      startClassicGame()
+    }
+  }
+
+  // ── Écran courant et joueur au tour ────────────────────────────────────────
+
+  const screen: Screen = gameOver
+    ? 'end'
+    : gameMode === 'fun'
+      ? 'board'
+      : classicGamePhase === 'prelude'
+        ? 'prelude'
+        : classicGamePhase === 'preludeSummary'
+          ? 'preludeSummary'
+          : classicGamePhase === 'selection'
+            ? 'memorize'
+            : 'board'
+
+  // Mode Cartes : chacun son tour retourne une carte et boit l'étage.
+  const nextFlipper = gameMode === 'fun' && !gameOver && players.length > 0
+    ? players[funFlipperIndex(totalCardsFlipped, players.length)]
+    : undefined
+  const lastFlipper = gameMode === 'fun' && totalCardsFlipped > 0 && players.length > 0
+    ? players[funFlipperIndex(totalCardsFlipped - 1, players.length)]
+    : undefined
+
+  // Passe-téléphone du mode Cartes, retardé : celui qui vient de retourner
+  // lit d'abord son verdict, puis l'écran dit à qui tendre le téléphone.
+  const nextFlipperId = nextFlipper?.id ?? null
+  useEffect(() => {
+    if (!nextFlipperId) {
+      funPassArmedRef.current = false
+      setFunPass(null)
+      return
+    }
+    const next = makeFunPass(nextFlipperId, totalCardsFlipped)
+    // Point de départ du montage posé sans attendre : retardé, il aurait servi
+    // de référence muette et avalé le flash du joueur suivant.
+    if (!funPassArmedRef.current) {
+      funPassArmedRef.current = true
+      setFunPass(next)
+      return
+    }
+    const timer = setTimeout(() => setFunPass(next), VERDICT_HOLD_MS)
+    return () => clearTimeout(timer)
+  }, [nextFlipperId, totalCardsFlipped])
+
+  const passPlayer = gameMode === 'fun'
+    ? players.find(p => p.id === funPass?.playerId)
+    : screen === 'prelude'
+      ? players[preludeCurrentPlayer]
+      : screen === 'memorize'
+        ? players[currentSelectionPlayer]
+        : undefined
+  const passKey = gameMode === 'fun' ? (passPlayer ? funPass?.key ?? null : null) : passPlayer?.id ?? null
+
   if (session.pending) return <ResumeGamePrompt onResume={resumeSavedGame} onDiscard={session.discard} />
 
-  return (
-    <div className="w-full relative text-cream">
-      <div className={`container mx-auto max-w-6xl pb-24 ${isMobile ? 'p-2' : 'p-4'}`} style={{ maxWidth: containerMaxWidth }}>
-        {/* En-tête */}
-        <div className={`rounded-2xl border border-gold/20 bg-felt-deep/90 backdrop-blur-xl ${isMobile ? 'mb-2 px-3 py-2' : 'mb-5 md:mb-6 px-4 py-3 md:px-6 md:py-4'}`}>
-          <div className="flex items-center justify-between gap-2">
-            <h1 className={`font-display font-bold text-gold ${isMobile ? 'text-lg pl-10' : 'text-2xl sm:text-3xl'}`}>
-              {t('title')}{gameMode === 'classic' ? ` ${t('game.titleClassic')}` : ''}
-            </h1>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={resetGame}
-                className="rounded-xl border border-gold/20 bg-black/20 p-2 text-cream/70 transition hover:text-gold"
-                aria-label={t('game.newGameAria')}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </button>
-              <button
-                onClick={onGameEnd}
-                className="rounded-xl border border-gold/20 bg-black/20 p-2 text-cream/70 transition hover:text-gold"
-                aria-label={t('game.backAria')}
-              >
-                <ArrowDown className="h-4 w-4 rotate-90" />
-              </button>
-            </div>
+  const nameClass = (p: BasePlayer) => cn(isSpecialPlayer(p) && getSpecialEffectClass(p))
+
+  // ── Verdict d'une carte retournée : qui boit, combien ─────────────────────
+
+  const renderVerdict = (big = false) => {
+    const titleClass = cn('font-display font-bold leading-tight text-cream', big ? 'text-xl' : 'text-lg')
+    const pillClass = cn(
+      'inline-block rounded-lg bg-suit-red px-2 py-0.5 font-display font-bold leading-tight text-cream',
+      big ? 'text-xl' : 'text-lg'
+    )
+    if (!currentCard || !lastFlippedCard) {
+      return (
+        <>
+          <p className={titleClass}>
+            {gameMode === 'fun' && nextFlipper
+              ? t('game.verdict.startFun', { name: nextFlipper.name })
+              : t('game.verdict.startClassic')}
+          </p>
+          <p className="mt-0.5 text-sm leading-snug text-cream/80">
+            {gameMode === 'fun' ? t('game.verdict.startRule') : t('game.verdict.startRuleClassic')}
+          </p>
+        </>
+      )
+    }
+    const stake = stakeOfRow(pyramid.length, lastFlippedCard.row)
+    const where = stake.kind === 'bottomsUp'
+      ? t('game.verdict.summit', { card: cardLabel(currentCard) })
+      : t('game.verdict.floor', { floor: stake.count, card: cardLabel(currentCard) })
+    return (
+      <>
+        <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{where}</p>
+        {gameMode === 'fun' && lastFlipper ? (
+          stake.kind === 'bottomsUp' ? (
+            <p className="mt-1"><span className={pillClass}>{t('game.verdict.funBottomsUp', { name: lastFlipper.name })}</span></p>
+          ) : (
+            <p className={cn('mt-0.5', titleClass)}>{t('game.verdict.funDrinks', { name: lastFlipper.name, count: stake.count })}</p>
+          )
+        ) : (
+          <>
+            <p className={cn('mt-0.5', titleClass)}>{t('game.verdict.classicWho', { rank: currentCard.value })}</p>
+            {stake.kind === 'bottomsUp' ? (
+              <p className="mt-1"><span className={cn(pillClass, 'text-sm')}>{t('game.verdict.classicBottomsUp')}</span></p>
+            ) : (
+              <p className="text-sm font-semibold text-gold">{t('game.verdict.classicGive', { count: stake.count })}</p>
+            )}
+          </>
+        )}
+      </>
+    )
+  }
+
+  // ── Prélude (mode classique) ──────────────────────────────────────────────
+
+  const preludePlayer = players[preludeCurrentPlayer]
+  const preludeResults = preludePlayer ? (preludeResultsByPlayer[preludePlayer.id] || []) : []
+  const lastPreludeResult = preludeRevealed.length > 0 ? preludeResults[preludeResults.length - 1] : undefined
+  const preludeStepIndex = preludeStep === 'reveal' ? PRELUDE_STEPS.length : PRELUDE_STEPS.indexOf(preludeStep)
+  const lastPreludePlayer = preludeCurrentPlayer >= players.length - 1
+
+  const preludeQuestion = (step: PreludeStep, name: string) => {
+    switch (step) {
+      case 'color': return t('game.questions.color', { name })
+      case 'higherLower': return t('game.questions.higherLower', { name, value: preludeRevealed[0]?.value ?? '?' })
+      case 'insideOutside': return t('game.questions.insideOutside', { name })
+      case 'suit': return t('game.questions.suit', { name })
+    }
+  }
+
+  const preludeChoices = (step: PreludeStep): { value: string; label: string; icon?: ReactNode; tone?: string }[] => {
+    switch (step) {
+      case 'color': return [
+        { value: 'red', label: t('game.choices.red'), tone: 'text-red-300' },
+        { value: 'black', label: t('game.choices.black') },
+      ]
+      case 'higherLower': return [
+        { value: 'higher', label: t('game.choices.higher'), icon: <ArrowUp aria-hidden className="h-5 w-5" /> },
+        { value: 'lower', label: t('game.choices.lower'), icon: <ArrowDown aria-hidden className="h-5 w-5" /> },
+      ]
+      case 'insideOutside': return [
+        { value: 'inside', label: t('game.choices.inside'), icon: <FoldHorizontal aria-hidden className="h-5 w-5" /> },
+        { value: 'outside', label: t('game.choices.outside'), icon: <UnfoldHorizontal aria-hidden className="h-5 w-5" /> },
+      ]
+      case 'suit': return [
+        { value: 'hearts', label: t('game.choices.hearts'), tone: 'text-red-300' },
+        { value: 'diamonds', label: t('game.choices.diamonds'), tone: 'text-red-300' },
+        { value: 'clubs', label: t('game.choices.clubs') },
+        { value: 'spades', label: t('game.choices.spades') },
+      ]
+    }
+  }
+
+  const preludeContent = preludePlayer ? (
+    <div className="flex flex-col gap-3">
+      <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+        <div className="flex items-center gap-3">
+          <PlayerAvatar player={preludePlayer} size="lg" />
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
+              {preludeStep === 'reveal' ? t('game.preludeDone') : t('game.preludeStep', { n: preludeStepIndex + 1 })}
+            </p>
+            <p className={cn('truncate font-display text-xl font-bold text-cream', nameClass(preludePlayer))}>{preludePlayer.name}</p>
+          </div>
+          <div aria-hidden className="flex shrink-0 gap-1.5">
+            {PRELUDE_STEPS.map((s, i) => (
+              <span
+                key={s}
+                className={cn(
+                  'h-2.5 w-2.5 rounded-full',
+                  i === preludeStepIndex ? 'bg-gold' : i < preludeStepIndex ? 'bg-gold/50' : 'bg-black/30'
+                )}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Phase de pré-jeu classique: prédictions en 4 étapes */}
-        {gameMode === 'classic' && classicGamePhase === 'prelude' && (
-          <div className="mb-6 space-y-3">
-            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 md:p-5">
-              {/* Joueur courant */}
-              <div className="flex items-center gap-3 mb-4">
-                {(() => {
-                  const p = players[preludeCurrentPlayer]
-                  return p ? (
-                    <>
-                      <PlayerAvatar player={p} size="md" />
-                      <div>
-                        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.predictions')}</p>
-                        <p className={cn('font-display font-bold text-cream', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
-                      </div>
-                    </>
-                  ) : null
-                })()}
-                <div className="ml-auto flex gap-1">
-                  {(['color','higherLower','insideOutside','suit'] as const).map((s, i) => (
-                    <div key={s} className={cn('h-2 w-2 rounded-full transition-all',
-                      preludeStep === s ? 'bg-gold' :
-                      (['color','higherLower','insideOutside','suit'].indexOf(preludeStep) > i) ? 'bg-gold/50' : 'bg-black/30'
-                    )} />
-                  ))}
-                </div>
-              </div>
+        <div aria-hidden className="mt-4 flex items-center justify-center gap-2">
+          {PRELUDE_STEPS.map((s, i) => {
+            const c = preludeRevealed[i]
+            return c ? (
+              <motion.div
+                key={s}
+                initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <CardFace card={c} size="mini" className="h-20 w-14" />
+              </motion.div>
+            ) : (
+              <div key={s} className="h-20 w-14 rounded-xl border border-dashed border-gold/30" />
+            )
+          })}
+        </div>
 
-              {/* Question */}
-              <p className="mb-3 text-sm text-cream/80">
-                {preludeStep === 'color' && t('game.questions.color')}
-                {preludeStep === 'higherLower' && t('game.questions.higherLower', { value: preludeRevealed[0]?.value ?? '?' })}
-                {preludeStep === 'insideOutside' && t('game.questions.insideOutside')}
-                {preludeStep === 'suit' && t('game.questions.suit')}
-              </p>
+        {/* Toujours montée : une région live créée avec son texte est souvent tue. */}
+        <div role="status" aria-live="polite" aria-atomic="true" className="mt-3">
+          {lastPreludeResult && (
+            <p
+              className={cn(
+                'rounded-xl px-3 py-2 text-center font-display text-lg font-bold leading-tight',
+                lastPreludeResult.success
+                  ? 'border border-emerald-300/40 bg-emerald-500/10 text-emerald-300'
+                  : 'bg-suit-red text-cream'
+              )}
+            >
+              <span className="sr-only">{cardLabel(lastPreludeResult.card)} · </span>
+              {lastPreludeResult.success
+                ? t('game.verdict.preludeSuccess', { name: preludePlayer.name })
+                : t('game.verdict.preludeFail', { name: preludePlayer.name, count: PRELUDE_PENALTY[lastPreludeResult.step] })}
+            </p>
+          )}
+        </div>
+      </section>
 
-              <div className="flex flex-wrap gap-2">
-                {preludeStep === 'color' && (
-                  <>
-                    <button onClick={() => handlePreludeSelection('red')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-red-300 transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.red')}</button>
-                    <button onClick={() => handlePreludeSelection('black')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.black')}</button>
-                  </>
-                )}
-                {preludeStep === 'higherLower' && (
-                  <>
-                    <button onClick={() => handlePreludeSelection('higher')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.higher')}</button>
-                    <button onClick={() => handlePreludeSelection('lower')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.lower')}</button>
-                  </>
-                )}
-                {preludeStep === 'insideOutside' && (
-                  <>
-                    <button onClick={() => handlePreludeSelection('inside')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.inside')}</button>
-                    <button onClick={() => handlePreludeSelection('outside')} className="flex-1 rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold text-cream transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95">{t('game.choices.outside')}</button>
-                  </>
-                )}
-                {preludeStep === 'suit' && (
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    {([['hearts','choices.hearts','text-red-300'],['diamonds','choices.diamonds','text-red-300'],['clubs','choices.clubs','text-cream'],['spades','choices.spades','text-cream']] as const).map(([suit, labelKey, tone]) => (
-                      <button key={suit} onClick={() => handlePreludeSelection(suit)} className={`rounded-xl border border-gold/20 bg-black/20 py-3 font-semibold ${tone} transition hover:border-gold/60 hover:bg-gold/[0.15] active:scale-95`}>
-                        {t(`game.${labelKey}`)}
-                      </button>
-                    ))}
+      {/* Récapitulatif gorgées du pré-jeu */}
+      <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+        <h2 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.preludeDrinks')}</h2>
+        <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+          {players.map(p => {
+            const drinks = preludeDrinksByPlayer[p.id] || 0
+            return (
+              <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl border border-gold/20 bg-black/20 px-2.5 py-1.5">
+                <span className="truncate text-cream/80">{p.name}</span>
+                <span className={cn('shrink-0 font-bold', drinks > 0 ? 'text-red-300' : 'text-cream/70')}>{drinks}🍺</span>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+    </div>
+  ) : null
+
+  const preludeBar = (
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      {/* Question toujours montée (vide pendant le verdict) : d'un joueur à
+          l'autre, la région live existe déjà quand « Tom, rouge ou noire ? »
+          s'y écrit. Vide, sr-only la sort du flux et du gap. */}
+      <p
+        aria-live="polite"
+        className={cn(
+          'text-center font-display text-base font-bold leading-tight text-gold',
+          preludeStep === 'reveal' && 'sr-only'
+        )}
+      >
+        {preludeStep === 'reveal' ? null : preludeQuestion(preludeStep, preludePlayer?.name ?? '')}
+      </p>
+      {preludeStep === 'reveal' ? (
+        <Button variant="primary" size="gameLg" className="w-full whitespace-normal leading-tight" onClick={proceedAfterPreludeIfNeeded}>
+          {lastPreludePlayer
+            ? t('game.preludeSeeSummary')
+            : t('game.preludePassTo', { name: players[preludeCurrentPlayer + 1]?.name ?? '' })}
+        </Button>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {preludeChoices(preludeStep).map(choice => (
+            <Button
+              key={choice.value}
+              variant="quiet"
+              size={preludeStep === 'suit' ? 'game' : 'gameLg'}
+              className={cn('w-full gap-2', choice.tone)}
+              onClick={() => handlePreludeSelection(choice.value)}
+            >
+              {choice.icon}
+              {choice.label}
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  // ── Bilan du prélude ──────────────────────────────────────────────────────
+
+  const preludeSummaryContent = (
+    <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+      <h2 className="mb-3 font-display text-xl font-bold text-gold">{t('game.preludeSummaryTitle')}</h2>
+      {(() => {
+        const totals = computePreludeTotals()
+        return (
+          <ul className="space-y-2">
+            {players.map(p => {
+              const drinks = preludeDrinksByPlayer[p.id] || 0
+              const mistakes = (preludeResultsByPlayer[p.id] || []).filter(r => !r.success).map(r => t(`stepLabels.${r.step}`))
+              const totalPts = totals[p.id] || 0
+              return (
+                <li key={p.id} className="flex items-center gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
+                  <PlayerAvatar player={p} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={cn('truncate text-base font-semibold text-cream', nameClass(p))}>{p.name}</span>
+                      {drinks > 0 ? (
+                        <span className="shrink-0 text-sm font-bold text-red-300">{tc('sipsCount', { count: drinks })}</span>
+                      ) : (
+                        <Check aria-hidden className="h-5 w-5 shrink-0 text-emerald-300" />
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center justify-between gap-2">
+                      <span className="text-xs text-cream/70">{mistakes.length > 0 ? t('game.mistakes', { list: mistakes.join(', ') }) : t('game.noMistakes')}</span>
+                      <span className="shrink-0 font-display text-xs font-semibold text-gold">{t('game.points', { pts: totalPts })}</span>
+                    </div>
                   </div>
-                )}
-              </div>
+                </li>
+              )
+            })}
+          </ul>
+        )
+      })()}
+    </section>
+  )
 
-              {/* Cartes révélées */}
-              {preludeRevealed.length > 0 && (
-                <div className="mt-4 flex items-center gap-2">
-                  {preludeRevealed.map((c, idx) => (
-                    <PlayingCard key={idx} suit={GAME_SUIT[c.suit]} rank={c.value} className="flex h-20 w-14 items-center justify-center">
-                      <span className={`text-2xl font-bold ${getCardColor(c.suit)}`}>{getSuitSymbol(c.suit)}</span>
-                    </PlayingCard>
-                  ))}
-                  {preludeMessage && (
-                    <p
-                      role="status"
-                      aria-live="polite"
-                      className={cn('ml-2 text-sm font-semibold', preludeMessage.includes('✓') ? 'text-emerald-300' : 'text-red-300')}
-                    >
-                      {preludeMessage}
-                    </p>
+  const preludeSummaryBar = (
+    <Button
+      variant="primary"
+      size="gameLg"
+      className="w-full whitespace-normal leading-tight"
+      onClick={() => {
+        setClassicGamePhase('selection')
+        setCurrentSelectionPlayer(0)
+        setReadyToStart(false)
+      }}
+    >
+      {t('game.memorizationStart', { name: players[0]?.name ?? '' })}
+    </Button>
+  )
+
+  // ── Mémorisation (mode classique) ─────────────────────────────────────────
+
+  const memoPlayer = players[currentSelectionPlayer]
+  const memoCards = memoPlayer ? (selectedCardsByPlayer[memoPlayer.id] || []) : []
+  const lastMemoPlayer = currentSelectionPlayer >= players.length - 1
+
+  const memorizeContent = memoPlayer ? (
+    <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+      <div className="flex items-center gap-3">
+        <PlayerAvatar player={memoPlayer} size="lg" />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
+            {t('game.memorization')} · {currentSelectionPlayer + 1}/{players.length}
+          </p>
+          <p className={cn('truncate font-display text-xl font-bold text-cream', nameClass(memoPlayer))}>{memoPlayer.name}</p>
+        </div>
+        <span className="shrink-0 rounded-lg border border-gold/30 bg-gold/10 px-2 py-0.5 text-sm font-medium text-gold">{t('page.cardsCount', { n: cardsToSelect })}</span>
+      </div>
+      <p className="mt-3 text-sm text-cream/80">{t('game.memorizeHint')}</p>
+
+      <div className={cn('mx-auto mt-4 grid max-w-sm gap-2', cardsToSelect === 5 ? 'grid-cols-5' : 'grid-cols-4')}>
+        {memoCards.map((card, idx) => (
+          <button
+            key={`mem-${idx}`}
+            type="button"
+            aria-label={card.faceUp ? t('game.hideCardAria', { value: card.value, suit: SUIT_GLYPH[card.suit] }) : t('game.revealCardAria', { n: idx + 1 })}
+            aria-pressed={card.faceUp}
+            onClick={() => {
+              const pid = memoPlayer.id
+              setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: prev[pid].map((c, i) => i === idx ? { ...c, faceUp: !c.faceUp } : c) }))
+            }}
+            className="aspect-[2/3] w-full rounded-xl transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep"
+          >
+            {card.faceUp ? (
+              <CardFace card={card} size="mini" className="h-full w-full" />
+            ) : (
+              <PlayingCardBack className="h-full w-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Button variant="quiet" size="game" className="w-full gap-2" onClick={() => setMemorizedCardsFaceUp(memoPlayer.id, true)}>
+          <Eye aria-hidden className="h-5 w-5" />
+          {t('game.seeAll')}
+        </Button>
+        <Button variant="quiet" size="game" className="w-full gap-2" onClick={() => setMemorizedCardsFaceUp(memoPlayer.id, false)}>
+          <EyeOff aria-hidden className="h-5 w-5" />
+          {t('game.hideAll')}
+        </Button>
+      </div>
+    </section>
+  ) : null
+
+  const memorizeBar = (
+    <Button variant="primary" size="gameLg" className="w-full whitespace-normal leading-tight" onClick={finishMemorization}>
+      {lastMemoPlayer
+        ? t('game.memorizedStart')
+        : t('game.memorizedPassTo', { name: players[currentSelectionPlayer + 1]?.name ?? '' })}
+    </Button>
+  )
+
+  // ── Plateau ───────────────────────────────────────────────────────────────
+
+  // Une carte tient en largeur (la rangée du bas compte `rows` cartes, avec la
+  // place des pastilles d'étage de part et d'autre) ET en hauteur (`rows`
+  // rangées sous la Navbar, l'en-tête et la barre du verdict) : en portrait,
+  // toute la pyramide se voit sans tourner le téléphone. Entre 28 et 64 px.
+  const rows = Math.max(1, pyramid.length || pyramidHeight)
+  const boardStyle = {
+    '--pyr-card-w': `clamp(1.75rem, min(calc((100vw - 10.5rem) / ${rows}), calc((100vh - 25rem) / ${rows * 1.5})), 4rem)`,
+  } as CSSProperties
+
+  const boardContent = (
+    <div className="flex flex-col gap-3">
+      <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-2 sm:p-4">
+        <div className="flex flex-col gap-1.5 py-1" style={boardStyle}>
+          {pyramid.map((row, rowIndex) => {
+            const isSummit = rowIndex === 0
+            return (
+              <div key={rowIndex} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
+                {/* Pastille d'étage : ×N gorgées, cul sec au sommet. Le verdict de la barre le redit en toutes lettres. */}
+                <div aria-hidden className="mr-1.5 justify-self-end">
+                  {isSummit ? (
+                    <span className="block whitespace-nowrap rounded-lg bg-suit-red px-1.5 py-1 text-xs font-bold uppercase leading-none tracking-wide text-cream">
+                      {t('game.bottomsUp')}
+                    </span>
+                  ) : (
+                    <span className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-lg border border-gold/30 bg-gold/10 px-1 font-display text-xs font-bold tabular-nums text-gold">
+                      ×{floorOfRow(pyramid.length, rowIndex)}
+                    </span>
                   )}
                 </div>
-              )}
-            </div>
-
-            {/* Récapitulatif gorgées du pré-jeu */}
-            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-              <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 mb-2">{t('game.preludeDrinks')}</p>
-              <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-                {players.map(p => {
-                  const drinks = preludeDrinksByPlayer[p.id] || 0
-                  return (
-                    <li key={p.id} className="flex items-center justify-between rounded-xl border border-gold/20 bg-black/20 px-2.5 py-1.5">
-                      <span className="text-cream/70 truncate">{p.name}</span>
-                      <span className={cn('font-bold ml-2', drinks > 0 ? 'text-red-300' : 'text-cream/50')}>{drinks}🍺</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          </div>
-        )}
-
-
-        {/* Résumé du mini-jeu + pause avant mémorisation */}
-        {gameMode === 'classic' && classicGamePhase === 'preludeSummary' && (
-          <div className="mb-6">
-            <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4 md:p-5">
-              <h3 className="font-display text-lg font-bold text-cream mb-4">{t('game.preludeSummaryTitle')}</h3>
-              {(() => {
-                const totals = computePreludeTotals()
-                return (
-                  <ul className="space-y-2">
-                    {players.map(p => {
-                      const drinks = preludeDrinksByPlayer[p.id] || 0
-                      const mistakes = (preludeResultsByPlayer[p.id] || []).filter(r => !r.success).map(r => t(`stepLabels.${r.step}`))
-                      const totalPts = totals[p.id] || 0
-                      return (
-                        <li key={p.id} className="flex items-start gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
-                          <PlayerAvatar player={p} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-cream text-sm">{p.name}</span>
-                              <span className={cn('text-sm font-bold', drinks > 0 ? 'text-red-300' : 'text-emerald-300')}>{drinks > 0 ? `${drinks}🍺` : '✓'}</span>
-                            </div>
-                            <div className="flex items-center justify-between mt-0.5">
-                              <span className="text-xs text-cream/60">{mistakes.length > 0 ? t('game.mistakes', { list: mistakes.join(', ') }) : t('game.noMistakes')}</span>
-                              <span className="font-display text-xs font-semibold text-gold">{t('game.points', { pts: totalPts })}</span>
-                            </div>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )
-              })()}
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => {
-                    setClassicGamePhase('selection')
-                    setCurrentSelectionPlayer(0)
-                    setReadyToStart(false)
-                  }}
-                  className="rounded-2xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-black shadow-none hover:bg-amber-400 disabled:opacity-40"
-                >
-                  {t('game.memorizationContinue')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Message : tourner en paysage sur mobile portrait */}
-        {isMobile && !isLandscape && !gameOver && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="flex items-center justify-center mb-3 p-3 rounded-xl border border-gold/30 bg-gold/10">
-            <div className="flex items-center gap-2 text-cream/80 text-sm">
-              <span className="font-medium" dangerouslySetInnerHTML={{ __html: t.raw('game.landscapeHint') as string }} />
-            </div>
-          </div>
-        )}
-        {/* Instructions sur mobile paysage */}
-        {isMobile && isLandscape && !gameOver && (gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="flex items-center justify-center mb-2">
-            <div className="rounded-xl border border-gold/20 bg-black/20 px-3 py-1.5 text-center text-xs flex items-center gap-2">
-              <ArrowDown className="h-3 w-3 text-gold" />
-              <span className="text-cream/70">{t('game.scrollHint')}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Overlay mémorisation */}
-        {gameMode === 'classic' && classicGamePhase === 'selection' && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="w-full max-w-2xl rounded-2xl border border-gold/20 bg-felt-deep text-cream shadow-2xl">
-              <div className="p-5 md:p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const p = players[currentSelectionPlayer]
-                      return p ? (
-                        <>
-                          <PlayerAvatar player={p} size="lg" />
-                          <div>
-                            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.memorization')}</p>
-                            <p className={cn('font-display font-bold text-cream text-lg leading-tight', isSpecialPlayer(p) && getSpecialEffectClass(p))}>{p.name}</p>
-                            <p className="font-display text-xs text-gold">{currentSelectionPlayer + 1} / {players.length}</p>
-                          </div>
-                        </>
-                      ) : null
-                    })()}
-                  </div>
-                  <span className="rounded-lg border border-gold/30 bg-gold/10 px-2 py-0.5 text-sm font-medium text-gold">{t('page.cardsCount', { n: cardsToSelect })}</span>
-                </div>
-
-                <div className={cn('grid place-items-center py-2 gap-3', cardsToSelect === 5 ? 'grid-cols-5' : 'grid-cols-4')}>
-                  {(selectedCardsByPlayer[players[currentSelectionPlayer]?.id] || []).map((card, idx) => (
-                    <button
-                      key={`mem-${idx}`}
-                      aria-label={card.faceUp ? t('game.hideCardAria', { value: card.value, suit: getSuitSymbol(card.suit) }) : t('game.revealCardAria', { n: idx + 1 })}
-                      aria-pressed={card.faceUp}
-                      onClick={() => {
-                        const pid = players[currentSelectionPlayer]?.id
-                        if (!pid) return
-                        setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: prev[pid].map((c, i) => i === idx ? { ...c, faceUp: !c.faceUp } : c) }))
-                      }}
-                      className={cn(
-                        'h-24 w-16 md:h-28 md:w-20 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95'
-                      )}
-                    >
-                      {card.faceUp ? (
-                        <PlayingCard suit={GAME_SUIT[card.suit]} rank={card.value} className="flex h-full w-full items-center justify-center">
-                          <span className={`text-2xl font-bold ${getCardColor(card.suit)}`}>{getSuitSymbol(card.suit)}</span>
-                        </PlayingCard>
-                      ) : (
-                        <PlayingCardBack className="h-full w-full" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-5 flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const pid = players[currentSelectionPlayer]?.id
-                      if (!pid) return
-                      setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: true })) }))
-                    }}
-                    className="rounded-2xl border border-gold/25 bg-black/20 px-4 py-2 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
-                  >{t('game.seeAll')}</button>
-                  <button
-                    onClick={() => {
-                      const pid = players[currentSelectionPlayer]?.id
-                      if (!pid) return
-                      setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false })) }))
-                    }}
-                    className="rounded-2xl border border-gold/25 bg-black/20 px-4 py-2 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
-                  >{t('game.hideAll')}</button>
-                  <button
-                    onClick={() => {
-                      const pid = players[currentSelectionPlayer]?.id
-                      if (pid) setSelectedCardsByPlayer(prev => ({ ...prev, [pid]: (prev[pid] || []).map(c => ({ ...c, faceUp: false })) }))
-                      if (currentSelectionPlayer < players.length - 1) {
-                        setCurrentSelectionPlayer(prev => prev + 1)
-                      } else {
-                        setReadyToStart(true)
-                        startClassicGame()
-                      }
-                    }}
-                    className="ml-auto rounded-2xl bg-amber-500 px-5 py-2 text-sm font-bold text-black shadow-none hover:bg-amber-400"
-                  >
-                    {currentSelectionPlayer < players.length - 1 ? t('game.nextPlayer') : t('game.start')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-
-        {/* Conteneur principal */}
-        {(gameMode === 'fun' || (gameMode === 'classic' && (classicGamePhase === 'play' || classicGamePhase === 'selection'))) && (
-          <div className="flex flex-col gap-3">
-
-            {/* ── Plateau ──────────────────────────────────────────────── */}
-            <div className="w-full min-w-0">
-              <div
-                className={cn(
-                  'relative overflow-hidden rounded-2xl border border-gold/15 bg-felt-deep/70',
-                  isMobile ? 'mb-2 p-2' : 'mb-4 md:mb-6 p-3 md:p-5'
-                )}
-              >
-                {/* Pyramide */}
-                {(gameMode === 'fun' || classicGamePhase === 'play') && (
-                  <div
-                    className={cn('relative py-2 md:py-4', isMobile ? 'overflow-x-auto overflow-y-auto scroll-smooth' : '')}
-                    style={isMobile ? { minWidth: 'min-content', WebkitOverflowScrolling: 'touch', maxHeight: isLandscape ? '55vh' : undefined } : undefined}
-                  >
-                    {pyramid.map((row, rowIndex) => {
-                      const isTopRow = rowIndex === 0
-                      return (
-                        <div
-                          key={rowIndex}
-                          className="flex justify-center items-center shrink-0"
-                          style={{
-                            paddingLeft: `${Math.max(0, (pyramid.length - rowIndex - 1) * (isMobile ? 0.2 : 0.5))}rem`,
-                            marginBottom: isMobile ? '0.4rem' : '0.6rem'
-                          }}
-                        >
-                          {/* Badge de rangée */}
-                          <div className={cn(
-                            'mr-2 md:mr-3 flex shrink-0 items-center justify-center rounded-lg font-bold',
-                            isTopRow
-                              ? 'border border-suit-red/40 bg-suit-red/20 px-1.5 py-0.5 text-[11px] text-cream'
-                              : 'h-5 w-5 md:h-7 md:w-7 border border-gold/30 bg-gold/10 font-display text-[10px] md:text-xs text-gold'
-                          )}>
-                            {isTopRow ? '🔥' : pyramid.length - rowIndex}
-                          </div>
-
-                          {row.map((card, colIndex) => {
-                            const isNext = !!(nextCardToFlip && nextCardToFlip.row === rowIndex && nextCardToFlip.col === colIndex)
-                            const isLast = !!(lastFlippedCard && lastFlippedCard.row === rowIndex && lastFlippedCard.col === colIndex)
-
-                            return (
-                              <motion.div
-                                key={`${rowIndex}-${colIndex}`}
-                                className={cn(
-                                  cardWidth, 'mx-0.5 md:mx-1 rounded-xl flex items-center justify-center transition-all duration-200',
-                                  isNext && !card.faceUp && 'ring-2 ring-gold',
-                                  isLast && 'scale-105 ring-2 ring-gold/60'
-                                )}
-                                animate={card.faceUp ? { rotateY: 0 } : { rotateY: 180 }}
-                                transition={{ duration: 0.45, ease: 'easeOut' }}
-                                style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
-                              >
-                                {card.faceUp ? (
-                                  <PlayingCard suit={GAME_SUIT[card.suit]} rank={card.value} className="flex h-full w-full items-center justify-center">
-                                    <span className={cn(isMobile ? 'text-xl' : 'text-2xl md:text-3xl', 'font-black opacity-80', getCardColor(card.suit))}>{getSuitSymbol(card.suit)}</span>
-                                  </PlayingCard>
-                                ) : (
-                                  <div className="relative w-full h-full rounded-xl" style={{ transform: 'rotateY(180deg)' }}>
-                                    <PlayingCardBack className="h-full w-full" />
-                                    {isNext && <div className="absolute inset-0 rounded-xl bg-gold/10 animate-pulse" />}
-                                  </div>
-                                )}
-                              </motion.div>
-                            )
-                          })}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* Barre de progression */}
-                {(gameMode === 'fun' || classicGamePhase === 'play') && totalCards > 0 && (
-                  <div className="mt-3 md:mt-5 space-y-1.5">
-                    <div
-                      role="progressbar"
-                      aria-valuenow={totalCardsFlipped}
-                      aria-valuemin={0}
-                      aria-valuemax={totalCards}
-                      aria-label={t('game.progressAria', { flipped: totalCardsFlipped, total: totalCards })}
-                      className="relative w-full overflow-hidden rounded-full bg-black/30 h-2 md:h-2.5"
-                    >
-                      <div
-                        className="absolute left-0 top-0 h-full rounded-full bg-gold transition-all duration-500"
-                        style={{ width: `${(totalCardsFlipped / totalCards) * 100}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-display text-[11px] text-gold/70">{totalCardsFlipped} / {totalCards}</span>
-                      {currentCard && (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-cream/70">
-                          {t('game.lastCard')}
-                          <span className={cn('text-sm font-black', isRedSuit(currentCard.suit) ? 'text-red-300' : 'text-cream')}>{currentCard.value}{getSuitSymbol(currentCard.suit)}</span>
-                        </span>
-                      )}
-                      <span className="font-display text-[11px] text-gold/70">{Math.round((totalCardsFlipped / totalCards) * 100)}%</span>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            </div>
-
-            {/* ── Cartes des joueurs (mode classique) ───────────────────── */}
-            {gameMode === 'classic' && classicGamePhase === 'play' && (
-              <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3 md:p-4">
-                <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('game.playerCards')}</p>
-                <div className="flex flex-wrap gap-3">
-                  {players.map((player) => {
-                    const cards = selectedCardsByPlayer[player.id] || []
-                    if (cards.length === 0) return null
+                <div className="flex gap-1">
+                  {row.map((card, colIndex) => {
+                    const isNext = !!(nextCardToFlip && nextCardToFlip.row === rowIndex && nextCardToFlip.col === colIndex)
+                    const isLast = !!(lastFlippedCard && lastFlippedCard.row === rowIndex && lastFlippedCard.col === colIndex)
                     return (
-                      <div key={player.id} className="flex items-center gap-2">
-                        <span className={cn('text-xs font-semibold text-cream/80 shrink-0', isSpecialPlayer(player) && getSpecialEffectClass(player))}>
-                          {player.name}
-                        </span>
-                        <div className="flex gap-1">
-                          {cards.map((card, cardIndex) => {
-                            const isLastFlippedValue = !!(lastFlippedCard && pyramid[lastFlippedCard.row]?.[lastFlippedCard.col]?.value === card.value)
-                            return (
-                              <button
-                                key={`${player.id}-${card.suit}-${card.value}-${cardIndex}`}
-                                aria-label={card.faceUp ? t('game.hidePlayerCardAria', { value: card.value, suit: getSuitSymbol(card.suit), player: player.name }) : t('game.revealPlayerCardAria', { n: cardIndex + 1, player: player.name })}
-                                aria-pressed={card.faceUp}
-                                onClick={() => setSelectedCardsByPlayer(prev => ({ ...prev, [player.id]: prev[player.id].map((c, i) => i === cardIndex ? { ...c, faceUp: !c.faceUp } : c) }))}
-                                className={cn(
-                                  'flex h-10 w-7 items-center justify-center rounded-xl transition-all duration-200 active:scale-95',
-                                  card.faceUp && isLastFlippedValue && 'ring-2 ring-gold scale-110'
-                                )}
-                              >
-                                {card.faceUp ? (
-                                  <PlayingCard corners={false} className="flex h-full w-full items-center justify-center">
-                                    <div className={cn('text-[10px] font-black leading-none text-center', getCardColor(card.suit))}>
-                                      <div>{card.value}</div>
-                                      <div>{getSuitSymbol(card.suit)}</div>
-                                    </div>
-                                  </PlayingCard>
-                                ) : (
-                                  <PlayingCardBack className="h-full w-full" />
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
+                      <motion.div
+                        key={`${rowIndex}-${colIndex}`}
+                        className={cn(
+                          'rounded-xl',
+                          isNext && !card.faceUp && 'ring-2 ring-gold',
+                          isLast && 'ring-2 ring-gold ring-offset-2 ring-offset-felt-deep'
+                        )}
+                        animate={card.faceUp ? { rotateY: 0 } : { rotateY: 180 }}
+                        transition={{ duration: reducedMotion ? 0 : 0.45, ease: 'easeOut' }}
+                        style={{
+                          width: 'var(--pyr-card-w)',
+                          height: 'calc(var(--pyr-card-w) * 1.5)',
+                          transformStyle: 'preserve-3d',
+                          perspective: '1000px',
+                        }}
+                      >
+                        {card.faceUp ? (
+                          <CardFace card={card} size="board" className="h-full w-full" />
+                        ) : (
+                          <div className="relative h-full w-full rounded-xl" style={{ transform: 'rotateY(180deg)' }}>
+                            <PlayingCardBack className="h-full w-full" />
+                            {isNext && <div className="absolute inset-0 rounded-xl bg-gold/20 motion-safe:animate-pulse" />}
+                          </div>
+                        )}
+                      </motion.div>
                     )
                   })}
                 </div>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Barre fixe bas — bouton Suivant (toutes tailles d'écran) */}
-        {(gameMode === 'fun' || (gameMode === 'classic' && classicGamePhase === 'play')) && (
-          <div className="fixed bottom-0 inset-x-0 z-20 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
-            <div className="mx-auto max-w-2xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <div className="flex items-center gap-3">
-                {/* Carte actuelle */}
-                <div className="shrink-0 w-14">
-                  {currentCard ? (
-                    <PlayingCard suit={GAME_SUIT[currentCard.suit]} rank={currentCard.value} className="flex h-20 w-14 items-center justify-center">
-                      <span className={cn('text-2xl font-black', getCardColor(currentCard.suit))}>{getSuitSymbol(currentCard.suit)}</span>
-                    </PlayingCard>
-                  ) : (
-                    <div className="flex h-20 w-14 items-center justify-center rounded-xl border border-gold/20 bg-black/20 text-cream/50 text-xs text-center leading-tight">
-                      {t('game.noCard')}
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={flipNextCard}
-                  disabled={gameOver || !nextCardToFlip || isCardFlipping}
-                  aria-label={gameOver ? t('game.gameOverAria') : isCardFlipping ? t('game.flippingAria') : t('game.flipNextAria')}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-black py-3.5 rounded-2xl font-bold text-base shadow-none [touch-action:manipulation] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 transition-transform"
-                >
-                  {gameOver ? t('game.finished') : t('game.next')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        
-        {/* Région aria-live : annonces lecteur d'écran */}
-        <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {gameOver ? t('game.gameOverLive') : currentCard ? t('game.cardRevealedLive', { value: currentCard.value, suit: getSuitSymbol(currentCard.suit) }) : ''}
+            )
+          })}
         </div>
 
-        {/* Écran de fin mode classique */}
-        {gameOver && gameMode === 'classic' && (
-          <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto p-4 bg-black/70 backdrop-blur-sm">
-            {/* Défilable, carte centrée par my-auto (et non items-center) : avec
-                l'avis de première partie, la carte peut dépasser un petit écran,
-                et un contenu centré qui déborde perdait son haut ET ses boutons. */}
-            <div className="relative my-auto w-full max-w-md overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep p-6 text-cream shadow-2xl">
-              <div className="relative space-y-4">
-                <div className="text-center">
-                  <h3 className="font-display text-xl font-bold text-gold">{t('game.gameFinished')}</h3>
-                </div>
-                {(() => {
-                  const res = computeScores()
-                  if (!res) return null
-                  return (
-                    <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-2xl border border-gold/30 bg-gold/10 p-3 text-center">
-                          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 mb-1">{t('game.mostPoints')}</p>
-                          <p className="font-display font-bold text-cream">{res.max.player?.name}</p>
-                          <p className="font-display text-2xl font-bold text-gold">{res.max.score}</p>
-                        </div>
-                        <div className="rounded-2xl border border-suit-red/30 bg-suit-red/[0.15] p-3 text-center">
-                          <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-red-300 mb-1">{t('game.leastPoints')}</p>
-                          <p className="font-display font-bold text-cream">{res.min.player?.name}</p>
-                          <p className="font-display text-2xl font-bold text-red-300">{res.min.score}</p>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-gold/[0.15] bg-black/20 p-3">
-                        <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75 mb-2">{t('game.fullScores')}</p>
-                        <ul className="grid grid-cols-2 gap-1.5">
-                          {players.map(p => {
-                            const score = res.scores[p.id] ?? 0
-                            return (
-                              <li key={p.id} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-black/20 px-2.5 py-1.5">
-                                <PlayerAvatar player={p} size="sm" />
-                                <span className="text-xs text-cream/70 truncate flex-1">{p.name}</span>
-                                <span className="font-display text-xs font-bold text-gold">{score}</span>
-                              </li>
-                            )
-                          })}
-                        </ul>
-                      </div>
-                    </>
-                  )
-                })()}
-                <FirstGameFeedbackCard mode="local" gameId="pyramide" />
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={resetGame}
-                    className="flex-1 rounded-2xl bg-amber-500 py-3 text-sm font-bold text-black shadow-none hover:bg-amber-400"
-                  >
-                    {t('game.replay')}
-                  </button>
-                  <button
-                    onClick={onGameEnd}
-                    className="flex-1 rounded-2xl border border-gold/25 bg-black/20 py-3 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream"
-                  >
-                    {t('game.menu')}
-                  </button>
-                </div>
-              </div>
+        {totalCards > 0 && (
+          <div className="mt-3 space-y-1.5 px-1">
+            <div
+              role="progressbar"
+              aria-valuenow={totalCardsFlipped}
+              aria-valuemin={0}
+              aria-valuemax={totalCards}
+              aria-label={t('game.progressAria', { flipped: totalCardsFlipped, total: totalCards })}
+              className="relative h-2 w-full overflow-hidden rounded-full bg-black/30"
+            >
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-gold transition-[width] duration-500"
+                style={{ width: `${(totalCardsFlipped / totalCards) * 100}%` }}
+              />
             </div>
+            <p className="text-center font-display text-xs text-gold">{t('game.progress', { flipped: totalCardsFlipped, total: totalCards })}</p>
           </div>
         )}
-      </div>
+      </section>
+
+      {/* ── Cartes des joueurs (mode classique) ───────────────────── */}
+      {gameMode === 'classic' && (
+        <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3 sm:p-4">
+          <h2 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.playerCards')}</h2>
+          <div className="flex flex-wrap gap-x-5 gap-y-3">
+            {players.map((player) => {
+              const cards = selectedCardsByPlayer[player.id] || []
+              if (cards.length === 0) return null
+              return (
+                <div key={player.id} className="flex items-center gap-2">
+                  <span className={cn('shrink-0 text-sm font-semibold text-cream/80', nameClass(player))}>
+                    {player.name}
+                  </span>
+                  <div className="flex gap-1.5">
+                    {cards.map((card, cardIndex) => {
+                      const isLastFlippedValue = !!(lastFlippedCard && pyramid[lastFlippedCard.row]?.[lastFlippedCard.col]?.value === card.value)
+                      return (
+                        <button
+                          key={`${player.id}-${card.suit}-${card.value}-${cardIndex}`}
+                          type="button"
+                          aria-label={card.faceUp ? t('game.hidePlayerCardAria', { value: card.value, suit: SUIT_GLYPH[card.suit], player: player.name }) : t('game.revealPlayerCardAria', { n: cardIndex + 1, player: player.name })}
+                          aria-pressed={card.faceUp}
+                          onClick={() => setSelectedCardsByPlayer(prev => ({ ...prev, [player.id]: prev[player.id].map((c, i) => i === cardIndex ? { ...c, faceUp: !c.faceUp } : c) }))}
+                          className={cn(
+                            'touch-target h-14 w-10 rounded-lg transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+                            card.faceUp && isLastFlippedValue && 'ring-2 ring-gold ring-offset-2 ring-offset-felt-deep'
+                          )}
+                        >
+                          {card.faceUp ? (
+                            <CardFace card={card} size="chip" className="h-full w-full rounded-lg" />
+                          ) : (
+                            <PlayingCardBack className="h-full w-full rounded-lg" />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </div>
   )
-} 
+
+  const boardBar = (
+    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <div role="status" aria-live="polite" aria-atomic="true" className="flex min-w-0 flex-1 items-center gap-3">
+        <div aria-hidden className="shrink-0">
+          {currentCard ? (
+            <CardFace card={currentCard} size="mini" className="h-16 w-11 sm:h-14 sm:w-10" />
+          ) : (
+            <PlayingCardBack className="h-16 w-11 sm:h-14 sm:w-10" />
+          )}
+        </div>
+        <motion.div
+          key={totalCardsFlipped}
+          className="min-w-0 flex-1"
+          initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {renderVerdict()}
+        </motion.div>
+      </div>
+      <Button
+        variant="primary"
+        size="gameLg"
+        className="w-full whitespace-normal leading-tight [touch-action:manipulation] sm:w-auto sm:min-w-[15rem]"
+        // Verrou court (la carte tourne) sans griser le bouton à chaque carte.
+        aria-disabled={isCardFlipping || undefined}
+        disabled={!nextCardToFlip}
+        onClick={flipNextCard}
+      >
+        {nextFlipper ? t('game.flipBy', { name: nextFlipper.name }) : t('game.flip')}
+      </Button>
+    </div>
+  )
+
+  // ── Fin de partie (les deux modes) ────────────────────────────────────────
+
+  const funRanking = gameMode === 'fun'
+    ? (() => {
+        const tally = computeFunTally(pyramid.length, totalCardsFlipped, players.length)
+        return players
+          .map((player, i) => ({ player, ...(tally[i] ?? { sips: 0, bottomsUp: 0 }) }))
+          .sort((a, b) => b.bottomsUp - a.bottomsUp || b.sips - a.sips)
+      })()
+    : []
+
+  const endContent = (
+    <div className="flex flex-col gap-4">
+      <header className="text-center">
+        <h2 className="font-display text-2xl font-bold text-gold">{t('game.gameFinished')}</h2>
+        {totalCards > 0 && <p className="mt-1 text-sm text-cream/80">{t('game.endRecap', { cards: totalCards })}</p>}
+      </header>
+
+      {currentCard && lastFlippedCard && (
+        <section className="flex items-center gap-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+          <div aria-hidden className="shrink-0">
+            <CardFace card={currentCard} size="large" className="h-28 w-20" />
+          </div>
+          <div className="min-w-0 flex-1">{renderVerdict(true)}</div>
+        </section>
+      )}
+
+      {gameMode === 'fun' ? (
+        <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+          <h3 className="mb-3 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.tallyTitle')}</h3>
+          <ul className="space-y-2">
+            {funRanking.map(({ player, sips, bottomsUp }) => (
+              <li key={player.id} className="flex items-center gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 py-2">
+                <PlayerAvatar player={player} />
+                <span className={cn('min-w-0 flex-1 truncate text-base font-semibold text-cream', nameClass(player))}>{player.name}</span>
+                {bottomsUp > 0 && (
+                  <span className="shrink-0 rounded-md bg-suit-red px-1.5 py-0.5 text-xs font-bold uppercase text-cream">{t('game.bottomsUp')}</span>
+                )}
+                <span className="shrink-0 font-display text-base font-bold text-gold">{tc('sipsCount', { count: sips })}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        (() => {
+          const res = computeScores()
+          if (!res) return null
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-gold/30 bg-gold/10 p-3 text-center">
+                  <p className="mb-1 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.mostPoints')}</p>
+                  <p className="truncate font-display text-base font-bold text-cream">{res.max.player?.name}</p>
+                  <p className="font-display text-2xl font-bold text-gold">{res.max.score}</p>
+                </div>
+                <div className="rounded-2xl border border-suit-red/40 bg-suit-red/[0.15] p-3 text-center">
+                  <p className="mb-1 font-display text-xs font-semibold uppercase tracking-[0.18em] text-red-300">{t('game.leastPoints')}</p>
+                  <p className="truncate font-display text-base font-bold text-cream">{res.min.player?.name}</p>
+                  <p className="font-display text-2xl font-bold text-red-300">{res.min.score}</p>
+                </div>
+              </div>
+              <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                <h3 className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('game.fullScores')}</h3>
+                <ul className="grid grid-cols-2 gap-1.5">
+                  {players.map(p => (
+                    <li key={p.id} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-black/20 px-2.5 py-1.5">
+                      <PlayerAvatar player={p} size="sm" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-cream/80">{p.name}</span>
+                      <span className="shrink-0 font-display text-sm font-bold text-gold">{res.scores[p.id] ?? 0}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </>
+          )
+        })()
+      )}
+
+      <EndActionDock
+        voiceGutter={false}
+        feedback={<FirstGameFeedbackCard variant="banner" mode="local" gameId="pyramide" />}
+      >
+        <Button variant="primary" size="gameLg" className="w-full gap-2" onClick={resetGame}>
+          <RotateCcw aria-hidden className="h-5 w-5" />
+          {t('game.replay')}
+        </Button>
+        <Button variant="quiet" size="game" className="w-full" onClick={onGameEnd}>
+          {t('game.menu')}
+        </Button>
+      </EndActionDock>
+    </div>
+  )
+
+  // ── Assemblage ────────────────────────────────────────────────────────────
+
+  const content =
+    screen === 'end' ? endContent
+      : screen === 'prelude' ? preludeContent
+        : screen === 'preludeSummary' ? preludeSummaryContent
+          : screen === 'memorize' ? memorizeContent
+            : boardContent
+
+  // Sur l'écran de fin, le dock remplace la barre : deux barres fixes se superposeraient.
+  const actionBar =
+    screen === 'end' ? undefined
+      : screen === 'prelude' ? preludeBar
+        : screen === 'preludeSummary' ? preludeSummaryBar
+          : screen === 'memorize' ? memorizeBar
+            : boardBar
+
+  const contentPad =
+    screen === 'board' ? PAD_BOARD
+      : screen === 'prelude' && preludeStep === 'suit' ? PAD_PRELUDE_FOUR
+        : screen === 'prelude' && preludeStep !== 'reveal' ? PAD_PRELUDE_TWO
+          : undefined
+
+  return (
+    <>
+      {confirmDialog}
+      <PassPhoneOverlay
+        playerKey={passKey}
+        name={passPlayer?.name ?? ''}
+        avatar={passPlayer ? <PlayerIcon player={passPlayer} size="lg" className="h-20 w-20 text-6xl" /> : undefined}
+        enabled={!gameOver}
+      />
+      <GameShell
+        title={t('title')}
+        headerSubtitle={t(`page.modes.${gameMode}.label`)}
+        onBack={onGameEnd}
+        maxWidth={720}
+        contentClassName={contentPad}
+        headerRight={
+          screen === 'end' ? undefined : (
+            <Button
+              variant="ghost"
+              size="gameIcon"
+              aria-label={tc('confirmRestart.confirm')}
+              onClick={() => void askRestart()}
+              className="border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold"
+            >
+              <RotateCcw aria-hidden className="h-5 w-5" />
+            </Button>
+          )
+        }
+        actionBar={actionBar}
+      >
+        {content}
+      </GameShell>
+    </>
+  )
+}

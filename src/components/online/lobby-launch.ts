@@ -88,3 +88,67 @@ export function forceLaunchDecision({
   const offered = late > 0
   return { offered, allowed: offered && missing === 0, staying, late, missing }
 }
+
+/** Un siège humain vu par l'état de lancement. */
+export type LaunchSeat = {
+  isReady: boolean
+  /** L'hôte n'est jamais attendu : « Lancer la partie » le met prêt avant de lancer. */
+  isHost: boolean
+}
+
+export type LobbyLaunchInput<S extends LaunchSeat> = {
+  /** Sièges humains, dans l'ordre de la table (bots exclus). */
+  members: S[]
+  /** Bots réglés par l'hôte — 0 si le jeu ne les accepte pas. */
+  botCount: number
+  /** Minimum du jeu, humains + bots. */
+  minPlayers: number
+  /** Maximum du jeu (Toucher-Coulé : la capacité du format choisi). */
+  maxPlayers?: number
+}
+
+export type LobbyLaunchStatus<S extends LaunchSeat> = {
+  /** Sièges prêts, l'hôte compté prêt : c'est lui qui lance. */
+  ready: number
+  total: number
+  /** Invités pas encore prêts, dans l'ordre de la table — jamais l'hôte. */
+  late: S[]
+  /** Joueurs (humains + bots) qu'il manque pour atteindre le minimum du jeu. */
+  missingPlayers: number
+  /** Plus de monde que le jeu n'en prend. */
+  tooMany: boolean
+  /** Tout est réuni : l'hôte lance d'un seul geste (prêt puis lancement). */
+  launchable: boolean
+}
+
+/**
+ * Où en est la table avant le lancement — ce que l'hôte et les invités
+ * lisent dans la barre du bas et sous la table.
+ *
+ * Le serveur exige TOUS les membres prêts (`canLaunch`), hôte compris : quand
+ * ses trois amis étaient prêts, l'hôte lisait « 3/4 prêts » et cherchait le
+ * retardataire… qui était lui-même. Ici l'hôte compte prêt et n'est jamais
+ * attendu : son seul bouton enchaîne « prêt » puis « lancer », comme le
+ * lancement avec les bots. Mêmes bornes que computeReadyState (online-room.ts) :
+ * minimum sur humains + bots, maximum sur les humains comme sur le total.
+ */
+export function lobbyLaunchStatus<S extends LaunchSeat>({
+  members,
+  botCount,
+  minPlayers,
+  maxPlayers,
+}: LobbyLaunchInput<S>): LobbyLaunchStatus<S> {
+  const bots = Math.max(0, botCount)
+  const late = members.filter((m) => !m.isReady && !m.isHost)
+  const total = members.length
+  const missingPlayers = Math.max(0, minPlayers - total - bots)
+  const tooMany = maxPlayers !== undefined && (total > maxPlayers || total + bots > maxPlayers)
+  return {
+    ready: total - late.length,
+    total,
+    late,
+    missingPlayers,
+    tooMany,
+    launchable: total > 0 && late.length === 0 && missingPlayers === 0 && !tooMany,
+  }
+}

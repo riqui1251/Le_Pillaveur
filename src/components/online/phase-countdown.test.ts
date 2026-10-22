@@ -1,5 +1,9 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { COUNTDOWN_MIN_TICK_MS, countdownSnapshot, nextSecondTickMs } from './phase-countdown'
+import { COUNTDOWN_MIN_TICK_MS, countdownSnapshot, formatCountdown, nextSecondTickMs } from './phase-countdown'
+import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseHeader } from './PhaseHeader'
 
 /**
  * Les secondes affichées doivent être EXACTEMENT celles que les composants
@@ -60,5 +64,109 @@ describe('nextSecondTickMs', () => {
   it('garde un plancher pour ne pas tourner en boucle serrée', () => {
     expect(nextSecondTickMs(10_000, 9_999)).toBe(COUNTDOWN_MIN_TICK_MS)
     expect(nextSecondTickMs(10_000, 12_995)).toBe(COUNTDOWN_MIN_TICK_MS)
+  })
+})
+
+describe('formatCountdown', () => {
+  it('écrit minutes:secondes, avec le « 0: » sous la minute', () => {
+    expect(formatCountdown(23)).toBe('0:23')
+    expect(formatCountdown(5)).toBe('0:05')
+    expect(formatCountdown(60)).toBe('1:00')
+    expect(formatCountdown(125)).toBe('2:05')
+  })
+
+  it('ne descend jamais sous 0:00', () => {
+    expect(formatCountdown(0)).toBe('0:00')
+    expect(formatCountdown(-3)).toBe('0:00')
+  })
+})
+
+describe('PhaseCountdown — barre chiffrée', () => {
+  it('garde la barre nue des appels existants', () => {
+    const html = renderToStaticMarkup(
+      createElement(PhaseCountdown, { variant: 'bar', endsAt: Date.now() + 20_000, total: 40_000, colorClassName: 'bg-gold' })
+    )
+    expect(html).toContain('class="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"')
+    expect(html).not.toContain('role="timer"')
+  })
+
+  it('affiche les secondes en m:ss à droite d’une piste plus haute', () => {
+    const html = renderToStaticMarkup(
+      createElement(PhaseCountdown, {
+        variant: 'bar',
+        showDigits: true,
+        endsAt: Date.now() + 23_500,
+        total: 60_000,
+        dangerMs: 10_000,
+        colorClassName: 'bg-gold',
+      })
+    )
+    expect(html).toContain('h-2.5')
+    expect(html).toMatch(/role="timer"[^>]*>0:24</)
+    expect(html).toContain('text-cream')
+    expect(html).toContain('bg-gold')
+  })
+
+  it('passe le chiffre en rouge pulsé et la barre en red-400 par défaut sous le seuil', () => {
+    const html = renderToStaticMarkup(
+      createElement(PhaseCountdown, {
+        variant: 'bar',
+        showDigits: true,
+        endsAt: Date.now() + 4_500,
+        total: 60_000,
+        dangerMs: 10_000,
+        colorClassName: 'bg-gold',
+      })
+    )
+    expect(html).toContain('text-red-300 motion-safe:animate-pulse')
+    expect(html).toContain('bg-red-400')
+    expect(html).not.toContain('bg-gold')
+  })
+
+  it('ne pulse plus une fois l’échéance passée, en attendant le serveur', () => {
+    const html = renderToStaticMarkup(
+      createElement(PhaseCountdown, {
+        variant: 'bar',
+        showDigits: true,
+        endsAt: Date.now() - 1_000,
+        total: 60_000,
+        dangerMs: 10_000,
+      })
+    )
+    expect(html).toMatch(/role="timer"[^>]*>0:00</)
+    expect(html).toContain('text-red-300')
+    expect(html).not.toContain('animate-pulse')
+  })
+
+  it('n’écrit pas de « 0:00 » sans échéance', () => {
+    const html = renderToStaticMarkup(
+      createElement(PhaseCountdown, { variant: 'bar', showDigits: true, endsAt: null, total: 60_000, dangerMs: 10_000 })
+    )
+    expect(html).not.toContain('role="timer"')
+    expect(html).not.toContain('0:00')
+  })
+})
+
+describe('PhaseHeader', () => {
+  it('pose manche, phase en titre d’or, chrono chiffré et ligne d’état', () => {
+    const html = renderToStaticMarkup(
+      createElement(PhaseHeader, {
+        round: 'Nuit 1',
+        phase: 'Les loups choisissent',
+        endsAt: Date.now() + 30_000,
+        total: 60_000,
+        status: 'En attente de 3 joueurs',
+      })
+    )
+    expect(html).toContain('Nuit 1')
+    expect(html).toMatch(/font-display text-base[^"]*text-gold[^>]*>Les loups choisissent/)
+    expect(html).toContain('line-clamp-2')
+    expect(html).toContain('role="timer"')
+    expect(html).toContain('En attente de 3 joueurs')
+  })
+
+  it('n’affiche pas de chrono sans échéance', () => {
+    const html = renderToStaticMarkup(createElement(PhaseHeader, { phase: 'Révélation', endsAt: null }))
+    expect(html).not.toContain('role="timer"')
   })
 })

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
-import { Check, Loader2, Send } from 'lucide-react'
+import { Check, Loader2, Send, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import {
@@ -15,6 +15,7 @@ import {
   type FirstGamePlayMode,
 } from '@/lib/first-game-device'
 import { reportLocalGame } from '@/lib/local-game-beacon'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 /**
@@ -38,6 +39,11 @@ import { cn } from '@/lib/utils'
  * au-dessus — insérée au-dessus au moment où le pouce vise « Rejouer », elle
  * décalait toute la barre et le toucher tombait sur un visage (note choisie
  * par erreur) ou sur « Non merci » (demande close pour de bon).
+ *
+ * Variante `banner` : le bandeau compact du dock de fin (EndActionDock),
+ * juste AU-DESSUS de « Rejouer ». Le dock est ancré par le bas et grandit
+ * vers le haut : un bandeau tardif n'y déplace pas « Rejouer », `lateSlot`
+ * n'a donc plus d'objet et il est ignoré.
  */
 
 /** Visages de 1 à 5 : se lisent sans texte, à toutes les tables (quatre langues). */
@@ -71,9 +77,15 @@ export type FirstGameFeedbackCardProps = {
   shownAt?: number
   /**
    * Emplacement SOUS la barre d'actions, où se pose une carte tardive. Absent
-   * (barre fixe du Quiz : la carte n'y décale rien), elle reste en place.
+   * (barre fixe : la carte n'y décale rien), elle reste en place. Ignoré en
+   * variante `banner`.
    */
   lateSlot?: HTMLElement | null
+  /**
+   * 'card' (défaut) : carte dans le flux de l'écran de fin ; 'banner' :
+   * bandeau compact à passer en `feedback` d'EndActionDock.
+   */
+  variant?: 'card' | 'banner'
   /** Ajustements propres à l'écran hôte (marges, largeur), en place seulement. */
   className?: string
 }
@@ -219,11 +231,13 @@ function FirstGameFeedbackPrompt({
   className,
   shownAt,
   lateSlot,
+  variant = 'card',
   ready,
   serverEligible,
 }: FirstGameFeedbackCardProps & { ready: boolean; serverEligible?: boolean }) {
   const t = useTranslations('feedback.firstGame')
   const titleId = useId()
+  const subtitleId = useId()
   const commentId = useId()
 
   const [visible, setVisible] = useState(false)
@@ -246,7 +260,8 @@ function FirstGameFeedbackPrompt({
   // Seul un « non » du SERVEUR en ligne reste révisable : la lecture a pu
   // partir avant la transaction qui crédite la partie (et pose first_game) —
   // la relecture de la bannière d'XP (1,5 s plus tard) peut alors encore
-  // dire « oui ». Ce « oui » tardif se pose sous les actions (voir l'en-tête).
+  // dire « oui ». Ce « oui » tardif se pose sous les actions, ou dans le dock
+  // en bandeau sans les déplacer (voir l'en-tête).
   useEffect(() => {
     if (!ready || decidedRef.current) return
     if (mode === 'online' && !serverEligible) return
@@ -319,13 +334,20 @@ function FirstGameFeedbackPrompt({
 
   if (!visible) return null
 
+  const banner = variant === 'banner'
   // Sous les actions, la carte prend la mise en page de son emplacement ; en
-  // place, celle que lui donne l'écran hôte.
-  const portaled = late && Boolean(lateSlot)
-  const panel = cn(
-    'w-full rounded-2xl border border-gold/30 bg-felt-deep/90 p-3 text-center text-cream shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)] motion-safe:animate-in motion-safe:fade-in',
-    !portaled && className
-  )
+  // place, celle que lui donne l'écran hôte. Le bandeau, lui, reste toujours
+  // dans le dock (cf. l'en-tête).
+  const portaled = !banner && late && Boolean(lateSlot)
+  const panel = banner
+    ? cn(
+        'w-full rounded-2xl border border-gold/40 bg-gold/10 px-3 py-2 text-cream motion-safe:animate-in motion-safe:fade-in',
+        className
+      )
+    : cn(
+        'w-full rounded-2xl border border-gold/30 bg-felt-deep/90 p-3 text-center text-cream shadow-[0_10px_30px_-18px_rgba(0,0,0,0.9)] motion-safe:animate-in motion-safe:fade-in',
+        !portaled && className
+      )
   const place = (node: ReactElement) => (portaled && lateSlot ? createPortal(node, lateSlot) : node)
 
   if (finished) {
@@ -335,7 +357,10 @@ function FirstGameFeedbackPrompt({
           ref={doneRef}
           tabIndex={-1}
           role="status"
-          className="flex items-center justify-center gap-2 text-sm font-semibold text-cream outline-none"
+          className={cn(
+            'flex items-center justify-center gap-2 text-sm font-semibold text-cream outline-none',
+            banner && 'min-h-[2rem]'
+          )}
         >
           {status !== 'dismissed' && <Check aria-hidden className="h-4 w-4 shrink-0 text-gold" />}
           {status === 'sent' ? t('thanks') : status === 'already' ? t('already') : t('dismissed')}
@@ -346,6 +371,129 @@ function FirstGameFeedbackPrompt({
 
   const sending = status === 'sending'
 
+  const faces = (
+    <div
+      role="radiogroup"
+      aria-labelledby={titleId}
+      className={cn('flex justify-center gap-1.5', banner ? 'mt-1' : 'mt-2.5')}
+    >
+      {RATING_FACES.map((face, index) => {
+        const value = index + 1
+        const checked = rating === value
+        return (
+          <button
+            key={value}
+            ref={(el) => {
+              radioRefs.current[index] = el
+            }}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            aria-label={t('rate', { rating: value })}
+            // Une seule entrée au clavier : la note choisie, sinon la première.
+            tabIndex={checked || (rating === null && index === 0) ? 0 : -1}
+            disabled={sending}
+            onClick={() => setRating(value)}
+            onKeyDown={(event) => onRadioKeyDown(event, index)}
+            className={cn(
+              'flex h-11 w-11 items-center justify-center rounded-xl border text-2xl leading-none transition [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 motion-reduce:transition-none',
+              checked
+                ? 'border-gold/60 bg-gold/20 motion-safe:scale-110'
+                : cn('border-cream/20 bg-felt-deep/60 hover:bg-cream/10', rating !== null && 'opacity-60')
+            )}
+          >
+            <span aria-hidden>{face}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+
+  const errorLine = error ? (
+    <p role="alert" className="mt-2 rounded-xl bg-suit-red/20 px-3 py-1.5 text-xs text-red-100">
+      {error === 'tooMany' ? t('tooMany') : t('error')}
+    </p>
+  ) : null
+
+  const sendLabel = (
+    <>
+      {sending ? (
+        <Loader2 aria-hidden className="h-4 w-4 shrink-0 animate-spin" />
+      ) : (
+        <Send aria-hidden className="h-4 w-4 shrink-0" />
+      )}
+      {sending ? t('sending') : t('send')}
+    </>
+  )
+
+  if (banner) {
+    // Bandeau du dock : une ligne de titre et sa croix, les visages, puis —
+    // la note choisie — un champ court et « Envoyer ». Le sous-titre reste
+    // lu par les lecteurs d'écran, sans coûter une ligne au-dessus de « Rejouer ».
+    return (
+      <section aria-labelledby={titleId} aria-describedby={subtitleId} className={panel}>
+        <div className="flex items-center gap-2">
+          <h3
+            id={titleId}
+            className="min-w-0 flex-1 font-display text-sm font-bold leading-tight text-gold"
+          >
+            {/* Titre court : le titre de la carte passait sur deux lignes à
+                375 px (italien, français), au-dessus de « Rejouer ». */}
+            {t('bannerTitle')}
+          </h3>
+          <button
+            type="button"
+            onClick={dismiss}
+            disabled={sending}
+            aria-label={t('dismiss')}
+            // Marges négatives : la cible garde ses 44 px sans grossir la ligne.
+            className="-my-1.5 -mr-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-cream/70 transition-colors [touch-action:manipulation] hover:bg-cream/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:opacity-40"
+          >
+            <X aria-hidden className="h-5 w-5" />
+          </button>
+        </div>
+        <p id={subtitleId} className="sr-only">
+          {t('subtitle')}
+        </p>
+
+        {faces}
+
+        {rating !== null && (
+          <div className="mt-2 flex items-end gap-2">
+            <label htmlFor={commentId} className="sr-only">
+              {t('commentLabel')}
+            </label>
+            <textarea
+              id={commentId}
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              placeholder={t('commentLabel')}
+              maxLength={MAX_COMMENT}
+              rows={1}
+              disabled={sending}
+              // Une ligne, deux au plus (le champ suit son texte là où le
+              // navigateur le sait). 16 px : iOS zoome sur tout champ plus petit.
+              className="min-h-[44px] max-h-[4.75rem] min-w-0 flex-1 resize-none rounded-xl border border-cream/20 bg-felt-deep/70 px-3 py-2.5 text-base leading-snug text-cream [field-sizing:content] placeholder:text-cream/60 focus:border-gold/60 focus:outline-none focus:ring-2 focus:ring-gold/60"
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="game"
+              onClick={() => void send()}
+              disabled={sending}
+              aria-busy={sending || undefined}
+              className="shrink-0 gap-1.5 [touch-action:manipulation]"
+            >
+              {sendLabel}
+            </Button>
+          </div>
+        )}
+
+        {errorLine}
+      </section>
+    )
+  }
+
   return place(
     <section aria-labelledby={titleId} className={panel}>
       <h3 id={titleId} className="font-display text-base font-bold leading-tight text-gold">
@@ -353,37 +501,7 @@ function FirstGameFeedbackPrompt({
       </h3>
       <p className="mt-0.5 text-xs leading-snug text-cream/70">{t('subtitle')}</p>
 
-      <div role="radiogroup" aria-labelledby={titleId} className="mt-2.5 flex justify-center gap-1.5">
-        {RATING_FACES.map((face, index) => {
-          const value = index + 1
-          const checked = rating === value
-          return (
-            <button
-              key={value}
-              ref={(el) => {
-                radioRefs.current[index] = el
-              }}
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              aria-label={t('rate', { rating: value })}
-              // Une seule entrée au clavier : la note choisie, sinon la première.
-              tabIndex={checked || (rating === null && index === 0) ? 0 : -1}
-              disabled={sending}
-              onClick={() => setRating(value)}
-              onKeyDown={(event) => onRadioKeyDown(event, index)}
-              className={cn(
-                'flex h-11 w-11 items-center justify-center rounded-xl border text-2xl leading-none transition [touch-action:manipulation] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 motion-reduce:transition-none',
-                checked
-                  ? 'border-gold/60 bg-gold/20 motion-safe:scale-110'
-                  : cn('border-white/10 bg-white/5 hover:bg-white/10', rating !== null && 'opacity-60')
-              )}
-            >
-              <span aria-hidden>{face}</span>
-            </button>
-          )
-        })}
-      </div>
+      {faces}
 
       {rating !== null && (
         <div className="mt-2.5 text-left">
@@ -399,16 +517,12 @@ function FirstGameFeedbackPrompt({
             rows={2}
             disabled={sending}
             // 16 px sous sm : iOS zoome sur tout champ plus petit au focus.
-            className="w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-base text-cream placeholder:text-cream/40 focus:outline-none focus:ring-1 focus:ring-gold/50 sm:text-sm"
+            className="w-full resize-none rounded-xl border border-cream/20 bg-felt-deep/70 px-3 py-2 text-base text-cream placeholder:text-cream/60 focus:outline-none focus:ring-1 focus:ring-gold/50 sm:text-sm"
           />
         </div>
       )}
 
-      {error && (
-        <p role="alert" className="mt-2 rounded-xl bg-suit-red/20 px-3 py-1.5 text-xs text-red-100">
-          {error === 'tooMany' ? t('tooMany') : t('error')}
-        </p>
-      )}
+      {errorLine}
 
       <div className="mt-2 flex items-center justify-center gap-2">
         {rating !== null && (
@@ -419,19 +533,14 @@ function FirstGameFeedbackPrompt({
             aria-busy={sending || undefined}
             className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl bg-gold/90 px-5 text-sm font-bold text-primary-foreground transition-colors [touch-action:manipulation] hover:bg-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream/60 disabled:opacity-60"
           >
-            {sending ? (
-              <Loader2 aria-hidden className="h-4 w-4 shrink-0 animate-spin" />
-            ) : (
-              <Send aria-hidden className="h-4 w-4 shrink-0" />
-            )}
-            {sending ? t('sending') : t('send')}
+            {sendLabel}
           </button>
         )}
         <button
           type="button"
           onClick={dismiss}
           disabled={sending}
-          className="min-h-[44px] rounded-xl px-3 text-xs font-medium text-cream/60 underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:opacity-60"
+          className="min-h-[44px] rounded-xl px-3 text-xs font-medium text-cream/70 underline-offset-2 transition-colors [touch-action:manipulation] hover:text-cream hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:opacity-60"
         >
           {t('dismiss')}
         </button>

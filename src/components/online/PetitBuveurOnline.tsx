@@ -1,14 +1,22 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Dice6, ArrowLeft, Beer, Leaf, Trophy, Sparkles, Shuffle, User, HelpCircle, History, X, Volume2, VolumeX, Coins, Gavel, Clover } from 'lucide-react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { Dice6, Beer, Leaf, Trophy, Sparkles, Shuffle, User, HelpCircle, History, Volume2, VolumeX, Coins, Gavel, Clover, Check, Target, MoreHorizontal, LogOut, ChevronRight, Flag } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { EndConfetti } from './EndConfetti'
 import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseHeader } from './PhaseHeader'
+import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
+import { MedalDot } from './MedalDot'
+import { TurnBanner } from '@/components/game/TurnBanner'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
@@ -25,7 +33,7 @@ import {
   withAmbiance,
 } from '@/app/[locale]/games/petit-buveur/ambiance'
 import type { PetitBuveurT } from '@/app/[locale]/games/petit-buveur/case-config'
-import { ChoiceSheet, PRIMARY_CHOICE, SECONDARY_CHOICE } from './petit-buveur/ChoiceSheet'
+import { ChoiceSheet, PRIMARY_CHOICE, SECONDARY_CHOICE, DANGER_CHOICE, focusOnMount } from './petit-buveur/ChoiceSheet'
 import { useBoardSequence } from './petit-buveur/useBoardSequence'
 import {
   choiceOf,
@@ -41,6 +49,10 @@ import {
 } from './petit-buveur/view-helpers'
 import { useGameSounds } from '@/hooks/useGameSounds'
 import { CaseRevealCard } from '@/components/petit-buveur/CaseRevealCard'
+import { CaseToken } from '@/components/petit-buveur/CaseToken'
+import { PbPawn, pbPawnColumns, pbPawnSize } from '@/components/petit-buveur/PbPawn'
+import { PbDifficultyIcon, PbEffectIcon, PB_EFFECT_STYLE, type PbEffectKind } from '@/components/petit-buveur/effects'
+import { PbDialogClose, allowEscapeClose } from '@/components/petit-buveur/PbDialogClose'
 import { getCaseMeta } from '@/lib/petit-buveur/case-families'
 import { InteractionSpectacle } from '@/components/petit-buveur/InteractionSpectacle'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
@@ -61,7 +73,7 @@ import '@/styles/petit-buveur-board.css'
  */
 
 const BOARD_SIZE = 30
-const DIFFICULTY_EMOJI: Record<string, string> = { facile: '🌱', normal: '🌟', difficile: '🔥', extreme: '💀' }
+const DIFFICULTIES = ['facile', 'normal', 'difficile', 'extreme']
 
 /**
  * L'avertissement AFK (« joue ! ») s'affiche pendant les 60 dernières secondes
@@ -97,14 +109,17 @@ function iconFor(index: number): string {
 
 type EffectChip = {
   id: string
-  icon: string
+  kind: PbEffectKind
   title: string
   desc: string
   remaining: number
+  playerId: string
   playerName: string
   linkedName?: string
-  accent: string
 }
+
+/** Boutons d'icône de l'en-tête et des fenêtres : 44 px, filet or sur le feutre. */
+const ICON_BUTTON = 'border border-gold/20 bg-black/20 text-cream/80 hover:bg-black/30 hover:text-gold'
 
 export function PetitBuveurOnline() {
   const { user } = useAuth()
@@ -122,11 +137,15 @@ export function PetitBuveurOnline() {
   }, [tPB])
   const tGame = (key: string, values?: Record<string, string | number>) => tPB(`game.${key}`, values)
   const tDiff = useTranslations('games.petit-buveur.difficultyLabels')
+  const tCommon = useTranslations('common')
   const DrinkGlyph = ambiance === 'soft' ? Leaf : Beer
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [rolling, setRolling] = useState(false)
   const [showLegend, setShowLegend] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [confirmDialog, confirm] = useConfirmAction()
+  const reducedMotion = useReducedMotion()
   const [diceOverlay, setDiceOverlay] = useState<DiceOverlayState | null>(null)
   const diceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** « Toucher pour passer » : écourte le maintien du résultat. */
@@ -244,8 +263,8 @@ export function PetitBuveurOnline() {
 
   if (!view || !user) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-400/30 border-t-amber-400" />
+      <div className="flex flex-1 items-center justify-center p-6 text-cream/70">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
       </div>
     )
   }
@@ -273,7 +292,7 @@ export function PetitBuveurOnline() {
           ambiance === 'soft'
         )
       : undefined
-  const difficulty = room.settings?.difficulty && room.settings.difficulty in DIFFICULTY_EMOJI
+  const difficulty = room.settings?.difficulty && DIFFICULTIES.includes(room.settings.difficulty)
     ? room.settings.difficulty
     : 'normal'
 
@@ -294,59 +313,90 @@ export function PetitBuveurOnline() {
 
   const effectChips: EffectChip[] = []
   view.players.forEach((p) => {
+    const base = { playerId: p.id, playerName: p.name }
     if (p.protected && (p.protectionTurnsLeft ?? 0) > 0) {
       effectChips.push({
-        id: `prot-${p.id}`, icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'),
-        remaining: p.protectionTurnsLeft ?? 1, playerName: p.name, accent: 'border-blue-400/50 bg-blue-500/[0.15]',
+        ...base, id: `prot-${p.id}`, kind: 'protection', title: tGame('effects.protection'),
+        desc: tGame('effects.protectionDesc'), remaining: p.protectionTurnsLeft ?? 1,
       })
     }
     if (p.cursed > 0) {
       effectChips.push({
-        id: `curse-${p.id}`, icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'),
-        remaining: p.cursed, playerName: p.name, accent: 'border-red-400/50 bg-red-500/[0.15]',
+        ...base, id: `curse-${p.id}`, kind: 'curse', title: tGame('effects.curse'),
+        desc: tGame('effects.curseDesc'), remaining: p.cursed,
       })
     }
     if (p.linkedTo && (p.linkedTurns ?? 0) > 0) {
       const linked = view.players.find((o) => o.id === p.linkedTo)
       effectChips.push({
-        id: `link-${p.id}`, icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'),
-        remaining: p.linkedTurns ?? 1, playerName: p.name, linkedName: linked?.name,
-        accent: 'border-chip-blue/60 bg-chip-blue/20',
+        ...base, id: `link-${p.id}`, kind: 'chain', title: tGame('effects.chain'),
+        desc: tGame('effects.chainDesc'), remaining: p.linkedTurns ?? 1, linkedName: linked?.name,
       })
     }
     if (p.skipNextTurn) {
       effectChips.push({
-        id: `skip-${p.id}`, icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'),
-        remaining: 1, playerName: p.name, accent: 'border-slate-400/50 bg-slate-500/[0.15]',
+        ...base, id: `skip-${p.id}`, kind: 'skip', title: tGame('effects.skipTurn'),
+        desc: tGame('effects.skipTurnDesc'), remaining: 1,
       })
     }
     if (p.anchored) {
       effectChips.push({
-        id: `anchor-${p.id}`, icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'),
-        remaining: 1, playerName: p.name, accent: 'border-cyan-400/50 bg-cyan-500/[0.15]',
+        ...base, id: `anchor-${p.id}`, kind: 'anchor', title: tGame('effects.anchor'),
+        desc: tGame('effects.anchorDesc'), remaining: 1,
+      })
+    }
+    if (p.mirrorDrinkTargetId && (p.mirrorDrinkTurns ?? 0) > 0) {
+      const target = view.players.find((o) => o.id === p.mirrorDrinkTargetId)
+      effectChips.push({
+        ...base, id: `mirror-${p.id}`, kind: 'mirror', title: tGame('effects.mirror'),
+        desc: target
+          ? tGame('effects.mirrorDescOneWay', { a: p.name, b: target.name })
+          : tGame('effects.mirrorDescShortOneWay'),
+        remaining: p.mirrorDrinkTurns ?? 1, linkedName: target?.name,
       })
     }
   })
 
   /** Légende statique de tous les effets possibles (mêmes icônes/couleurs que les pastilles actives). */
-  const legendEffects = [
-    { icon: '🛡️', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc'), accent: 'border-blue-400/50 bg-blue-500/[0.15]' },
-    { icon: '👻', title: tGame('effects.curse'), desc: tGame('effects.curseDesc'), accent: 'border-red-400/50 bg-red-500/[0.15]' },
-    { icon: '🔗', title: tGame('effects.chain'), desc: tGame('effects.chainDesc'), accent: 'border-chip-blue/60 bg-chip-blue/20' },
-    { icon: '⏭️', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc'), accent: 'border-slate-400/50 bg-slate-500/[0.15]' },
-    { icon: '⚓', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc'), accent: 'border-cyan-400/50 bg-cyan-500/[0.15]' },
+  const legendEffects: { kind: PbEffectKind; title: string; desc: string }[] = [
+    { kind: 'protection', title: tGame('effects.protection'), desc: tGame('effects.protectionDesc') },
+    { kind: 'curse', title: tGame('effects.curse'), desc: tGame('effects.curseDesc') },
+    { kind: 'chain', title: tGame('effects.chain'), desc: tGame('effects.chainDesc') },
+    { kind: 'skip', title: tGame('effects.skipTurn'), desc: tGame('effects.skipTurnDesc') },
+    { kind: 'anchor', title: tGame('effects.anchor'), desc: tGame('effects.anchorDesc') },
+    { kind: 'mirror', title: tGame('effects.mirror'), desc: tGame('effects.mirrorDescShortOneWay') },
   ]
 
   const ranking = rankByShown(view.players, shownPosOf)
   const finalRanking = [...view.players].sort((a, b) => b.position - a.position)
+  // Mêmes filets que le classement du jeu local : or, crème, cuivre, puis feutre.
   const rankBorder = (i: number) =>
     i === 0
-      ? 'border-amber-400/[0.35] bg-amber-500/10'
+      ? 'border-gold/50 bg-gold/10'
       : i === 1
-        ? 'border-white/[0.15] bg-white/5'
+        ? 'border-cream/30 bg-black/20'
         : i === 2
-          ? 'border-orange-500/25 bg-orange-600/10'
-          : 'border-white/[0.08] bg-white/[0.03]'
+          ? 'border-[#D3A275]/40 bg-[#8C5F35]/20'
+          : 'border-gold/20 bg-black/20'
+  const rankBadge = (i: number) =>
+    i < 3 ? (
+      <MedalDot position={i + 1} className="h-6 w-6 shrink-0 text-xs" />
+    ) : (
+      <span className="inline-flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border border-gold/20 bg-black/25 px-1.5 text-xs font-bold tabular-nums text-cream/80">
+        {i + 1}
+      </span>
+    )
+  /** Rang du joueur dans la table : couleur de son pion, la même que sur la TV. */
+  const pawnOf = (id: string, size: number, active = false, children?: ReactNode) => (
+    <PbPawn
+      icon={<PlayerAvatarGlyph value={iconOf(id)} />}
+      colorIndex={Math.max(0, view.players.findIndex((p) => p.id === id))}
+      size={size}
+      active={active}
+    >
+      {children}
+    </PbPawn>
+  )
 
   const sendAction = async (
     action: 'roll' | 'resolve',
@@ -477,20 +527,17 @@ export function PetitBuveurOnline() {
         return (
           <span
             key={c.playerId}
-            className={cn(
-              'flex items-center gap-1 rounded-full border border-white/[0.15] bg-gray-950/60 px-2 py-0.5 text-xs font-semibold',
-              tone === 'card' ? 'text-white/90' : 'text-white/80'
-            )}
+            className="flex items-center gap-1.5 rounded-full border border-gold/20 bg-black/30 py-0.5 pl-0.5 pr-2 text-sm font-semibold text-cream"
           >
-            <span aria-hidden><PlayerAvatarGlyph value={iconOf(c.playerId)} /></span>
+            {pawnOf(c.playerId, 18)}
             {p && (
               <OnlinePlayerName
                 name={p.name}
                 cosmetics={cosmetics.get(p.id)}
-                className={tone === 'card' ? 'max-w-[6rem] truncate' : 'max-w-[5rem] truncate'}
+                className={tone === 'card' ? 'max-w-[7rem] truncate' : 'max-w-[6rem] truncate'}
               />
             )}
-            {c.drinks > 0 && <span className="text-amber-300">+{c.drinks} {drinkIcon(ambiance)}</span>}
+            {c.drinks > 0 && <span className="text-red-300">+{c.drinks} {drinkIcon(ambiance)}</span>}
             {c.to !== c.from && (
               <span className="text-sky-300">
                 → {t('caseLabel')} {c.to + 1}
@@ -507,24 +554,62 @@ export function PetitBuveurOnline() {
       <>
         {outcome.changes.length > 0 && changeChips(outcome.changes, tone)}
         {extras.map((line, i) => (
-          <p key={i} className="mt-1.5 text-xs font-semibold text-cream/80">
+          <p key={i} className="mt-1.5 text-sm font-semibold text-cream/80">
             {line}
           </p>
         ))}
         {outcome.changes.length === 0 && extras.length === 0 && showNothing && (
-          <p className="mt-1.5 text-xs font-semibold text-emerald-300">{t('outcomeNothing')}</p>
+          <p className="mt-1.5 text-sm font-semibold text-emerald-300">{t('outcomeNothing')}</p>
         )}
       </>
     )
   }
   const lastLanding = landingIndex(view.players, view.lastOutcome)
 
-  // grid-cols-[minmax(0,1fr)] : sans lui, le min-content d'une rangée
-  // (en-tête) étire la colonne implicite au-delà du viewport (mobile).
+  // « À qui le tour » : le joueur au tour, ou celui qui doit décider (la cible
+  // choisit pile ou face, le lanceur juge le défi) une fois le pion posé.
+  const deciding = Boolean(pending) && boardSettled && !finished
+  const bannerPlayer = deciding ? decider ?? shownTurnPlayer : shownTurnPlayer
+  const bannerMine = !finished && (deciding ? isMyDecision : isMyTurn)
+  // Pas de compte à rebours ici : le bandeau est une région vivante, un
+  // chiffre qui change chaque seconde y serait relu en boucle (il reste sur la
+  // carte de la case en attente).
+  const bannerHint = deciding && pending
+    ? isMyDecision
+      ? pendingTitle
+      : pending.stage === 'verdict'
+        ? t('verdictWaiting', { name: nameOf(pending.playerId), target: nameOf(pending.targetId) })
+        : undefined
+    : undefined
+
+  const canRoll = isMyTurn && !pending && !finished
+  const canConfirm = showChoice && choice?.kind === 'confirm' && Boolean(pending)
+  const actionStatus = canRoll || isMyDecision || finished
+    ? undefined
+    : t('waitingFor', { name: (deciding ? nameOf(deciderId) : active?.name) ?? '' })
+
+  const askLeave = async () => {
+    setShowMenu(false)
+    const ok = await confirm({
+      title: t('leaveConfirm.title'),
+      description: t('leaveConfirm.description'),
+      confirmLabel: t('leaveConfirm.confirm'),
+      cancelLabel: t('leaveConfirm.cancel'),
+      tone: 'danger',
+    })
+    if (ok) void leaveRoom()
+  }
+
+  // Surcouches plein écran HORS de la scène (OnlineGameStage, z-20, est un
+  // contexte d'empilement) : rendues dedans, le haut de la carte de fin et des
+  // fenêtres de choix passait sous la barre du site.
+  const portal = (node: ReactNode) => (typeof document === 'undefined' ? node : createPortal(node, document.body))
+
   return (
     <>
-    <div className="relative grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] overflow-hidden bg-gray-950 text-white">
       {/* Spectacle des tirages (roue, pièce, dé de la honte) — visible par tous */}
+      {portal(
+      <>
       <InteractionSpectacle
         interaction={view.lastInteraction}
         caseLabel={view.lastInteraction ? caseLabel(view.lastInteraction.kind) : ''}
@@ -572,292 +657,136 @@ export function PetitBuveurOnline() {
         labelSelf={tGame('yourTurn')}
         delayMs={1600}
       />
+      </>
+      )}
 
-      {/* Blobs animés */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/[0.15] blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-orange-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
-        <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
-      </div>
-
-      {/* En-tête */}
-      <header className="relative z-30 shrink-0 border-b border-white/10 bg-gray-950/[0.85] backdrop-blur-md">
-        {/* 375 px : cinq boutons de 36 px ne laissent qu'environ 140 px au
-            titre, d'où un écart réduit, la difficulté déplacée dans le HUD
-            et un titre sur deux lignes plutôt qu'une ellipse. */}
-        <div className="mx-auto flex max-w-3xl items-center gap-1.5 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
-          <button
-            onClick={() => leaveRoom()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label={t('leave')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <h1 className="line-clamp-2 min-w-0 flex-1 text-center text-sm font-bold leading-tight sm:line-clamp-1 sm:text-lg">
-            {t('title')}
-          </h1>
-          <span className="hidden shrink-0 rounded-full border border-white/[0.15] bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/60 sm:inline-flex">
-            {DIFFICULTY_EMOJI[difficulty]} {tDiff(difficulty)}
-          </span>
-          <button
-            onClick={() => setShowHistory(true)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label={t('history.title')}
-          >
-            <History className="h-4 w-4" />
-          </button>
-          <button
-            onClick={toggleMuted}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label={muted ? tGame('soundOn') : tGame('soundOff')}
-          >
-            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </button>
-          <button
-            onClick={() => setShowLegend(true)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label={t('effectsLegend')}
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
-          <TutorialReopenButton onClick={tutorial.reopen} />
-        </div>
-      </header>
-
-      {/* Zone scrollable */}
-      <main className="relative min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-        <div className="mx-auto flex w-full max-w-3xl flex-col space-y-2 px-3 py-2.5 pb-4 sm:space-y-3 sm:px-4 sm:py-3">
-          {/* HUD tour + joueur actif */}
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md sm:px-4 sm:py-3">
-            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/[0.15] px-2 py-0.5 text-xs font-bold text-amber-300 sm:px-2.5 sm:py-1">
+      {/* Flux de la partie : la scène (OnlineGameStage) défile, la barre d'action reste sous le pouce. */}
+      <div className={cn('mx-auto flex w-full max-w-3xl flex-1 flex-col gap-2.5 p-3 sm:gap-3 sm:px-4', onlineActionBarPadding('tall'))}>
+        <PhaseHeader
+          round={
+            <span className="inline-flex items-center gap-1.5">
               {t('turn', { count: view.turnCount })}
+              <span aria-hidden>·</span>
+              <PbDifficultyIcon difficulty={difficulty} className="h-4 w-4 text-gold" />
+              {tDiff(difficulty)}
             </span>
-            <div className="min-w-0 flex-1 text-center">
-              <p className="hidden text-xs uppercase tracking-widest text-white/40 sm:mb-0.5 sm:block">{tGame('turnOf')}</p>
-              <div className="flex items-center justify-center gap-1.5 truncate text-sm font-bold sm:text-base">
-                {shownTurnPlayer && <span aria-hidden><PlayerAvatarGlyph value={iconOf(shownTurnPlayer.id)} /></span>}
-                {shownTurnPlayer && (
-                  <OnlinePlayerName
-                    name={shownTurnPlayer.name}
-                    cosmetics={cosmetics.get(shownTurnPlayer.id)}
-                    className="truncate"
-                  />
-                )}
-              </div>
-            </div>
-            <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-white/60">
-              <span className="sm:hidden" role="img" aria-label={tDiff(difficulty)}>
-                {DIFFICULTY_EMOJI[difficulty]}
-              </span>
-              {activeShownPos != null ? activeShownPos + 1 : '—'}/{BOARD_SIZE}
-            </span>
+          }
+          phase={tGame('title')}
+          right={
+            <>
+              <TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="gameIcon"
+                onClick={() => setShowMenu(true)}
+                aria-haspopup="dialog"
+                aria-label={t('menu.title')}
+                className={ICON_BUTTON}
+              >
+                <MoreHorizontal aria-hidden className="h-5 w-5" />
+              </Button>
+            </>
+          }
+        />
+
+        {!finished && bannerPlayer && (
+          <TurnBanner
+            mine={bannerMine}
+            name={bannerPlayer.name}
+            avatar={pawnOf(bannerPlayer.id, 30)}
+            hint={bannerHint}
+          />
+        )}
+
+        {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
+        {someoneLeft && (
+          <div className="space-y-0.5 rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 text-center">
+            {view.players
+              .filter((p) => !p.isBot && p.leftAt)
+              .map((p) => (
+                <p key={p.id} className="text-sm font-semibold text-cream">
+                  <PhaseCountdown endsAt={(p.leftAt ?? 0) + ONLINE_REPLACE_GRACE_MS}>
+                    {({ seconds }) => t('waitingReturn', { name: p.name, seconds })}
+                  </PhaseCountdown>
+                </p>
+              ))}
           </div>
+        )}
 
-          {/* Joueur(s) parti(s) : en attente de leur retour avant remplacement par un bot */}
-          {someoneLeft && (
-            <div className="space-y-0.5 rounded-xl border border-amber-400/[0.35] bg-amber-500/10 px-3 py-2 text-center">
-              {view.players
-                .filter((p) => !p.isBot && p.leftAt)
-                .map((p) => (
-                  <p key={p.id} className="text-xs font-semibold text-amber-100">
-                    <PhaseCountdown endsAt={(p.leftAt ?? 0) + ONLINE_REPLACE_GRACE_MS}>
-                      {({ seconds }) => t('waitingReturn', { name: p.name, seconds })}
-                    </PhaseCountdown>
-                  </p>
-                ))}
-            </div>
-          )}
+        {/* Coup refusé (pas ton tour, expulsion…) — 3 s */}
+        {actionError && (
+          <div role="alert" className="rounded-xl border border-suit-red/50 bg-suit-red/20 px-3 py-2 text-center text-sm font-semibold text-cream">
+            {actionError}
+          </div>
+        )}
 
-          {/* Coup refusé (pas ton tour, expulsion…) — 3 s */}
-          {actionError && (
-            <div className="rounded-xl border border-red-400/[0.35] bg-red-500/10 px-3 py-2 text-center text-xs font-semibold text-red-100">
-              {actionError}
-            </div>
-          )}
+        {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
+            direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
+        {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
+          <div className="rounded-xl border border-suit-red/50 bg-suit-red/20 px-3 py-2 text-center">
+            <p className="text-sm font-semibold text-cream">
+              <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
+                {({ seconds }) =>
+                  afkTarget.id === user.id
+                    ? t('afkWarningSelf', { seconds })
+                    : t('afkWarning', { name: afkTarget.name, seconds })
+                }
+              </PhaseCountdown>
+            </p>
+          </div>
+        )}
 
-          {/* Avertissement AFK (60 dernières secondes avant expulsion) : message
-              direct « joue ! » pour le joueur au tour, informatif pour les autres. */}
-          {afkWatch && afkTarget && !afkTarget.isBot && !afkTarget.leftAt && (
-            <div className="rounded-xl border border-red-400/[0.35] bg-red-500/10 px-3 py-2 text-center">
-              <p className="text-xs font-semibold text-red-100">
-                <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
-                  {({ seconds }) =>
-                    afkTarget.id === user.id
-                      ? t('afkWarningSelf', { seconds })
-                      : t('afkWarning', { name: afkTarget.name, seconds })
-                  }
-                </PhaseCountdown>
-              </p>
-            </div>
-          )}
-
-          {/* Effets actifs — pastilles compactes (icône + joueur + compteur, détail en title) */}
-          {effectChips.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5">
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-300" aria-hidden />
-              {effectChips.map((e) => (
-                <span
-                  key={e.id}
-                  title={`${e.playerName}${e.linkedName ? ` ↔ ${e.linkedName}` : ''} · ${e.title} — ${e.desc}`}
+        {/* Plateau EN TÊTE, comme en local : le pion qui marche reste sous les yeux. */}
+        <div className="pb-board">
+          <div className="pb-board-grid grid grid-cols-6 gap-1.5 sm:gap-2.5">
+            {Array.from({ length: BOARD_SIZE }).map((_, index) => {
+              const onCase = view.players.filter((p) => shownPosOf(p.id) === index)
+              const isStart = index === 0
+              const isFinish = index === BOARD_SIZE - 1
+              const isActiveCase = activeShownPos === index
+              const isLeaderCase = index === leaderPos
+              return (
+                <div
+                  key={index}
                   className={cn(
-                    'flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-white/90',
-                    e.accent
+                    'relative flex aspect-square min-h-[2.75rem] items-center justify-center rounded-lg sm:min-h-[3.25rem] sm:rounded-xl',
+                    isStart
+                      ? 'pb-board-case pb-board-start'
+                      : isFinish
+                        ? 'pb-board-case pb-board-finish'
+                        : 'pb-board-case',
+                    isActiveCase && isLeaderCase
+                      ? 'pb-board-highlight-both'
+                      : isActiveCase
+                        ? 'pb-board-highlight-active'
+                        : isLeaderCase
+                          ? 'pb-board-highlight-leader'
+                          : ''
                   )}
                 >
-                  <span aria-hidden>{e.icon}</span>
-                  <span className="max-w-[4.5rem] truncate sm:max-w-[7rem]">
-                    {e.playerName}
-                    {e.linkedName ? ` ↔ ${e.linkedName}` : ''}
-                  </span>
-                  <span className="rounded-full bg-black/25 px-1 text-xs font-bold leading-4">{e.remaining}</span>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Dernière case résolue — carte flip teintée par la famille de case,
-              retournée quand le pion de l'acteur est posé sur la case du dé. */}
-          {view.lastCase && !pending && board.caseRevealed && (() => {
-            const outcome =
-              view.lastOutcome && view.lastOutcome.caseType === view.lastCase.type ? view.lastOutcome : null
-            // Un défi rejoué par Répétition / Rewind porte son texte dans la case effective.
-            const shownDefi =
-              outcome?.effectiveCase?.type === 'defi'
-                ? outcome.effectiveCase
-                : view.lastCase.type === 'defi'
-                  ? view.lastCase
-                  : null
-            return (
-              <CaseRevealCard
-                caseType={view.lastCase.type}
-                label={outcome ? outcomeTitle(outcome) : caseLabel(view.lastCase.type)}
-                revealKey={outcomeSignature(view) || `${view.turnCount}:${view.lastCase.type}:${view.lastDice ?? ''}`}
-                headerExtra={
-                  <>
-                    {outcome && lastLanding != null && (
-                      <span className="text-xs font-semibold text-white/70 sm:text-sm">
-                        {t('caseLabel')} {lastLanding + 1}
-                      </span>
-                    )}
-                    {view.lastDice != null && (
-                      <span className="ml-auto flex items-center gap-1 text-xs text-white/60">
-                        <Dice6 className="h-3.5 w-3.5" aria-hidden /> {view.lastDice}
-                      </span>
-                    )}
-                  </>
-                }
-              >
-                {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
-                {shownDefi && typeof shownDefi.defiIndex === 'number' && (
-                  <p className="mt-1.5 text-sm font-medium text-white/[0.85]">{defiText(shownDefi.defiIndex)}</p>
-                )}
-                {/* CE QUE la case a fait : gorgées prises, déplacements, protections —
-                    lisible avant que le joueur suivant ne joue. */}
-                {outcome &&
-                  outcomeBody(
-                    outcome,
-                    'card',
-                    getCaseMeta(view.lastCase.type).family !== 'neutral' &&
-                      getCaseMeta(view.lastCase.type).family !== 'bonus'
+                  {/* Numéro de case : au-dessus des pions, sur sa pastille (petit-buveur-board.css). */}
+                  {!isFinish && (
+                    <span
+                      className={cn(
+                        'pb-board-case-num absolute left-0.5 top-0.5 z-[3] font-semibold sm:left-1 sm:top-1',
+                        isStart && 'text-xs text-emerald-300'
+                      )}
+                    >
+                      {isStart ? <Flag aria-hidden className="h-3 w-3" /> : index + 1}
+                    </span>
                   )}
-              </CaseRevealCard>
-            )
-          })()}
-
-          {/* Case en attente d'une décision — visible par toute la table */}
-          {pending && boardSettled && !finished && (
-            <div className="rounded-2xl border border-amber-500/30 bg-felt-deep/70 px-3 py-2.5 sm:px-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-base leading-none" aria-hidden>
-                  {getCaseMeta(pending.caseType).icon}
-                </span>
-                <span className="text-sm font-bold text-cream">{pendingTitle}</span>
-                {pending.targetId && (
-                  <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-amber-200">
-                    🎯 {nameOf(pending.targetId)}
-                  </span>
-                )}
-              </div>
-              {pendingDetail && <p className="mt-1.5 text-sm font-medium text-white/[0.85]">{pendingDetail}</p>}
-              {!isMyDecision && (
-                <p className="mt-1.5 text-xs font-medium text-cream/70">
-                  {pending.stage === 'side' && typeof pending.deadlineAt === 'number' ? (
-                    <PhaseCountdown endsAt={pending.deadlineAt}>
-                      {({ seconds }) => t('sideWaiting', { name: nameOf(pending.targetId), seconds })}
-                    </PhaseCountdown>
-                  ) : pending.stage === 'verdict' ? (
-                    t('verdictWaiting', { name: nameOf(pending.playerId), target: nameOf(pending.targetId) })
-                  ) : (
-                    t('waitingFor', { name: nameOf(deciderId) })
+                  {isFinish && onCase.length === 0 && (
+                    <Trophy aria-hidden className="pb-board-finish-icon h-7 w-7 text-gold sm:h-9 sm:w-9" />
                   )}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Simple confirmation (roue, dé de la honte… : aucun choix à faire) */}
-          {showChoice && choice?.kind === 'confirm' && pending && (
-            <button
-              type="button"
-              onClick={() => sendAction('resolve')}
-              disabled={busy}
-              className={PRIMARY_CHOICE}
-            >
-              {busy ? '…' : `${t('continueCase')} (${caseLabel(pending.caseType)})`}
-            </button>
-          )}
-
-          {/* Plateau */}
-          <div className="pb-board">
-            <div className="pb-board-grid grid grid-cols-6 gap-2 sm:gap-2.5">
-              {Array.from({ length: BOARD_SIZE }).map((_, index) => {
-                const onCase = view.players.filter((p) => shownPosOf(p.id) === index)
-                const isStart = index === 0
-                const isFinish = index === BOARD_SIZE - 1
-                const isActiveCase = activeShownPos === index
-                const isLeaderCase = index === leaderPos
-                return (
-                  <div
-                    key={index}
-                    className={cn(
-                      'relative flex aspect-square min-h-[2.75rem] items-center justify-center rounded-lg sm:min-h-[3.25rem] sm:rounded-xl',
-                      isStart
-                        ? 'pb-board-case pb-board-start'
-                        : isFinish
-                          ? 'pb-board-case pb-board-finish'
-                          : 'pb-board-case',
-                      isActiveCase && isLeaderCase
-                        ? 'pb-board-highlight-both'
-                        : isActiveCase
-                          ? 'pb-board-highlight-active'
-                          : isLeaderCase
-                            ? 'pb-board-highlight-leader'
-                            : ''
-                    )}
-                  >
-                    {/* Numéro de case : couleur et taille lisibles imposées par
-                        petit-buveur-board.css (crème 0,75, 11 px au téléphone). */}
-                    {!isFinish && (
-                      <span
-                        className={cn(
-                          'pb-board-case-num absolute left-0.5 top-0.5 z-[1] font-semibold sm:left-1 sm:top-1',
-                          isStart && 'text-[11px] text-emerald-400/70 sm:text-xs'
-                        )}
-                      >
-                        {isStart ? '🏁' : index + 1}
-                      </span>
-                    )}
-                    {isFinish && onCase.length === 0 && (
-                      <Trophy aria-hidden className="pb-board-finish-icon h-8 w-8 text-gold sm:h-10 sm:w-10" />
-                    )}
+                  {onCase.length > 0 && (
                     <div
                       className={cn(
-                        'pb-board-players absolute inset-0 grid place-items-center gap-0.5 p-1',
-                        onCase.length > 2 ? 'grid-cols-2' : 'grid-cols-1'
+                        'pb-board-players absolute inset-0 grid place-content-center place-items-center gap-0.5 p-1',
+                        pbPawnColumns(onCase.length)
                       )}
                     >
                       {onCase.map((p) => {
-                        const isSelf = p.id === user.id
                         const isPlayerActive = p.id === shownTurnPlayer?.id
                         return (
                           <motion.span
@@ -866,123 +795,215 @@ export function PetitBuveurOnline() {
                             transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                             title={p.name}
                             className={cn(
-                              'flex items-center justify-center rounded-full text-base leading-none transition-transform sm:text-lg',
-                              isPlayerActive ? 'z-10 scale-110 ring-2 ring-white/80' : 'z-0',
-                              isSelf && 'drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]'
+                              'relative flex items-center justify-center',
+                              isPlayerActive ? 'z-10' : 'z-0',
+                              p.id === user.id && 'drop-shadow-[0_0_6px_rgba(217,164,65,0.8)]'
                             )}
                           >
-                            <PlayerAvatarGlyph value={iconOf(p.id)} />
+                            {pawnOf(
+                              p.id,
+                              pbPawnSize(onCase.length),
+                              isPlayerActive,
+                              <FloatingDrinkBadge placement="above" deltas={drinkDeltas.filter((d) => d.playerId === p.id)} />
+                            )}
                           </motion.span>
                         )
                       })}
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Classement */}
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
-            <div className="mb-2.5 flex items-center gap-2">
-              <Trophy className="h-3.5 w-3.5 text-amber-400" />
-              <h3 className="text-xs font-semibold text-white/80">{tGame('ranking')}</h3>
-            </div>
-            <div className="flex gap-2 overflow-x-auto p-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {ranking.map((p, index) => {
-                const isActive = shownTurnPlayer?.id === p.id
-                return (
-                  <div
-                    key={p.id}
-                    className={cn(
-                      'relative flex w-[9.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:p-2.5',
-                      isActive
-                        ? 'border-emerald-400/60 bg-emerald-500/[0.12] shadow-[inset_0_0_0_1px_rgba(52,211,153,0.35)]'
-                        : rankBorder(index)
-                    )}
-                  >
-                    <FloatingDrinkBadge deltas={drinkDeltas.filter((d) => d.playerId === p.id)} />
-                    <span
-                      className={cn(
-                        'inline-flex h-6 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border px-1.5 text-xs font-bold tabular-nums',
-                        index === 0
-                          ? 'border-amber-400/[0.45] bg-amber-500/20 text-amber-100'
-                          : index === 1
-                            ? 'border-white/25 bg-white/10 text-white/80'
-                            : index === 2
-                              ? 'border-orange-500/[0.35] bg-orange-600/[0.15] text-orange-100'
-                              : 'border-white/10 bg-white/5 text-white/50'
-                      )}
-                    >
-                      {index + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-1.5">
-                        <span className="shrink-0 text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
-                        <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 truncate text-xs font-semibold text-white/90" />
-                      </div>
-                      <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-white/60">
-                        {t('caseLabel')} {shownPosOf(p.id) + 1}
-                        <DrinkGlyph className="h-3 w-3" aria-hidden /> <PulsingCount value={drinksById[p.id] ?? p.drinks} />
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-        </div>
-      </main>
-
-      {/* Barre d'action fixe — gardée jusqu'à l'écran de fin, qui attend l'arrivée du pion */}
-      {!endRevealed && (
-        <footer
-          className="relative z-40 border-t border-white/10 bg-gray-950/95 px-3 py-3 backdrop-blur-md pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4"
-          aria-label={t('title')}
-        >
-          <div className="mx-auto flex w-full max-w-lg items-stretch gap-2 sm:max-w-3xl sm:gap-3">
-            {shownTurnPlayer && (
-              <div className="flex shrink-0 flex-col justify-center gap-1.5 rounded-2xl border border-emerald-400/[0.35] bg-emerald-500/10 px-3 py-2.5 sm:px-4 sm:py-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300/80">
-                  {tGame('turnShort')}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(shownTurnPlayer.id)} /></span>
-                  <OnlinePlayerName
-                    name={shownTurnPlayer.name}
-                    cosmetics={cosmetics.get(shownTurnPlayer.id)}
-                    className="max-w-[5.5rem] truncate text-sm font-bold text-emerald-100 sm:max-w-[7.5rem] sm:text-base"
-                  />
+                  )}
                 </div>
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={handleRoll}
-              disabled={!isMyTurn || Boolean(pending) || finished || !boardSettled || busy || rolling}
-              className="min-w-0 flex-1 touch-manipulation select-none rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-3.5 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-lg"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <span>
-                  {rolling || finished
-                    ? t('rollDice')
-                    : pending
-                      ? isMyDecision
-                        ? t('continueCase')
-                        : t('waitingFor', { name: nameOf(deciderId) })
-                      : isMyTurn
-                        ? t('rollDice')
-                        : t('waitingFor', { name: active?.name ?? '' })}
-                </span>
-                <Dice6 className={cn('h-5 w-5', rolling && 'animate-spin')} />
-              </span>
-            </button>
+              )
+            })}
           </div>
-        </footer>
+        </div>
+
+        {/* Case en attente d'une décision — visible par toute la table (qui décide : bandeau du tour) */}
+        {pending && boardSettled && !finished && (
+          <div className="rounded-2xl border border-gold/30 bg-felt-deep/70 px-3 py-2.5 sm:px-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <CaseToken caseType={pending.caseType} size={28} />
+              <span className="text-base font-bold text-cream">{pendingTitle}</span>
+              {pending.targetId && (
+                <span className="ml-auto flex items-center gap-1 text-sm font-semibold text-gold">
+                  <Target aria-hidden className="h-4 w-4" /> {nameOf(pending.targetId)}
+                </span>
+              )}
+            </div>
+            {pendingDetail && <p className="mt-1.5 text-sm font-medium text-cream">{pendingDetail}</p>}
+            {!isMyDecision && pending.stage === 'side' && typeof pending.deadlineAt === 'number' && (
+              <p className="mt-1.5 text-sm font-medium tabular-nums text-cream/80">
+                <PhaseCountdown endsAt={pending.deadlineAt}>
+                  {({ seconds }) => t('sideWaiting', { name: nameOf(pending.targetId), seconds })}
+                </PhaseCountdown>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Dernière case résolue — carte flip teintée par la famille de case,
+            retournée quand le pion de l'acteur est posé sur la case du dé. */}
+        {view.lastCase && !pending && board.caseRevealed && (() => {
+          const outcome =
+            view.lastOutcome && view.lastOutcome.caseType === view.lastCase.type ? view.lastOutcome : null
+          // Un défi rejoué par Répétition / Rewind porte son texte dans la case effective.
+          const shownDefi =
+            outcome?.effectiveCase?.type === 'defi'
+              ? outcome.effectiveCase
+              : view.lastCase.type === 'defi'
+                ? view.lastCase
+                : null
+          return (
+            <CaseRevealCard
+              caseType={view.lastCase.type}
+              label={outcome ? outcomeTitle(outcome) : caseLabel(view.lastCase.type)}
+              revealKey={outcomeSignature(view) || `${view.turnCount}:${view.lastCase.type}:${view.lastDice ?? ''}`}
+              headerExtra={
+                <>
+                  {outcome && lastLanding != null && (
+                    <span className="text-sm font-semibold text-cream/80">
+                      {t('caseLabel')} {lastLanding + 1}
+                    </span>
+                  )}
+                  {view.lastDice != null && (
+                    <span className="ml-auto flex items-center gap-1 text-sm text-cream/80">
+                      <Dice6 className="h-4 w-4" aria-hidden /> {view.lastDice}
+                    </span>
+                  )}
+                </>
+              }
+            >
+              {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
+              {shownDefi && typeof shownDefi.defiIndex === 'number' && (
+                <p className="mt-1.5 text-sm font-medium text-cream">{defiText(shownDefi.defiIndex)}</p>
+              )}
+              {/* CE QUE la case a fait : gorgées prises, déplacements, protections —
+                  lisible avant que le joueur suivant ne joue. */}
+              {outcome &&
+                outcomeBody(
+                  outcome,
+                  'card',
+                  getCaseMeta(view.lastCase.type).family !== 'neutral' &&
+                    getCaseMeta(view.lastCase.type).family !== 'bonus'
+                )}
+            </CaseRevealCard>
+          )
+        })()}
+
+        {/* Effets actifs — une rangée de pastilles qui ouvre le détail et la légende */}
+        {effectChips.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowLegend(true)}
+            aria-haspopup="dialog"
+            className="flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-gold/20 bg-felt-deep/70 px-3 py-2 text-left transition-colors hover:bg-felt-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+            <span className="sr-only">{tGame('effects.activeTitle')} :</span>
+            <span className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+              {effectChips.map((e) => (
+                <span
+                  key={e.id}
+                  className={cn(
+                    'inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border pl-1.5 pr-2 text-sm font-semibold text-cream',
+                    PB_EFFECT_STYLE[e.kind].chip
+                  )}
+                >
+                  {pawnOf(e.playerId, 18)}
+                  <PbEffectIcon kind={e.kind} className="h-4 w-4" />
+                  <span className="truncate">
+                    {e.playerName}
+                    {e.linkedName ? `${e.kind === 'chain' ? ' ↔ ' : ' → '}${e.linkedName}` : ''}
+                  </span>
+                  <span className="sr-only">
+                    {e.title} · {tGame('effects.turnsLeft', { count: e.remaining })}
+                  </span>
+                  <span aria-hidden className="rounded-full bg-black/30 px-1.5 text-xs tabular-nums">
+                    {e.remaining}
+                  </span>
+                </span>
+              ))}
+            </span>
+            <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-cream/70" />
+          </button>
+        )}
+
+        {/* Classement */}
+        <div className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <div className="mb-2.5 flex items-center gap-2">
+            <Trophy aria-hidden className="h-4 w-4 text-gold" />
+            <h2 className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{tGame('ranking')}</h2>
+          </div>
+          <div className="flex gap-2 overflow-x-auto p-0.5 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {ranking.map((p, index) => {
+              const isActive = shownTurnPlayer?.id === p.id
+              return (
+                <div
+                  key={p.id}
+                  className={cn(
+                    'relative flex w-[9.5rem] shrink-0 items-center gap-2 rounded-xl border p-2 transition-colors sm:w-[10rem] sm:p-2.5',
+                    isActive
+                      ? 'border-gold/60 bg-gold/[0.15] shadow-[inset_0_0_0_1px_rgb(var(--gold-rgb)/0.35)]'
+                      : rankBorder(index)
+                  )}
+                >
+                  {rankBadge(index)}
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-1.5">
+                      {pawnOf(p.id, 18)}
+                      <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 truncate text-sm font-semibold text-cream" />
+                    </div>
+                    <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-cream/80">
+                      {t('caseLabel')} {shownPosOf(p.id) + 1}
+                      <DrinkGlyph className="h-3.5 w-3.5" aria-hidden /> <PulsingCount value={drinksById[p.id] ?? p.drinks} />
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Barre d'action fixe — montée toute la partie (sa ligne d'état est une
+          région vivante), jusqu'à l'écran de fin qui attend l'arrivée du pion. */}
+      {!endRevealed && (
+        <OnlineActionBar status={actionStatus} maxWidthClass="max-w-lg">
+          {canRoll && (
+            <Button
+              type="button"
+              variant="primary"
+              size="gameLg"
+              onClick={handleRoll}
+              disabled={!boardSettled || busy || rolling}
+              aria-busy={rolling || undefined}
+              className="w-full touch-manipulation select-none gap-2"
+            >
+              <span className="truncate">{rolling ? tGame('rolling') : t('rollDice')}</span>
+              <Dice6 aria-hidden className={cn('h-5 w-5 shrink-0', rolling && 'motion-safe:animate-spin')} />
+            </Button>
+          )}
+          {/* Simple confirmation (roue, dé de la honte… : aucun choix à faire) */}
+          {canConfirm && pending && (
+            <Button
+              type="button"
+              variant="primary"
+              size="gameLg"
+              onClick={() => sendAction('resolve')}
+              disabled={busy}
+              aria-busy={busy || undefined}
+              className="w-full gap-2"
+            >
+              <span className="truncate">{`${t('continueCase')} (${caseLabel(pending.caseType)})`}</span>
+              <ChevronRight aria-hidden className="h-5 w-5 shrink-0" />
+            </Button>
+          )}
+        </OnlineActionBar>
       )}
 
-      {/* Écran de victoire — fidèle au mode local (confettis, trophée, stats, classement final). */}
+      {/* Écran de victoire — fidèle au mode local (confettis, trophée, stats, classement final).
+          Feuille ancrée en bas au téléphone : un bandeau d'avis qui arrive tard
+          la fait grandir vers le haut sans recentrer la carte. */}
+      {portal(
       <AnimatePresence>
         {finished && endRevealed && (
           <motion.div
@@ -992,70 +1013,73 @@ export function PetitBuveurOnline() {
             role="dialog"
             aria-modal="true"
             aria-label={tGame('victory.winner')}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[110] flex items-end justify-center bg-black/80 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] backdrop-blur-sm sm:items-center sm:p-4"
           >
             <EndConfetti rain pieces={200} />
             <motion.div
-              initial={{ scale: 0.85, y: 30 }}
-              animate={{ scale: 1, y: 0 }}
+              initial={reducedMotion ? { opacity: 0 } : { scale: 0.85, y: 30 }}
+              animate={reducedMotion ? { opacity: 1 } : { scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 }}
-              className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/[0.15] bg-felt-deep/95 shadow-2xl backdrop-blur-md"
+              tabIndex={-1}
+              ref={focusOnMount}
+              className="flex max-h-[92dvh] w-full max-w-md flex-col overflow-y-auto rounded-3xl border border-gold/20 bg-felt-deep text-cream shadow-2xl outline-none"
             >
               <OnlineEndScreen
                 variant="sheet"
-                className="bg-gradient-to-br from-amber-600/20 via-transparent to-orange-600/10 p-6"
+                className="px-5 pt-6"
                 won={winner?.id === user?.id}
                 rematchVotes={(view as { rematchVotes?: string[] }).rematchVotes ?? []}
                 onRematch={voteRematch}
                 onLeave={leaveRoom}
-                rematchClassName="from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500"
                 header={
-                  // Trophée animé
+                  // Trophée : deux rebonds, pas de boucle (réduire les animations les coupe)
                   <div className="mb-4 flex flex-col items-center gap-3">
                     <motion.div
-                      animate={{ scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                      className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-4xl shadow-xl shadow-amber-500/40"
+                      animate={reducedMotion ? undefined : { scale: [1, 1.1, 1], rotate: [0, -8, 8, 0] }}
+                      transition={{ duration: 1.5, repeat: 2, repeatDelay: 1.5 }}
+                      className="flex h-20 w-20 items-center justify-center rounded-2xl border border-gold/40 bg-gold/[0.15] text-gold"
                     >
-                      <Trophy aria-hidden className="h-12 w-12 text-gold" />
+                      <Trophy aria-hidden className="h-10 w-10" />
                     </motion.div>
                     <div className="text-center">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+                      <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
                         {tGame('victory.winner')}
                       </p>
-                      <h2 className="mt-1 text-2xl font-bold text-white">
+                      <h2 className="mt-1 font-display text-2xl font-bold text-gold">
                         {winner ? (
                           <OnlinePlayerName name={winner.name} cosmetics={cosmetics.get(winner.id)} />
                         ) : (
                           '—'
                         )}
                       </h2>
-                      <p className="mt-0.5 text-sm text-white/50">{tGame('victory.wonGame')}</p>
+                      <p className="mt-0.5 text-sm text-cream/70">{tGame('victory.wonGame')}</p>
                     </div>
                   </div>
                 }
                 ranking={
                   <>
                     {/* Stats */}
-                    <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <div className="mb-4 grid grid-cols-3 gap-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
                       <div className="text-center">
-                        <p className="text-lg font-bold text-amber-300">{view.turnCount}</p>
-                        <p className="text-xs text-white/40">{tGame('victory.turns')}</p>
+                        <p className="font-display text-lg font-bold text-gold">{view.turnCount}</p>
+                        <p className="text-xs text-cream/70">{tGame('victory.turns')}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-lg font-bold text-amber-300">{view.players.length}</p>
-                        <p className="text-xs text-white/40">{tGame('victory.players')}</p>
+                        <p className="font-display text-lg font-bold text-gold">{view.players.length}</p>
+                        <p className="text-xs text-cream/70">{tGame('victory.players')}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xl leading-none" aria-hidden>{DIFFICULTY_EMOJI[difficulty]}</p>
-                        <p className="mt-1 text-sm font-bold text-amber-300">{tDiff(difficulty)}</p>
-                        <p className="mt-0.5 text-xs text-white/40">{tGame('victory.difficulty')}</p>
+                        <p className="flex items-center justify-center gap-1 font-display text-sm font-bold text-gold">
+                          <PbDifficultyIcon difficulty={difficulty} className="h-4 w-4" />
+                          {tDiff(difficulty)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-cream/70">{tGame('victory.difficulty')}</p>
                       </div>
                     </div>
 
                     {/* Classement final */}
-                    <div className="mb-5 space-y-2 rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
+                    <div className="mb-4 space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+                      <p className="mb-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
                         {tGame('finalRanking')}
                       </p>
                       {finalRanking.map((p, index) => (
@@ -1063,25 +1087,16 @@ export function PetitBuveurOnline() {
                           key={p.id}
                           className={cn(
                             'flex items-center justify-between rounded-xl px-3 py-2',
-                            p.id === winner?.id ? 'border border-amber-400/30 bg-amber-500/[0.15]' : 'bg-white/5'
+                            p.id === winner?.id ? 'border border-gold/60 bg-gold/[0.15]' : 'border border-gold/20 bg-black/20'
                           )}
                         >
                           <div className="flex min-w-0 items-center gap-2">
-                            <span
-                              className={cn(
-                                'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
-                                index === 0
-                                  ? 'border-amber-400/[0.45] bg-amber-500/20 text-amber-100'
-                                  : 'border-white/10 bg-white/5 text-white/50'
-                              )}
-                            >
-                              {index + 1}
-                            </span>
+                            {rankBadge(index)}
                             <RankCrest role={cosmetics.get(p.id)?.role} />
-                            <span className="shrink-0 text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
-                            <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="truncate text-sm font-semibold text-white" />
+                            {pawnOf(p.id, 22)}
+                            <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="truncate text-sm font-semibold text-cream" />
                           </div>
-                          <div className="flex shrink-0 gap-3 text-xs text-white/50">
+                          <div className="flex shrink-0 gap-3 text-xs text-cream/80">
                             <span>{p.drinks} {drinkIcon(ambiance)}</span>
                             <span>{t('caseLabel')} {p.position + 1}</span>
                           </div>
@@ -1102,61 +1117,49 @@ export function PetitBuveurOnline() {
           </motion.div>
         )}
       </AnimatePresence>
+      )}
 
-      {/* Fenêtres de décision — plein écran mobile (bottom-sheet), centrées sur desktop */}
+      {/* Fenêtres de décision — feuille du bas sur mobile, centrées sur desktop */}
+      {portal(
       <AnimatePresence>
         {showChoice && pending && choice?.kind === 'target' && (
           <ChoiceSheet
             key="target"
-            scroll
             ariaLabel={tGame('target.title')}
             caseLabel={pendingTitle}
+            caseType={pending.caseType}
             title={tGame('target.title')}
             hint={pendingDetail ?? tGame('target.hint')}
+            footer={
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => randomTarget(choice.allowSelf)}
+                  className={SECONDARY_CHOICE}
+                >
+                  <Shuffle className="h-4 w-4 shrink-0 text-gold" aria-hidden />
+                  <span className="truncate">{tGame('target.random')}</span>
+                </button>
+                {active && choice.allowSelf && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => sendAction('resolve', { targetId: active.id })}
+                    className={SECONDARY_CHOICE}
+                  >
+                    <User className="h-4 w-4 shrink-0 text-gold" aria-hidden />
+                    <span className="flex min-w-0 items-center gap-1 truncate">
+                      {tGame('target.me')}{' '}
+                      <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="truncate font-semibold" />
+                    </span>
+                  </button>
+                )}
+              </div>
+            }
           >
-            {/* Classement compact */}
-            <div className="mb-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">{tGame('ranking')}</p>
-              <ul className="space-y-1">
-                {ranking.map((p, index) => {
-                  const isActive = p.id === active?.id
-                  return (
-                    <li
-                      key={p.id}
-                      className={cn(
-                        'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm',
-                        isActive && 'bg-emerald-500/10'
-                      )}
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          className={cn(
-                            'inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md border px-1 text-xs font-bold tabular-nums',
-                            index === 0
-                              ? 'border-amber-400/[0.45] bg-amber-500/20 text-amber-100'
-                              : 'border-white/10 bg-white/5 text-white/60'
-                          )}
-                        >
-                          {index + 1}
-                        </span>
-                        <span className="shrink-0 text-xs" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
-                        <OnlinePlayerName
-                          name={p.name}
-                          cosmetics={cosmetics.get(p.id)}
-                          className={cn('truncate font-medium text-white/90', isActive && 'text-emerald-300')}
-                        />
-                      </span>
-                      <span className="shrink-0 text-xs text-white/60">
-                        {t('caseLabel')} {shownPosOf(p.id) + 1}
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-
-            {/* Cibles (hors soi-même — voir bouton « Moi » quand la case l'autorise) */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {/* Cibles (hors soi-même — voir « Moi » quand la case l'autorise) : une ligne de 56 px chacune */}
+            <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
               {view.players
                 .filter((p) => p.id !== active?.id)
                 .map((p) => (
@@ -1165,46 +1168,19 @@ export function PetitBuveurOnline() {
                     type="button"
                     disabled={busy}
                     onClick={() => sendAction('resolve', { targetId: p.id })}
-                    className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/10 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                    className="flex h-14 w-full items-center gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 text-left text-cream transition-all hover:border-gold/60 hover:bg-gold/[0.15] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
                   >
-                    <span className="text-3xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p.id)} /></span>
+                    {pawnOf(p.id, 28)}
                     <OnlinePlayerName
                       name={p.name}
                       cosmetics={cosmetics.get(p.id)}
-                      className="max-w-full truncate text-center text-sm font-semibold text-white"
+                      className="min-w-0 flex-1 truncate text-[15px] font-semibold"
                     />
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/60">
+                    <span className="shrink-0 rounded-full border border-gold/20 bg-black/25 px-2 py-0.5 text-xs font-medium text-cream/80">
                       {t('caseLabel')} {shownPosOf(p.id) + 1}
                     </span>
                   </button>
                 ))}
-            </div>
-
-            {/* Actions rapides */}
-            <div className="mt-5 space-y-2 border-t border-white/10 pt-4">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => randomTarget(choice.allowSelf)}
-                className={SECONDARY_CHOICE}
-              >
-                <Shuffle className="h-4 w-4 text-amber-300" aria-hidden />
-                {tGame('target.random')}
-              </button>
-              {active && choice.allowSelf && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => sendAction('resolve', { targetId: active.id })}
-                  className={SECONDARY_CHOICE}
-                >
-                  <User className="h-4 w-4 opacity-90" aria-hidden />
-                  <span className="flex min-w-0 items-center gap-1 truncate">
-                    {tGame('target.me')}{' '}
-                    <OnlinePlayerName name={active.name} cosmetics={cosmetics.get(active.id)} className="font-semibold" />
-                  </span>
-                </button>
-              )}
             </div>
           </ChoiceSheet>
         )}
@@ -1215,31 +1191,35 @@ export function PetitBuveurOnline() {
             key="verdict"
             ariaLabel={tGame('challengeQuestion')}
             caseLabel={pendingTitle}
+            caseType={pending.caseType}
             title={tGame('challengeQuestion')}
-            icon={<Gavel className="h-6 w-6 text-amber-300" aria-hidden />}
+            icon={<Gavel className="h-6 w-6 text-gold" aria-hidden />}
             hint={
               <>
-                <span className="block font-semibold text-cream">🎯 {nameOf(pending.targetId)}</span>
+                <span className="flex items-center gap-1.5 font-semibold text-cream">
+                  <Target aria-hidden className="h-4 w-4 text-gold" /> {nameOf(pending.targetId)}
+                </span>
                 {pendingDetail && <span className="mt-1 block">{pendingDetail}</span>}
               </>
             }
           >
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => sendAction('resolve', { succeeded: true })}
                 className={PRIMARY_CHOICE}
               >
-                ✅ {tGame('challengeSuccess')}
+                <Check aria-hidden className="h-5 w-5 shrink-0" />
+                {tGame('challengeSuccess')}
               </button>
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => sendAction('resolve', { succeeded: false })}
-                className={SECONDARY_CHOICE}
+                className={DANGER_CHOICE}
               >
-                <DrinkGlyph className="h-4 w-4 text-red-300" aria-hidden />
+                <DrinkGlyph className="h-5 w-5 shrink-0" aria-hidden />
                 {tGame('challengeDrink', { count: pendingCase?.effect ?? 0 })}
               </button>
             </div>
@@ -1252,8 +1232,9 @@ export function PetitBuveurOnline() {
             key="side"
             ariaLabel={tGame('dialogs.coinFlip')}
             caseLabel={pendingTitle}
+            caseType={pending.caseType}
             title={tGame('dialogs.coinFlip')}
-            icon={<Coins className="h-6 w-6 text-amber-300" aria-hidden />}
+            icon={<Coins className="h-6 w-6 text-gold" aria-hidden />}
             hint={
               <>
                 <span className="block">{t('sidePrompt', { actor: nameOf(pending.playerId) })}</span>
@@ -1263,7 +1244,7 @@ export function PetitBuveurOnline() {
                 {typeof pending.deadlineAt === 'number' && (
                   <PhaseCountdown endsAt={pending.deadlineAt}>
                     {({ seconds }) => (
-                      <span className="mt-1 block text-xs tabular-nums text-cream/70">
+                      <span className="mt-1 block text-sm tabular-nums text-cream/80">
                         {t('secondsLeft', { seconds })}
                       </span>
                     )}
@@ -1272,7 +1253,7 @@ export function PetitBuveurOnline() {
               </>
             }
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 disabled={busy}
@@ -1299,11 +1280,12 @@ export function PetitBuveurOnline() {
             key="chance"
             ariaLabel={tGame('dialogs.chance')}
             caseLabel={pendingTitle}
+            caseType={pending.caseType}
             title={tGame('dialogs.chance')}
-            icon={<Clover className="h-6 w-6 text-amber-300" aria-hidden />}
+            icon={<Clover className="h-6 w-6 text-gold" aria-hidden />}
             hint={tGame('dialogs.chancePrompt')}
           >
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2">
               <button type="button" disabled={busy} onClick={handleChanceReroll} className={PRIMARY_CHOICE}>
                 {tGame('dialogs.chanceReroll')}
               </button>
@@ -1320,8 +1302,14 @@ export function PetitBuveurOnline() {
         )}
 
         {showChoice && pending && choice?.kind === 'teleport' && (
-          <ChoiceSheet key="teleport" ariaLabel={t('teleportPrompt')} caseLabel={pendingTitle} title={t('teleportPrompt')}>
-            <div className="grid grid-cols-1 gap-3">
+          <ChoiceSheet
+            key="teleport"
+            ariaLabel={t('teleportPrompt')}
+            caseLabel={pendingTitle}
+            caseType={pending.caseType}
+            title={t('teleportPrompt')}
+          >
+            <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
                 disabled={busy}
@@ -1342,138 +1330,184 @@ export function PetitBuveurOnline() {
           </ChoiceSheet>
         )}
       </AnimatePresence>
+      )}
 
-      {/* Légende des effets — informative, fermable (contrairement aux modales de choix). */}
-      <AnimatePresence>
-        {showLegend && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('effectsLegend')}
-            onClick={() => setShowLegend(false)}
-            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              onClick={(e) => e.stopPropagation()}
-              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
+      {/* Menu de la partie (⋯) : historique, effets, son, quitter (confirmé) */}
+      <Dialog open={showMenu} onOpenChange={setShowMenu}>
+        <DialogContent showCloseButton={false} onEscapeKeyDown={allowEscapeClose} className="sm:max-w-sm">
+          <PbDialogClose label={tCommon('close')} />
+          <DialogHeader>
+            <DialogTitle className="flex min-h-[44px] items-center pr-12 font-display text-cream">{t('menu.title')}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button
+              type="button"
+              variant="quiet"
+              size="game"
+              className="w-full justify-start gap-3"
+              onClick={() => {
+                setShowMenu(false)
+                setShowHistory(true)
+              }}
             >
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 py-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 shrink-0 text-amber-300" />
-                  <h3 className="text-base font-bold text-white">{t('effectsLegend')}</h3>
-                </div>
-                <button
-                  onClick={() => setShowLegend(false)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label={tGame('close')}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="min-h-0 space-y-2 overflow-y-auto p-4">
-                {legendEffects.map((e) => (
-                  <div key={e.title} className={cn('flex items-center gap-3 rounded-xl border px-3 py-2.5', e.accent)}>
-                    <span className="text-xl" aria-hidden>{e.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white">{e.title}</p>
-                      <p className="text-xs text-white/60">{e.desc}</p>
+              <History aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              {t('history.title')}
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              size="game"
+              className="w-full justify-start gap-3"
+              onClick={() => {
+                setShowMenu(false)
+                setShowLegend(true)
+              }}
+            >
+              <HelpCircle aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              {t('effectsLegend')}
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              size="game"
+              className="w-full justify-start gap-3"
+              onClick={toggleMuted}
+            >
+              {muted ? (
+                <VolumeX aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              ) : (
+                <Volume2 aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              )}
+              {muted ? tGame('soundOn') : tGame('soundOff')}
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              size="game"
+              className="w-full justify-start gap-3 border-suit-red/50 text-red-300 hover:bg-suit-red/20"
+              onClick={() => void askLeave()}
+            >
+              <LogOut aria-hidden className="h-5 w-5 shrink-0" />
+              {t('menu.leave')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {confirmDialog}
+
+      {/* Effets en cours + légende des effets — informative, fermable (contrairement aux fenêtres de choix). */}
+      <Dialog open={showLegend} onOpenChange={setShowLegend}>
+        <DialogContent
+          showCloseButton={false}
+          onEscapeKeyDown={allowEscapeClose}
+          className="max-h-[85dvh] overflow-y-auto sm:max-w-md"
+        >
+          <PbDialogClose label={tCommon('close')} />
+          <DialogHeader>
+            <DialogTitle className="flex min-h-[44px] items-center gap-2 pr-12 font-display text-cream">
+              <Sparkles aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              {effectChips.length > 0 ? tGame('effects.activeTitle') : t('effectsLegend')}
+            </DialogTitle>
+          </DialogHeader>
+          {effectChips.length > 0 && (
+            <div className="space-y-2">
+              {effectChips.map((e) => (
+                <div key={e.id} className={cn('flex items-start gap-3 rounded-xl border px-3 py-2.5', PB_EFFECT_STYLE[e.kind].chip)}>
+                  <PbEffectIcon kind={e.kind} className="mt-0.5 h-6 w-6" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                      <p className="font-display text-base font-bold text-cream">{e.title}</p>
+                      <span className="shrink-0 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-0.5 text-xs font-semibold text-gold">
+                        {tGame('effects.turnsLeft', { count: e.remaining })}
+                      </span>
                     </div>
+                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-cream">
+                      {pawnOf(e.playerId, 20)}
+                      <span className="truncate">
+                        {e.playerName}
+                        {e.linkedName ? `${e.kind === 'chain' ? ' ↔ ' : ' → '}${e.linkedName}` : ''}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm text-cream/70">{e.desc}</p>
                   </div>
-                ))}
+                </div>
+              ))}
+              <p className="pt-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('effectsLegend')}</p>
+            </div>
+          )}
+          <div className="space-y-2">
+            {legendEffects.map((e) => (
+              <div key={e.kind} className={cn('flex items-center gap-3 rounded-xl border px-3 py-2.5', PB_EFFECT_STYLE[e.kind].chip)}>
+                <PbEffectIcon kind={e.kind} className="h-6 w-6" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-cream">{e.title}</p>
+                  <p className="text-sm text-cream/70">{e.desc}</p>
+                </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Historique des effets précédents — informatif, fermable */}
-      <AnimatePresence>
-        {showHistory && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('history.title')}
-            onClick={() => setShowHistory(false)}
-            className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-              onClick={(e) => e.stopPropagation()}
-              className="z-[100] flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-felt-deep shadow-2xl"
-            >
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-br from-amber-600/20 to-transparent px-5 py-4">
-                <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 shrink-0 text-amber-300" />
-                  <h3 className="text-base font-bold text-white">{t('history.title')}</h3>
-                </div>
-                <button
-                  onClick={() => setShowHistory(false)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label={tGame('close')}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="min-h-0 space-y-2 overflow-y-auto p-4">
-                {(view.outcomeHistory ?? []).length === 0 ? (
-                  <p className="py-6 text-center text-sm text-white/50">{t('history.empty')}</p>
-                ) : (
-                  [...(view.outcomeHistory ?? [])].reverse().map((entry, i) => {
-                    const actor = view.players.find((p) => p.id === entry.actorId)
-                    return (
-                      <div
-                        key={`${entry.turn}-${entry.caseType}-${i}`}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-                      >
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-md border border-white/[0.15] bg-white/10 px-1.5 py-0.5 text-xs font-bold tabular-nums text-white/60">
-                            T{entry.turn}
-                          </span>
-                          <span className="text-base leading-none" aria-hidden>
-                            {getCaseMeta(entry.caseType).icon}
-                          </span>
-                          <span className="text-xs font-semibold text-white/90">
-                            {outcomeTitle(entry)}
-                          </span>
-                          {entry.dice != null && (
-                            <span className="flex items-center gap-0.5 text-xs text-white/60">
-                              <Dice6 className="h-3 w-3" /> {entry.dice}
-                            </span>
-                          )}
-                          <span className="ml-auto flex items-center gap-1 text-xs text-white/50">
-                            <span aria-hidden><PlayerAvatarGlyph value={iconOf(entry.actorId)} /></span>
-                            {actor && (
-                              <OnlinePlayerName name={actor.name} cosmetics={cosmetics.get(actor.id)} className="max-w-[5.5rem] truncate" />
-                            )}
-                          </span>
-                        </div>
-                        {outcomeBody(entry, 'history', true)}
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-    <AnimatePresence>
-      {tutorial.open && <GameTutorialModal gameId="petit-buveur" onClose={tutorial.close} />}
-    </AnimatePresence>
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent
+          showCloseButton={false}
+          onEscapeKeyDown={allowEscapeClose}
+          className="max-h-[85dvh] overflow-y-auto sm:max-w-md"
+        >
+          <PbDialogClose label={tCommon('close')} />
+          <DialogHeader>
+            <DialogTitle className="flex min-h-[44px] items-center gap-2 pr-12 font-display text-cream">
+              <History aria-hidden className="h-5 w-5 shrink-0 text-gold" />
+              {t('history.title')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {(view.outcomeHistory ?? []).length === 0 ? (
+              <p className="py-6 text-center text-sm text-cream/70">{t('history.empty')}</p>
+            ) : (
+              [...(view.outcomeHistory ?? [])].reverse().map((entry, i) => {
+                const actor = view.players.find((p) => p.id === entry.actorId)
+                return (
+                  <div
+                    key={`${entry.turn}-${entry.caseType}-${i}`}
+                    className="rounded-xl border border-gold/20 bg-black/20 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-md border border-gold/20 bg-black/25 px-1.5 py-0.5 text-xs font-bold tabular-nums text-cream/80">
+                        {t('turn', { count: entry.turn })}
+                      </span>
+                      <CaseToken caseType={entry.caseType} size={24} />
+                      <span className="text-sm font-semibold text-cream">
+                        {outcomeTitle(entry)}
+                      </span>
+                      {entry.dice != null && (
+                        <span className="flex items-center gap-0.5 text-xs text-cream/80">
+                          <Dice6 aria-hidden className="h-3.5 w-3.5" /> {entry.dice}
+                        </span>
+                      )}
+                      <span className="ml-auto flex items-center gap-1.5 text-sm text-cream/80">
+                        {pawnOf(entry.actorId, 18)}
+                        {actor && (
+                          <OnlinePlayerName name={actor.name} cosmetics={cosmetics.get(actor.id)} className="max-w-[6rem] truncate" />
+                        )}
+                      </span>
+                    </div>
+                    {outcomeBody(entry, 'history', true)}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {portal(
+        <AnimatePresence>
+          {tutorial.open && <GameTutorialModal gameId="petit-buveur" onClose={tutorial.close} />}
+        </AnimatePresence>
+      )}
     </>
   )
 }

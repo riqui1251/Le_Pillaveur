@@ -109,6 +109,19 @@ function normalize(text: string): string {
     .trim()
 }
 
+/**
+ * L'indice est-il un mot encore visible sur la grille (interdit, règle
+ * classique) ? Partagé avec le téléphone du maître-mot, qui le signale avant
+ * l'envoi au lieu d'un refus générique du serveur.
+ */
+export function mcClueOnGrid(
+  tiles: readonly { word: string; revealed: boolean }[],
+  clue: string
+): boolean {
+  const key = normalize(clue)
+  return tiles.some((tile) => !tile.revealed && normalize(tile.word) === key)
+}
+
 // ─── Création ────────────────────────────────────────────────────────────────
 
 export function createMCState(
@@ -209,10 +222,8 @@ export function reduceMC(state: MCState, action: MCAction): MCState {
       if (word.length < 1 || word.length > MC_CLUE_MAX_LEN || /\s/.test(word)) {
         throw new MCEngineError('INVALID_CLUE')
       }
-      // Interdit : un mot encore visible sur la grille (règle classique).
-      const key = normalize(word)
-      const onGrid = state.words.some((w, i) => !state.revealed[i] && normalize(w) === key)
-      if (onGrid) throw new MCEngineError('CLUE_ON_GRID')
+      const tiles = state.words.map((w, i) => ({ word: w, revealed: state.revealed[i] }))
+      if (mcClueOnGrid(tiles, word)) throw new MCEngineError('CLUE_ON_GRID')
       if (!Number.isInteger(action.count) || action.count < 1 || action.count > 9) {
         throw new MCEngineError('INVALID_COUNT')
       }

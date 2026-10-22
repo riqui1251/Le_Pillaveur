@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
 import { Flag, Loader2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 /**
@@ -76,15 +77,15 @@ export function ReportDialog({ target, onClose }: Props) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-10 flex flex-col bg-[#0c0b12]/98 backdrop-blur-sm"
+      className="absolute inset-0 z-10 flex flex-col bg-felt-deep text-cream"
       role="dialog"
       aria-modal="true"
       aria-label={target.messageId ? t('reportTitle') : t('reportPlayerTitle')}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+      <div className="flex items-center justify-between gap-2 border-b border-gold/20 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <Flag className="h-4 w-4 shrink-0 text-red-300" />
-          <h3 className="truncate text-sm font-bold text-white">
+          <h3 className="truncate text-sm font-bold text-cream">
             {target.messageId ? t('reportTitle') : t('reportPlayerTitle')}
           </h3>
         </div>
@@ -92,14 +93,14 @@ export function ReportDialog({ target, onClose }: Props) {
           type="button"
           onClick={onClose}
           aria-label={tCommon('cancel')}
-          className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+          className="touch-target flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-cream/70 transition-colors hover:bg-gold/10 hover:text-cream"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-        <p className="text-xs text-white/50">{target.displayName}</p>
+        <p className="text-xs text-cream/70">{target.displayName}</p>
 
         {result === 'sent' || result === 'already' ? (
           <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
@@ -108,17 +109,17 @@ export function ReportDialog({ target, onClose }: Props) {
         ) : (
           <>
             <fieldset className="space-y-1.5">
-              <legend className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-white/40">
+              <legend className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-cream/60">
                 {t('reportReason')}
               </legend>
               {REASONS.map((value) => (
                 <label
                   key={value}
                   className={cn(
-                    'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors',
+                    'flex min-h-[44px] cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors',
                     reason === value
-                      ? 'border-violet-400/50 bg-violet-500/15 text-white'
-                      : 'border-white/10 bg-white/[0.03] text-white/70 hover:bg-white/[0.07]'
+                      ? 'border-gold/60 bg-gold/[0.15] text-cream'
+                      : 'border-gold/20 bg-white/[0.03] text-cream/80 hover:bg-white/[0.07]'
                   )}
                 >
                   <input
@@ -127,7 +128,7 @@ export function ReportDialog({ target, onClose }: Props) {
                     value={value}
                     checked={reason === value}
                     onChange={() => setReason(value)}
-                    className="h-3.5 w-3.5 accent-violet-500"
+                    className="h-4 w-4 accent-amber-500"
                   />
                   {t(`reportReasons.${value}`)}
                 </label>
@@ -135,7 +136,7 @@ export function ReportDialog({ target, onClose }: Props) {
             </fieldset>
 
             <label className="block">
-              <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-white/40">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-widest text-cream/60">
                 {t('reportComment')}
               </span>
               <textarea
@@ -143,12 +144,12 @@ export function ReportDialog({ target, onClose }: Props) {
                 onChange={(e) => setComment(e.target.value)}
                 maxLength={500}
                 rows={3}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-violet-400/50 focus:outline-none"
+                className="w-full rounded-xl border border-gold/20 bg-black/20 px-3 py-2 text-sm text-cream placeholder:text-cream/50 focus:border-gold/60 focus:outline-none"
               />
             </label>
 
             {result === 'failed' && (
-              <p role="status" className="text-[11px] text-red-300">
+              <p role="status" className="text-xs text-red-300">
                 {t('reportFailed')}
               </p>
             )}
@@ -156,33 +157,27 @@ export function ReportDialog({ target, onClose }: Props) {
         )}
       </div>
 
-      <div className="flex gap-2 border-t border-white/10 p-2.5">
+      <div className="flex gap-2 border-t border-gold/20 p-2.5">
         {result === 'sent' || result === 'already' ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-xl bg-white/10 py-2 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.15]"
-          >
+          <Button type="button" variant="quiet" size="game" onClick={onClose} className="flex-1">
             {t('back')}
-          </button>
+          </Button>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-xl border border-white/[0.15] bg-white/5 py-2 text-sm font-semibold text-white/70 transition-colors hover:bg-white/10"
-            >
+            <Button type="button" variant="quiet" size="game" onClick={onClose} className="flex-1">
               {tCommon('cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="danger"
+              size="game"
               onClick={() => void submit()}
               disabled={sending}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-600 py-2 text-sm font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+              className="flex-1 gap-1.5"
             >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />}
+              {sending ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" /> : <Flag className="h-4 w-4" />}
               {t('reportSubmit')}
-            </button>
+            </Button>
           </>
         )}
       </div>

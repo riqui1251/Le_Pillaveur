@@ -1,14 +1,20 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import {
+  PRELUDE_PENALTY,
   buildClassicPyramid,
+  computeFunTally,
   computeScoreSummary,
   computeTotalsByPlayer,
   createDeck,
   createPyramid,
   evaluatePreludeChoice,
   findNextCardToFlip,
+  flipOrder,
+  floorOfRow,
+  funFlipperIndex,
   rankValue,
   shuffleDeck,
+  stakeOfRow,
   totalCardsForHeight,
   valueToPoints,
   type Card,
@@ -250,5 +256,78 @@ describe('buildClassicPyramid', () => {
     const pyramid = buildClassicPyramid(tinyDeck, [], 3) // demande 6 cartes, n'en a qu'1
     expect(pyramid.flat()).toHaveLength(6)
     expect(errSpy).toHaveBeenCalled()
+  })
+})
+
+describe('flipOrder', () => {
+  it('suit findNextCardToFlip, du bas vers le sommet', () => {
+    const height = 4
+    const { pyramidCards } = createPyramid(createDeck(1), height)
+    const walked: { row: number; col: number }[] = []
+    let pos: { row: number; col: number } | null = { row: height - 1, col: 0 }
+    while (pos) {
+      walked.push(pos)
+      pos = findNextCardToFlip(pyramidCards, pos.row, pos.col)
+    }
+    expect(flipOrder(height)).toEqual(walked)
+    expect(flipOrder(height)).toHaveLength(totalCardsForHeight(height))
+  })
+})
+
+describe('ce que coûte une carte', () => {
+  it("compte l'étage depuis le bas", () => {
+    expect(floorOfRow(5, 4)).toBe(1)
+    expect(floorOfRow(5, 1)).toBe(4)
+  })
+
+  it("une gorgée par étage, cul sec au sommet", () => {
+    expect(stakeOfRow(5, 4)).toEqual({ kind: 'sips', count: 1 })
+    expect(stakeOfRow(5, 2)).toEqual({ kind: 'sips', count: 3 })
+    expect(stakeOfRow(5, 0)).toEqual({ kind: 'bottomsUp' })
+    expect(stakeOfRow(3, 0)).toEqual({ kind: 'bottomsUp' })
+  })
+})
+
+describe('funFlipperIndex', () => {
+  it('fait tourner la table carte après carte', () => {
+    expect([0, 1, 2, 3, 4].map(i => funFlipperIndex(i, 3))).toEqual([0, 1, 2, 0, 1])
+  })
+
+  it('reste dans les bornes', () => {
+    expect(funFlipperIndex(5, 0)).toBe(0)
+    expect(funFlipperIndex(-1, 3)).toBe(2)
+  })
+})
+
+describe('computeFunTally', () => {
+  it('additionne les gorgées et les culs secs de chaque joueur', () => {
+    // Hauteur 3 : étages 1,1,1 puis 2,2 puis le sommet ; joueurs 0,1,0,1,0,1.
+    expect(computeFunTally(3, 6, 2)).toEqual([
+      { sips: 4, bottomsUp: 0 },
+      { sips: 3, bottomsUp: 1 },
+    ])
+  })
+
+  it("ne compte que les cartes déjà retournées", () => {
+    expect(computeFunTally(3, 2, 3)).toEqual([
+      { sips: 1, bottomsUp: 0 },
+      { sips: 1, bottomsUp: 0 },
+      { sips: 0, bottomsUp: 0 },
+    ])
+    expect(computeFunTally(3, 0, 2)).toEqual([
+      { sips: 0, bottomsUp: 0 },
+      { sips: 0, bottomsUp: 0 },
+    ])
+  })
+})
+
+describe('PRELUDE_PENALTY', () => {
+  it("vaut ce que coûte une erreur à chaque étape", () => {
+    const red = card('5', 'hearts')
+    expect(evaluatePreludeChoice('color', 'black', red, []).penalty).toBe(PRELUDE_PENALTY.color)
+    expect(evaluatePreludeChoice('higherLower', 'higher', red, [card('9')]).penalty).toBe(PRELUDE_PENALTY.higherLower)
+    expect(evaluatePreludeChoice('insideOutside', 'inside', red, [card('9'), card('K')]).penalty).toBe(PRELUDE_PENALTY.insideOutside)
+    expect(evaluatePreludeChoice('suit', 'spades', red, []).penalty).toBe(PRELUDE_PENALTY.suit)
+    expect(Object.values(PRELUDE_PENALTY)).toEqual([1, 2, 3, 4])
   })
 })

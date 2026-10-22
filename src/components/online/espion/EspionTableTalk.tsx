@@ -95,6 +95,9 @@ export function EspionTableTalk({
       feedAria={t('feedAria')}
       aimedBadge={variant === 'tv' ? undefined : { kinds: ['accuse', 'suspect'], text: t('accusedYou') }}
       valuesOf={valuesOf}
+      // Au téléphone, un bot parle toutes les quelques secondes : le lecteur
+      // d'écran n'annonce que ce qui me vise.
+      live={variant === 'phone' ? 'aimed' : 'all'}
     />
   )
 }

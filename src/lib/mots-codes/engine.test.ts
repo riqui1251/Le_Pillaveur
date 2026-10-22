@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   createMCState,
   currentMCActorId,
+  mcClueOnGrid,
   mcRemainingFor,
   mcSpymasterOf,
   reduceMC,
   toMCClientView,
   toMCSpectatorView,
-  MCEngineError,
   MC_CLUE_MS,
   MC_COUNTDOWN_MS,
   MC_GRID,
@@ -98,6 +98,16 @@ describe('GIVE_CLUE', () => {
     expect(g.phase).toBe('guess')
     expect(g.clue).toEqual({ word: 'indice', count: 3 })
     expect(g.guessesLeft).toBe(4)
+  })
+
+  it('mcClueOnGrid : même règle que le moteur (casse et accents ignorés, tuiles révélées permises)', () => {
+    const tiles = [
+      { word: 'Château', revealed: false },
+      { word: 'lune', revealed: true },
+    ]
+    expect(mcClueOnGrid(tiles, ' CHATEAU ')).toBe(true)
+    expect(mcClueOnGrid(tiles, 'lune')).toBe(false)
+    expect(mcClueOnGrid(tiles, 'soleil')).toBe(false)
   })
 })
 

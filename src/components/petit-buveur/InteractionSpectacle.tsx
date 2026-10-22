@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { drinkIcon } from './drink-feedback'
 import type { LastInteraction } from '@/lib/petit-buveur/engine'
 import { DiceFace } from './DiceOverlay'
 import { playGameSound } from '@/lib/sound/game-sounds'
@@ -94,13 +97,16 @@ function SpinningWheel({
   legendDrink: string
 }) {
   // La roue s'arrête avec le segment tiré sous l'aiguille (en haut).
-  // Couleurs SIGNIFIANTES : vert = sauvé, deux rouges alternés = gorgées.
+  // Couleurs SIGNIFIANTES, celles de la roue du jeu local : vert bouclier =
+  // sauvé, deux rouges alternés = gorgées (🌿 en Soft, comme le reste du jeu).
+  const { mode } = useAmbianceMode()
+  const drinkGlyph = drinkIcon(mode)
   const segAngle = 360 / WHEEL_SEGMENTS
   const finalRotation = 360 * 5 - (segment * segAngle + segAngle / 2)
   const gradient = useMemo(() => {
     const stops = Array.from({ length: WHEEL_SEGMENTS }, (_, i) => {
       const color = isSafeSegment(i)
-        ? '#059669'
+        ? '#047857'
         : i % 2 === 0
           ? 'rgb(var(--suit-red-rgb))'
           : 'rgb(var(--suit-red-rgb) / 0.8)'
@@ -112,8 +118,10 @@ function SpinningWheel({
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative">
-        <div className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 text-xl drop-shadow" aria-hidden>
-          🔻
+        <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 drop-shadow" aria-hidden>
+          <svg width="28" height="28" viewBox="0 0 28 28">
+            <polygon points="4,4 24,4 14,22" style={{ fill: 'rgb(var(--cream-rgb))' }} />
+          </svg>
         </div>
         <motion.div
           initial={{ rotate: 0 }}
@@ -122,29 +130,29 @@ function SpinningWheel({
           className="relative h-40 w-40 rounded-full border-4 border-gold/60 shadow-2xl"
           style={{ backgroundImage: gradient, backgroundColor: 'rgb(var(--cream-rgb))' }}
         >
-          {/* Picto au centre de chaque segment : ✓ sauvé, 🍺 gorgées */}
+          {/* Picto au centre de chaque segment : bouclier sauvé, verre gorgées */}
           {Array.from({ length: WHEEL_SEGMENTS }).map((_, i) => (
             <span
               key={i}
-              className="absolute left-1/2 top-1/2 text-[13px] font-black text-cream drop-shadow"
+              className="absolute left-1/2 top-1/2 flex text-sm leading-none text-cream drop-shadow"
               style={{
                 transform: `translate(-50%, -50%) rotate(${(i + 0.5) * segAngle}deg) translateY(-62px)`,
               }}
               aria-hidden
             >
-              {isSafeSegment(i) ? '✓' : '🍺'}
+              {isSafeSegment(i) ? <Shield className="h-3.5 w-3.5" strokeWidth={2.5} /> : drinkGlyph}
             </span>
           ))}
           <span className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gold/60 bg-felt-deep" />
         </motion.div>
       </div>
       {/* Légende */}
-      <div className="flex items-center gap-4 rounded-full border border-gold/20 bg-felt-deep/90 px-3 py-1 text-[11px] font-semibold text-cream/80">
+      <div className="flex items-center gap-4 rounded-full border border-gold/20 bg-felt-deep/90 px-3 py-1 text-xs font-semibold text-cream/80">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" aria-hidden /> {legendSafe}
+          <Shield aria-hidden className="h-3.5 w-3.5 text-emerald-300" strokeWidth={2.5} /> {legendSafe}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-suit-red" aria-hidden /> 🍺 {legendDrink}
+          <span className="h-2.5 w-2.5 rounded-full bg-suit-red" aria-hidden /> <span aria-hidden>{drinkGlyph}</span> {legendDrink}
         </span>
       </div>
     </div>
@@ -273,7 +281,7 @@ export function InteractionSpectacle({
         >
           <div className="flex flex-col items-center gap-4 px-6">
             <div className="flex items-center gap-2 rounded-full border border-gold/20 bg-felt-deep/90 px-4 py-1.5">
-              <span className="rounded-full border border-gold/40 bg-gold/[0.15] px-2 py-0.5 text-[11px] font-semibold text-gold">
+              <span className="rounded-full border border-gold/40 bg-gold/[0.15] px-2 py-0.5 text-xs font-semibold text-gold">
                 {caseLabel}
               </span>
               <span className="max-w-[11rem] truncate text-sm font-semibold text-cream">{actorName}</span>

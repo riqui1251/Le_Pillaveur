@@ -99,6 +99,62 @@ export function findNextCardToFlip(
   return null
 }
 
+/** Ordre complet de retournement (rangée du bas d'abord, de gauche à droite), celui de findNextCardToFlip. */
+export function flipOrder(pyramidHeight: number): { row: number; col: number }[] {
+  const order: { row: number; col: number }[] = []
+  for (let row = pyramidHeight - 1; row >= 0; row--) {
+    for (let col = 0; col <= row; col++) order.push({ row, col })
+  }
+  return order
+}
+
+// ── Ce que coûte une carte retournée ───────────────────────────────────────
+
+/**
+ * Étage d'une rangée, compté depuis le bas : 1 pour la rangée du bas. La
+ * rangée 0 est le sommet. C'est le nombre écrit dans la pastille de la rangée.
+ */
+export function floorOfRow(pyramidHeight: number, row: number): number {
+  return pyramidHeight - row
+}
+
+/** Autant de gorgées que l'étage de la carte ; la carte du sommet, c'est cul sec. */
+export type FlipStake = { kind: 'sips'; count: number } | { kind: 'bottomsUp' }
+
+export function stakeOfRow(pyramidHeight: number, row: number): FlipStake {
+  return row === 0 ? { kind: 'bottomsUp' } : { kind: 'sips', count: floorOfRow(pyramidHeight, row) }
+}
+
+/** Mode Cartes : chacun son tour, dans l'ordre de la table. Index du joueur qui retourne la carte n° `flipIndex` (0 = la première). */
+export function funFlipperIndex(flipIndex: number, playerCount: number): number {
+  if (playerCount <= 0) return 0
+  return ((flipIndex % playerCount) + playerCount) % playerCount
+}
+
+export interface FunTally {
+  sips: number
+  bottomsUp: number
+}
+
+/**
+ * Bilan du mode Cartes après `flippedCount` cartes retournées : gorgées et
+ * culs secs bus par chaque joueur, rangés comme la table (index de joueur).
+ * Tout se déduit de l'ordre de retournement : rien à sauvegarder de plus.
+ */
+export function computeFunTally(pyramidHeight: number, flippedCount: number, playerCount: number): FunTally[] {
+  const tally: FunTally[] = Array.from({ length: Math.max(0, playerCount) }, () => ({ sips: 0, bottomsUp: 0 }))
+  if (playerCount <= 0) return tally
+  flipOrder(pyramidHeight)
+    .slice(0, Math.max(0, flippedCount))
+    .forEach(({ row }, flipIndex) => {
+      const stake = stakeOfRow(pyramidHeight, row)
+      const entry = tally[funFlipperIndex(flipIndex, playerCount)]
+      if (stake.kind === 'bottomsUp') entry.bottomsUp++
+      else entry.sips += stake.count
+    })
+  return tally
+}
+
 // ── Prélude (mode classique) — prédictions en 4 étapes ─────────────────────
 
 export type PreludeStep = 'color' | 'higherLower' | 'insideOutside' | 'suit'
@@ -115,6 +171,14 @@ export interface PreludeEvaluation {
   penalty: number
 }
 
+/** Gorgées d'une erreur au prélude : le rang de l'étape, de 1 (couleur) à 4 (signe). */
+export const PRELUDE_PENALTY: Record<PreludeStep, number> = {
+  color: 1,
+  higherLower: 2,
+  insideOutside: 3,
+  suit: 4,
+}
+
 /**
  * Évalue un choix de prélude. `revealedSoFar` = cartes déjà révélées pour ce
  * joueur AVANT la carte courante (ne contient pas `revealed`).
@@ -128,7 +192,7 @@ export function evaluatePreludeChoice(
   if (step === 'color') {
     const isRed = revealed.suit === 'hearts' || revealed.suit === 'diamonds'
     const success = (choice === 'red' && isRed) || (choice === 'black' && !isRed)
-    return { success, penalty: 1 }
+    return { success, penalty: PRELUDE_PENALTY.color }
   }
 
   if (step === 'higherLower') {
@@ -138,7 +202,7 @@ export function evaluatePreludeChoice(
       const cmp = rankValue(revealed.value) - rankValue(first.value)
       success = (choice === 'higher' && cmp > 0) || (choice === 'lower' && cmp < 0)
     }
-    return { success, penalty: 2 }
+    return { success, penalty: PRELUDE_PENALTY.higherLower }
   }
 
   if (step === 'insideOutside') {
@@ -152,11 +216,11 @@ export function evaluatePreludeChoice(
       const isInside = r > minV && r < maxV
       success = (choice === 'inside' && isInside) || (choice === 'outside' && !isInside)
     }
-    return { success, penalty: 3 }
+    return { success, penalty: PRELUDE_PENALTY.insideOutside }
   }
 
   // suit
-  return { success: choice === revealed.suit, penalty: 4 }
+  return { success: choice === revealed.suit, penalty: PRELUDE_PENALTY.suit }
 }
 
 /** Somme des points (valeur des cartes) obtenus par chaque joueur au prélude */

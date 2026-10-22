@@ -14,7 +14,7 @@ import { sanitizeStrokes, type Stroke } from '@/lib/crobard/engine'
  * soit la dessiner (si phrase reçue) soit la deviner en une phrase (si
  * dessin reçu). Résolution dès que tout le monde a soumis, ou au timeout
  * (soumission vide acceptée = maillon « blanc »). Pas de score : à la fin,
- * chaque chaîne complète est révélée dans l'ordre, un salon à la fois.
+ * chaque chaîne est révélée dans l'ordre, une à la fois, maillon par maillon.
  */
 
 export const TELEPHONE_MIN_PLAYERS = 3
@@ -26,14 +26,28 @@ export const TELEPHONE_WRITE_MS = 60_000
 /** Durée d'une manche de dessin. */
 export const TELEPHONE_DRAW_MS = 80_000
 /**
- * Durée d'affichage d'UNE chaîne pendant la révélation. La révélation est le
- * moment qui fait tout l'intérêt du jeu : elle ne doit dépendre d'AUCUN
- * joueur en particulier. Le meneur garde la main (il fait défiler quand il
- * veut, en avant comme en arrière), mais l'horloge de phase serveur prend le
- * relais s'il est absent, endormi ou déconnecté — sans jamais accélérer le
- * déroulé normal, puisque le meneur passe toujours AVANT l'échéance.
+ * Durée d'affichage d'une chaîne ENTIÈREMENT dévoilée, avant la suivante. La
+ * révélation est le moment qui fait tout l'intérêt du jeu : elle ne doit
+ * dépendre d'AUCUN joueur en particulier. Le meneur garde la main (il dévoile
+ * quand il veut, et revient à la chaîne précédente), mais l'horloge de phase
+ * serveur prend le relais s'il est absent, endormi ou déconnecté — sans
+ * jamais accélérer le déroulé normal, puisque le meneur passe toujours AVANT
+ * l'échéance.
  */
 export const TELEPHONE_REVEAL_MS = 45_000
+/**
+ * Délai de l'horloge entre deux maillons d'une même chaîne. La chaîne se
+ * dévoile maillon par maillon : d'un bloc, chacun lisait la chute à son
+ * rythme et le fou rire collectif se diluait.
+ */
+export const TELEPHONE_REVEAL_LINK_MS = 15_000
+/**
+ * Cadence d'un bot meneur du reveal : le temps de regarder un maillon, et
+ * plus long sur la chaîne entière — d'un pas égal, il passait à la chaîne
+ * suivante aussitôt la chute affichée, en plein fou rire.
+ */
+export const TELEPHONE_BOT_REVEAL_LINK_MS = 4_000
+export const TELEPHONE_BOT_REVEAL_CHAIN_MS = 8_000
 /** Longueur maximale d'une phrase (écriture ou devinette). */
 export const TELEPHONE_TEXT_MAX_LEN = 140
 
@@ -68,6 +82,8 @@ export type TelephoneState = TimedPhaseState & {
   /** Ordre de révélation des chaînes (mélangé une fois, à l'entrée en reveal). */
   revealOrder: string[]
   revealIdx: number
+  /** Dernier maillon dévoilé de la chaîne affichée (0 = seulement le premier). */
+  revealLinkIdx: number
   rematchVotes: string[]
   /** SECRET serveur — sert UNIQUEMENT à l'ordre de reveal, aucun tirage de contenu. */
   rngState: number
@@ -79,8 +95,12 @@ export type TelephoneAction =
   | { type: 'CLEAR'; playerId: string }
   | { type: 'SUBMIT'; playerId: string; strokes?: Stroke[]; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
-  | { type: 'CONTINUE'; playerId: string; now: number }
-  | { type: 'PREVIOUS'; playerId: string; now: number }
+  /**
+   * `claimedKey` : clé de phase de la vue du meneur. Absente (bots, vieux
+   * clients), le cran s'applique à l'état courant.
+   */
+  | { type: 'CONTINUE'; playerId: string; now: number; claimedKey?: string }
+  | { type: 'PREVIOUS'; playerId: string; now: number; claimedKey?: string }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
@@ -107,6 +127,24 @@ export function telephoneActionTypeForRound(round: number): 'write' | 'draw' {
 
 function blankFor(actionType: 'write' | 'draw'): TelephoneContribution {
   return actionType === 'write' ? { type: 'text', text: '' } : { type: 'draw', strokes: [] }
+}
+
+/** Index du dernier maillon de la chaîne `revealIdx` (0 pour une chaîne vide). */
+export function telephoneRevealLastLinkIdx(
+  state: Pick<TelephoneState, 'chains' | 'revealOrder'>,
+  revealIdx: number
+): number {
+  const ownerId = state.revealOrder[revealIdx]
+  return Math.max(0, (ownerId ? state.chains[ownerId]?.length ?? 0 : 0) - 1)
+}
+
+/** Délai du prochain cran d'un bot meneur (tick de service serveur). */
+export function telephoneBotRevealDelayMs(
+  state: Pick<TelephoneState, 'chains' | 'revealOrder' | 'revealIdx' | 'revealLinkIdx'>
+): number {
+  return state.revealLinkIdx >= telephoneRevealLastLinkIdx(state, state.revealIdx)
+    ? TELEPHONE_BOT_REVEAL_CHAIN_MS
+    : TELEPHONE_BOT_REVEAL_LINK_MS
 }
 
 /** Chaîne assignée au joueur d'index `playerIdx` à la manche `round` (rotation fixe). */
@@ -148,6 +186,7 @@ export function createTelephoneState(
     submittedIds: [],
     revealOrder: [],
     revealIdx: 0,
+    revealLinkIdx: 0,
     rematchVotes: [],
     rngState: rng.getState(),
   }
@@ -157,7 +196,6 @@ export function createTelephoneState(
 
 /** Assigne les contributions de la manche courante aux chaînes, puis avance. */
 function resolveRound(state: TelephoneState, now: number): TelephoneState {
-  const n = state.players.length
   const actionType = telephoneActionTypeForRound(state.round)
   const chains: Record<string, TelephoneContribution[]> = {}
   for (const key of Object.keys(state.chains)) chains[key] = [...state.chains[key]]
@@ -172,6 +210,7 @@ function resolveRound(state: TelephoneState, now: number): TelephoneState {
   if (nextRound >= state.totalRounds) {
     const rng = rngFromState(state.rngState)
     const revealOrder = rng.shuffle(state.players.map((p) => p.id))
+    const firstChainDone = telephoneRevealLastLinkIdx({ chains, revealOrder }, 0) === 0
     return {
       ...state,
       chains,
@@ -179,7 +218,8 @@ function resolveRound(state: TelephoneState, now: number): TelephoneState {
       submittedIds: [],
       revealOrder,
       revealIdx: 0,
-      ...enterPhase(state.phaseSeq, 'reveal', TELEPHONE_REVEAL_MS, now),
+      revealLinkIdx: 0,
+      ...enterPhase(state.phaseSeq, 'reveal', revealDurationMs(firstChainDone), now),
       phase: 'reveal',
       rngState: rng.getState(),
       version: state.version + 1,
@@ -200,13 +240,30 @@ function resolveRound(state: TelephoneState, now: number): TelephoneState {
   }
 }
 
+/** Échéance d'un cran de révélation : courte entre deux maillons, pleine sur la chaîne entière. */
+function revealDurationMs(chainComplete: boolean): number {
+  return chainComplete ? TELEPHONE_REVEAL_MS : TELEPHONE_REVEAL_LINK_MS
+}
+
 /**
- * Fait défiler la révélation d'un cran (+1 = suivant, -1 = précédent) et
- * REARME l'échéance : chaque chaîne dispose de son plein temps d'affichage,
- * qu'on y arrive par le bouton du meneur ou par l'horloge serveur.
+ * Cran suivant de la révélation : le maillon d'après, ou — chaîne entière à
+ * l'écran — la chaîne suivante à partir de son premier maillon (la fin de
+ * partie après la dernière). Chaque cran REARME l'échéance, qu'on y arrive
+ * par le bouton du meneur ou par l'horloge serveur.
  */
-function revealStep(state: TelephoneState, delta: number, now: number): TelephoneState {
-  const nextIdx = state.revealIdx + delta
+function revealForward(state: TelephoneState, now: number): TelephoneState {
+  const lastLinkIdx = telephoneRevealLastLinkIdx(state, state.revealIdx)
+  if (state.revealLinkIdx < lastLinkIdx) {
+    const revealLinkIdx = state.revealLinkIdx + 1
+    return {
+      ...state,
+      revealLinkIdx,
+      ...enterPhase(state.phaseSeq, 'reveal', revealDurationMs(revealLinkIdx >= lastLinkIdx), now),
+      phase: 'reveal',
+      version: state.version + 1,
+    }
+  }
+  const nextIdx = state.revealIdx + 1
   if (nextIdx >= state.revealOrder.length) {
     return {
       ...state,
@@ -216,10 +273,25 @@ function revealStep(state: TelephoneState, delta: number, now: number): Telephon
       version: state.version + 1,
     }
   }
-  if (nextIdx < 0) throw new TelephoneEngineError('ALREADY_FIRST_CHAIN')
+  const nextChainDone = telephoneRevealLastLinkIdx(state, nextIdx) === 0
   return {
     ...state,
     revealIdx: nextIdx,
+    revealLinkIdx: 0,
+    ...enterPhase(state.phaseSeq, 'reveal', revealDurationMs(nextChainDone), now),
+    phase: 'reveal',
+    version: state.version + 1,
+  }
+}
+
+/** Retour à la chaîne précédente, déjà vue : elle revient ENTIÈRE, sans redévoiler ses maillons. */
+function revealBack(state: TelephoneState, now: number): TelephoneState {
+  const prevIdx = state.revealIdx - 1
+  if (prevIdx < 0) throw new TelephoneEngineError('ALREADY_FIRST_CHAIN')
+  return {
+    ...state,
+    revealIdx: prevIdx,
+    revealLinkIdx: telephoneRevealLastLinkIdx(state, prevIdx),
     ...enterPhase(state.phaseSeq, 'reveal', TELEPHONE_REVEAL_MS, now),
     phase: 'reveal',
     version: state.version + 1,
@@ -328,26 +400,33 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       if (state.phase === 'contributing') {
         return resolveRound(state, action.now)
       }
-      // Révélation : l'échéance fait défiler la chaîne suivante MÊME si le
-      // meneur a disparu — c'est ce qui empêche la table de rester bloquée
-      // sur le moment le plus attendu du jeu.
+      // Révélation : l'échéance dévoile le cran suivant MÊME si le meneur a
+      // disparu — c'est ce qui empêche la table de rester bloquée sur le
+      // moment le plus attendu du jeu.
       if (state.phase === 'reveal') {
-        return revealStep(state, 1, action.now)
+        return revealForward(state, action.now)
       }
       throw new TelephoneEngineError('NOTHING_TO_ADVANCE')
     }
 
     case 'CONTINUE': {
+      // Idempotent comme ADVANCE : le geste du meneur qui croise l'échéance
+      // vise un cran déjà passé, il ne doit pas en faire franchir un second.
+      if (action.claimedKey && action.claimedKey !== phaseKey(state)) {
+        throw new TelephoneEngineError('PHASE_CHANGED')
+      }
       if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_REVEAL')
       if (action.playerId !== currentTelephoneActorId(state)) throw new TelephoneEngineError('NOT_LEADER')
-      return revealStep(state, 1, action.now)
+      return revealForward(state, action.now)
     }
 
     case 'PREVIOUS': {
+      if (action.claimedKey && action.claimedKey !== phaseKey(state)) {
+        throw new TelephoneEngineError('PHASE_CHANGED')
+      }
       if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_REVEAL')
       if (action.playerId !== currentTelephoneActorId(state)) throw new TelephoneEngineError('NOT_LEADER')
-      if (state.revealIdx <= 0) throw new TelephoneEngineError('ALREADY_FIRST_CHAIN')
-      return revealStep(state, -1, action.now)
+      return revealBack(state, action.now)
     }
 
     case 'LEAVE': {
@@ -435,18 +514,28 @@ export type TelephoneClientView = Omit<
   received: TelephoneContribution | null
   /** Ce que le viewer doit produire cette manche. */
   actionType: 'write' | 'draw' | null
-  /** Pendant reveal/finished : la chaîne actuellement affichée, complète et publique. */
-  revealChain: { ownerName: string; links: TelephoneContribution[] } | null
+  /**
+   * Pendant reveal/finished : la chaîne affichée, publique. En reveal,
+   * `links` s'arrête au dernier maillon DÉVOILÉ (la suite ne quitte pas le
+   * serveur avant son tour) ; `linkCount` donne sa longueur totale.
+   */
+  revealChain: TelephoneRevealChain | null
 }
 
-function buildRevealChain(
-  state: TelephoneState
-): { ownerName: string; links: TelephoneContribution[] } | null {
+export type TelephoneRevealChain = {
+  ownerName: string
+  links: TelephoneContribution[]
+  linkCount: number
+}
+
+function buildRevealChain(state: TelephoneState): TelephoneRevealChain | null {
   if (state.phase !== 'reveal' && state.phase !== 'finished') return null
   const ownerId = state.revealOrder[state.revealIdx]
   if (!ownerId) return null
   const owner = state.players.find((p) => p.id === ownerId)
-  return { ownerName: owner?.name ?? '—', links: state.chains[ownerId] ?? [] }
+  const all = state.chains[ownerId] ?? []
+  const links = state.phase === 'reveal' ? all.slice(0, Math.max(0, state.revealLinkIdx) + 1) : all
+  return { ownerName: owner?.name ?? '—', links, linkCount: all.length }
 }
 
 /**
@@ -486,8 +575,8 @@ export function toTelephoneClientView(state: TelephoneState, viewerId: string): 
 
 /**
  * Vue SPECTATEUR NEUTRE (TV) : jamais de maillon personnel (rien à «
- * recevoir »), juste le compte de soumissions pendant le jeu — et la
- * vitrine complète pendant `reveal`.
+ * recevoir »), juste le compte de soumissions pendant le jeu — et, pendant
+ * `reveal`, la chaîne affichée jusqu'à son dernier maillon dévoilé.
  */
 export function toTelephoneSpectatorView(state: TelephoneState): TelephoneClientView {
   const { rngState: _rng, chains: _chains, pendingSubmissions: _ps, players, ...rest } = state

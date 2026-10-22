@@ -4,7 +4,8 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { HubShell } from '@/components/hub/HubShell'
-import { SelectedPlayersBar } from '@/components/hub/SelectedPlayersBar'
+import { PartyBar } from '@/components/hub/PartyBar'
+import { TableRecordsPanel } from '@/components/hub/SelectedPlayersBar'
 import { GamesGrid } from '@/components/hub/GamesGrid'
 import { OpenLobbiesList } from '@/components/online/OpenLobbiesList'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
@@ -14,8 +15,6 @@ import { RejoinBanner } from '@/components/online/RejoinBanner'
 import { RecentGamesRow } from '@/components/online/RecentGamesRow'
 import { RecentLocalGamesRow } from '@/components/hub/RecentLocalGamesRow'
 import { OfflineBanner } from '@/components/hub/OfflineBanner'
-import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
-import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
@@ -23,7 +22,6 @@ import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { Link } from '@/i18n/navigation'
 import { COLLECTION_SLUGS } from '@/lib/collections'
 import { GAMES } from '@/lib/games'
-import { cn } from '@/lib/utils'
 
 /**
  * Le hub est rendu UNE fois au build, sans URL : tout ce qui lit
@@ -31,7 +29,7 @@ import { cn } from '@/lib/utils'
  * Suspense (JoinDeepLink, SoloFilterFromUrl), au repli VIDE — ces enfants ne
  * rendent rien, ils agissent. Sans frontière, Next repassait la page ENTIÈRE
  * au navigateur — HTML vide, catalogue invisible pour Googlebot — ou refusait
- * le build. Le reste (bascules, bandeaux, grille) ne dépend pas de l'URL et
+ * le build. Le reste (barre de soirée, bandeaux, grille) ne dépend pas de l'URL et
  * part dans le HTML comme avant.
  */
 export default function GamesHubPage() {
@@ -73,33 +71,13 @@ export default function GamesHubPage() {
               seul téléphone restent jouables (service worker), le reste non.
               Rendu vide tant que la connexion tient. */}
           <OfflineBanner />
-          {/* Deux réglages, deux lignes. Côte à côte, l'ambiance tenait en
-              icônes seules (une chope, une feuille) : personne ne savait ce
-              qu'elle changeait, ni laquelle était active. Elle a désormais ses
-              libellés et sa phrase d'explication, sur toute la largeur.
-              La hauteur est RÉSERVÉE tant que l'auth n'a pas répondu : sans
-              ça, l'arrivée des bascules pousserait la grille déjà affichée
-              vers le bas. Une fois l'auth connue sans compte, la zone se
-              referme au lieu de laisser une bande vide. */}
-          <div
-            className={cn(
-              'flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-3',
-              (authLoading || Boolean(user)) && 'min-h-[6.75rem] sm:min-h-[4.75rem]'
-            )}
-          >
-            <PlayModeToggle className="max-w-none sm:max-w-sm sm:flex-1" />
-            <AmbianceModeToggle className="sm:max-w-sm sm:flex-1" />
-          </div>
-          {/* Bandeau de session : tant que l'auth n'a pas répondu, `isOnline`
-              vaut false pour TOUT LE MONDE — l'afficher tout de suite le
-              ferait clignoter chez les joueurs en ligne. */}
-          {!authLoading && !isOnline && <SelectedPlayersBar />}
-          {user?.displayName && (
-            <p className="flex items-center justify-end gap-1.5 px-1 text-[11px] text-white/45">
-              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {isOnline ? (user.onlineDisplayName ?? user.displayName) : user.displayName}
-            </p>
-          )}
+          {/* Les réglages de la soirée — mode, ambiance, joueurs — tiennent
+              sur UNE ligne de 56 px ; un toucher ouvre la feuille qui les
+              règle. Les deux bascules et la liste des joueurs, posées ici en
+              entier, repoussaient la première carte de jeu vers 850-950 px à
+              375×667 : choisir un jeu demandait de faire défiler. La barre
+              garde sa hauteur pendant le chargement de l'auth : rien ne saute. */}
+          <PartyBar />
           {/* Quatre portes par intention (« à 2 », « sans alcool »…) : des
               pages serveur indexables (/jeux/<collection>), liées d'ici pour
               le maillage — et pour le joueur qui sait déjà ce qu'il cherche.
@@ -128,17 +106,21 @@ export default function GamesHubPage() {
 
       {isOnline && <RejoinBanner onJoin={handleJoinInvite} joining={joining} />}
       {isOnline && <FriendInviteBanner onJoin={handleJoinInvite} joining={joining} />}
-      {/* Rendez-vous « table du vendredi » : en tête du hub, avant tables et
-          catalogue, en ligne comme en local — il décide seul s'il a quelque
-          chose à dire. Seules les deux alertes du moment le précèdent (une
-          partie en cours à rejoindre, une invitation qui attend) : rares,
-          elles ne se montrent que lorsqu'elles pressent. */}
-      <FridayTableBanner />
+      {/* Rendez-vous « table du vendredi » PENDANT la soirée : en tête du hub,
+          avant tables et catalogue, en ligne comme en local — il décide seul
+          s'il a quelque chose à dire. Seules les deux alertes du moment le
+          précèdent (une partie en cours à rejoindre, une invitation qui
+          attend) : rares, elles ne se montrent que lorsqu'elles pressent.
+          Le reste de la semaine, sa ligne de rendez-vous descend sous la
+          grille (voir plus bas) : elle ne doit pas passer avant les jeux. */}
+      <FridayTableBanner show="live" />
+      {/* « Rejouer » juste sous la barre ; tables ouvertes et parties en cours
+          tiennent en une ligne « Rejoindre » qui se déplie. */}
       {isOnline && <RecentGamesRow />}
       {isOnline && <OpenLobbiesList />}
       {/* Pendant local de « Vos dernières tables » : les derniers jeux ouverts
-          sur cet appareil. Même attente de l'auth que le bandeau de joueurs,
-          sinon un joueur en ligne la verrait passer le temps d'une réponse. */}
+          sur cet appareil. Même attente de l'auth que les records, sinon un
+          joueur en ligne la verrait passer le temps d'une réponse. */}
       {!authLoading && !isOnline && <RecentLocalGamesRow />}
 
       {/* La grille ne dépend QUE du catalogue statique : elle est rendue sans
@@ -146,7 +128,7 @@ export default function GamesHubPage() {
           l'appel d'authentification n'avait pas répondu — HTML vide, flash
           blanc pour tout le monde et catalogue invisible sans JavaScript sur
           la page poussée en priorité 1.0 au sitemap. Seuls les bandeaux
-          au-dessus (bascules, joueurs, tables récentes) attendent la session.
+          au-dessus (barre de soirée, tables récentes) attendent la session.
           Le filtre ?solo=1, lui, vient de l'URL, inconnue au build : il est
           lu à part (SoloFilterFromUrl) et appliqué après l'hydratation. Le
           HTML porte donc la grille COMPLÈTE — celle que voient Googlebot et
@@ -158,6 +140,10 @@ export default function GamesHubPage() {
         <SoloFilterFromUrl onChange={setSolo} />
       </Suspense>
       <GamesGrid solo={solo} />
+      {/* Sous la grille : ce qu'on va chercher entre deux parties (records de
+          la table, pont vers le compte) et le rendez-vous du vendredi. */}
+      {!authLoading && !isOnline && <TableRecordsPanel />}
+      <FridayTableBanner show="upcoming" className="mb-0 mt-6" />
     </HubShell>
     </>
   )

@@ -245,7 +245,7 @@ const LOCAL_ROWS: LocalGameDailyRow[] = [
   // Ligne abîmée (négatif, NaN) : comptée nulle part.
   { day: '2026-10-24', gameId: 'pendu', starts: -1, ends: Number.NaN },
   // Premier jour des 7 jours ; Purple n'a pas d'écran de fin.
-  { day: '2026-10-19', gameId: 'purple', starts: 2, ends: 0 },
+  { day: '2026-10-19', gameId: 'roue-des-gorgees', starts: 2, ends: 0 },
   // Veille des 7 jours : dans les 30 et dans la série.
   { day: '2026-10-18', gameId: 'pyramide', starts: 5, ends: 2 },
   // Premier jour des 30 jours, hors de la série.
@@ -281,7 +281,7 @@ describe('summarizeLocalPlay', () => {
   it('par jeu sur 7 jours : tri par lancements, titres du catalogue, jeux sans écran de fin signalés', () => {
     expect(stats.byGame.d7).toEqual([
       { gameId: 'pmu', gameTitle: titleOf('pmu'), starts: 3, ends: 4, noEndScreen: false },
-      { gameId: 'purple', gameTitle: titleOf('purple'), starts: 2, ends: 0, noEndScreen: true },
+      { gameId: 'roue-des-gorgees', gameTitle: titleOf('roue-des-gorgees'), starts: 2, ends: 0, noEndScreen: true },
       { gameId: 'jeu-retire', gameTitle: 'jeu-retire', starts: 1, ends: 0, noEndScreen: false },
     ])
     expect(stats.totals.d7).toEqual({ starts: 6, ends: 4 })
@@ -291,7 +291,7 @@ describe('summarizeLocalPlay', () => {
     expect(stats.byGame.d30.map((g) => [g.gameId, g.starts, g.ends])).toEqual([
       ['pyramide', 5, 2],
       ['pmu', 4, 5],
-      ['purple', 2, 0],
+      ['roue-des-gorgees', 2, 0],
       ['jeu-retire', 1, 0],
     ])
     expect(stats.totals.d30).toEqual({ starts: 12, ends: 7 })

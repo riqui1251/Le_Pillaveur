@@ -77,6 +77,7 @@ export const ONLINE_ERROR_CODES = [
   'stop_too_early',
   'incomplete_stop',
   'contest_needs_more_players',
+  'fake_taken',
   // Refus du moteur sans code dédié — filet générique, jamais de texte brut
   'action_failed',
 
@@ -156,6 +157,8 @@ const LEGACY_ALIASES: Record<string, OnlineErrorCode> = {
   STOP_TOO_EARLY: 'stop_too_early',
   INCOMPLETE_STOP: 'incomplete_stop',
   CONTEST_NEEDS_MORE_PLAYERS: 'contest_needs_more_players',
+  // Grand Bluff : bluff identique à la vraie réponse ou à celui d'un autre.
+  FAKE_TAKEN: 'fake_taken',
 }
 
 /** Résout une valeur `error` de l'API vers un code stable, ou null si inconnue */
@@ -223,6 +226,7 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   stop_too_early: 'Trop tôt pour crier STOP',
   incomplete_stop: 'Remplissez toutes les cases avant de crier STOP',
   contest_needs_more_players: 'Pas assez de joueurs pour contester une réponse',
+  fake_taken: 'Cette réponse est déjà prise, invente autre chose',
   action_failed: 'Action impossible',
 
   conflict: 'Conflit, réessayez',

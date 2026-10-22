@@ -1,24 +1,45 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Crown } from 'lucide-react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import {
+  ChevronDown,
+  ChevronsDown,
+  Crown,
+  Flag,
+  Layers,
+  Loader2,
+  Medal,
+  SkipForward,
+  WifiOff,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
+import { PhaseHeader } from './PhaseHeader'
+import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
+import { TurnBanner } from '@/components/game/TurnBanner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
+  preCloseNeeded,
+  preComboIssue,
   preIsJoker,
+  preLastPlayRank,
+  preOuRien,
   preRankOf,
   preSuitOf,
+  PRE_INTERLUDE_MS,
   PRE_RANKS,
   PRE_SUITS,
   PRE_TURN_MS,
   type PreClientView,
+  type PrePlayerView,
 } from '@/lib/president/engine'
 import { botAvatarFromName, botTickDelayMs, type SpeechGenre } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
@@ -32,9 +53,11 @@ import { OnlineEndScreen } from './OnlineEndScreen'
 import { genreOf, genreOfId } from './bot-speech/bot-speech-feed'
 
 /**
- * PRÉSIDENT en ligne (serveur-autoritaire). Main triée en éventail
- * horizontal, sélection par rang (tap = lever la carte), Poser/Passer en
- * zone pouce. Les mains adverses ne circulent jamais — seulement les comptes.
+ * PRÉSIDENT en ligne (serveur-autoritaire). Le tapis et la table en haut, la
+ * main en bas, dans la barre fixe avec Poser/Passer : sur deux rangées qui
+ * tiennent à 375 px (14 cartes au plus à 4 joueurs), plus de bande qui
+ * défile et cache la paire de 9 hors écran. Tap = lever la carte. Les mains
+ * adverses ne circulent jamais — seulement les comptes.
  */
 
 function parseView(json: string | null | undefined): PreClientView | null {
@@ -52,49 +75,175 @@ function cardLabel(card: number): string {
   return preIsJoker(card) ? '🃏' : `${PRE_RANKS[preRankOf(card)]}${PRE_SUITS[preSuitOf(card)]}`
 }
 
-/** Insignes des rôles hérités de la manche précédente. */
-const ROLE_BADGES: Record<string, string> = {
-  president: '👑',
-  vicePresident: '🎖️',
-  viceTrou: '🪠',
-  trou: '🕳️',
+type PreRole = NonNullable<PrePlayerView['role']>
+
+/** Insignes des rôles : couronne et médaille en or, le Trou et son vice en rouge. */
+const ROLE_ICONS: Record<PreRole, { Icon: LucideIcon; tone: string }> = {
+  president: { Icon: Crown, tone: 'text-gold' },
+  vicePresident: { Icon: Medal, tone: 'text-gold' },
+  viceTrou: { Icon: ChevronDown, tone: 'text-red-300' },
+  trou: { Icon: ChevronsDown, tone: 'text-red-300' },
 }
 
-function CardFace({ card, raised, onClick }: { card: number; raised?: boolean; onClick?: () => void }) {
+function RoleIcon({ role, className }: { role: PreRole; className?: string }) {
+  const { Icon, tone } = ROLE_ICONS[role]
+  return <Icon aria-hidden className={cn('h-4 w-4 shrink-0', tone, className)} />
+}
+
+/** Rôle attaché à une place du classement d'une manche close. */
+function rankRole(i: number, len: number): PreRole | null {
+  if (i === 0) return 'president'
+  if (i === len - 1) return 'trou'
+  if (len >= 4 && i === 1) return 'vicePresident'
+  if (len >= 4 && i === len - 2) return 'viceTrou'
+  return null
+}
+
+const CARD_SIZES = {
+  md: { box: 'h-16 w-11 rounded-lg', rank: 'text-base', suit: 'text-lg', joker: 'text-2xl' },
+  lg: { box: 'h-20 w-14 rounded-xl', rank: 'text-xl', suit: 'text-2xl', joker: 'text-3xl' },
+} as const
+
+function CardFace({
+  card,
+  label,
+  size = 'md',
+  selected = false,
+  onToggle,
+}: {
+  card: number
+  /** Nom lu par le lecteur d'écran (« 9♥ », « Joker »). */
+  label: string
+  size?: keyof typeof CARD_SIZES
+  selected?: boolean
+  /** Absent : carte à regarder, pas à toucher. */
+  onToggle?: () => void
+}) {
   const joker = preIsJoker(card)
-  const rank = PRE_RANKS[preRankOf(card)]
   const suit = PRE_SUITS[preSuitOf(card)]
-  const red = !joker && (suit === '♥' || suit === '♦')
+  const ink = !joker && (suit === '♥' || suit === '♦') ? 'text-suit-red' : 'text-[#24201A]'
+  const s = CARD_SIZES[size]
+  const face = joker ? (
+    // Joker caméléon : il remplace n'importe quelle carte.
+    <span aria-hidden className={cn('leading-none', s.joker)}>🃏</span>
+  ) : (
+    <>
+      <span aria-hidden className={cn('font-display font-black leading-none', s.rank, ink)}>
+        {PRE_RANKS[preRankOf(card)]}
+      </span>
+      <span aria-hidden className={cn('leading-none', s.suit, ink)}>{suit}</span>
+    </>
+  )
+  const base = cn(
+    'flex shrink-0 flex-col items-center justify-center border border-[#D8CCAE] bg-cream shadow-[0_6px_12px_-6px_rgba(0,0,0,0.7)]',
+    s.box,
+    joker && 'border-violet-400/70 bg-gradient-to-b from-cream to-violet-100'
+  )
+  if (!onToggle) {
+    return (
+      <span role="img" aria-label={label} className={base}>
+        {face}
+      </span>
+    )
+  }
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={!onClick}
+      onClick={onToggle}
+      aria-pressed={selected}
+      aria-label={label}
       className={cn(
-        'flex h-16 w-11 shrink-0 flex-col items-center justify-center rounded-lg border border-[#D8CCAE] bg-cream shadow-[0_6px_12px_-6px_rgba(0,0,0,0.7)] transition-transform',
-        joker && 'border-violet-400/70 bg-gradient-to-b from-cream to-violet-100',
-        raised && '-translate-y-3 ring-2 ring-gold',
-        onClick && 'active:scale-95'
+        base,
+        'motion-safe:transition-transform motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep',
+        // Carte levée : décalée vers le haut (signe lisible sans la couleur) et cerclée d'or.
+        selected && '-translate-y-2 shadow-[0_0_0_4px_rgba(217,164,65,0.35)] ring-2 ring-gold'
       )}
     >
-      {joker ? (
-        // Joker caméléon : il remplace n'importe quelle carte.
-        <span className="text-2xl leading-none" aria-label="Joker">
-          🃏
-        </span>
-      ) : (
-        <>
-          <span className={cn('font-display text-base font-black leading-none', red ? 'text-suit-red' : 'text-[#24201A]')}>
-            {rank}
-          </span>
-          <span className={cn('text-lg leading-none', red ? 'text-suit-red' : 'text-[#24201A]')} aria-hidden>
-            {suit}
-          </span>
-        </>
-      )}
+      {face}
     </button>
   )
 }
+
+/** Classement d'une manche close (interlude et fin de partie). */
+function RankingRows({
+  ranking,
+  players,
+  selfId,
+  iconOf,
+  labelOf,
+}: {
+  ranking: readonly string[]
+  players: readonly PrePlayerView[]
+  selfId: string
+  iconOf: (p: PrePlayerView) => string
+  labelOf: (role: PreRole, p: PrePlayerView) => string
+}) {
+  return (
+    <ol className="w-full max-w-sm space-y-1.5">
+      {ranking.map((id, i) => {
+        const p = players.find((x) => x.id === id)
+        if (!p) return null
+        const role = rankRole(i, ranking.length)
+        return (
+          <li
+            key={id}
+            className={cn(
+              'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
+              role === 'president'
+                ? 'border-gold/50 bg-gold/10'
+                : role === 'trou'
+                  ? 'border-suit-red/50 bg-suit-red/20'
+                  : 'border-gold/20 bg-felt-deep/70'
+            )}
+          >
+            <span className="w-5 shrink-0 text-center font-display text-sm font-black tabular-nums text-cream/80">
+              {i + 1}
+            </span>
+            <span aria-hidden className="shrink-0 text-lg leading-none">
+              <PlayerAvatarGlyph value={iconOf(p)} />
+            </span>
+            <span className={cn('min-w-0 flex-1 truncate text-sm font-bold', p.id === selfId ? 'text-gold' : 'text-cream')}>
+              {p.name}
+            </span>
+            {role && (
+              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold uppercase tracking-wide text-cream/80">
+                <RoleIcon role={role} />
+                {labelOf(role, p)}
+              </span>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+/**
+ * Hauteur de la barre fixe du bas, à réserver sous le flux. Main sur une ou
+ * deux rangées, fermeture de carré, Poser/Passer : la barre change de taille
+ * d'un tour à l'autre, une réserve fixe laissait soit un trou, soit le tapis
+ * sous les cartes.
+ */
+function useBarReserve(mode: string | null) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState<number | null>(null)
+  useEffect(() => {
+    // Le conteneur intérieur de la barre : ligne d'état, contenu, marges et zone sûre.
+    const host = ref.current?.parentElement
+    if (!mode || !host || typeof ResizeObserver === 'undefined') {
+      setHeight(null)
+      return
+    }
+    const measure = () => setHeight(host.getBoundingClientRect().height)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(host)
+    return () => observer.disconnect()
+  }, [mode])
+  return [ref, height] as const
+}
+
+type PendingAction = 'play' | 'pass' | 'close' | 'continue'
 
 export function PresidentOnline() {
   const { user } = useAuth()
@@ -104,6 +253,8 @@ export function PresidentOnline() {
   // légalité du combo) — le hook lit la réponse et annonce les refus.
   const { busy, actionError, sendAction } = useGameAction(room?.id)
   const [selected, setSelected] = useState<number[]>([])
+  const [pending, setPending] = useState<PendingAction | null>(null)
+  const reduceMotion = useReducedMotion()
 
   const inGame = room?.gameId === 'president' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -116,6 +267,19 @@ export function PresidentOnline() {
   useEffect(() => {
     setSelected([])
   }, [turnKey])
+
+  // Barre du bas : la main (en course) ou « Manche suivante » (interlude),
+  // pour un joueur assis seulement — le spectateur n'a rien à y faire.
+  const seated = Boolean(view && user && view.players.some((p) => p.id === user.id))
+  const barMode =
+    !view || !user || !seated
+      ? null
+      : view.phase === 'playing' && !view.outOrder.includes(user.id) && view.myHand.length > 0
+        ? 'hand'
+        : view.phase === 'interlude'
+          ? 'interlude'
+          : null
+  const [barRef, barHeight] = useBarReserve(barMode)
 
   // Tick « advance » à l'échéance, arbitré par rang (cf. useAdvanceTick).
   useAdvanceTick({
@@ -133,18 +297,11 @@ export function PresidentOnline() {
   const botActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
   // Tick spéculatif « fermeture de carré » : quand un run ≥ 2 traîne au
   // sommet du pli, un bot détenant le complément peut fermer HORS TOUR — le
-  // serveur tranche (NOT_BOT_TURN sinon, inoffensif).
+  // serveur tranche (NOT_BOT_TURN sinon, inoffensif). La fermeture complète
+  // le carré d'une pose de même taille (un brelan posé d'un coup ne se ferme
+  // pas d'une carte seule) : c'est preCloseNeeded.
   const closeChance = Boolean(
-    view &&
-      view.phase === 'playing' &&
-      view.lastPlay !== null &&
-      view.trickRun !== null &&
-      view.trickRun.count >= 2 &&
-      view.trickRun.count < 4 &&
-      // La fermeture complète le carré d'une pose de même taille (un brelan
-      // posé d'un coup ne se ferme pas d'une carte seule).
-      4 - view.trickRun.count === view.lastPlay.cards.length &&
-      view.players.some((p) => p.isBot && !p.leftAt)
+    view && preCloseNeeded(view) !== null && view.players.some((p) => p.isBot && !p.leftAt)
   )
   useBotReferee({
     roomId: room?.id,
@@ -170,8 +327,8 @@ export function PresidentOnline() {
 
   if (!view || !user || !room) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-400/30 border-t-emerald-400" />
+      <div className="flex flex-1 items-center justify-center p-6">
+        <Loader2 aria-hidden className="h-8 w-8 text-gold motion-safe:animate-spin" />
       </div>
     )
   }
@@ -180,7 +337,7 @@ export function PresidentOnline() {
   const nameOf = (id: string | null) => view.players.find((p) => p.id === id)?.name ?? '—'
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
-  const roleLabel = (role: string, genre: SpeechGenre) =>
+  const roleLabel = (role: PreRole, genre: SpeechGenre) =>
     role === 'president'
       ? t('roles.president', { genre })
       : role === 'trou'
@@ -188,84 +345,18 @@ export function PresidentOnline() {
         : role === 'vicePresident'
           ? t('roles.vicePresident', { genre })
           : t('roles.viceTrou')
-  // Étiquette de rôle d'une ligne de classement (👑 / 🎖️ / 🪠 / 🕳️).
-  const rankRoleLabel = (i: number, len: number, genre: SpeechGenre): string => {
-    if (i === 0) return `👑 ${t('roles.president', { genre })}`
-    if (i === len - 1) return `🕳️ ${t('roles.trou')}`
-    if (len >= 4 && i === 1) return `🎖️ ${t('roles.vicePresident', { genre })}`
-    if (len >= 4 && i === len - 2) return `🪠 ${t('roles.viceTrou')}`
-    return ''
-  }
-  const trickHistory = view.trickHistory ?? []
-
-  const me = view.players.find((p) => p.id === user.id)
-  const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
-  const myTurn = view.phase === 'playing' && view.currentTurnId === user.id
-  const iAmOut = view.outOrder.includes(user.id)
-  const myOutRank = view.outOrder.indexOf(user.id) + 1
-
-  const toggleCard = (card: number) => {
-    if (!myTurn || busy) return
-    setSelected((prev) => {
-      if (prev.includes(card)) return prev.filter((c) => c !== card)
-      // Sélection homogène sur les NATURELLES : un rang différent redémarre la
-      // sélection — les jokers, caméléons, se combinent avec tout.
-      const prevNaturals = prev.filter((c) => !preIsJoker(c))
-      if (
-        !preIsJoker(card) &&
-        prevNaturals.length > 0 &&
-        preRankOf(prevNaturals[0]) !== preRankOf(card)
-      ) {
-        return [card, ...prev.filter((c) => preIsJoker(c))]
-      }
-      return [...prev, card]
-    })
-  }
-
-  // « Ou rien » : la dernière pose a égalé la précédente → rang verrouillé.
-  const lockedRank =
-    view.lastPlay && view.trickRun && view.trickRun.count > view.lastPlay.cards.length
-      ? view.trickRun.rank
-      : null
-
-  // Rang de la sélection : celui des naturelles — les jokers suivent (et
-  // seuls, ils copient la pose du dessus : toujours légaux à taille égale).
-  const selectedNaturals = selected.filter((c) => !preIsJoker(c))
-  const selectedRank = selectedNaturals.length > 0 ? preRankOf(selectedNaturals[0]) : null
-  const lastPlayRank = view.lastPlay
-    ? (view.lastPlay.rank ?? preRankOf(view.lastPlay.cards[0]))
-    : null
-
-  const canPlaySelection =
-    myTurn &&
-    selected.length > 0 &&
-    (!view.lastPlay ||
-      (selected.length === view.lastPlay.cards.length &&
-        (selectedRank === null ||
-          (lockedRank !== null
-            ? selectedRank === lockedRank
-            : // L'ÉGAL est permis : il verrouille le pli pour le suivant.
-              selectedRank >= (lastPlayRank ?? 0)))))
-
-  // Fermeture de carré : je détiens les cartes manquantes du rang au sommet
-  // du pli (3 simples à la suite → la 4e ; une paire → l'autre paire) — les
-  // jokers complètent. On ne ferme qu'avec une pose de MÊME TAILLE que celles
-  // du pli : un brelan posé d'un coup ne se ferme pas d'une carte seule.
-  const closeNeeded =
-    view.phase === 'playing' &&
-    view.lastPlay &&
-    view.trickRun &&
-    view.trickRun.count >= 2 &&
-    4 - view.trickRun.count === view.lastPlay.cards.length
-      ? 4 - view.trickRun.count
-      : 0
-  const myJokers = view.myHand.filter((c) => preIsJoker(c))
-  const myRankCards =
-    closeNeeded > 0 && view.trickRun
-      ? view.myHand.filter((c) => preRankOf(c) === view.trickRun!.rank)
-      : []
-  const myCloseCards = [...myRankCards, ...myJokers].slice(0, closeNeeded)
-  const canClose = !iAmOut && closeNeeded > 0 && myCloseCards.length === closeNeeded
+  const rankingLabel = (role: PreRole, p: PrePlayerView) => roleLabel(role, genreOf(p))
+  const cardName = (card: number) => (preIsJoker(card) ? t('joker') : cardLabel(card))
+  const tutorialButton = <TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />
+  const tutorialModal = (
+    <AnimatePresence>
+      {tutorial.open && <GameTutorialModal gameId="president" onClose={tutorial.close} />}
+    </AnimatePresence>
+  )
+  // Réserve sous le flux : la hauteur MESURÉE de la barre ; avant la mesure,
+  // la réserve haute par défaut.
+  const flowReserve = barMode && barHeight === null ? onlineActionBarPadding('tall') : barMode ? undefined : 'pb-6'
+  const flowStyle = barMode && barHeight !== null ? { paddingBottom: `${Math.ceil(barHeight) + 16}px` } : undefined
 
   // ── Fin de partie ────────────────────────────────────────────────────────
   if (finished) {
@@ -276,50 +367,30 @@ export function PresidentOnline() {
         rematchVotes={view.rematchVotes ?? []}
         onRematch={voteRematch}
         onLeave={leaveRoom}
-        rematchClassName="from-emerald-800 to-amber-600"
         header={
           <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
+            initial={reduceMotion ? false : { scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 220, damping: 18 }}
             className="flex flex-col items-center gap-2 text-center"
           >
-            <Crown className="h-14 w-14 text-gold" />
+            <Crown aria-hidden className="h-14 w-14 text-gold" />
             <h2 className="font-display text-3xl font-bold text-gold">{t('finished.title')}</h2>
-            <p className="max-w-xs text-sm text-white/60">
+            <p className="max-w-xs text-sm text-cream/80">
               {t('finished.subtitle', { name: nameOf(ranking[0] ?? null), genre: genreOfId(view.players, ranking[0]) })}
             </p>
           </motion.div>
         }
         ranking={
           <>
-            <div className="w-full max-w-sm space-y-1.5">
-              {ranking.map((id, i) => {
-                const p = view.players.find((x) => x.id === id)
-                if (!p) return null
-                const isTrou = i === ranking.length - 1
-                return (
-                  <div
-                    key={id}
-                    className={cn(
-                      'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
-                      i === 0 ? 'border-gold/50 bg-gold/10' : isTrou ? 'border-suit-red/40 bg-suit-red/10' : 'border-white/10 bg-white/5'
-                    )}
-                  >
-                    <span className="w-5 text-center font-display text-sm font-black text-white/75">{i + 1}</span>
-                    <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                    <span className={cn('flex-1 truncate text-sm font-bold', p.id === user.id && 'text-gold')}>
-                      {p.name}
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-wide text-white/75">
-                      {rankRoleLabel(i, ranking.length, genreOf(p))}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
-            {!isSoft && <p className="text-sm font-bold text-amber-200">{t('trouDrinks')}</p>}
+            <RankingRows
+              ranking={ranking}
+              players={view.players}
+              selfId={user.id}
+              iconOf={iconOf}
+              labelOf={rankingLabel}
+            />
+            {!isSoft && <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>}
           </>
         }
         // La progression était bien créditée au Président, mais aucun écran
@@ -332,10 +403,13 @@ export function PresidentOnline() {
   // ── Compte à rebours ─────────────────────────────────────────────────────
   if (view.phase === 'countdown') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-        <p className="text-sm font-bold uppercase tracking-widest text-emerald-300/80">{t('countdown.title')}</p>
-        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="text-8xl font-black tabular-nums text-emerald-200" />
-        <p className="text-xs font-semibold text-white/75">{t('countdown.hint')}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center text-cream">
+        <p className="font-display text-2xl font-bold text-gold">{t('countdown.title')}</p>
+        <PhaseCountdownLaunch
+          endsAt={view.phaseEndsAt}
+          className="font-display text-8xl font-black tabular-nums text-cream"
+        />
+        <p className="max-w-xs text-sm font-semibold text-cream/80">{t('countdown.hint')}</p>
       </div>
     )
   }
@@ -345,51 +419,55 @@ export function PresidentOnline() {
     const ranking = view.lastRanking ?? []
     return (
       <>
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-        <h2 className="font-display text-2xl font-bold text-gold">
-          {t('mancheEnd', { n: view.manche + 1 })}
-        </h2>
-        <div className="w-full max-w-sm space-y-1.5">
-          {ranking.map((id, i) => {
-            const p = view.players.find((x) => x.id === id)
-            if (!p) return null
-            const isTrou = i === ranking.length - 1
-            return (
-              <div
-                key={id}
-                className={cn(
-                  'flex items-center gap-3 rounded-2xl border px-4 py-2',
-                  i === 0 ? 'border-gold/50 bg-gold/10' : isTrou ? 'border-suit-red/40 bg-suit-red/10' : 'border-white/10 bg-white/5'
-                )}
-              >
-                <span className="w-5 text-center font-display text-sm font-black text-white/75">{i + 1}</span>
-                <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                <span className={cn('flex-1 truncate text-sm font-bold', p.id === user.id && 'text-gold')}>
-                  {p.name}
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wide text-white/75">
-                  {rankRoleLabel(i, ranking.length, genreOf(p))}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-        <p className="max-w-xs text-center text-xs font-semibold text-white/75">{t('exchangeInfo')}</p>
-        {!isSoft && <p className="text-sm font-bold text-amber-200">{t('trouDrinks')}</p>}
-        <Button
-          onClick={() => void sendAction({ action: 'continue' })}
-          disabled={busy}
-          className="w-full max-w-sm rounded-2xl bg-gradient-to-r from-emerald-800 to-amber-600 py-4 text-sm font-bold"
+        <div
+          className={cn('flex flex-1 flex-col items-center gap-3 p-3 text-cream sm:mx-auto sm:w-full sm:max-w-lg', flowReserve)}
+          style={flowStyle}
         >
-          {t('nextManche')}
-          {view.phaseEndsAt !== null && (
-            <PhaseCountdown endsAt={view.phaseEndsAt}>{({ seconds }) => ` (${seconds}s)`}</PhaseCountdown>
-          )}
-        </Button>
-      </div>
-      <AnimatePresence>
-        {tutorial.open && <GameTutorialModal gameId="president" onClose={tutorial.close} />}
-      </AnimatePresence>
+          <PhaseHeader
+            className="w-full"
+            phase={t('mancheEnd', { n: view.manche + 1 })}
+            endsAt={view.phaseEndsAt}
+            total={PRE_INTERLUDE_MS}
+            right={tutorialButton}
+          />
+          <RankingRows
+            ranking={ranking}
+            players={view.players}
+            selfId={user.id}
+            iconOf={iconOf}
+            labelOf={rankingLabel}
+          />
+          <p className="max-w-sm text-center text-sm text-cream/80">{t('exchangeInfo')}</p>
+          {!isSoft && <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>}
+        </div>
+        {barMode === 'interlude' && (
+          <OnlineActionBar status={actionError ?? t('interludeHint')} maxWidthClass="max-w-lg">
+            <div ref={barRef}>
+              {/* Le serveur refuse la relance avant le temps de lecture du
+                  classement : le bouton attend `continueAt` au lieu d'essuyer
+                  un refus. */}
+              <PhaseCountdown endsAt={view.continueAt}>
+                {({ expired }) => (
+                  <Button
+                    variant="primary"
+                    size="gameLg"
+                    className="w-full gap-2"
+                    disabled={busy || !expired}
+                    onClick={async () => {
+                      setPending('continue')
+                      await sendAction({ action: 'continue' })
+                      setPending(null)
+                    }}
+                  >
+                    {pending === 'continue' && <Loader2 aria-hidden className="h-5 w-5 motion-safe:animate-spin" />}
+                    {t('nextManche')}
+                  </Button>
+                )}
+              </PhaseCountdown>
+            </div>
+          </OnlineActionBar>
+        )}
+        {tutorialModal}
       </>
     )
   }
@@ -410,129 +488,249 @@ export function PresidentOnline() {
             : null
     : null
 
+  const trickHistory = view.trickHistory ?? []
+  const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
+  const turnPlayer = view.players.find((p) => p.id === view.currentTurnId)
+  const myTurn = view.currentTurnId === user.id
+  const iAmOut = view.outOrder.includes(user.id)
+  const myOutRank = view.outOrder.indexOf(user.id) + 1
+  const lastPlay = view.lastPlay
+  const lastPlayRank = lastPlay ? preLastPlayRank(lastPlay) : null
+  // « Ou rien » : la dernière pose a égalé la précédente → rang verrouillé.
+  const lockedRank = preOuRien(view)
+
+  const toggleCard = (card: number) => {
+    if (!myTurn || busy) return
+    setSelected((prev) => {
+      if (prev.includes(card)) return prev.filter((c) => c !== card)
+      // Sélection homogène sur les NATURELLES : un rang différent redémarre la
+      // sélection — les jokers, caméléons, se combinent avec tout.
+      const prevNaturals = prev.filter((c) => !preIsJoker(c))
+      if (
+        !preIsJoker(card) &&
+        prevNaturals.length > 0 &&
+        preRankOf(prevNaturals[0]) !== preRankOf(card)
+      ) {
+        return [card, ...prev.filter((c) => preIsJoker(c))]
+      }
+      return [...prev, card]
+    })
+  }
+
+  // Les règles du moteur, lues sur la vue : le téléphone dit pourquoi la
+  // sélection ne passe pas avant même l'envoi.
+  const selectionIssue = myTurn && selected.length > 0 ? preComboIssue(view, selected) : null
+  const canPlaySelection = myTurn && selected.length > 0 && selectionIssue === null
+  const issueText =
+    selectionIssue === 'WRONG_SIZE' && lastPlay
+      ? t('need.size', { count: lastPlay.cards.length })
+      : selectionIssue === 'TOO_LOW' && lastPlayRank !== null
+        ? t('need.rank', { rank: PRE_RANKS[lastPlayRank] })
+        : selectionIssue === 'MUST_MATCH_RANK' && lockedRank !== null
+          ? t('ouRien', { rank: PRE_RANKS[lockedRank] })
+          : null
+
+  // Fermeture de carré : je détiens les cartes manquantes du rang au sommet
+  // du pli (3 simples à la suite → la 4e ; une paire → l'autre paire) — les
+  // jokers complètent.
+  const closeNeed = preCloseNeeded(view)
+  const myCloseCards = closeNeed
+    ? [
+        ...view.myHand.filter((c) => !preIsJoker(c) && preRankOf(c) === closeNeed.rank),
+        ...view.myHand.filter((c) => preIsJoker(c)),
+      ].slice(0, closeNeed.count)
+    : []
+  const canClose = !iAmOut && closeNeed !== null && myCloseCards.length === closeNeed.count
+
+  const turnHint = !myTurn
+    ? undefined
+    : !lastPlay || lastPlayRank === null
+      ? t('leadHint')
+      : lockedRank !== null
+        ? t('hint.ouRien', { rank: PRE_RANKS[lockedRank] })
+        : t('hint.follow', { count: lastPlay.cards.length, rank: PRE_RANKS[lastPlayRank] })
+
+  const barStatus = actionError ?? issueText ?? (!myTurn && canClose ? t('closeHint') : null)
+
+  const play = async () => {
+    if (!canPlaySelection) return
+    setPending('play')
+    const res = await sendAction({ action: 'play', cards: selected })
+    setPending(null)
+    // Échec : la sélection reste, on peut corriger et renvoyer.
+    if (res?.ok) setSelected([])
+  }
+  const pass = async () => {
+    setPending('pass')
+    await sendAction({ action: 'pass' })
+    setPending(null)
+  }
+  const closeTrick = async () => {
+    setPending('close')
+    await sendAction({ action: 'close', cards: myCloseCards })
+    setPending(null)
+  }
+  const spinner = <Loader2 aria-hidden className="h-5 w-5 shrink-0 motion-safe:animate-spin" />
+
   return (
     <>
-    <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-      {/* Bandeau */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white/80">
-            {t('manche', { n: view.manche + 1, total: view.totalManches })}
-          </span>
-          <span className="flex items-center gap-2">
-            <span className={cn('text-xs font-bold', myTurn ? 'text-gold' : 'text-white/60')}>
-              {myTurn ? t('yourTurn') : t('turnOf', { name: nameOf(view.currentTurnId) })}
-            </span>
-            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
-          </span>
-        </div>
-        {view.phaseEndsAt !== null && (
-          <PhaseCountdown
-            variant="bar"
-            endsAt={view.phaseEndsAt}
-            total={PRE_TURN_MS}
-            dangerMs={8_000}
-            colorClassName="bg-gold"
-            dangerClassName="bg-suit-red"
-          />
-        )}
-      </div>
+    <div
+      className={cn('flex flex-1 flex-col gap-3 p-3 text-cream sm:mx-auto sm:w-full sm:max-w-lg', flowReserve)}
+      style={flowStyle}
+    >
+      <PhaseHeader
+        round={t('manche', { n: view.manche + 1, total: view.totalManches })}
+        phase={lastPlay ? t('phase.trick', { count: lastPlay.cards.length }) : t('phase.free')}
+        endsAt={view.phaseEndsAt}
+        total={PRE_TURN_MS}
+        dangerMs={8_000}
+        right={tutorialButton}
+      />
+
+      <TurnBanner
+        mine={myTurn}
+        name={turnPlayer?.name}
+        avatar={turnPlayer ? <PlayerAvatarGlyph value={iconOf(turnPlayer)} /> : undefined}
+        hint={turnHint}
+        alertOnMine
+      />
 
       {leftPlayer?.leftAt && (
-        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
+        <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
           <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
             {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
           </PhaseCountdown>
         </div>
       )}
 
-      {/* Coup refusé (combo illégal, pas ton tour, expulsion…) — 3 s */}
-      {actionError && (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+      {/* Coup refusé hors barre (spectateur, joueur sorti) — 3 s. En course,
+          la ligne d'état de la barre l'annonce. */}
+      {actionError && !barMode && (
+        <div role="alert" className="rounded-2xl border border-red-300/40 bg-suit-red/20 px-4 py-2 text-center text-sm font-semibold text-red-300">
           {actionError}
         </div>
       )}
 
       {/* Échange (visible seulement de la paire concernée) */}
       {myExchangeMsg && (
-        <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
+        <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
           {myExchangeMsg}
         </div>
       )}
 
-      {/* Joueurs */}
-      <div className="flex flex-wrap justify-center gap-1.5">
-        {view.players.map((p) => {
-          const outIdx = view.outOrder.indexOf(p.id)
-          return (
-            <span
-              key={p.id}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold',
-                view.currentTurnId === p.id
-                  ? 'border-gold/60 bg-gold/15 text-gold'
-                  : outIdx !== -1
-                    ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
-                    : 'border-white/10 bg-white/5 text-white/70'
-              )}
-            >
-              <PlayerAvatarGlyph value={iconOf(p)} />
-              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-              {p.role && (
-                <span aria-hidden title={roleLabel(p.role, genreOf(p))}>
-                  {ROLE_BADGES[p.role]}
-                </span>
-              )}
-              <span className="tabular-nums text-white/75">
-                {outIdx !== -1 ? `#${outIdx + 1}` : p.handCount}
-              </span>
-            </span>
-          )
-        })}
-      </div>
+      {iAmOut && (
+        <p className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-felt-deep/70 px-4 py-3 text-center text-base font-bold text-emerald-300">
+          <Flag aria-hidden className="h-5 w-5 shrink-0" />
+          {t('out', { rank: myOutRank })}
+        </p>
+      )}
 
-      {/* Tapis : dernier combo posé */}
-      <div className="flex min-h-[7rem] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4">
-        {view.lastPlay ? (
+      {/* Tapis : dernier combo posé, en grandes cartes. Juste sous le tour :
+          à 667 px de haut, sous une main de deux rangées, il restait
+          caché derrière la liste des joueurs. */}
+      <section className="flex min-h-[8.5rem] flex-col items-center justify-center gap-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4 shadow-inner">
+        {lastPlay ? (
           <>
-            <div className="flex gap-1.5">
-              {view.lastPlay.cards.map((card) => (
-                <CardFace key={card} card={card} />
+            <div className="flex flex-wrap justify-center gap-2">
+              {lastPlay.cards.map((card) => (
+                <CardFace key={card} card={card} label={cardName(card)} size="lg" />
               ))}
             </div>
-            <p className="text-xs font-semibold text-white/75">
-              {t('lastPlayBy', { name: nameOf(view.lastPlay.playerId) })}
+            <p className="text-sm font-semibold text-cream/80">
+              {t('lastPlayBy', { name: nameOf(lastPlay.playerId) })}
             </p>
             {lockedRank !== null && (
               <motion.p
-                initial={{ scale: 0.7, opacity: 0 }}
+                initial={reduceMotion ? false : { scale: 0.7, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="rounded-full border border-amber-400/50 bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-200"
+                className="rounded-full border border-gold/60 bg-gold/[0.15] px-3 py-1 font-display text-sm font-bold text-gold"
               >
                 {t('ouRien', { rank: PRE_RANKS[lockedRank] })}
               </motion.p>
             )}
           </>
         ) : (
-          <p className="text-sm font-bold text-white/80">{t('freeTrick')}</p>
+          <p className="text-center font-display text-base font-bold text-cream/80">{t('freeTrick')}</p>
         )}
-      </div>
+      </section>
+
+      {/* Joueurs : rôle, cartes en main ou place de sortie, passe et départ
+          signés d'une icône (pas seulement d'une teinte). */}
+      <ul className="flex flex-wrap justify-center gap-1.5">
+        {view.players.map((p) => {
+          const outIdx = view.outOrder.indexOf(p.id)
+          const isTurn = view.currentTurnId === p.id
+          const passed = !isTurn && outIdx === -1 && view.passedIds.includes(p.id)
+          const left = !p.isBot && Boolean(p.leftAt)
+          return (
+            <li
+              key={p.id}
+              className={cn(
+                'inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold',
+                isTurn
+                  ? 'border-gold bg-gold/20 text-amber-200'
+                  : outIdx !== -1
+                    ? 'border-emerald-300/40 bg-emerald-500/10 text-emerald-300'
+                    : 'border-gold/20 bg-felt-deep/70 text-cream',
+                (passed || left) && 'opacity-60'
+              )}
+            >
+              <span aria-hidden className="text-base leading-none">
+                <PlayerAvatarGlyph value={iconOf(p)} />
+              </span>
+              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+              {p.role && (
+                <>
+                  <RoleIcon role={p.role} />
+                  <span className="sr-only">{roleLabel(p.role, genreOf(p))}</span>
+                </>
+              )}
+              {left && (
+                <>
+                  <WifiOff aria-hidden className="h-4 w-4 shrink-0" />
+                  <span className="sr-only">{t('playerLeft')}</span>
+                </>
+              )}
+              {passed && (
+                <>
+                  <SkipForward aria-hidden className="h-4 w-4 shrink-0" />
+                  <span className="sr-only">{t('passed')}</span>
+                </>
+              )}
+              {outIdx !== -1 ? (
+                <span className="inline-flex items-center gap-0.5 tabular-nums">
+                  <Flag aria-hidden className="h-4 w-4 shrink-0" />
+                  <span aria-hidden>{outIdx + 1}</span>
+                  <span className="sr-only">{t('outPosition', { rank: outIdx + 1 })}</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 tabular-nums">
+                  <Layers aria-hidden className="h-4 w-4 shrink-0" />
+                  <span aria-hidden>{p.handCount}</span>
+                  <span className="sr-only">{t('handCount', { count: p.handCount })}</span>
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
 
       {/* Historique des plis de la manche (le plus récent en premier) */}
       {trickHistory.length > 0 && (
-        <details className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2">
-          <summary className="cursor-pointer select-none text-xs font-bold text-white/80">
+        <details className="rounded-2xl border border-gold/20 bg-felt-deep/70 px-4">
+          <summary className="cursor-pointer select-none py-3 text-sm font-bold text-cream/80">
             {t('history.title', { count: trickHistory.length })}
           </summary>
-          <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+          {/* max-h-[11rem] et non max-h-44 : Tailwind 3.3 ne génère pas l'échelle sur max-height. */}
+          <div className="max-h-[11rem] space-y-1.5 overflow-y-auto pb-3">
             {[...trickHistory].reverse().map((entry, i) => {
               const n = trickHistory.length - i
               return (
                 <div
                   key={n}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold text-white/80"
+                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-semibold text-cream/80"
                 >
-                  <span className="w-4 shrink-0 text-right tabular-nums text-white/65">{n}</span>
+                  <span className="w-5 shrink-0 text-right tabular-nums text-cream/70">{n}</span>
                   {entry.plays.map((pl, j) => {
                     const p = view.players.find((x) => x.id === pl.playerId)
                     return (
@@ -545,7 +743,7 @@ export function PresidentOnline() {
                     )
                   })}
                   {entry.winnerId && (
-                    <span className="text-gold/80">→ {nameOf(entry.winnerId)}</span>
+                    <span className="text-gold">→ {nameOf(entry.winnerId)}</span>
                   )}
                 </div>
               )
@@ -553,68 +751,84 @@ export function PresidentOnline() {
           </div>
         </details>
       )}
+    </div>
 
-      {/* Fermeture de carré : je détiens les cartes manquantes — hors tour ! */}
-      {canClose && (
-        <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <Button
-            onClick={() => void sendAction({ action: 'close', cards: myCloseCards })}
-            disabled={busy}
-            className="w-full rounded-2xl bg-gradient-to-r from-amber-600 to-red-600 py-5 text-base font-black shadow-lg shadow-amber-500/25"
+    {/* Ma main et l'action du moment, sous le pouce. Montée tant que je suis
+        en course (sa ligne d'état annonce refus et sélection invalide) ; seuls
+        ses boutons suivent le tour. */}
+    {barMode === 'hand' && (
+      <OnlineActionBar status={barStatus} maxWidthClass="max-w-lg">
+        <div ref={barRef} className="space-y-3">
+          {/* 7 cartes de 44 px par rangée tiennent dans les 343 px de la barre
+              à 375 px : 14 cartes = deux rangées, toutes visibles. L'écart
+              tombe à 2 px sous 370 px : les Android à 360 px (328 px utiles)
+              gardent ainsi 7 cartes par rangée au lieu de passer à trois. */}
+          <div
+            role="group"
+            aria-label={t('myHand')}
+            className={cn(
+              'flex flex-wrap justify-center gap-x-0.5 gap-y-2.5 pt-2.5 min-[370px]:gap-x-1',
+              !myTurn && 'opacity-80'
+            )}
           >
-            ⚡ {t('closeTrick', {
-              cards: myCloseCards.map(cardLabel).join(' '),
-            })}
-          </Button>
-        </motion.div>
-      )}
-
-      {/* Ma main */}
-      {iAmOut ? (
-        <p className="text-center text-sm font-bold text-emerald-200">
-          {t('out', { rank: myOutRank })}
-        </p>
-      ) : (
-        <>
-          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 py-4">
             {view.myHand.map((card) => (
               <CardFace
                 key={card}
                 card={card}
-                raised={selected.includes(card)}
-                onClick={() => toggleCard(card)}
+                label={cardName(card)}
+                selected={selected.includes(card)}
+                onToggle={myTurn ? () => toggleCard(card) : undefined}
               />
             ))}
           </div>
-          <div className="flex gap-2">
+
+          {/* Fermeture de carré : hors tour, c'est l'action du moment. */}
+          {canClose && (
             <Button
-              onClick={() => {
-                void sendAction({ action: 'play', cards: selected })
-                setSelected([])
-              }}
-              disabled={!canPlaySelection || busy}
-              className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-800 to-amber-600 py-5 text-base font-black disabled:opacity-50"
+              variant={myTurn ? 'quiet' : 'primary'}
+              size={myTurn ? 'game' : 'gameLg'}
+              className="w-full gap-2 whitespace-normal leading-tight"
+              disabled={busy}
+              onClick={() => void closeTrick()}
             >
-              {t('play', { count: selected.length })}
+              {pending === 'close' ? spinner : <Zap aria-hidden className="h-5 w-5 shrink-0" />}
+              {t('closeTrick', { cards: myCloseCards.map(cardLabel).join(' ') })}
             </Button>
-            <Button
-              onClick={() => void sendAction({ action: 'pass' })}
-              disabled={!myTurn || !view.lastPlay || busy}
-              variant="outline"
-              className="flex-1 rounded-2xl border-white/[0.15] bg-white/5 py-5 text-base font-bold text-white/80 hover:bg-white/10 disabled:opacity-50"
-            >
-              {t('pass')}
-            </Button>
-          </div>
-          {myTurn && !view.lastPlay && (
-            <p className="text-center text-xs font-semibold text-white/75">{t('leadHint')}</p>
           )}
-        </>
-      )}
-    </div>
-    <AnimatePresence>
-      {tutorial.open && <GameTutorialModal gameId="president" onClose={tutorial.close} />}
-    </AnimatePresence>
+
+          {myTurn && (
+            <div className="flex gap-2">
+              {/* On ne passe pas quand on mène le pli. */}
+              {lastPlay && (
+                <Button
+                  variant="quiet"
+                  size="gameLg"
+                  className="flex-1 gap-2"
+                  disabled={busy}
+                  onClick={() => void pass()}
+                >
+                  {pending === 'pass' && spinner}
+                  {t('pass')}
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                size="gameLg"
+                className="min-w-0 flex-[2] gap-2 whitespace-normal leading-tight"
+                disabled={!canPlaySelection || busy}
+                onClick={() => void play()}
+              >
+                {pending === 'play' && spinner}
+                {selected.length > 0
+                  ? t('playCards', { cards: [...selected].sort((a, b) => a - b).map(cardLabel).join(' ') })
+                  : t('pickCards')}
+              </Button>
+            </div>
+          )}
+        </div>
+      </OnlineActionBar>
+    )}
+    {tutorialModal}
     </>
   )
 }

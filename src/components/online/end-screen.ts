@@ -9,6 +9,7 @@
  *   dont un joueur a fermé l'onglet affichait 3/4 et repartait pourtant à 3 ;
  * - le lien partagé : le code de la table, mais d'une table PUBLIQUE seulement
  *   (isTableShareable) — le partage d'un résultat part vers un fil public.
+ * Et la ligne compacte de la bannière d'XP (xpSummaryParts).
  */
 
 /** Ce que le compteur lit d'un membre de la table (RoomMemberDto en est un). */
@@ -128,4 +129,38 @@ export function endShareUrl(
 export function endShareClipboardText(text: string, url: string): string {
   const message = text.trim()
   return message ? `${message}\n${url}` : url
+}
+
+/** Ce que la ligne compacte de la bannière d'XP sait de la partie. */
+export type XpSummaryInput = {
+  /** Total crédité par CETTE partie (détail du serveur) ; null sans détail fiable. */
+  gained: number | null
+  /** Gain d'entraînement (partie contre les seuls bots). */
+  solo: boolean
+  /** Niveau atteint. */
+  level: number
+  /** Passage de niveau dû à cette partie. */
+  leveledUp: boolean
+  /** Succès débloqués par cette partie (connus du catalogue). */
+  achievements: number
+}
+
+export type XpSummaryPart =
+  | { kind: 'gain'; xp: number; solo: boolean }
+  | { kind: 'level'; level: number; up: boolean }
+  | { kind: 'achievements'; count: number }
+
+/**
+ * « +20 XP · Niveau 1 · 2 succès » : ce qui s'applique, dans cet ordre. Le
+ * niveau est toujours là (seule information sûre sans détail de gain) ; pas
+ * de « +0 XP » ni de « 0 succès », qui ne disent rien.
+ */
+export function xpSummaryParts(input: XpSummaryInput): XpSummaryPart[] {
+  const parts: XpSummaryPart[] = []
+  if (input.gained !== null && input.gained > 0) {
+    parts.push({ kind: 'gain', xp: input.gained, solo: input.solo })
+  }
+  parts.push({ kind: 'level', level: input.level, up: input.leveledUp })
+  if (input.achievements > 0) parts.push({ kind: 'achievements', count: input.achievements })
+  return parts
 }

@@ -1,25 +1,39 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
-import { RotateCcw, X } from 'lucide-react'
+import { Check, RotateCcw } from 'lucide-react'
 import { GameShell } from '@/components/game/GameShell'
 import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
+import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
+import { EndActionDock } from '@/components/game/EndActionDock'
+import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
+import { GameIconById } from '@/components/hub/GameIconById'
+import { Button } from '@/components/ui/button'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
-import { PlayingCard as PlayingCardFace } from '@/components/ui/PlayingCard'
-import type { GameSuit } from '@/lib/games'
-import { cn } from '@/lib/utils'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
+import {
+  PURPLE_BET_META,
+  PURPLE_BET_TYPES,
+  PurpleBetButton,
+  PurpleBetGrid,
+  PurpleDrawnCards,
+  PurpleHistory,
+  PurplePotRow,
+  PurpleVerdictDialog,
+  type PurpleBetType,
+} from './purple-ui'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type CardValue = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'V' | 'D' | 'R' | 'A'
 type CardSuit = '♠' | '♥' | '♦' | '♣'
-type BetType = 'rouge' | 'double-rouge' | 'noir' | 'double-noir' | 'purple' | 'double-purple'
+type BetType = PurpleBetType
 
 interface PlayingCard { value: CardValue; suit: CardSuit; color: 'red' | 'black' }
 
@@ -54,26 +68,9 @@ type PurpleSave = {
   totalCardsDrawn: number
 }
 
-const BET_META: Record<BetType, { cards: number; gulps: number; labelKey: string; emoji: string }> = {
-  'rouge':         { cards: 1, gulps: 1, labelKey: 'rouge',         emoji: '🔴' },
-  'double-rouge':  { cards: 2, gulps: 2, labelKey: 'doubleRouge',   emoji: '🔴🔴' },
-  'noir':          { cards: 1, gulps: 1, labelKey: 'noir',          emoji: '⚫' },
-  'double-noir':   { cards: 2, gulps: 2, labelKey: 'doubleNoir',    emoji: '⚫⚫' },
-  'purple':        { cards: 2, gulps: 2, labelKey: 'purple',        emoji: '🟣' },
-  'double-purple': { cards: 4, gulps: 4, labelKey: 'doublePurple',  emoji: '🟣🟣' },
-}
-
-// Couleurs de contenu : rouge/noir des cartes et violet signature du Purple.
-const BET_STYLE: Record<BetType, string> = {
-  'rouge':         'border-suit-red/60 bg-suit-red',
-  'double-rouge':  'border-suit-red/60 bg-suit-red ring-1 ring-gold/40',
-  'noir':          'border-gold/20 bg-[#24201A]',
-  'double-noir':   'border-gold/20 bg-[#24201A] ring-1 ring-gold/40',
-  'purple':        'border-violet-500/40 bg-gradient-to-br from-violet-600 to-purple-800',
-  'double-purple': 'border-violet-400/40 bg-gradient-to-br from-violet-500 to-fuchsia-800',
-}
-
-const SUIT_TO_GAME_SUIT: Record<CardSuit, GameSuit> = { '♠': 'spade', '♥': 'heart', '♦': 'diamond', '♣': 'club' }
+// Barre de décision : ligne d'enjeu, « Continuer » (56) et « Passer » (48),
+// écarts et zone sûre. Les tailles de GameShell s'arrêtent à une rangée.
+const DECISION_PADDING = 'pb-[calc(12rem+env(safe-area-inset-bottom,0px))]'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -94,43 +91,12 @@ function checkBetResult(bet: BetType, cards: PlayingCard[]): boolean {
   }
 }
 
-// ─── Composant carte ──────────────────────────────────────────────────────────
-
-function PlayingCardUI({ card, size = 'lg' }: { card: PlayingCard; size?: 'sm' | 'lg' }) {
-  const ink = card.color === 'red' ? 'text-suit-red' : 'text-[#24201A]'
-  if (size === 'sm') {
-    return (
-      <PlayingCardFace suit={SUIT_TO_GAME_SUIT[card.suit]} rank={card.value} corners={false} className="flex h-14 w-10 shrink-0 flex-col items-center justify-center rounded-lg">
-        <span className={cn('font-display text-xs font-bold leading-none', ink)}>{card.value}</span>
-        <span className={cn('text-sm leading-none', ink)}>{card.suit}</span>
-      </PlayingCardFace>
-    )
-  }
-  return (
-    <PlayingCardFace suit={SUIT_TO_GAME_SUIT[card.suit]} rank={card.value} className="flex h-32 w-20 sm:h-36 sm:w-24 flex-col items-center justify-center">
-      <span className={cn('font-display text-3xl sm:text-4xl font-bold', ink)}>{card.value}</span>
-      <span className={cn('text-2xl sm:text-3xl leading-tight', ink)}>{card.suit}</span>
-    </PlayingCardFace>
-  )
-}
-
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function Game({ players, onGameEnd, updatePlayerStats }: GameProps) {
   const t = useTranslations('games.purple')
   const tCommon = useTranslations('common')
-  const betConfig = useMemo(() => {
-    const config = {} as Record<BetType, { cards: number; gulps: number; label: string; emoji: string }>
-    for (const [bet, meta] of Object.entries(BET_META) as [BetType, typeof BET_META[BetType]][]) {
-      config[bet] = {
-        cards: meta.cards,
-        gulps: meta.gulps,
-        label: t(`bets.${meta.labelKey}` as 'bets.rouge'),
-        emoji: meta.emoji,
-      }
-    }
-    return config
-  }, [t])
+  const [confirmDialog, confirm] = useConfirmAction()
   const [isMounted, setIsMounted] = useState(false)
   const [deck, setDeck] = useState<PlayingCard[]>([])
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
@@ -148,6 +114,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   // Flash « nouveau paquet mélangé » quand le paquet épuisé est rebouclé.
   const [newDeckFlash, setNewDeckFlash] = useState(false)
   const [started, setStarted] = useState(false)
+  // Bilan de fin : le jeu n'a pas de fin naturelle, ← y mène après confirmation.
+  const [ended, setEnded] = useState(false)
   const session = useResumableLocalGame<PurpleSave>(SAVE_ID, SAVE_VERSION, (s) =>
     isSameLocalTable(s.playerIds, players)
   )
@@ -239,7 +207,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
 
   const handleBet = (bet: BetType) => {
     if (isRevealing) return
-    const config = betConfig[bet]
+    const config = PURPLE_BET_META[bet]
     // Si pas assez de cartes, on mélange un nouveau paquet et on l'ajoute aux
     // restantes — la partie ne s'arrête jamais faute de cartes.
     let currentDeck = [...deck]
@@ -276,34 +244,90 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     }, 700)
   }
 
+  // Gardes : un double toucher sur « Passer » ou « Compris » sautait un joueur.
   const handleContinue = () => {
+    if (!canContinue) return
     setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
   }
 
   const handlePass = () => {
+    if (!canContinue) return
     setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
     setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
   }
 
   const closeResult = () => {
+    if (!showResult) return
     setShowResult(false)
     setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
     setDrawnCards([]); setLastBet(null)
   }
 
-  const quitGame = () => {
+  const creditGame = () => {
     // Garde de réentrance : le bouton retour peut être tapé deux fois avant que
     // la navigation ne démonte l'écran — la partie ne doit compter qu'une fois.
-    if (!gameCountedRef.current) {
-      gameCountedRef.current = true
-      players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
-    }
+    if (gameCountedRef.current) return
+    gameCountedRef.current = true
+    players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
+  }
+
+  const quitGame = () => {
+    creditGame()
     // Une partie terminée ne doit rien laisser derrière elle.
     session.clear()
     onGameEnd()
   }
 
+  // ← en pleine partie : on ne sort plus sans un mot, la table voit d'abord
+  // qui a bu combien (les gorgées n'étaient affichées nulle part en local).
+  const askFinish = async () => {
+    if (isRevealing) return
+    // Aucune carte tirée : rien à résumer, on sort comme avant.
+    if (totalCardsDrawn === 0) {
+      quitGame()
+      return
+    }
+    const ok = await confirm({
+      title: t('endConfirm.title'),
+      description: t('endConfirm.description'),
+      confirmLabel: t('endConfirm.confirm'),
+      cancelLabel: t('endConfirm.cancel'),
+      tone: 'primary',
+    })
+    if (!ok) return
+    creditGame()
+    session.clear()
+    setShowResult(false)
+    setEnded(true)
+  }
+
+  const replay = () => {
+    initializeGame()
+    setEnded(false)
+  }
+
+  // ↺ effaçait tout au premier toucher (gorgées de chacun, compteur, paquet),
+  // sauvegarde de reprise comprise : un doigt qui ripe en passant le téléphone
+  // suffisait. Confirmation, et la partie effacée compte quand même dans les
+  // statistiques si des cartes ont été tirées.
+  const askRestart = async () => {
+    // Pendant la révélation, le minuteur du pari appliquerait son verdict à
+    // la partie neuve.
+    if (isRevealing) return
+    const ok = await confirm({
+      title: tCommon('confirmRestart.title'),
+      description: tCommon('confirmRestart.description'),
+      confirmLabel: tCommon('confirmRestart.confirm'),
+      cancelLabel: tCommon('confirmRestart.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    if (totalCardsDrawn > 0) creditGame()
+    initializeGame()
+  }
+
   const currentPlayer = players[currentPlayerIndex]
+  const nextPlayer = players[(currentPlayerIndex + 1) % Math.max(1, players.length)]
 
   if (!isMounted || !session.ready) return null
   if (!players || players.length < 2) return <div className="p-6 text-center text-red-300">{t('minPlayers')}</div>
@@ -312,137 +336,191 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     return <ResumeGamePrompt onResume={resumeSavedGame} onDiscard={session.discard} />
   }
 
-  const betButtons: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
-
-  return (
-    <GameShell
-      title={t('title')}
-      onBack={quitGame}
-      maxWidth={700}
-      headerRight={
-        <button onClick={initializeGame} className="flex h-9 w-9 items-center justify-center rounded-xl border border-gold/[0.15] bg-black/20 text-cream/70 transition-colors hover:bg-black/30 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold" aria-label={t('newGame')}>
-          <RotateCcw className="h-4 w-4" />
-        </button>
-      }
-    >
-      <div className="space-y-4 text-cream">
-
-        {/* ── Joueur actif ─────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-          <PlayerIcon player={currentPlayer} size="md" className="h-10 w-10 text-xl" />
-          <div className="flex-1 min-w-0">
-            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('yourTurn')}</p>
-            <p className="font-display font-bold text-cream truncate">
-              <PlayerName player={currentPlayer} />
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg border border-gold/30 bg-gold/10 px-3 py-1.5 text-center text-gold">
-              <p className="text-[10px] uppercase tracking-wide text-gold/75">{t('counter')}</p>
-              <p className="font-display text-lg font-bold text-gold">{drinkCounter}<span className="text-xs ml-0.5">🍺</span></p>
-            </div>
-            <div className="rounded-xl border border-gold/[0.15] bg-black/20 px-3 py-1.5 text-center">
-              <p className="text-sm font-bold text-cream/60">{t('cardsLeft', { count: deck.length })}</p>
-              {newDeckFlash && (
-                <p className="text-[10px] font-semibold text-gold">{t('newDeck')}</p>
-              )}
-            </div>
-          </div>
+  // ── Fin de partie : qui a bu combien, du plus arrosé au plus sobre ─────────
+  if (ended) {
+    const tally = [...players].sort((a, b) => (gameResults[b.id] ?? 0) - (gameResults[a.id] ?? 0))
+    return (
+      <GameShell title={t('title')} onBack={quitGame} maxWidth={576} contentClassName="gap-4">
+        <div className="flex flex-col items-center gap-2 pt-2 text-center">
+          <GameIconById id="purple" surface="felt" className="h-12 w-12" />
+          <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
+          <p className="text-sm text-cream/80">{t('online.totalCards', { count: totalCardsDrawn })}</p>
         </div>
 
-        {/* ── Cartes tirées ────────────────────────────────────────────── */}
-        {drawnCards.length > 0 && (
-          <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-4">
-            <div className="flex flex-wrap justify-center gap-3">
-              {drawnCards.map((card, i) => <PlayingCardUI key={i} card={card} />)}
-            </div>
-            {isCorrect === true && canContinue && (
-              <div className="mt-4 text-center space-y-3">
-                <p className="text-emerald-300 font-semibold">
-                  {t('correct', { count: lastBet ? betConfig[lastBet].gulps : 0 })}
+        <section className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('tallyTitle')}</h3>
+          <ol className="space-y-2">
+            {tally.map(p => (
+              <li key={p.id} className="flex items-center gap-3 rounded-xl border border-gold/20 bg-black/20 px-3 py-2.5">
+                <PlayerIcon player={p} size="md" className="h-10 w-10 text-xl" />
+                <span className="min-w-0 flex-1 truncate text-base font-semibold text-cream">
+                  <PlayerName player={p} />
+                </span>
+                <span className="shrink-0 rounded-full bg-amber-500 px-2.5 py-1 text-sm font-bold tabular-nums text-[#24201A]">
+                  {tCommon('sipsCount', { count: gameResults[p.id] ?? 0 })}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <EndActionDock
+          voiceGutter={false}
+          feedback={<FirstGameFeedbackCard variant="banner" mode="local" gameId="purple" />}
+        >
+          <Button variant="primary" size="gameLg" className="w-full" onClick={replay}>
+            <RotateCcw aria-hidden className="mr-2 h-5 w-5" />
+            {tCommon('replay')}
+          </Button>
+          <Button variant="quiet" size="game" className="w-full" onClick={quitGame}>
+            {tCommon('quit')}
+          </Button>
+        </EndActionDock>
+      </GameShell>
+    )
+  }
+
+  const deciding = isCorrect === true && canContinue
+  const currentName = currentPlayer?.name ?? ''
+
+  // Le seul vrai choix du jeu, sous le pouce, avec ce qu'il engage : relancer
+  // le compteur, ou le refiler au joueur suivant (il ne retombe pas à zéro).
+  const decisionBar = deciding ? (
+    <div className="flex w-full flex-col gap-2">
+      <p className="text-center text-sm text-cream/80">
+        {t('decision.stake', { count: drinkCounter, name: currentName })}
+      </p>
+      <Button
+        variant="primary"
+        size="gameLg"
+        className="w-full whitespace-normal leading-tight"
+        onClick={handleContinue}
+      >
+        {t('decision.continue', { name: currentName })}
+      </Button>
+      <Button
+        variant="quiet"
+        size="game"
+        className="w-full whitespace-normal leading-tight"
+        onClick={handlePass}
+      >
+        {t('decision.pass', { name: nextPlayer?.name ?? '', count: drinkCounter })}
+      </Button>
+    </div>
+  ) : undefined
+
+  return (
+    <>
+      {confirmDialog}
+      {/* Clé nulle avant la donne : le premier joueur tiré au sort sert de
+          point de départ, sans flash ; ensuite, chaque changement de main. */}
+      <PassPhoneOverlay
+        playerKey={started ? currentPlayer?.id : null}
+        name={currentName}
+        avatar={currentPlayer ? <PlayerIcon player={currentPlayer} size="lg" className="h-20 w-20 text-6xl" /> : undefined}
+        enabled={!showResult}
+      />
+      <GameShell
+        title={t('title')}
+        onBack={() => void askFinish()}
+        maxWidth={700}
+        headerRight={
+          <Button
+            variant="ghost"
+            size="gameIcon"
+            onClick={() => void askRestart()}
+            aria-label={tCommon('confirmRestart.confirm')}
+            title={tCommon('confirmRestart.confirm')}
+            className="border border-gold/20 bg-black/20 text-cream/70 hover:bg-black/30 hover:text-gold"
+          >
+            <RotateCcw aria-hidden className="h-5 w-5" />
+          </Button>
+        }
+        actionBar={decisionBar}
+        contentClassName={deciding ? DECISION_PADDING : undefined}
+      >
+        <div className="space-y-4 text-cream">
+
+          {/* ── Joueur au tour + compteur ─────────────────────────────────
+              Deux rangées : le nom avait ~32 px de large à 375 px, coincé
+              entre l'avatar, le compteur et le paquet. */}
+          <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+            <div className="flex items-center gap-3">
+              {currentPlayer && <PlayerIcon player={currentPlayer} size="lg" />}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('yourTurn')}</p>
+                <p className="break-words font-display text-xl font-bold leading-tight text-cream sm:text-2xl">
+                  {currentPlayer && <PlayerName player={currentPlayer} />}
                 </p>
-                <div className="flex gap-2 justify-center">
-                  <button onClick={handleContinue} className="rounded-2xl bg-amber-500 px-5 py-2 text-sm font-bold text-black hover:bg-amber-400">
-                    {tCommon('continue')}
-                  </button>
-                  <button onClick={handlePass} className="rounded-2xl border border-gold/25 bg-black/20 px-5 py-2 text-sm font-semibold text-cream/80 hover:bg-black/30 hover:text-cream">
-                    {tCommon('pass')}
-                  </button>
-                </div>
               </div>
-            )}
-            {isRevealing && (
-              <p className="mt-3 text-center font-display text-sm text-gold animate-pulse">{t('revealing')}</p>
-            )}
-          </div>
-        )}
-
-        {/* ── Boutons de paris ─────────────────────────────────────────── */}
-        {!canContinue && !showResult && (
-          <div className="space-y-2">
-            <p className="text-center font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('chooseBet')}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {betButtons.map(bet => {
-                const cfg = betConfig[bet]
-                return (
-                  <button
-                    key={bet}
-                    onClick={() => handleBet(bet)}
-                    disabled={isRevealing}
-                    className={cn(
-                      'rounded-2xl border py-4 text-center font-semibold text-cream transition-all enabled:hover:ring-2 enabled:hover:ring-gold focus-visible:ring-2 focus-visible:ring-gold active:scale-95 disabled:opacity-40',
-                      BET_STYLE[bet],
-                    )}
-                  >
-                    <p className="text-lg leading-none mb-1">{cfg.emoji}</p>
-                    <p className="text-xs font-bold">{cfg.label}</p>
-                    <p className="text-[10px] text-cream/70">{tCommon('sipsCount', { count: cfg.gulps })}</p>
-                  </button>
-                )
-              })}
             </div>
-          </div>
-        )}
+            <PurplePotRow
+              counter={drinkCounter}
+              cardsLeft={deck.length}
+              newDeck={newDeckFlash}
+              className="mt-3 border-t border-gold/[0.15] pt-3"
+            />
+          </section>
 
-        {/* ── Historique des cartes ────────────────────────────────────── */}
-        {cardHistory.length > 0 && (
-          <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-            <p className="mb-2 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/75">{t('lastCards')}</p>
-            <div className="flex flex-wrap gap-2">
-              {cardHistory.map((card, i) => <PlayingCardUI key={i} card={card} size="sm" />)}
-            </div>
-          </div>
-        )}
+          {/* ── Cartes tirées : dos le temps de la révélation, puis retournées ── */}
+          {drawnCards.length > 0 && (
+            <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+              <PurpleDrawnCards cards={drawnCards} hidden={isRevealing} drawKey={totalCardsDrawn} />
+              {isRevealing && (
+                <p className="mt-3 text-center font-display text-sm text-gold motion-safe:animate-pulse">{t('revealing')}</p>
+              )}
+              {deciding && (
+                <p className="mt-4 flex items-center justify-center gap-1.5 text-center font-semibold text-emerald-300">
+                  <Check aria-hidden className="h-5 w-5 shrink-0" />
+                  {t('correct', { count: lastBet ? PURPLE_BET_META[lastBet].gulps : 0 })}
+                </p>
+              )}
+            </section>
+          )}
 
-        {/* ── Dialog mauvaise réponse ──────────────────────────────────── */}
-        {showResult && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-            <div className="relative w-full max-w-sm rounded-2xl border border-gold/20 bg-felt-deep p-6 text-cream shadow-2xl">
-              <div className="text-center space-y-4">
-                <div className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-suit-red/[0.15] border border-suit-red/30 text-3xl">
-                  😬
-                </div>
-                <div>
-                  <p className="font-display text-lg font-bold text-cream">{t('wrongCombo')}</p>
-                  <p className="mt-1 text-sm text-cream/70">
-                    {t('mustDrink', { name: currentPlayer?.name ?? '', count: amountToDrink })}
-                  </p>
-                </div>
-                <button
-                  onClick={closeResult}
-                  className="w-full rounded-2xl bg-amber-500 py-3 text-sm font-bold text-black hover:bg-amber-400"
-                >
-                  {tCommon('understoodNext')}
-                </button>
-              </div>
-              <button onClick={closeResult} className="absolute right-3 top-3 rounded-xl p-1 text-cream/60 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
+          {/* Toujours montée : une région live créée avec son texte est souvent
+              tue. L'échec passe par le dialogue de verdict. */}
+          <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {deciding
+              ? `${drawnCards.map(c => `${c.value} ${c.suit}`).join(', ')}. ${t('correct', { count: lastBet ? PURPLE_BET_META[lastBet].gulps : 0 })}`
+              : ''}
+          </p>
 
-      </div>
-    </GameShell>
+          {/* ── Paris ─────────────────────────────────────────────────── */}
+          {!canContinue && !showResult && (
+            <section className="space-y-2">
+              <h2 className="text-center text-sm font-semibold text-gold">
+                {t('chooseBetFor', { name: currentName })}
+              </h2>
+              <PurpleBetGrid label={t('chooseBet')}>
+                {PURPLE_BET_TYPES.map(bet => (
+                  <PurpleBetButton key={bet} bet={bet} onClick={() => handleBet(bet)} disabled={isRevealing} />
+                ))}
+              </PurpleBetGrid>
+            </section>
+          )}
+
+          <PurpleHistory cards={cardHistory} />
+        </div>
+      </GameShell>
+
+      {/* ── Verdict : qui boit combien ─────────────────────────────────── */}
+      <PurpleVerdictDialog
+        open={showResult}
+        name={currentName}
+        amount={amountToDrink}
+        cards={drawnCards}
+        onDismiss={closeResult}
+      >
+        <Button
+          variant="primary"
+          size="gameLg"
+          className="w-full whitespace-normal leading-tight"
+          onClick={closeResult}
+        >
+          {t('nextTurn', { name: nextPlayer?.name ?? '' })}
+        </Button>
+      </PurpleVerdictDialog>
+    </>
   )
 }

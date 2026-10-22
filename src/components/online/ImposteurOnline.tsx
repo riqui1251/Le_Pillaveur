@@ -3,21 +3,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Eye, EyeOff, Megaphone, Pencil, Send, Shield, Skull, Trophy, UserX } from 'lucide-react'
+import { AlertTriangle, Check, Megaphone, Pencil, Send, Shield, Skull, Trophy, UserX } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
+import { useDeadline } from '@/hooks/useDeadline'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
+import { PhaseHeader } from './PhaseHeader'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
+import { TurnBanner } from '@/components/game/TurnBanner'
 import { Button } from '@/components/ui/button'
-import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
+import { PlayingCard } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
 import {
   isEmptyClueText,
   isValidClue,
   IMPOSTEUR_CLUE_MAX_LEN,
+  IMPOSTEUR_CLUE_MS,
+  IMPOSTEUR_REVEAL_MS,
   IMPOSTEUR_SPEECH_CAP,
+  IMPOSTEUR_VOTE_MS,
   imposteurCitedClue,
   type ImposteurClientView,
   type ImposteurHumanSpeakKind,
@@ -35,6 +42,7 @@ import { XpGainBanner } from './XpGainBanner'
 import { TargetGrid } from './TargetGrid'
 import { BotSpeechFeed } from './bot-speech/BotSpeechFeed'
 import { genreOf, genreOfId, type LineTranslator } from './bot-speech/bot-speech-feed'
+import { ImposteurWordChip } from './imposteur/ImposteurWordChip'
 
 /**
  * L'IMPOSTEUR en ligne (serveur-autoritaire). La vue est déjà filtrée par le
@@ -42,6 +50,12 @@ import { genreOf, genreOfId, type LineTranslator } from './bot-speech/bot-speech
  * le serveur (personne ne sait s'il est l'imposteur). Votes réduits à des
  * booléens « a voté ». Phases chronométrées : le compte à rebours est
  * décoratif côté client, l'échéance fait foi côté serveur (tick `advance`).
+ *
+ * Le geste du moment vit dans la barre du bas (zone du pouce) : le champ
+ * d'indice à MON tour (il tombait sous la liste et le fil des bots, hors
+ * écran pendant que les 45 s filaient), la validation du vote, « Manche
+ * suivante ». Le vote est définitif côté moteur (ALREADY_VOTED) : on choisit
+ * une carte, puis on valide.
  */
 
 function parseView(json: string | null | undefined): ImposteurClientView | null {
@@ -55,6 +69,16 @@ function parseView(json: string | null | undefined): ImposteurClientView | null 
 }
 
 const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
+
+/** Durée totale de la phase, pour remplir la barre du chrono. */
+const PHASE_TOTAL_MS: Partial<Record<ImposteurClientView['phase'], number>> = {
+  clue: IMPOSTEUR_CLUE_MS,
+  vote: IMPOSTEUR_VOTE_MS,
+  reveal: IMPOSTEUR_REVEAL_MS,
+}
+
+/** Paroles qui chargent quelqu'un (accusation, abonder contre) : le compte des cartes de vote. */
+const ACCUSING_KINDS: readonly string[] = ['suspect', 'rally']
 
 /**
  * Le dernier joueur qui m'a accusé ou a abondé contre moi dans la manche,
@@ -78,20 +102,32 @@ function lastAccuserOf(
 export function ImposteurOnline() {
   const { user } = useAuth()
   const isSoft = user?.ambianceMode === 'soft'
-  const { room, voteRematch, leaveRoom } = useOnlineRoom()
+  const { room, voteRematch, leaveRoom, fetchRoom } = useOnlineRoom()
   const t = useTranslations('games.imposteur.game')
-  const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
+  const tTargets = useTranslations('gameUi.targets')
+  const { busy: posting, actionError, sendAction: postAction } = useGameAction(room?.id)
+  // Relecture de la salle entre deux essais d'une intention (cf. sendIntent) :
+  // le hook n'est plus « occupé », mais le geste n'est pas fini.
+  const [retrying, setRetrying] = useState(false)
+  const busy = posting || retrying
   const [hideWord, setHideWord] = useState(false)
   const reducedMotion = useReducedMotion()
   const [clueInput, setClueInput] = useState('')
   // Grille d'accusation ouverte par « Accuser » (distincte de la grille de vote).
   const [speakMode, setSpeakMode] = useState(false)
+  const [speakSending, setSpeakSending] = useState<string | null>(null)
+  // Vote en deux temps : la carte touchée est seulement CHOISIE, le vote part
+  // du bouton de la barre du bas.
+  const [votePick, setVotePick] = useState<string | null>(null)
+  const [voteSending, setVoteSending] = useState<string | null>(null)
 
   const inGame = room?.gameId === 'imposteur' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const stateVersion = room?.stateVersion ?? -1
   const tutorial = useGameTutorial('imposteur', inGame)
   const cosmetics = useMemberCosmetics(room)
+  // Plancher de lecture de la révélation (le moteur refuse « continuer » avant).
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
 
   // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick)
   // — le rang 0 tire à l'échéance, le suivant prend le relais 4 s plus tard si
@@ -156,12 +192,14 @@ export function ImposteurOnline() {
     return () => clearTimeout(timer)
   }, [stateVersion, afkWatchable])
 
-  // Vide le champ d'indice à chaque tour de parole — pas à chaque version :
-  // les bots parlent pendant que l'humain cherche son indice, et chaque
-  // parole effacerait ce qu'il est en train de taper.
+  // Vide le champ d'indice et le choix de vote à chaque tour de parole ou
+  // phase — pas à chaque version : les bots parlent pendant que l'humain
+  // cherche son indice ou hésite sur son vote, et chaque parole effacerait
+  // ce qu'il est en train de faire.
   const phaseKeyOfView = view?.phaseKey
   useEffect(() => {
     setClueInput('')
+    setVotePick(null)
   }, [phaseKeyOfView])
 
   // La grille d'accusation se referme quand MA parole est passée, à chaque
@@ -173,9 +211,12 @@ export function ImposteurOnline() {
       ? (view.speech ?? []).filter((sp) => sp.round === view.round && sp.playerId === user.id).length
       : 0
   const speechRoundKey = view ? `${view.phase}#${view.round}` : null
+  // Et quand mon tour d'indice arrive : la grille, masquée pendant mon tour,
+  // ne doit pas resurgir ouverte une fois mon indice donné.
+  const myClueTurnNow = Boolean(view && user && view.phase === 'clue' && room?.currentTurnUserId === user.id)
   useEffect(() => {
     setSpeakMode(false)
-  }, [speechRoundKey, mySpeechCount])
+  }, [speechRoundKey, mySpeechCount, myClueTurnNow])
 
   if (!inGame) {
     return <GameOnlineLobby gameId="imposteur" />
@@ -183,7 +224,7 @@ export function ImposteurOnline() {
 
   if (!view || !user || !room) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-white/60">
+      <div className="flex flex-1 items-center justify-center p-6 text-cream/70">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
       </div>
     )
@@ -192,10 +233,12 @@ export function ImposteurOnline() {
   const me = view.players.find((p) => p.id === user.id)
   const iAmAlive = Boolean(me && !me.eliminated)
   const activeId = room.currentTurnUserId
+  const activePlayer = view.players.find((p) => p.id === activeId)
   const isMyClueTurn = view.phase === 'clue' && activeId === user.id && iAmAlive
   const finished = view.phase === 'finished'
   const reveal = view.lastReveal
-  const aliveCount = view.players.filter((p) => !p.eliminated).length
+  const alivePlayers = view.players.filter((p) => !p.eliminated)
+  const aliveCount = alivePlayers.length
 
   const nameOf = (id: string | null | undefined) =>
     view.players.find((p) => p.id === id)?.name ?? '—'
@@ -206,10 +249,27 @@ export function ImposteurOnline() {
   // Verrou de version conservé ; le hook lit la réponse et annonce les refus.
   const sendAction = (body: Record<string, unknown>) =>
     postAction({ ...body, expectedVersion: room.stateVersion })
+  // Intention du joueur (indice, vote, parole). Les bots parlent toutes les
+  // 2,5 à 5,5 s : une parole arrivée entre-temps fait sauter le verrou, et le
+  // 409 est muet — le vote validé dans la barre ou l'indice envoyé ne partait
+  // pas, sans un mot. On relit la salle et on retente une fois (comme le
+  // Loup-Garou) : le moteur revalide phase, tour et cible sur l'état frais,
+  // et c'est la retentative qui parle si elle échoue.
+  const sendIntent = async (body: Record<string, unknown>) => {
+    const res = await sendAction(body)
+    if (res?.status !== 409) return res
+    setRetrying(true)
+    try {
+      const fresh = await fetchRoom()
+      return fresh ? await postAction({ ...body, expectedVersion: fresh.stateVersion }) : res
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   const clueTrimmed = clueInput.trim()
   const clueOk = me ? isValidClue(clueTrimmed, me.word) && !isEmptyClueText(clueTrimmed) : false
-  const totalPhaseMs = view.phase === 'clue' ? 45_000 : 60_000
+  const clueRejected = clueTrimmed.length > 0 && !clueOk
   const currentRoundClues = view.clues.filter((c) => c.round === view.round)
   const pastClues = view.clues.filter((c) => c.round < view.round)
 
@@ -220,8 +280,13 @@ export function ImposteurOnline() {
   const canSpeak = iAmAlive && !busy && speechLeft > 0
   const isAlive = (id: string) => view.players.some((p) => p.id === id && !p.eliminated)
   const accuserId = lastAccuserOf(roundSpeech, user.id, isAlive)
-  const speak = (kind: ImposteurHumanSpeakKind, targetId: string) =>
-    void sendAction({ action: 'speak', kind, targetId })
+  const speak = async (kind: ImposteurHumanSpeakKind, targetId: string) => {
+    setSpeakSending(targetId)
+    await sendIntent({ action: 'speak', kind, targetId })
+    setSpeakSending(null)
+  }
+  const accusationsOf = (id: string) =>
+    roundSpeech.filter((sp) => sp.targetId === id && ACCUSING_KINDS.includes(sp.kind)).length
   const tr: LineTranslator = {
     has: (key) => t.has(key),
     format: (key, values) => t(key, values),
@@ -245,17 +310,17 @@ export function ImposteurOnline() {
         onLeave={leaveRoom}
         header={
           <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
+            initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 220, damping: 18 }}
             className="flex flex-col items-center gap-2 text-center"
           >
-            <Trophy className="h-14 w-14 text-gold" />
-            <h2 className={cn('font-display text-3xl font-bold', civilWon ? 'text-emerald-200' : 'text-red-200')}>
+            <Trophy aria-hidden className="h-14 w-14 text-gold" />
+            <h2 className="font-display text-3xl font-bold text-gold">
               {civilWon ? t('victory.civilWin') : t('victory.imposteurWin')}
             </h2>
             {!isSoft && humanLosers && (
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-cream/80">
                 {civilWon ? t('victory.civilDrinks') : t('victory.imposteurDrinks')}
               </p>
             )}
@@ -264,7 +329,7 @@ export function ImposteurOnline() {
         ranking={
           // Révélation complète
           <div className="w-full max-w-sm space-y-2">
-            <p className="text-center text-xs font-semibold uppercase tracking-wide text-gold/60">
+            <p className="text-center text-xs font-semibold uppercase tracking-wide text-gold">
               {t('victory.fullReveal')}
             </p>
             {view.players.map((p) => (
@@ -274,18 +339,31 @@ export function ImposteurOnline() {
                   'flex items-center gap-3 rounded-2xl border px-4 py-2.5',
                   p.team === 'imposteur'
                     ? 'border-suit-red/40 bg-suit-red/10'
-                    : 'border-gold/10 bg-felt-deep/60',
-                  p.eliminated && 'opacity-60'
+                    : 'border-gold/20 bg-felt-deep/70'
                 )}
               >
                 <RankCrest role={cosmetics.get(p.id)?.role} />
-                <span className="text-xl" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                {/* Éliminé : seul l'avatar s'estompe — la ligne entière à 60 %
+                    passait le mot révélé (cream/80) sous 4,5:1 ; le crâne et le
+                    nom barré portent l'état. */}
+                <span className={cn('text-xl', p.eliminated && 'opacity-50')} aria-hidden>
+                  <PlayerAvatarGlyph value={iconOf(p)} />
+                </span>
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1 truncate text-sm font-bold">
-                    <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                    {p.eliminated && <Skull aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/40" />}
+                  <p className="flex items-center gap-1 text-sm font-bold">
+                    <OnlinePlayerName
+                      name={p.name}
+                      cosmetics={cosmetics.get(p.id)}
+                      className={cn('truncate', p.eliminated && 'line-through')}
+                    />
+                    {p.eliminated && (
+                      <>
+                        <Skull aria-hidden className="h-4 w-4 shrink-0 text-cream/70" />
+                        <span className="sr-only">{` (${tTargets('dead')})`}</span>
+                      </>
+                    )}
                   </p>
-                  <p className="text-xs text-white/50">« {p.word} »</p>
+                  <p className="break-words text-sm text-cream/80">« {p.word} »</p>
                 </div>
                 <span
                   className={cn(
@@ -309,10 +387,11 @@ export function ImposteurOnline() {
   }
 
   // ── Compte à rebours de lancement ────────────────────────────────────────
+  // La pleine carte du mot, une seule fois : c'est le moment de le mémoriser.
   if (view.phase === 'countdown') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-        <p className="font-display text-sm font-bold uppercase tracking-widest text-gold/80">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-cream">
+        <p className="font-display text-base font-bold uppercase tracking-widest text-gold">
           {t('countdown.title')}
         </p>
         <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="font-display text-8xl font-bold tabular-nums text-gold" />
@@ -322,63 +401,169 @@ export function ImposteurOnline() {
               <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">
                 {t('yourWord')}
               </p>
-              <p className="truncate font-display text-2xl font-bold tracking-wide text-[#24201A]">
+              <p className="break-words font-display text-2xl font-bold tracking-wide text-[#24201A]">
                 {me.word}
               </p>
+              <p className="mt-1 text-xs leading-snug text-[#6B6455]">{t('wordHint')}</p>
             </div>
           </PlayingCard>
         )}
-        <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
+        <p className="text-center text-sm font-semibold text-cream/80">{t('countdown.hint')}</p>
       </div>
     )
   }
 
   // ── Partie en cours ──────────────────────────────────────────────────────
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
+  const isVote = view.phase === 'vote'
+  const isReveal = view.phase === 'reveal' && Boolean(reveal)
+  const showClueBar = isMyClueTurn && Boolean(me)
+  const hasBar = showClueBar || isVote || isReveal
+  // Révélation : une rangée seule, sauf quand une erreur s'affiche au-dessus
+  // de « Manche suivante » (elle recouvrirait la fin du récap des indices).
+  const flowPadding = !hasBar
+    ? 'pb-6'
+    : onlineActionBarPadding(isReveal && !actionError ? 'default' : 'tall')
+
+  // Vote : candidats = vivants, moi exclu (le moteur refuse le vote contre soi),
+  // dans l'ordre de parole de la manche — les cartes portent les indices, elles
+  // doivent se lire comme le fil qu'elles remplacent.
+  const clueRank = (id: string) => {
+    const i = view.clueOrder.indexOf(id)
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i
+  }
+  const voteCandidates = alivePlayers
+    .filter((p) => (iAmAlive ? p.id !== user.id : true))
+    .sort((a, b) => clueRank(a.id) - clueRank(b.id))
+  const votedCount = alivePlayers.filter((p) => p.hasVoted).length
+  const canVote = isVote && iAmAlive && !view.myVote
+  const confirmVote = async () => {
+    if (!votePick) return
+    setVoteSending(votePick)
+    const res = await sendIntent({ action: 'vote', targetId: votePick })
+    setVoteSending(null)
+    // Échec (refus annoncé) : le choix reste, on peut revalider.
+    if (res?.ok) setVotePick(null)
+  }
+  const sendClue = () => {
+    if (clueOk && !busy) void sendIntent({ action: 'clue', text: clueTrimmed })
+  }
+
+  // L'erreur d'action s'affiche là où l'on vient d'agir : dans la barre du bas
+  // quand elle est là (le haut de l'écran est hors de vue en tapant).
+  const errorLine = actionError ? <span className="font-semibold text-red-300">{actionError}</span> : null
+  // Sans barre (indices, pas mon tour), le seul geste possible est une parole :
+  // le refus s'affiche dans le panneau du débat, sous le doigt — en haut de
+  // l'écran, il tombait hors de vue. 3 s.
+  const errorAlert = actionError ? (
+    <div role="alert" className="rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-300">
+      {actionError}
+    </div>
+  ) : null
+  const barStatus = errorLine
+    ?? (showClueBar && clueRejected
+      ? <span className="font-semibold text-red-300">{t('clueInvalid')}</span>
+      : isVote
+        ? view.myVote
+          ? t('votedStatus', { n: votedCount, total: aliveCount })
+          : t('voteProgress', { n: votedCount, total: aliveCount })
+        : null)
+
+  const continueLocked = view.continueAt != null && !continueUnlocked
+
+  const phaseTitle =
+    view.phase === 'clue' ? t('phaseHeader.clue') : isVote ? t('phaseHeader.vote') : t('phaseHeader.reveal')
+
+  const clueList = (
+    <ul className="space-y-1.5">
+      {view.clueOrder.map((pid) => {
+        const p = view.players.find((q) => q.id === pid)
+        if (!p) return null
+        const clue = currentRoundClues.find((c) => c.playerId === pid)
+        const isActive = view.phase === 'clue' && activeId === pid
+        return (
+          <li
+            key={pid}
+            className={cn(
+              'flex items-center gap-2 rounded-xl border px-3 py-2',
+              isActive ? 'border-gold/50 bg-gold/10' : 'border-cream/10 bg-black/20',
+              p.eliminated && 'opacity-40'
+            )}
+          >
+            <span className="shrink-0 text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+            <span
+              className={cn(
+                'w-[6.5rem] shrink-0 truncate text-sm font-semibold text-cream/80',
+                p.eliminated && 'line-through'
+              )}
+            >
+              <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
+              {p.id === user.id && <span className="text-cream/70"> {t('you')}</span>}
+            </span>
+            <span className="min-w-0 flex-1 break-words text-sm font-bold text-cream">
+              {clue ? (
+                `« ${clue.text} »`
+              ) : isActive ? (
+                <Pencil aria-hidden className="inline-block h-4 w-4 text-gold motion-safe:animate-pulse" />
+              ) : (
+                ''
+              )}
+            </span>
+            {p.eliminated && (
+              <>
+                <Skull aria-hidden className="h-4 w-4 shrink-0 text-cream/70" />
+                <span className="sr-only">{` (${tTargets('dead')})`}</span>
+              </>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+
   return (
     <>
-    <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-      {/* Bandeau : manche + phase + timer (filet d'or qui se consume) */}
-      <div className="rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-cream/85">{t('round', { n: view.round })}</span>
-          <span className="flex items-center gap-2">
-            <span className="font-display text-xs font-semibold uppercase tracking-wide text-gold">
-              {view.phase === 'clue' && t('phaseClue')}
-              {view.phase === 'vote' && t('phaseVote')}
-              {view.phase === 'reveal' && t('phaseReveal')}
-            </span>
-            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
-          </span>
-        </div>
-        {view.phaseEndsAt !== null && (
-          <PhaseCountdown
-            variant="bar"
-            endsAt={view.phaseEndsAt}
-            total={totalPhaseMs}
-            dangerMs={10_000}
-            colorClassName="bg-gold"
-            dangerClassName="bg-suit-red"
-          />
-        )}
-      </div>
+    <div className={cn('flex flex-1 flex-col gap-3 p-3 text-cream sm:mx-auto sm:w-full sm:max-w-lg', flowPadding)}>
+      <PhaseHeader
+        round={t('round', { n: view.round })}
+        phase={phaseTitle}
+        endsAt={view.phaseEndsAt}
+        total={PHASE_TOTAL_MS[view.phase]}
+        dangerMs={10_000}
+        right={<TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />}
+        status={
+          view.phase === 'clue'
+            ? t('clueProgress', { n: currentRoundClues.length, total: view.clueOrder.length })
+            : undefined
+        }
+      />
 
-      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
-      {actionError && (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-          {actionError}
-        </div>
-      )}
+      {/* À qui le tour : seule la phase d'indices se joue chacun son tour.
+          Monté toute la partie, masqué hors indices : TurnBanner sonne au
+          PASSAGE à « à moi », jamais au montage — le premier de l'ordre d'une
+          nouvelle manche n'aurait sinon ni son ni vibration (à la manche 1,
+          il se monte après le compte à rebours, que toute la table regarde). */}
+      <TurnBanner
+        mine={isMyClueTurn}
+        name={activePlayer?.name}
+        avatar={activePlayer ? <PlayerAvatarGlyph value={iconOf(activePlayer)} /> : undefined}
+        hint={isMyClueTurn ? t('clueHintMine') : undefined}
+        alertOnMine
+        className={view.phase === 'clue' ? undefined : 'hidden'}
+      />
+
+      {!hasBar && !speaking && errorAlert}
       {/* Bannières retour / AFK */}
-      {leftPlayer?.leftAt && view.phase !== 'finished' && (
-        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
+      {leftPlayer?.leftAt && (
+        <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
           <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
             {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
           </PhaseCountdown>
         </div>
       )}
       {afkWatch && afkTarget && (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
+        <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-300">
+          {afkTarget.id === user.id && <AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />}
           <PhaseCountdown endsAt={turnStartRef.current.at + ONLINE_REPLACE_GRACE_MS}>
             {({ seconds }) =>
               afkTarget.id === user.id
@@ -389,82 +574,27 @@ export function ImposteurOnline() {
         </div>
       )}
 
-      {/* Mon mot secret : carte à jouer retournable — face crème quand
-          visible, dos treillis or quand masquée (le mot quitte le DOM). */}
+      {/* Mon mot secret : une bande retournable (la pleine carte est au compte à rebours). */}
       {me && (
-        <AnimatePresence mode="wait" initial={false}>
-          {hideWord ? (
-            <motion.div
-              key="word-back"
-              initial={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
-              animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
-              transition={{ duration: reducedMotion ? 0 : 0.16 }}
-              className="relative"
-            >
-              <PlayingCardBack className="h-[5.25rem]" />
-              <button
-                onClick={() => setHideWord(false)}
-                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold transition-colors hover:bg-gold/20"
-                aria-label={t('showWord')}
-              >
-                <Eye className="h-4 w-4" />
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="word-face"
-              initial={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
-              animate={{ rotateY: 0, opacity: 1 }}
-              exit={{ rotateY: reducedMotion ? 0 : 90, opacity: 0 }}
-              transition={{ duration: reducedMotion ? 0 : 0.16 }}
-              className="relative"
-            >
-              <PlayingCard
-                suit="spade"
-                rank="K"
-                className={cn('min-h-[5.25rem]', !iAmAlive && 'opacity-70')}
-              >
-                <div className="min-w-0 py-3 pl-7 pr-12">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#6B6455]">
-                    {iAmAlive ? t('yourWord') : t('eliminatedYou')}
-                  </p>
-                  <p className="truncate font-display text-xl font-bold tracking-wide text-[#24201A]">
-                    « {me.word} »
-                  </p>
-                  {iAmAlive && (
-                    <p className="mt-0.5 text-xs leading-snug text-[#6B6455]">{t('wordHint')}</p>
-                  )}
-                </div>
-              </PlayingCard>
-              <button
-                onClick={() => setHideWord(true)}
-                className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-[#24201A]/[0.15] bg-[#24201A]/5 text-[#24201A]/60 transition-colors hover:bg-[#24201A]/10"
-                aria-label={t('hideWord')}
-              >
-                <EyeOff className="h-4 w-4" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <ImposteurWordChip word={me.word} eliminated={!iAmAlive} hidden={hideWord} onHiddenChange={setHideWord} />
       )}
 
       {/* Révélation */}
       <AnimatePresence>
         {view.phase === 'reveal' && reveal && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             className="space-y-3 rounded-2xl border border-gold/25 bg-felt-deep/80 p-4 text-center"
           >
             {reveal.eliminatedId ? (
               <>
-                <UserX className="mx-auto h-8 w-8 text-red-300" />
+                <UserX aria-hidden className="mx-auto h-8 w-8 text-red-300" />
                 <p className="font-display text-lg font-bold text-gold">
                   {t('reveal.outTitle', { name: nameOf(reveal.eliminatedId), genre: revealGenre })}
                 </p>
-                <p className="text-sm text-white/70">
+                <p className="text-sm text-cream/80">
                   {t('reveal.outWord', { word: reveal.word ?? '—', genre: revealGenre })}
                 </p>
                 <p
@@ -491,129 +621,93 @@ export function ImposteurOnline() {
                 <p className="font-display text-lg font-bold text-gold">
                   {reveal.tie ? t('reveal.tieTitle') : t('reveal.noVote')}
                 </p>
-                <p className="text-sm text-white/60">{t('reveal.tieMsg')}</p>
+                <p className="text-sm text-cream/80">{t('reveal.tieMsg')}</p>
               </>
             )}
             {/* Décompte public */}
             {Object.keys(reveal.tally).length > 0 && (
-              <div className="flex flex-wrap justify-center gap-1.5 text-xs text-white/60">
+              <div className="flex flex-wrap justify-center gap-1.5">
                 {Object.entries(reveal.tally)
                   .sort((a, b) => b[1] - a[1])
                   .map(([id, count]) => (
-                    <span key={id} className="rounded-full bg-white/8 px-2 py-0.5">
-                      {nameOf(id)} : {count}
+                    <span
+                      key={id}
+                      className="rounded-full border border-cream/20 bg-black/20 px-2.5 py-0.5 text-sm text-cream/80"
+                    >
+                      {nameOf(id)} : <span className="font-bold tabular-nums text-cream">{count}</span>
                     </span>
                   ))}
               </div>
             )}
-            <Button
-              onClick={() => void sendAction({ action: 'continue' })}
-              disabled={busy}
-              className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-4 text-sm font-bold hover:from-amber-400 hover:to-amber-500"
-            >
-              {aliveCount <= 3 || reveal.team === 'imposteur'
-                ? t('reveal.seeResult')
-                : t('reveal.continue')}
-            </Button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Vote : cartes crème qu'on abat (noms en encre, pas de cosmétiques) */}
-      {view.phase === 'vote' && (
-        <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-          <p className="text-center text-sm font-bold">
-            {iAmAlive
-              ? view.myVote
-                ? t('voted')
-                : t('votePrompt')
-              : t('spectatorVote')}
+      {/* Vote : les cartes portent l'indice de chacun — on décide sans
+          remonter au fil. Un toucher choisit, la barre du bas valide. */}
+      {isVote && (
+        <div className="space-y-2.5 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <p className="text-center text-sm font-semibold text-cream/80">
+            {iAmAlive ? (view.myVote ? t('voted') : t('votePickHint')) : t('spectatorVote')}
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            {view.players
-              .filter((p) => !p.eliminated)
-              .map((p) => {
-                const isMe = p.id === user.id
-                const chosen = view.myVote === p.id
-                const disabled = !iAmAlive || Boolean(view.myVote) || isMe || busy
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => void sendAction({ action: 'vote', targetId: p.id })}
-                    disabled={disabled}
-                    className={cn(
-                      'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[#24201A] transition-all',
-                      'shadow-[0_6px_14px_-8px_rgba(0,0,0,0.55)]',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep',
-                      chosen
-                        ? '-translate-y-0.5 border-suit-red bg-cream ring-2 ring-suit-red'
-                        : 'border-[#D8CCAE] bg-cream',
-                      !disabled && 'hover:-translate-y-0.5 active:scale-95',
-                      isMe && 'opacity-40'
-                    )}
-                  >
-                    <span className="text-lg" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                    <span className="min-w-0 flex-1 truncate text-xs font-bold">
-                      {p.name}
-                      {isMe && <span className="text-[#6B6455]"> {t('you')}</span>}
+          <TargetGrid
+            mode="select"
+            tone="danger"
+            players={voteCandidates}
+            iconOf={iconOf}
+            selectedId={canVote ? votePick : null}
+            onSelect={setVotePick}
+            chosenId={view.myVote ?? null}
+            disabled={!canVote || busy}
+            pendingId={voteSending}
+            meta={(p) => {
+              const clue = currentRoundClues.find((c) => c.playerId === p.id)
+              const accused = accusationsOf(p.id)
+              const voted = view.players.find((q) => q.id === p.id)?.hasVoted
+              if (!clue && !accused && !voted) return null
+              return (
+                <>
+                  {/* L'indice décide du vote : 14 px en encre, au-dessus des 12 px gris de l'état. */}
+                  {clue && <span className="block break-words text-sm text-[#24201A]">« {clue.text} »</span>}
+                  {(accused > 0 || voted) && (
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2">
+                      {accused > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <Megaphone aria-hidden className="h-3 w-3 shrink-0" />
+                          {t('accusations', { count: accused })}
+                        </span>
+                      )}
+                      {voted && (
+                        <span className="inline-flex items-center gap-1">
+                          <Check aria-hidden className="h-3 w-3 shrink-0" strokeWidth={3} />
+                          {t('hasVotedMeta')}
+                        </span>
+                      )}
                     </span>
-                    {p.hasVoted && (
-                      <span className="shrink-0 text-xs font-bold text-emerald-700">✓</span>
-                    )}
-                  </button>
-                )
-              })}
-          </div>
+                  )}
+                </>
+              )
+            }}
+            youLabel={t('you')}
+            selfId={user.id}
+          />
         </div>
       )}
 
-      {/* Fil d'indices */}
-      <div className="space-y-2 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold/60">
-          {t('cluesTitle', { n: view.round })}
-        </p>
-        {view.phase === 'clue' && (
-          <p className="text-center text-sm font-bold text-gold">
-            {isMyClueTurn ? t('yourTurnClue') : t('turnOf', { name: nameOf(activeId) })}
+      {/* Fil d'indices de la manche (au vote, les cartes de vote le portent). */}
+      {!isVote && (
+        <div className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            {t('cluesTitle', { n: view.round })}
           </p>
-        )}
-        <ul className="space-y-1.5">
-          {view.clueOrder.map((pid) => {
-            const p = view.players.find((q) => q.id === pid)
-            if (!p) return null
-            const clue = currentRoundClues.find((c) => c.playerId === pid)
-            const isActive = view.phase === 'clue' && activeId === pid
-            return (
-              <li
-                key={pid}
-                className={cn(
-                  'flex items-center gap-2 rounded-xl border px-3 py-2',
-                  isActive
-                    ? 'border-gold/50 bg-gold/10'
-                    : 'border-white/8 bg-white/4',
-                  p.eliminated && 'opacity-45'
-                )}
-              >
-                <span className="text-base" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                <span className="w-24 shrink-0 truncate text-xs font-semibold text-white/70">
-                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                  {p.id === user.id && <span className="text-white/40"> {t('you')}</span>}
-                </span>
-                <span className="flex min-w-0 flex-1 items-center gap-1 truncate text-sm font-bold">
-                  {clue ? (
-                    `« ${clue.text} »`
-                  ) : isActive ? (
-                    <Pencil aria-hidden className="h-3.5 w-3.5 animate-pulse text-gold/70" />
-                  ) : (
-                    ''
-                  )}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-        {/* Fil des paroles (bots et humains) */}
-        {speaking && (
+          {clueList}
+        </div>
+      )}
+
+      {/* Débat : fil des paroles (bots et humains), Accuser / Me défendre */}
+      {speaking && (
+        <div className="space-y-2.5 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gold">{t('feedAria')}</p>
           <BotSpeechFeed
             speeches={view.speech ?? []}
             round={view.round}
@@ -625,104 +719,170 @@ export function ImposteurOnline() {
             feedAria={t('feedAria')}
             aimedBadge={{ kinds: ['suspect', 'rally'], text: t('accusedYou') }}
             valuesOf={speechValues}
+            // Une parole de bot toutes les quelques secondes : le lecteur
+            // d'écran n'entend que celles qui me visent.
+            live="aimed"
           />
-        )}
-        {/* Accuser / Me défendre : hors de mon tour d'indice, vivant */}
-        {speaking && iAmAlive && !isMyClueTurn && (
-          speakMode ? (
-            <div className="space-y-2">
-              <p className="text-center text-xs font-semibold text-white/60">{t('speakPickAccuse')}</p>
-              <TargetGrid
-                players={view.players.filter((p) => !p.eliminated && p.id !== user.id)}
-                iconOf={iconOf}
-                onPick={(id) => speak('suspect', id)}
-                disabled={!canSpeak}
-                youLabel={t('you')}
-                selfId={user.id}
-              />
-              <Button
-                onClick={() => setSpeakMode(false)}
-                variant="outline"
-                className="w-full rounded-xl border-white/[0.15] bg-white/5 py-2 text-xs text-white/70"
-              >
-                {t('speakCancel')}
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <div className={cn('grid gap-2', accuserId ? 'grid-cols-2' : 'grid-cols-1')}>
-                <Button
-                  onClick={() => setSpeakMode(true)}
+          {!hasBar && errorAlert}
+          {/* Hors de mon tour d'indice, vivant */}
+          {iAmAlive && !isMyClueTurn && (
+            speakMode ? (
+              <div className="space-y-2">
+                <p className="text-center text-sm font-semibold text-cream/80">{t('speakPickAccuse')}</p>
+                <TargetGrid
+                  players={view.players.filter((p) => !p.eliminated && p.id !== user.id)}
+                  iconOf={iconOf}
+                  onPick={(id) => void speak('suspect', id)}
                   disabled={!canSpeak}
-                  className="rounded-xl bg-gradient-to-r from-suit-red to-red-700 px-2 py-2.5 text-xs font-bold"
-                >
-                  <Megaphone className="mr-1 h-3.5 w-3.5 shrink-0" />
-                  {t('speakAccuse')}
+                  pendingId={speakSending}
+                  youLabel={t('you')}
+                  selfId={user.id}
+                />
+                <Button variant="quiet" size="game" className="w-full" onClick={() => setSpeakMode(false)}>
+                  {t('speakCancel')}
                 </Button>
-                {accuserId && (
-                  <Button
-                    onClick={() => speak('defend', accuserId)}
-                    disabled={!canSpeak}
-                    className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 px-2 py-2.5 text-xs font-bold"
-                  >
-                    <Shield className="mr-1 h-3.5 w-3.5 shrink-0" />
-                    {t('speakDefend')}
-                  </Button>
-                )}
               </div>
-              <p className="text-center text-[11px] text-white/40">
-                {t('speechLeft', { n: speechLeft, max: IMPOSTEUR_SPEECH_CAP })}
-              </p>
-            </div>
-          )
-        )}
-        {/* Manches précédentes (aide-mémoire compact) */}
-        {pastClues.length > 0 && (
-          <details className="text-xs text-white/50">
-            <summary className="cursor-pointer font-semibold">{t('pastClues')}</summary>
-            <div className="mt-1.5 space-y-1">
-              {pastClues.map((c, i) => (
-                <p key={i}>
-                  <span className="text-white/35">M{c.round} · {nameOf(c.playerId)} :</span> « {c.text} »
+            ) : (
+              <div className="space-y-1.5">
+                <div className={cn('grid gap-2', accuserId ? 'grid-cols-2' : 'grid-cols-1')}>
+                  <Button
+                    variant="danger"
+                    size="game"
+                    className="min-w-0 px-3"
+                    onClick={() => setSpeakMode(true)}
+                    disabled={!canSpeak}
+                  >
+                    <Megaphone aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+                    <span className="truncate">{t('speakAccuse')}</span>
+                  </Button>
+                  {accuserId && (
+                    <Button
+                      variant="primary"
+                      size="game"
+                      className="min-w-0 px-3"
+                      onClick={() => void speak('defend', accuserId)}
+                      disabled={!canSpeak}
+                    >
+                      <Shield aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+                      <span className="truncate">{t('speakDefend')}</span>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-center text-xs text-cream/70">
+                  {t('speechLeft', { n: speechLeft, max: IMPOSTEUR_SPEECH_CAP })}
                 </p>
-              ))}
-            </div>
-          </details>
-        )}
-      </div>
-
-      {/* Saisie d'indice (à mon tour) */}
-      {isMyClueTurn && me && (
-        <div className="space-y-1.5 rounded-2xl border border-gold/40 bg-felt-deep/85 p-3">
-          <div className="flex gap-2">
-            <input
-              value={clueInput}
-              onChange={(e) => setClueInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && clueOk && !busy) {
-                  void sendAction({ action: 'clue', text: clueTrimmed })
-                }
-              }}
-              maxLength={IMPOSTEUR_CLUE_MAX_LEN}
-              placeholder={t('cluePlaceholder')}
-              autoFocus
-              className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/8 px-3 py-2.5 text-sm font-semibold text-white placeholder:text-white/30 focus:border-gold focus:outline-none"
-            />
-            <Button
-              onClick={() => void sendAction({ action: 'clue', text: clueTrimmed })}
-              disabled={busy || !clueOk}
-              className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 font-bold hover:from-amber-400 hover:to-amber-500"
-              aria-label={t('clueSend')}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-          {clueTrimmed.length > 0 && !clueOk && (
-            <p className="text-xs font-semibold text-red-300/80">{t('clueInvalid')}</p>
+              </div>
+            )
           )}
         </div>
       )}
+
+      {/* Manches précédentes (aide-mémoire compact) */}
+      {pastClues.length > 0 && (
+        <details className="rounded-2xl border border-gold/20 bg-felt-deep/70 px-3 text-sm text-cream/80">
+          <summary className="cursor-pointer py-3 font-semibold text-cream">
+            {t('pastClues')}
+          </summary>
+          <div className="space-y-1 pb-3">
+            {pastClues.map((c, i) => (
+              <p key={i} className="break-words">
+                <span className="text-cream/70">{t('round', { n: c.round })} · {nameOf(c.playerId)} ·</span> « {c.text} »
+              </p>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
+
+    {/* Le geste du moment, sous le pouce */}
+    {hasBar && (
+      <OnlineActionBar status={barStatus} maxWidthClass="max-w-lg">
+        {showClueBar && (
+          <>
+          {/* Le chrono redit sous le pouce : clavier ouvert, l'en-tête de
+              phase est hors de vue pendant que les 45 s filent. */}
+          <PhaseCountdown
+            variant="bar"
+            showDigits
+            endsAt={view.phaseEndsAt}
+            total={IMPOSTEUR_CLUE_MS}
+            dangerMs={10_000}
+            colorClassName="bg-gold"
+            className="mb-2 flex items-center gap-3"
+          />
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              sendClue()
+            }}
+          >
+            <input
+              value={clueInput}
+              onChange={(e) => setClueInput(e.target.value)}
+              maxLength={IMPOSTEUR_CLUE_MAX_LEN}
+              placeholder={t('cluePlaceholder')}
+              aria-label={t('cluePlaceholder')}
+              aria-invalid={clueRejected || undefined}
+              autoComplete="off"
+              enterKeyHint="send"
+              autoFocus
+              // text-base : sous 16 px, iOS zoome sur le champ au toucher.
+              className="h-12 min-w-0 flex-1 rounded-xl border border-cream/[0.25] bg-black/30 px-4 text-base font-semibold text-cream placeholder:text-cream/60 focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/40"
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              size="game"
+              disabled={busy || !clueOk}
+              aria-label={t('clueSend')}
+              className="shrink-0 px-4"
+            >
+              <Send aria-hidden className="mr-1.5 h-4 w-4" />
+              {t('clueSendShort')}
+            </Button>
+          </form>
+          </>
+        )}
+        {canVote && (
+          <div className="flex gap-2">
+            <Button
+              variant="quiet"
+              size="gameLg"
+              className="shrink-0 px-4"
+              disabled={!votePick || busy}
+              onClick={() => setVotePick(null)}
+            >
+              {t('voteChange')}
+            </Button>
+            <Button
+              variant="danger"
+              size="gameLg"
+              className="min-w-0 flex-1"
+              disabled={!votePick || busy}
+              onClick={() => void confirmVote()}
+            >
+              <span className="truncate">
+                {votePick ? t('voteFor', { name: nameOf(votePick) }) : t('votePickFirst')}
+              </span>
+            </Button>
+          </div>
+        )}
+        {isReveal && reveal && (
+          <Button
+            variant="primary"
+            size="gameLg"
+            className="w-full"
+            disabled={busy || continueLocked}
+            onClick={() => void sendAction({ action: 'continue' })}
+          >
+            {aliveCount <= 3 || reveal.team === 'imposteur'
+              ? t('reveal.seeResult')
+              : t('reveal.continue')}
+          </Button>
+        )}
+      </OnlineActionBar>
+    )}
     <AnimatePresence>
       {tutorial.open && <GameTutorialModal gameId="imposteur" onClose={tutorial.close} />}
     </AnimatePresence>

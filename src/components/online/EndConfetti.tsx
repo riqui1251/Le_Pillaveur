@@ -62,6 +62,13 @@ export function fireConfetti(options: confetti.Options): void {
     .catch(() => {})
 }
 
+/**
+ * Couleurs de la table « Cartes sur Table » : or (deux tons), crème, rouge
+ * carreau, bleu jeton. La palette par défaut de la bibliothèque (violets,
+ * cyans, roses) jurait avec le feutre.
+ */
+export const CONFETTI_COLORS = ['#D9A441', '#E8C373', '#F3EAD3', '#B3382E', '#274B8F']
+
 /** Pièces d'une salve : ce que react-confetti lançait sur les écrans de fin. */
 const SALVO_PIECES = 180
 /** Cadence d'émission : ~30 jets par seconde, deux pièces par jet en salve. */
@@ -86,7 +93,9 @@ export function EndConfetti({
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    if (reduced) return
+    // Double garde : le hook fige la préférence au montage du composant ;
+    // la requête média est relue à chaque (re)lancement de la salve.
+    if (reduced || prefersReducedMotion()) return
     const canvas = canvasRef.current
     if (!canvas) return
     let cancelled = false
@@ -109,6 +118,7 @@ export function EndConfetti({
           gravity: 1.2,
           drift: (Math.random() - 0.5) * 0.6,
           ticks: PIECE_TICKS,
+          colors: CONFETTI_COLORS,
           origin: { x: Math.random(), y: -0.05 },
         })
       const perEmit = rain ? pieces / RAIN_LIFETIME_S / (1000 / EMIT_EVERY_MS) : 2

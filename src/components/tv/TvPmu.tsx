@@ -226,8 +226,8 @@ function PmuFinished({
 
         {state.mode === 'paris' && winner && (
           <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
-            {picking && payouts.length > 0 && (
-              <p className="shrink-0 text-xl text-white/80">
+            {(picking || state.noTargets) && payouts.length > 0 && (
+              <p className="shrink-0 text-xl text-cream/80">
                 {state.noTargets ? tp('results.allWinners') : tp('results.pickTarget')}
               </p>
             )}

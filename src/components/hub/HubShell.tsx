@@ -38,7 +38,7 @@ export function HubShell({ title, subtitle, children, headerExtra, compact = fal
                 {title}
               </span>
             </h1>
-            <p className="mx-auto max-w-xl text-sm text-white/65 sm:text-base">{subtitle}</p>
+            <p className="mx-auto max-w-xl text-sm text-cream/70 sm:text-base">{subtitle}</p>
             {headerExtra && <div className="pt-2">{headerExtra}</div>}
           </header>
         )}

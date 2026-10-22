@@ -756,7 +756,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   if (session.pending) {
     return (
       <div className={`relative flex min-h-screen items-center justify-center bg-gradient-to-b ${theme.background} p-4 text-white`}>
-        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-white/15 bg-white/10 p-6 text-center">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border border-white/[0.15] bg-white/10 p-6 text-center">
           <h2 className="text-xl font-extrabold">{tCommon('resumeGame.title')}</h2>
           <p className="text-sm text-white/70">{tCommon('resumeGame.body')}</p>
           <div className="flex flex-col gap-2">

@@ -318,7 +318,7 @@ export function FirstStepsCard({
     const className = cn(
       'flex min-h-[44px] shrink-0 items-center justify-center rounded-xl px-3 text-xs font-bold transition-colors',
       id === firstTodo
-        ? 'bg-amber-500 text-black hover:bg-amber-400'
+        ? 'bg-amber-500 text-[#24201A] hover:bg-amber-400'
         : 'border border-gold/30 text-gold hover:bg-gold/10'
     )
     const label = t(`steps.${id}.action`)
@@ -397,14 +397,14 @@ export function FirstStepsCard({
           {state === 'promise' ? (
             <>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gold">{t('reward.label')}</p>
-              <p className="mt-0.5 text-xs text-white/70">{t('reward.promise', { month, frame: frameName })}</p>
+              <p className="mt-0.5 text-xs text-cream/80">{t('reward.promise', { month, frame: frameName })}</p>
             </>
           ) : (
             <>
               <p className="text-sm font-semibold text-cream">
                 {t(state === 'unlocked' ? 'reward.unlockedTitle' : 'reward.equippedTitle', { frame: frameName })}
               </p>
-              <p className="mt-0.5 text-xs text-white/60">
+              <p className="mt-0.5 text-xs text-cream/70">
                 {t(state === 'unlocked' ? 'reward.unlockedHint' : 'reward.equippedHint')}
               </p>
             </>
@@ -420,7 +420,7 @@ export function FirstStepsCard({
               // le bouton plein reste celui de la prochaine étape.
               stepsLeft
                 ? 'border border-gold/30 text-gold hover:bg-gold/10'
-                : 'bg-amber-500 text-black hover:bg-amber-400'
+                : 'bg-amber-500 text-[#24201A] hover:bg-amber-400'
             )}
           >
             {t('reward.equip')}
@@ -442,13 +442,13 @@ export function FirstStepsCard({
           <h2 id={titleId} className="font-display text-lg font-bold text-gold">
             {t('title')}
           </h2>
-          <p className="mt-1 text-xs text-white/60">{stepsLeft ? t('intro') : t('reward.allDone')}</p>
+          <p className="mt-1 text-xs text-cream/70">{stepsLeft ? t('intro') : t('reward.allDone')}</p>
         </div>
         <button
           type="button"
           onClick={dismiss}
           aria-label={stepsLeft ? t('dismissLabel') : t('reward.dismissLabel')}
-          className="-mr-2 -mt-2 flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-semibold text-white/50 transition-colors hover:bg-white/10 hover:text-white/80"
+          className="-mr-2 -mt-2 flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-semibold text-cream/70 transition-colors hover:bg-gold/10 hover:text-cream"
         >
           <X className="h-3.5 w-3.5" aria-hidden />
           {t('dismiss')}
@@ -490,7 +490,7 @@ export function FirstStepsCard({
                   key={step.id}
                   className={cn(
                     'flex items-center gap-3 rounded-xl border px-3 py-2.5',
-                    step.done ? 'border-white/5 bg-white/[0.02]' : 'border-white/10 bg-white/[0.04]'
+                    step.done ? 'border-gold/10 bg-white/[0.02]' : 'border-gold/20 bg-white/[0.04]'
                   )}
                 >
                   <span
@@ -508,7 +508,7 @@ export function FirstStepsCard({
                     <p
                       className={cn(
                         'text-sm font-semibold',
-                        step.done ? 'text-white/40 line-through decoration-white/30' : 'text-white'
+                        step.done ? 'text-cream/60 line-through decoration-cream/40' : 'text-cream'
                       )}
                     >
                       {t(`steps.${step.id}.title`)}
@@ -516,7 +516,7 @@ export function FirstStepsCard({
                         {' '}({step.done ? t('done') : t('todo')})
                       </span>
                     </p>
-                    {hint && <p className="mt-0.5 text-xs text-white/60">{hint}</p>}
+                    {hint && <p className="mt-0.5 text-xs text-cream/70">{hint}</p>}
                   </div>
                   {!step.done && actionOf(step.id)}
                 </li>

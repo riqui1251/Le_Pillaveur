@@ -59,7 +59,7 @@ export function PlayingCard({
           <span
             aria-hidden
             className={cn(
-              'pointer-events-none absolute left-1.5 top-1 select-none text-center font-display text-[10px] font-bold leading-[1.05]',
+              'pointer-events-none absolute left-1.5 top-1 select-none text-center font-display text-[11px] font-bold leading-[1.05]',
               red ? 'text-suit-red' : 'text-[#24201A]'
             )}
           >
@@ -70,7 +70,7 @@ export function PlayingCard({
           <span
             aria-hidden
             className={cn(
-              'pointer-events-none absolute bottom-1 right-1.5 rotate-180 select-none text-center font-display text-[10px] font-bold leading-[1.05]',
+              'pointer-events-none absolute bottom-1 right-1.5 rotate-180 select-none text-center font-display text-[11px] font-bold leading-[1.05]',
               red ? 'text-suit-red' : 'text-[#24201A]'
             )}
           >

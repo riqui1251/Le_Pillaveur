@@ -73,12 +73,26 @@ export function drinkIcon(ambiance: AmbianceMode): string {
   return ambiance === 'soft' ? '🌿' : '🍺'
 }
 
-/** « +N 🍺 » qui flotte au-dessus d'un conteneur en `position: relative`. */
-export function FloatingDrinkBadge({ deltas }: { deltas: DrinkDelta[] }) {
+/**
+ * « +N 🍺 » qui flotte au-dessus d'un conteneur en `position: relative`.
+ *
+ * `above` : centré au-dessus du conteneur (un pion du plateau). Le badge
+ * vivait dans les cartes du classement, un défileur horizontal : son
+ * overflow-y passait à `auto` et rognait le badge dès son envol, sous le
+ * plateau et donc hors écran. Posé sur le pion, il s'envole là où l'œil
+ * regarde, sans défileur pour le couper.
+ */
+export function FloatingDrinkBadge({
+  deltas,
+  placement = 'corner',
+}: {
+  deltas: DrinkDelta[]
+  placement?: 'corner' | 'above'
+}) {
   const reduced = useReducedMotion()
   const { mode } = useAmbianceMode()
   const icon = drinkIcon(mode)
-  return (
+  const badges = (
     <AnimatePresence>
       {deltas.map((d) => (
         <motion.span
@@ -87,13 +101,22 @@ export function FloatingDrinkBadge({ deltas }: { deltas: DrinkDelta[] }) {
           animate={reduced ? { opacity: 1 } : { opacity: [0, 1, 1, 0], y: -26, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1.4, ease: 'easeOut' }}
-          className="pointer-events-none absolute -top-1 right-2 z-20 whitespace-nowrap rounded-full border border-suit-red/60 bg-suit-red px-2 py-0.5 text-xs font-bold text-cream shadow-lg"
+          className={
+            (placement === 'above' ? 'relative ' : 'absolute -top-1 right-2 ') +
+            'pointer-events-none z-20 whitespace-nowrap rounded-full border border-suit-red/60 bg-suit-red px-2 py-0.5 text-xs font-bold leading-4 text-cream shadow-lg'
+          }
           aria-hidden
         >
           +{d.delta} {icon}
         </motion.span>
       ))}
     </AnimatePresence>
+  )
+  if (placement === 'corner') return badges
+  return (
+    <span className="pointer-events-none absolute bottom-full left-1/2 z-20 flex -translate-x-1/2 flex-col items-center">
+      {badges}
+    </span>
   )
 }
 

@@ -131,7 +131,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
         </DialogHeader>
 
         {success ? (
-          <p className="rounded-lg bg-emerald-500/15 px-4 py-3 text-sm text-emerald-300">
+          <p className="rounded-lg bg-emerald-500/[0.15] px-4 py-3 text-sm text-emerald-300">
             {t('success')}
           </p>
         ) : (
@@ -228,7 +228,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
             </div>
 
             {error && (
-              <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>
+              <p className="rounded-lg bg-red-500/[0.15] px-3 py-2 text-sm text-red-300">{error}</p>
             )}
 
             <DialogFooter>

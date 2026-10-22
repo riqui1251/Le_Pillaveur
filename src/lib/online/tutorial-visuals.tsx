@@ -114,7 +114,7 @@ export function CanvasPreview({ badge, dim }: { badge?: string; dim?: boolean })
     <div className={BOX}>
       <div
         className={cn(
-          'relative h-20 w-28 overflow-hidden rounded-lg border border-[#D8CCAE] bg-white',
+          'relative h-20 w-28 overflow-hidden rounded-lg border border-[#D8CCAE] bg-cream',
           dim && 'opacity-60'
         )}
       >

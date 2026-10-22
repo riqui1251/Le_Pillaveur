@@ -88,7 +88,7 @@ export function TvLobby({ room, joinUrl }: { room: TvRoomDto; joinUrl: string })
   // devient un « +N » plutôt que de pousser la liste hors de l'écran.
   const overflow = members.length > capacity ? members.length - (capacity - 1) : 0
   const shown = overflow > 0 ? members.slice(0, capacity - 1) : members
-  const readyCount = members.filter((m) => m.isReady).length
+  const readyCount = members.filter((m) => m.isReady || m.isHost).length
   const rows = Math.min(ROWS[density], Math.ceil((shown.length + (overflow > 0 ? 1 : 0)) / COLUMNS[density]))
 
   return (

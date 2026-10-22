@@ -58,7 +58,7 @@ export type TabouState = TimedPhaseState & {
   describerOrder: string[]
   describerIdx: number
   describerId: string
-  /** SECRET — seul le décrivant le voit tant que la manche est en cours. */
+  /** SECRET pour l'équipe qui devine — cf. `tabouSeesCurrentWord`. */
   currentWord: TabouEntry | null
   /** Pool complet de la partie (pour retirage sans répétition). */
   allWords: TabouEntry[]
@@ -390,12 +390,28 @@ export type TabouClientView = Omit<
   phaseKey: string
   /** true si le viewer est le décrivant de la manche courante. */
   isDescriber: boolean
-  /** Le mot + tabous en cours — visible SEULEMENT du décrivant, pendant `describing`. */
+  /** Le mot + tabous en cours — décrivant et équipe adverse, pendant `describing` (cf. `tabouSeesCurrentWord`). */
   currentWord: TabouEntry | null
 }
 
 /**
- * Vue PAR JOUEUR : seul le décrivant voit `currentWord` pendant la manche.
+ * Qui reçoit le mot en cours et ses tabous : le décrivant, et l'équipe
+ * ADVERSE — c'est elle qui arbitre, comme au Tabou de table où elle lit la
+ * carte par-dessus l'épaule : sans les mots interdits sous les yeux, son
+ * bouton TABOU partait à l'aveugle. Jamais les coéquipiers du décrivant (ils
+ * devinent), ni personne hors de la description (le premier mot est tiré dès
+ * le compte à rebours).
+ */
+export function tabouSeesCurrentWord(state: TabouState, viewerId: string): boolean {
+  if (state.phase !== 'describing') return false
+  if (viewerId === state.describerId) return true
+  const viewer = state.players.find((p) => p.id === viewerId)
+  const describer = state.players.find((p) => p.id === state.describerId)
+  return Boolean(viewer && describer && viewer.team !== describer.team)
+}
+
+/**
+ * Vue PAR JOUEUR : `currentWord` selon `tabouSeesCurrentWord`.
  * `lastRoundWord` (posé au bilan) est déjà public dans `TabouState` — repris
  * tel quel via `...rest`, aucun traitement spécial requis.
  */
@@ -409,7 +425,7 @@ export function toTabouClientView(state: TabouState, viewerId: string): TabouCli
     ...rest,
     phaseKey: phaseKey(state),
     isDescriber,
-    currentWord: isDescriber && state.phase === 'describing' ? currentWord : null,
+    currentWord: tabouSeesCurrentWord(state, viewerId) ? currentWord : null,
     players: players.map((p) => ({
       id: p.id,
       name: p.name,

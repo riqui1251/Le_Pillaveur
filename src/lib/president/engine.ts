@@ -198,13 +198,15 @@ export function preSortHand(hand: number[]): number[] {
  * « Ou rien » : la dernière pose a ÉGALÉ la précédente → le rang du pli est
  * verrouillé (on égale encore, ou son tour saute). Null hors verrou.
  */
-export function preOuRien(state: PreState): number | null {
+export function preOuRien(state: Pick<PreState, 'lastPlay' | 'trickRun'>): number | null {
   if (!state.lastPlay || !state.trickRun) return null
   return state.trickRun.count > state.lastPlay.cards.length ? state.trickRun.rank : null
 }
 
 /** Cartes qu'il faudrait pour FERMER le pli (compléter le carré du rang courant). */
-export function preCloseNeeded(state: PreState): { rank: number; count: number } | null {
+export function preCloseNeeded(
+  state: Pick<PreState, 'phase' | 'lastPlay' | 'trickRun'>
+): { rank: number; count: number } | null {
   if (state.phase !== 'playing' || !state.lastPlay || !state.trickRun) return null
   // Fermeture réservée aux runs d'au moins 2 cartes (3 simples à la suite,
   // ou une paire posée) — une carte seule ne s'écrase pas au brelan.
@@ -226,6 +228,22 @@ export function preCanPlay(state: PreState, playerId: string, cards: number[]): 
     return 'INVALID_COMBO'
   }
   if (!cards.every((c) => player.hand.includes(c))) return 'NOT_YOUR_CARDS'
+  return preComboIssue(state, cards)
+}
+
+/** Défaut d'un combo face au pli courant, la main du joueur mise à part. */
+export type PreComboIssue = 'INVALID_COMBO' | 'MIXED_RANKS' | 'WRONG_SIZE' | 'MUST_MATCH_RANK' | 'TOO_LOW'
+
+/**
+ * Le combo tient-il sur le pli courant ? Partie « règles » de preCanPlay,
+ * lisible sur la vue d'un joueur : le téléphone dit POURQUOI sa sélection ne
+ * passe pas (« il faut une paire », « 9 ou plus ») avant même l'envoi.
+ */
+export function preComboIssue(
+  state: Pick<PreState, 'lastPlay' | 'trickRun'>,
+  cards: readonly number[]
+): PreComboIssue | null {
+  if (cards.length < 1 || cards.length > 4) return 'INVALID_COMBO'
   // Les jokers remplacent n'importe quelle carte : le rang du combo vient
   // des cartes NATURELLES ; jokers seuls = caméléon (copie la pose du
   // dessus, ou mène au rang le plus faible).
@@ -623,7 +641,7 @@ function applyPlay(state: PreState, playerId: string, cards: number[], now: numb
 
 /** Applique un passe ; si tout le monde a passé, le pli est gagné. */
 function applyPass(state: PreState, playerId: string, now: number): PreState {
-  let next: PreState = {
+  const next: PreState = {
     ...state,
     passedIds: [...state.passedIds, playerId],
     version: state.version + 1,

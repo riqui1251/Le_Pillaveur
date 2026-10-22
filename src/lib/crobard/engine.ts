@@ -134,6 +134,7 @@ export type CrobardAction =
   | { type: 'CHOOSE_WORD'; playerId: string; index: number; now: number }
   | { type: 'DRAW_STROKE'; playerId: string; stroke: Stroke }
   | { type: 'CLEAR'; playerId: string }
+  | { type: 'UNDO_STROKE'; playerId: string }
   | { type: 'GUESS'; playerId: string; text: string; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
@@ -313,6 +314,15 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       if (state.phase !== 'drawing') throw new CrobardEngineError('NOT_DRAWING_PHASE')
       if (action.playerId !== state.drawerId) throw new CrobardEngineError('NOT_DRAWER')
       return { ...state, strokes: [], version: state.version + 1 }
+    }
+
+    // Retire le dernier trait : au doigt, c'est le geste de correction le
+    // plus utile, et le seul filet avant « tout effacer ».
+    case 'UNDO_STROKE': {
+      if (state.phase !== 'drawing') throw new CrobardEngineError('NOT_DRAWING_PHASE')
+      if (action.playerId !== state.drawerId) throw new CrobardEngineError('NOT_DRAWER')
+      if (state.strokes.length === 0) throw new CrobardEngineError('NOTHING_TO_UNDO')
+      return { ...state, strokes: state.strokes.slice(0, -1), version: state.version + 1 }
     }
 
     case 'GUESS': {

@@ -199,6 +199,9 @@ export function hiLoFinalResults(state: HiLoState): HiLoEnd {
   }
 }
 
+/** Qui boit, et combien, sur ce tirage : le verdict s'annonce nommé. */
+export type HiLoPenalty = { playerIds: string[]; drinks: number }
+
 export type HiLoGuessOutcome = {
   /** Pendant le retournement : carte tirée, paquet entamé, rien de révélé. */
   drawn: HiLoState
@@ -208,6 +211,12 @@ export type HiLoGuessOutcome = {
   missDialog: boolean
   /** Fin de partie déclenchée par ce tirage, sinon null. */
   end: HiLoEnd | null
+  /**
+   * Gorgées ajoutées au bilan par ce tirage (null si personne ne boit). Ce
+   * sont EXACTEMENT celles de `resolved.gameResults` : l'écran ne les déduit
+   * pas de la mise, qui n'est pas toujours ce qui se boit (égalité héritée).
+   */
+  penalty: HiLoPenalty | null
 }
 
 /**
@@ -256,7 +265,8 @@ export function resolveHiLoGuess(
     const loserId = currentHiLoPlayerId(state)
     if (loserId) resolved.gameResults = addDrinks(state.gameResults, [loserId], state.drinkCounter)
     resolved.gameOver = true
-    return { drawn, resolved, missDialog: true, end: hiLoFinalResults(state) }
+    const penalty = loserId ? { playerIds: [loserId], drinks: state.drinkCounter } : null
+    return { drawn, resolved, missDialog: true, end: hiLoFinalResults(state), penalty }
   }
 
   const bonus = guess === 'equal' ? 3 : 1
@@ -264,12 +274,13 @@ export function resolveHiLoGuess(
   if (state.mode === 'standard') {
     if (correct) {
       resolved.drinkCounter = state.drinkCounter + bonus
-      return { drawn, resolved, missDialog: false, end: null }
+      return { drawn, resolved, missDialog: false, end: null, penalty: null }
     }
     // Le joueur boit le cumul ; la mise repart à 1 à la fermeture de la fenêtre.
     const loserId = state.playerIds[state.currentPlayerIndex]
     if (loserId) resolved.gameResults = addDrinks(state.gameResults, [loserId], state.drinkCounter)
-    return { drawn, resolved, missDialog: true, end: null }
+    const penalty = loserId ? { playerIds: [loserId], drinks: state.drinkCounter } : null
+    return { drawn, resolved, missDialog: true, end: null, penalty }
   }
 
   // Traversée
@@ -281,26 +292,28 @@ export function resolveHiLoGuess(
       resolved.activePlayerIds = state.activePlayerIds.filter((_, index) => index !== state.currentPlayerIndex)
       if (resolved.activePlayerIds.length === 0) {
         resolved.gameOver = true
-        return { drawn, resolved, missDialog: false, end: hiLoFinalResults(state) }
+        return { drawn, resolved, missDialog: false, end: hiLoFinalResults(state), penalty: null }
       }
     }
     if (state.correctGuessesInRow + 1 >= state.targetGuesses) {
       resolved.gameOver = true
-      return { drawn, resolved, missDialog: false, end: hiLoFinalResults(state) }
+      return { drawn, resolved, missDialog: false, end: hiLoFinalResults(state), penalty: null }
     }
-    return { drawn, resolved, missDialog: false, end: null }
+    return { drawn, resolved, missDialog: false, end: null, penalty: null }
   }
+
+  const drinkers = [...state.activePlayerIds]
 
   if (state.isUnguessedEqual) {
     // Lecture d'avant le tirage (voir plus haut) : tout le monde boit 1, cumul et série gardés.
-    resolved.gameResults = addDrinks(state.gameResults, state.activePlayerIds, 1)
-    return { drawn, resolved, missDialog: true, end: null }
+    resolved.gameResults = addDrinks(state.gameResults, drinkers, 1)
+    return { drawn, resolved, missDialog: true, end: null, penalty: { playerIds: drinkers, drinks: 1 } }
   }
 
   // Erreur : tous les joueurs encore en jeu boivent la mise, la série repart de zéro.
-  resolved.gameResults = addDrinks(state.gameResults, state.activePlayerIds, state.drinkCounter)
+  resolved.gameResults = addDrinks(state.gameResults, drinkers, state.drinkCounter)
   resolved.correctGuessesInRow = 0
-  return { drawn, resolved, missDialog: true, end: null }
+  return { drawn, resolved, missDialog: true, end: null, penalty: { playerIds: drinkers, drinks: state.drinkCounter } }
 }
 
 /**
@@ -356,6 +369,16 @@ export function advanceHiLoTurn(state: HiLoState, missDialogOpen = false): HiLoT
     advanced: true,
     end: null,
   }
+}
+
+/**
+ * Joueur qui aura la main au tour suivant, null si la partie s'arrête là.
+ * Lu AVANT de passer la main, pour l'annoncer sous le verdict (« Au tour de
+ * Max ») : même calcul que advanceHiLoTurn, sauts historiques compris.
+ */
+export function upcomingHiLoPlayerId(state: HiLoState): string | null {
+  const turn = advanceHiLoTurn(state)
+  return turn.advanced ? currentHiLoPlayerId(turn.state) : null
 }
 
 /** Cartes déjà jouées (retournées), sur un paquet de 52. */

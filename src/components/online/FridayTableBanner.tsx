@@ -25,6 +25,7 @@ import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
+import { cn } from '@/lib/utils'
 
 /**
  * Horloge du bandeau : il passe de la ligne discrète au bandeau « ouvert » (et
@@ -94,8 +95,19 @@ function LivePulse() {
  * serveur ni avant le montage (l'heure est celle du navigateur — le hub est
  * pré-rendu au build), rien sur /tv, rien la semaine où le visiteur l'a
  * masqué (localStorage, clé de semaine de la soirée visée).
+ *
+ * `show` : le hub monte DEUX bandeaux — la soirée en cours (`live`) en tête,
+ * la ligne de rendez-vous (`upcoming`) sous la grille, pour que la première
+ * carte de jeu reste dans le premier écran. Chacun se tait hors de son
+ * moment ; seul celui de la soirée sonde le serveur.
  */
-export function FridayTableBanner() {
+export function FridayTableBanner({
+  show = 'all',
+  className,
+}: {
+  show?: 'all' | 'live' | 'upcoming'
+  className?: string
+} = {}) {
   const t = useTranslations('fridayTable')
   const tTry = useTranslations('tryBots')
   const tCommon = useTranslations('common')
@@ -145,6 +157,7 @@ export function FridayTableBanner() {
   const live = status?.live === true
   const weekKey = status ? fridayTableWeekKey(status) : null
   const hidden = !status || isTvPath(pathname) || dismissedKey === weekKey
+  const shown = show === 'all' || (show === 'live') === live
 
   useEffect(() => {
     if (justDismissed) dismissedRef.current?.focus({ preventScroll: true })
@@ -183,7 +196,7 @@ export function FridayTableBanner() {
   // Sondage léger, PENDANT la soirée seulement, et jamais onglet caché : la
   // liste se rafraîchit au retour sur l'onglet.
   useEffect(() => {
-    if (!live || hidden) return
+    if (!live || hidden || !shown) return
     const poll = () => {
       if (document.visibilityState === 'hidden') return
       void fetchTable()
@@ -195,7 +208,7 @@ export function FridayTableBanner() {
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', poll)
     }
-  }, [live, hidden, fetchTable])
+  }, [live, hidden, shown, fetchTable])
 
   if (justDismissed && hidden) {
     return (
@@ -204,7 +217,7 @@ export function FridayTableBanner() {
       </p>
     )
   }
-  if (!status || hidden || !weekKey) return null
+  if (!status || hidden || !weekKey || !shown) return null
 
   const dismiss = () => {
     try {
@@ -222,7 +235,7 @@ export function FridayTableBanner() {
       onClick={dismiss}
       aria-label={t('dismiss')}
       title={t('dismiss')}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/70"
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-cream/60 transition-colors hover:bg-white/[0.06] hover:text-cream"
     >
       <X className="h-4 w-4" aria-hidden />
     </button>
@@ -243,9 +256,9 @@ export function FridayTableBanner() {
       ? t('nextToday', { time })
       : t('next', { day: new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(startsAt), time })
     return (
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/20 py-0.5 pl-3 pr-0.5">
-        <CalendarClock className="h-4 w-4 shrink-0 text-gold/70" aria-hidden />
-        <p className="min-w-0 flex-1 py-2 text-xs leading-snug text-white/60">{text}</p>
+      <div className={cn('mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/30 py-0.5 pl-3 pr-0.5', className)}>
+        <CalendarClock className="h-4 w-4 shrink-0 text-gold" aria-hidden />
+        <p className="min-w-0 flex-1 py-2 text-xs leading-snug text-cream/70">{text}</p>
         {dismissButton}
       </div>
     )
@@ -424,8 +437,8 @@ export function FridayTableBanner() {
     }
   }
 
-  const ctaClass =
-    'h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/20 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50'
+  // Encre sur or (Button `primary`) : le blanc sur le dégradé or tombait à 2,25:1.
+  const ctaClass = 'w-full text-base'
 
   const shownError = error ?? (roomFailed ? (roomError ?? tTry('error')) : null)
 
@@ -438,21 +451,24 @@ export function FridayTableBanner() {
   return (
     <section
       aria-label={t('label')}
-      className="mb-4 rounded-2xl border border-gold/30 bg-felt-deep/70 p-4 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] backdrop-blur-md"
+      className={cn(
+        'mb-4 rounded-2xl border border-gold/30 bg-felt-deep/70 p-4 shadow-[0_18px_40px_-24px_rgba(0,0,0,0.9)] backdrop-blur-md',
+        className
+      )}
     >
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-gold/10">
-          <GameIconById id={FRIDAY_TABLE.gameId} className="h-5 w-5 text-gold" />
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-felt-deep">
+          <GameIconById id={FRIDAY_TABLE.gameId} surface="felt" className="h-6 w-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/80">
+          <p className="flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
             <LivePulse />
             <span className="truncate">{t('live.kicker', { time: timeFormat.format(new Date(status.endsAt)) })}</span>
           </p>
           <h2 className="mt-0.5 font-display text-lg font-bold leading-tight text-cream">{t('live.title')}</h2>
           {/* aria-live : le nombre de joueurs qui attendent change au fil des sondages. */}
-          <p className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-white/60" aria-live="polite">
-            {table && !seatedHere && <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold/70" aria-hidden />}
+          <p className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-cream/70" aria-live="polite">
+            {table && !seatedHere && <Users className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />}
             <span>{subtitle}</span>
           </p>
         </div>
@@ -461,7 +477,7 @@ export function FridayTableBanner() {
 
       <div className="mt-3">
         {seatedHere ? (
-          <Button asChild className={ctaClass}>
+          <Button asChild variant="primary" size="game" className={ctaClass}>
             <Link href={GAME_PATH}>{t('backToTable')}</Link>
           </Button>
         ) : table && user ? (
@@ -470,13 +486,13 @@ export function FridayTableBanner() {
             onClick={() => void joinCurrentTable(table.code)}
             disabled={busy}
             aria-busy={busy || undefined}
-            className={ctaClass}
+            variant="primary" size="game" className={ctaClass}
           >
             <Users className="mr-2 h-4 w-4" aria-hidden />
             {busy ? t('joining') : t('join')}
           </Button>
         ) : table ? (
-          <Button asChild className={ctaClass}>
+          <Button asChild variant="primary" size="game" className={ctaClass}>
             <Link href={`/jeux?join=${table.code}`}>
               <Users className="mr-2 h-4 w-4" aria-hidden />
               {t('join')}
@@ -492,13 +508,13 @@ export function FridayTableBanner() {
               maxLength={30}
               required
               autoFocus
-              className="h-12 border-white/10 bg-white/[0.05] text-center text-white"
+              className="h-12 border-gold/20 bg-white/[0.05] text-center text-cream"
             />
-            <Button type="submit" disabled={busy || pseudo.trim().length === 0} className={ctaClass}>
+            <Button type="submit" disabled={busy || pseudo.trim().length === 0} variant="primary" size="game" className={ctaClass}>
               <DoorOpen className="mr-2 h-4 w-4" aria-hidden />
               {busy ? t('opening') : t('open')}
             </Button>
-            <p className="text-center text-xs leading-snug text-white/40">{tTry('guestHintDevice')}</p>
+            <p className="text-center text-xs leading-snug text-cream/70">{tTry('guestHintDevice')}</p>
             <button
               type="button"
               onClick={() => {
@@ -506,13 +522,13 @@ export function FridayTableBanner() {
                 setError(null)
               }}
               disabled={busy}
-              className="min-h-[44px] w-full text-center text-xs text-white/40 underline underline-offset-2 transition-colors hover:text-white/70"
+              className="min-h-[44px] w-full text-center text-xs text-cream/70 underline underline-offset-2 transition-colors hover:text-cream"
             >
               {tCommon('cancel')}
             </button>
           </form>
         ) : (
-          <Button type="button" onClick={() => void openTable()} disabled={busy || !checked} className={ctaClass}>
+          <Button type="button" onClick={() => void openTable()} disabled={busy || !checked} variant="primary" size="game" className={ctaClass}>
             <DoorOpen className="mr-2 h-4 w-4" aria-hidden />
             {busy ? t('opening') : t('open')}
           </Button>

@@ -43,6 +43,22 @@ const SECTION_PREFIXES: ReadonlyArray<readonly [prefix: string, key: StaticPageK
   ['/regles/', 'regles'],
 ]
 
+/**
+ * Sous-titre de la navbar sur la page d'un jeu : OÙ il se joue, pas son état.
+ * « Partie en cours » s'affichait dès la vitrine et le pré-lobby, avant toute
+ * partie — et la navbar ne peut pas savoir si une partie est montée (chaque
+ * page de jeu tient cet état pour elle). Le mode, lui, est toujours vrai :
+ * un jeu en ligne seulement, ou un jeu ouvert en mode en ligne alors qu'il a
+ * sa salle, se joue « un téléphone chacun » ; tout le reste sur un seul.
+ */
+export function gameSubtitleKey(
+  game: { onlineOnly?: boolean; onlineReady?: boolean },
+  playMode: 'local' | 'online' | undefined
+): 'game.online' | 'game.local' {
+  const online = Boolean(game.onlineOnly) || (playMode === 'online' && Boolean(game.onlineReady))
+  return online ? 'game.online' : 'game.local'
+}
+
 /** Resolve page title/subtitle for the navbar from a pathname (with or without locale prefix). */
 export function usePageMeta(pathname: string): PageMeta {
   const t = useTranslations('nav')
@@ -69,7 +85,7 @@ export function usePageMeta(pathname: string): PageMeta {
     if (game) {
       return {
         title: game.title,
-        subtitle: tPages('gameInProgress.subtitle'),
+        subtitle: tPages(gameSubtitleKey(game, user?.playMode)),
       }
     }
 

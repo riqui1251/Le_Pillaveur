@@ -139,11 +139,12 @@
         "title": "Règles",
         "subtitle": "Les règles de chaque jeu"
       },
-      "gameInProgress": {
-        "subtitle": "Partie en cours"
-      },
       "default": {
         "subtitle": "Jeux à boire entre amis"
+      },
+      "game": {
+        "local": "Sur un seul téléphone",
+        "online": "Un téléphone chacun"
       }
     },
     "levelBadge": "Nv. {level}",
@@ -199,6 +200,12 @@
       "body": "Une partie a été interrompue. Tu peux la reprendre là où elle s'est arrêtée, ou en lancer une nouvelle.",
       "resume": "Reprendre",
       "newGame": "Nouvelle partie"
+    },
+    "confirmRestart": {
+      "title": "Recommencer la partie ?",
+      "description": "La partie en cours sera perdue.",
+      "confirm": "Recommencer",
+      "cancel": "Continuer la partie"
     }
   },
   "hub": {
@@ -244,10 +251,15 @@
         "groupBadge": "Mieux à plusieurs"
       },
       "onlineOnly": {
-        "title": "En ligne uniquement",
-        "hint": "Ces jeux demandent un téléphone par joueur : ouvrez une table en ligne avec un compte gratuit, ou essayez-les seul contre des bots."
+        "hint": "Ces jeux demandent un téléphone par joueur : ouvrez une table en ligne avec un compte gratuit, ou essayez-les seul contre des bots.",
+        "sectionTitle": "Un téléphone chacun · {count, plural, one {# jeu} other {# jeux}}"
       },
-      "opening": "Ouverture…"
+      "opening": "Ouverture…",
+      "playersBadge": "{range} joueurs",
+      "localSection": {
+        "title": "Sur ce téléphone · {count, plural, one {# jeu} other {# jeux}}",
+        "hint": "Un seul téléphone qui passe de main en main, sans compte."
+      }
     },
     "recentLocal": {
       "title": "Vos derniers jeux",
@@ -256,7 +268,7 @@
     "jeuxOnline": {
       "title": "Jeux en ligne",
       "subtitle": "Rejoins un lobby ouvert ou choisis un jeu pour en créer un nouveau.",
-      "connectedAs": "Joueur connecté :",
+      "connectedAs": "Joueur connecté",
       "recent": {
         "title": "Vos dernières tables",
         "replay": "Rejouer",
@@ -283,11 +295,9 @@
       "moderation": "L'abus d'alcool est dangereux pour la santé. À consommer avec modération."
     },
     "selectedPlayers": {
-      "ready": "{count, plural, one {# joueur prêt} other {# joueurs prêts}}",
       "none": "Aucun joueur sélectionné",
       "choose": "Choisir les joueurs",
       "modify": "Modifier",
-      "tapToChoose": "Touchez ici pour choisir vos joueurs (minimum 2).",
       "bridge": {
         "guestText": "Un compte gratuit garde vos joueurs et leurs stats d'une soirée à l'autre.",
         "guestCta": "Créer un compte",
@@ -330,6 +340,18 @@
       },
       "en-grand-groupe": {
         "chip": "En grand groupe"
+      }
+    },
+    "partyBar": {
+      "title": "Réglages de la soirée",
+      "mode": {
+        "local": "Un téléphone",
+        "online": "En ligne"
+      },
+      "players": "{count, plural, =0 {Qui joue ?} one {# joueur} other {# joueurs}}",
+      "modeHint": {
+        "local": "Un seul téléphone qui passe de main en main autour de la table.",
+        "online": "Chacun joue sur son téléphone, réunis par un code de table."
       }
     }
   },
@@ -386,7 +408,9 @@
     "streakOne": "Série : 1 semaine",
     "streakBonus": "dont +{xp} XP de série",
     "streakNextWeek": "Rejoue la semaine prochaine : +{xp} XP de série",
-    "achievementUnlocked": "Succès débloqué : {name}"
+    "achievementUnlocked": "Succès débloqué : {name}",
+    "details": "Détails",
+    "achievementsCount": "{count, plural, one {# succès} other {# succès}}"
   },
   "onlineCollection": {
     "title": "Collection de {name}",
@@ -510,11 +534,13 @@
       "kickConfirm": "Retirer ?",
       "kickConfirmLabel": "Touche à nouveau pour retirer {name}",
       "customize": "Change ton icône, ton effet de pseudo et ton cadre",
-      "customizeHint": "Touche ton siège pour changer de look"
+      "customizeHint": "Touche ton siège pour changer de look",
+      "kickAction": "Retirer"
     },
     "settings": {
       "title": "Réglages",
-      "botsSummary": "{count, plural, one {# bot} other {# bots}}"
+      "botsSummary": "{count, plural, one {# bot} other {# bots}}",
+      "hostOnly": "Réglé par {name} — seul l'hôte peut changer ces réglages"
     },
     "gameSwitch": {
       "cta": "Changer de jeu",
@@ -522,19 +548,28 @@
       "current": "En cours",
       "tooMany": "Trop de joueurs à table (max {count})",
       "moving": "La table passe à {game}…",
-      "goToTable": "Aller à la table"
+      "goToTable": "Aller à la table",
+      "unavailableTitle": "Pas possible avec cette table"
     },
     "readyButton": {
-      "on": "✓ Prêt",
-      "off": "Me déclarer prêt"
+      "off": "Je suis prêt"
     },
     "launch": {
       "cta": "Lancer la partie",
-      "minPlayers": "{count, plural, one {Min. # joueur} other {Min. # joueurs}}",
-      "waitingForHost": "En attente que {name} lance la partie…",
       "withBots": "Lancer avec les bots",
       "force": "Lancer sans {count, plural, one {le retardataire} other {les # retardataires}}",
-      "forceBlocked": "Pas assez de joueurs prêts : il en manque {count}"
+      "forceBlocked": "Pas assez de joueurs prêts : il en manque {count}",
+      "status": {
+        "allReady": "Tout le monde est prêt ({ready}/{total})",
+        "waitingYou": "{ready, plural, one {#/{total} prêt} other {#/{total} prêts}} — il ne manque plus que toi",
+        "waitingNames": "{ready, plural, one {#/{total} prêt} other {#/{total} prêts}} — on attend {names}",
+        "waitingCount": "{ready, plural, one {#/{total} prêt} other {#/{total} prêts}} — on attend {count, plural, one {# joueur} other {# joueurs}}"
+      },
+      "needPlayers": "{count, plural, one {Il manque 1 joueur pour lancer} other {Il manque # joueurs pour lancer}}",
+      "waitingFor": "En attente de {names} ({ready}/{total})",
+      "waitingForCount": "En attente de {count, plural, one {# joueur} other {# joueurs}} ({ready}/{total})",
+      "guestReady": "Prêt — {name} lance bientôt ({ready}/{total})",
+      "notYet": "Pas encore"
     },
     "end": {
       "rematch": "Rejouer",
@@ -674,7 +709,8 @@
       "friend_request_cooldown": "Ce joueur a refusé ta demande récemment.",
       "request_not_found": "Demande introuvable.",
       "request_already_handled": "Cette demande a déjà été traitée.",
-      "request_already_declined": "Demande déjà refusée."
+      "request_already_declined": "Demande déjà refusée.",
+      "fake_taken": "Cette réponse est déjà prise : invente autre chose."
     },
     "showcase": {
       "players": "{min} à {max} joueurs",
@@ -684,6 +720,11 @@
       "howTitle": "Comment ça se joue",
       "rulesLink": "Règles complètes",
       "pending": "Jouer"
+    },
+    "compact": {
+      "waiting": "{count, plural, one {# table t'attend} other {# tables t'attendent}}",
+      "live": "{count, plural, one {# partie en cours} other {# parties en cours}}",
+      "empty": "Aucune table ouverte pour l'instant"
     }
   },
   "rematchNight": {
@@ -1210,8 +1251,8 @@
       },
       "titleBets": "1220 — Paris",
       "backToGames": "Retour aux jeux",
-      "reconfigure": "Reconfigurer les paris",
-      "setupInfo": "Chaque joueur choisit sa parité, sa plage, son chiffre fait boire et son chiffre donne à boire. Les deux chiffres doivent être différents.",
+      "reconfigure": "Modifier les paris",
+      "setupInfo": "Chaque joueur choisit sa parité, sa plage, son chiffre « fait boire » et son chiffre « donne à boire ». Les deux chiffres doivent être différents.",
       "parityLabel": "Parité de la somme",
       "pair": "Pair",
       "impair": "Impair",
@@ -1223,23 +1264,13 @@
       },
       "drinkNumber": "Fait boire",
       "giveNumber": "Donne à boire",
-      "clashWarning": "⚠️ Les deux chiffres doivent être différents.",
-      "validateBets": "Valider les paris — Lancer la partie →",
+      "clashWarning": "Les deux chiffres doivent être différents.",
+      "validateBets": "Valider les paris et jouer",
       "sum": "Somme",
       "results": "Résultats",
-      "history": "Historique ({count} lancers précédents)",
-      "rolling": "🎲 Lancement…",
-      "rollDice": "🎲 Lancer les dés",
-      "rollAriaRolling": "Lancer en cours",
-      "rollAria": "Lancer les dés",
-      "outcomes": {
-        "drink": "🍺 Boit — somme = {number}.",
-        "give": "🎁 Donne à boire : {label}.",
-        "partialGive": "⚡ Chiffre sur un dé ({numbers}) sans somme → {count} gorgée(s) (÷2).",
-        "totalGive": "Total : {count} gorgée(s) à distribuer.",
-        "partialNothing": "⚡ Chiffre(s) sur un dé ({numbers}) mais pas en somme — rien à distribuer.",
-        "nothing": "Rien pour toi ce lancer."
-      },
+      "history": "Lancers précédents ({count})",
+      "rolling": "Les dés roulent…",
+      "rollDice": "Lancer les dés",
       "online": {
         "waitingSetup": "Chacun règle ses paris, puis se déclare prêt.",
         "myBets": "Mes paris",
@@ -1248,17 +1279,55 @@
         "anyoneRolls": "N'importe qui peut lancer les dés.",
         "endGame": "Terminer la partie",
         "finishedTitle": "Partie terminée",
-        "totalRolls": "{count} lancers au total",
-        "replay": "Rejouer",
-        "rematchWaiting": "En attente ({count}/{total})",
-        "backToMenu": "Retour au menu",
+        "totalRolls": "{count, plural, one {# lancer au total} other {# lancers au total}}",
         "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour",
-        "setupDeadline": "Mise en place : {seconds}s — passé ce délai, les retardataires sont déclarés prêts"
+        "setupDeadline": "Mise en place : {seconds}s — passé ce délai, les retardataires sont déclarés prêts",
+        "phaseSetup": "Mise en place des paris",
+        "phasePlay": "Lancers de dés",
+        "readyCount": "{ready}/{total} prêts",
+        "deadlineHint": "À la fin du temps, les retardataires sont déclarés prêts.",
+        "playerReady": "prêt",
+        "playerNotReady": "pas encore prêt",
+        "endConfirm": {
+          "title": "Terminer pour toute la table ?",
+          "description": "La partie s'arrête sur tous les téléphones. La table pourra ensuite voter pour rejouer."
+        }
       },
       "about": {
         "p1": "Un dé à 12 faces, un dé à 20 faces, et quatre paris à régler sur ton téléphone avant chaque lancer : la parité de la somme, sa plage (2-10, 11-20 ou 21-30), un chiffre « fait boire » et un chiffre « donne à boire ». Le 1220, c'est le jeu de dés mathématiquement fourbe de l'apéro, et il n'a besoin d'aucun meneur.",
         "p2": "N'importe qui lance les deux dés et le résultat s'affiche chez tout le monde. Le serveur fait les comptes : somme égale à ton « fait boire », tu bois ; égale à ton « donne à boire », tu distribues ; bonne parité ou bonne plage, tu distribues aussi. Un chiffre présent sur un seul dé compte à moitié. Puis chacun ajuste ses paris et on relance.",
         "p3": "Pas de podium : le 1220 est un jeu d'ambiance, et la partie s'arrête quand la table le décide, après dix ou vingt minutes de combos qui font hurler. La somme tombe le plus souvent autour de 16 ou 17 : place tes plages en connaissance de cause. À deux ça marche, mais c'est à partir de quatre ou cinq paris différents sur le même lancer que la table s'arrose vraiment."
+      },
+      "betsButton": "Paris",
+      "editingSubtitle": "Partie en cours : l'historique est conservé",
+      "setupInvalid": "Chaque joueur doit choisir deux chiffres différents.",
+      "resumeWithBets": "Reprendre avec ces paris",
+      "rollAnnounce": "D12 : {d12}, D20 : {d20}, somme {total}.",
+      "rollsCount": "{count, plural, =0 {Aucun lancer} one {# lancer} other {# lancers}}",
+      "tableBets": "Paris de la table",
+      "reasons": {
+        "drink": "Somme {number} = chiffre « fait boire »",
+        "band": "Somme dans la plage {band}",
+        "parity": "Bonne parité : {parity}",
+        "giveNum": "Somme {number} = chiffre « donne à boire »",
+        "partialHalf": "{numbers} sur un seul dé : gorgées à donner divisées par deux",
+        "partialNothing": "{numbers} sur un seul dé, sans faire la somme : rien à donner"
+      },
+      "verdict": {
+        "drink": "Boit {count, number}",
+        "give": "Donne {count, number}",
+        "nothing": "Rien ce lancer"
+      },
+      "tally": {
+        "title": "Bilan de la partie",
+        "drank": "{count, plural, one {A bu # gorgée} other {A bu # gorgées}}",
+        "gave": "{count, plural, one {A donné # gorgée} other {A donné # gorgées}}"
+      },
+      "endConfirm": {
+        "title": "Terminer la partie ?",
+        "description": "Le bilan des gorgées de chaque joueur s'affiche ensuite.",
+        "confirm": "Terminer",
+        "cancel": "Continuer à jouer"
       }
     },
     "meta": {
@@ -1516,17 +1585,16 @@
         ]
       },
       "minPlayers": "Au moins 2 joueurs requis.",
-      "newGame": "Nouvelle partie",
       "yourTurn": "Au tour de",
       "counter": "Compteur",
-      "cardsLeft": "{count} restantes",
+      "cardsLeft": "{count, plural, one {# carte restante} other {# cartes restantes}}",
       "newDeck": "Nouveau paquet mélangé !",
       "chooseBet": "Choisis ton pari",
-      "correct": "✓ Correct ! +{count} gorgée(s) au compteur",
+      "correct": "Correct ! +{count, plural, one {# gorgée} other {# gorgées}} au compteur",
       "revealing": "Révélation…",
       "lastCards": "Dernières cartes",
       "wrongCombo": "Mauvaise combinaison !",
-      "mustDrink": "{name} doit boire {count} gorgée(s) 🍺",
+      "mustDrink": "{name} doit boire {count, plural, one {# gorgée} other {# gorgées}} 🍺",
       "bets": {
         "rouge": "Rouge",
         "doubleRouge": "Double rouge",
@@ -1536,23 +1604,47 @@
         "doublePurple": "Double Purple"
       },
       "online": {
-        "yourTurn": "À toi de parier",
         "waitingBet": "{name} choisit son pari…",
         "waitingDecision": "En attente de {name}…",
         "endGame": "Terminer la partie",
         "finishedTitle": "Partie terminée",
-        "totalCards": "{count} cartes tirées au total",
-        "replay": "Rejouer",
+        "totalCards": "{count, plural, one {# carte tirée au total} other {# cartes tirées au total}}",
         "rematchWaiting": "En attente ({count}/{total})",
-        "backToMenu": "Retour au menu",
         "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
-        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+        "afkWarningSelf": "À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
+        "phaseBet": "Faites vos jeux",
+        "phaseDecision": "Continuer ou passer ?",
+        "endConfirm": {
+          "title": "Terminer pour toute la table ?",
+          "description": "La partie s'arrête sur tous les téléphones et le bilan des gorgées s'affiche.",
+          "confirm": "Terminer pour tous",
+          "cancel": "Continuer à jouer"
+        }
       },
       "about": {
         "p1": "À ton tour, tu paries sur la couleur des prochaines cartes du paquet. Rouge ou noir, une carte : la cagnotte de gorgées prend 1. Double rouge ou double noir, deux cartes : elle prend 2. Purple, une rouge et une noire dans n'importe quel ordre : 2 aussi. Double purple, quatre cartes en deux paires dépareillées : 4. Bonne pioche, la cagnotte grossit ; mauvaise pioche, tu la bois entière.",
         "p2": "Le joueur actif choisit son pari sur son téléphone, et les cartes se retournent chez tout le monde en même temps. Bonne pioche : tu continues, nouveau pari, même cagnotte, ou tu passes la main, et la cagnotte suit le joueur suivant, façon patate chaude. Mauvaise pioche : tu bois toute la cagnotte, pari compris, elle retombe à zéro et le tour passe. Pas de podium : la table s'arrête quand elle veut.",
         "p3": "Les cartes n'ont pas de mémoire : la série de rouges ne rend pas le noir plus probable. Passe la main quand la cagnotte devient lourde ; tente le purple sur une cagnotte vide, pas sur une cagnotte de six. Un bot parie, continue et passe la main comme un joueur. À deux, passer la main devient un vrai coup de poker ; à seize, gare à celui qui la reçoit pleine."
+      },
+      "chooseBetFor": "{name}, choisis ton pari",
+      "counterReset": "Le compteur repart à zéro.",
+      "nextTurn": "Compris, au tour de {name}",
+      "tallyTitle": "Qui a bu combien",
+      "endConfirm": {
+        "title": "Terminer la partie ?",
+        "description": "Place au bilan : qui a bu combien pendant la partie.",
+        "confirm": "Voir le bilan",
+        "cancel": "Continuer à jouer"
+      },
+      "decision": {
+        "stake": "{name} a {count, plural, one {# gorgée} other {# gorgées}} en jeu",
+        "continue": "{name}, parie encore",
+        "pass": "Passer à {name} · {count, plural, one {# gorgée transmise} other {# gorgées transmises}}",
+        "stakeSelf": "Compteur : {count, plural, one {# gorgée} other {# gorgées}} · au premier raté, tu bois tout",
+        "waiting": "{name} hésite : continuer ou passer ?",
+        "hint": "Bien vu ! Parie encore ou passe la main.",
+        "continueSelf": "Parier encore"
       }
     },
     "roue-des-gorgees": {
@@ -1585,42 +1677,50 @@
     "monsieur-3": {
       "title": "Monsieur 3",
       "newGame": "Nouvelle partie",
-      "backToGames": "Retour aux jeux",
       "phaseSetup": "Recherche de Monsieur 3",
       "phasePlay": "En jeu",
-      "m3Badge": "M3 : {name} · {count} 🍺",
-      "activePlayer": "Joueur actif",
       "m3Label": "Monsieur 3",
       "sum": "Somme",
       "players": "Joueurs",
       "history": "Historique ({count})",
-      "rollSetup": "🎲 Lancer le dé",
-      "rollPlay": "🎲 Lancer les dés",
-      "rolling": "🎲 Lancement...",
-      "gameOver": "Partie terminée !",
-      "m3Title": "Monsieur 3",
+      "rolling": "Les dés roulent…",
+      "gameOver": "Partie terminée !",
       "sipsDrunk": "{count, plural, one {gorgée bue} other {gorgées bues}}",
       "replay": "Rejouer",
-      "menu": "Menu",
+      "menu": "Retour aux jeux",
       "messages": {
         "setupStart": "Lancez le dé — le premier à faire un 3 devient Monsieur 3 !",
-        "foundM3": "{name} a fait un 3 — Monsieur 3 trouvé !",
-        "foundSpecial": "🎲 Monsieur 3 !",
+        "foundM3": "{name} a fait un 3 et devient Monsieur 3 !",
+        "foundSpecial": "Monsieur 3 trouvé !",
         "rollResult": "{name} a fait un {roll}.",
-        "turnNext": "C'est au tour de {name} de lancer les dés.",
-        "gameEnd": "Monsieur 3 a terminé son tour — fin de la partie !",
-        "sum5": "🤸 Somme 5 — bras en croix + Whoo ! Le dernier boit.",
-        "sum8": "👆 Somme 8 — pouce sur le front ! Le dernier boit.",
-        "m3Drinks": "🍺 Monsieur 3, tu bois !",
-        "double": "⚔️ Double ! {name} choisit un duel.",
-        "noRule": "Aucune règle — [{d1}, {d2}]."
+        "turnNext": "C'est au tour de {name} de lancer les dés."
+      },
+      "rollSetupNamed": "{name}, lance le dé",
+      "rollPlayNamed": "{name}, lance les dés",
+      "rollAgainNamed": "{name}, relance les dés",
+      "m3Rolling": "Monsieur 3 lance : s'il ne fait rien, la partie s'arrête.",
+      "verdict": {
+        "handTo": "Au tour de {name}.",
+        "three": "{count, plural, one {Un 3 !} other {Deux 3 !}}",
+        "five": "{count, plural, one {Un 5 !} other {Deux 5 !}}",
+        "sum3": "Somme 3 !",
+        "sum5": "Somme 5 : bras en croix et « Whoo ! »",
+        "sum8": "Somme 8 : pouce sur le front !",
+        "lastDrinks": "Le dernier à le faire boit.",
+        "m3Drinks": "{name} boit 1 gorgée.",
+        "m3Too": "{name} (Monsieur 3) boit aussi 1 gorgée.",
+        "double": "Double !",
+        "duel": "{name} choisit un duel.",
+        "nothing": "Rien. Main à {name}.",
+        "end": "Monsieur 3 ({name}) ne fait rien : la partie s'arrête.",
+        "rollAgain": "Relance, {name} !"
       }
     },
     "pmu": {
       "title": "Course PMU",
-      "titleBetting": "Paris 🃏",
-      "titleRacing": "Course PMU 🏁",
-      "titlePayout": "Distribution des gorgées 🍺",
+      "titleBetting": "Les paris",
+      "titleRacing": "La course",
+      "titlePayout": "La distribution",
       "chooseMode": "Choisissez votre mode de jeu",
       "modes": {
         "libre": {
@@ -1636,14 +1736,14 @@
         "selectedHint": "Joueur sélectionné : {name} — touchez un cheval",
         "defaultHint": "Touchez un joueur, puis un cheval pour l'assigner",
         "unassigned": "Non assignés",
-        "allAssigned": "Tous les joueurs sont assignés ✓",
-        "tapToRemove": "Touchez ici pour retirer du cheval",
-        "assignHere": "Assigner ici",
+        "allAssigned": "Tous les joueurs sont assignés",
         "tapToAssign": "Touchez pour assigner",
         "noPlayer": "Aucun joueur",
         "needOne": "Assignez au moins un joueur",
-        "nextBets": "Passer aux paris →",
-        "nextRace": "Démarrer la course 🏁"
+        "nextBets": "Passer aux paris",
+        "nextRace": "Démarrer la course",
+        "removeFromHorse": "Retirer {name} du cheval",
+        "assignTo": "Mettre {name} sur {horse}"
       },
       "horses": {
         "tonnerre": "Tonnerre",
@@ -1654,24 +1754,36 @@
       "betting": {
         "info": "🍺 Chaque joueur parie des gorgées qu'il boit maintenant. S'il gagne, il en distribue le double à la personne de son choix.",
         "drinkWin": "Boit {bet} → gagne {payout}",
-        "confirm": "Confirmer les paris et démarrer 🏁"
+        "confirm": "Confirmer les paris et démarrer",
+        "less": "Une gorgée de moins pour {name}",
+        "more": "Une gorgée de plus pour {name}"
       },
       "race": {
-        "track": "Piste",
-        "finish": "Arrivée 🏁"
+        "finish": "Arrivée",
+        "rank": "{rank, selectordinal, one {#er} other {#e}}"
       },
       "results": {
         "winner": "{name} a gagné !",
         "pickTarget": "Chaque gagnant choisit à qui distribuer ses gorgées.",
         "noRider": "Aucun joueur sur ce cheval.",
         "seeResults": "Voir les résultats",
-        "distribute": "{name} distribue {count} gorgées à {target}",
+        "distribute": "<strong>{name}</strong> donne <sips>{count, plural, one {# gorgée} other {# gorgées}}</sips> à <strong>{target}</strong>",
         "libreWin": "{name} gagne ! Distribuez {count} gorgées.",
         "toWhom": "À qui ?",
-        "allWinners": "Tous les joueurs sont gagnants.",
+        "allWinners": "Tout le monde gagne : personne ne distribue.",
         "giveTo": "à",
         "replay": "Rejouer",
-        "menu": "Menu"
+        "libreVerdict": "{names} {riders, plural, one {distribue} other {distribuent}} {count, plural, one {# gorgée} other {# gorgées}}.",
+        "quit": "Quitter"
+      },
+      "quitRace": {
+        "title": "Abandonner la course ?",
+        "description": "Le résultat de cette course sera perdu.",
+        "confirm": "Quitter"
+      },
+      "payout": {
+        "pickFor": "À qui donne {name} ?",
+        "toGive": "{count, plural, one {# gorgée à donner} other {# gorgées à donner}}"
       }
     },
     "hi-lo": {
@@ -1684,34 +1796,26 @@
         }
       },
       "loading": "Chargement du jeu...",
-      "sipsHeader": "Gorgées : {count}",
-      "cardsPlayed": "{played}/52",
-      "restart": "Recommencer",
       "higher": "Plus haut",
       "equal": "Égalité",
       "lower": "Plus bas",
-      "correctNext": "Correct ! Prochain joueur…",
+      "correctNext": "Bien vu ! Au tour de {name}",
       "traverseeMode": "Mode Traversée",
       "traverseeGoal": "Objectif : {current}/{target} bonnes réponses",
-      "cardsPlayedLabel": "{count} jouées",
-      "cardsLeftLabel": "{count} restantes",
+      "cardsPlayedLabel": "{count, plural, one {# jouée} other {# jouées}}",
+      "cardsLeftLabel": "{count, plural, one {# restante} other {# restantes}}",
       "gameOver": {
         "congrats": "Félicitations !",
         "fiveCards": "5 cartes identiques ! Fin de la partie",
         "end": "Fin de la partie",
         "goalReached": "Vous avez atteint l'objectif de {count} bonnes réponses consécutives !",
-        "fiveSame": "5 cartes identiques ({value} {suit}) sont apparues ! Fin de la partie.",
-        "results": "Résultats:",
-        "sipsResult": "{count} gorgées"
+        "fiveSame": "La carte {value} {suit} est sortie pour la 5e fois.",
+        "results": "Résultats",
+        "sipsResult": "{count, plural, one {# gorgée} other {# gorgées}}"
       },
       "wrong": {
         "title": "Mauvaise réponse !",
-        "unguessedEqual": "Égalité non devinée !",
-        "mustDrink": "{message}",
-        "traverseeEqual": "C'est une égalité ! Tous les joueurs boivent 1 gorgée.",
-        "traverseeAllDrink": "Tous les joueurs doivent boire {count} gorgées !",
-        "streakReset": "La série de bonnes réponses repart à zéro.",
-        "nextTurn": "C'est maintenant au tour de {name}"
+        "unguessedEqual": "Égalité non annoncée !"
       },
       "compliments": [
         "Le tout puissant",
@@ -1736,9 +1840,21 @@
         "Bois pour de vrai",
         "Pas d'eau cette fois"
       ],
-      "drinkMessageDefault": "{name} doit boire {count} gorgées !",
-      "drinkMessageSpecial": "\"{compliment}\" {name} doit boire {count} gorgées !",
-      "drinkMessageDeb": "{name} doit boire {count} gorgées et {message} !"
+      "drinkMessageDefault": "{name} boit {count, plural, one {# gorgée} other {# gorgées}} !",
+      "drinkMessageSpecial": "« {compliment} » {name} boit {count, plural, one {# gorgée} other {# gorgées}} !",
+      "drinkMessageDeb": "{name} boit {count, plural, one {# gorgée} other {# gorgées}} — {message}",
+      "guessPrompt": "{name}, plus haut ou plus bas ?",
+      "stakeUnit": "{count, plural, one {gorgée} other {gorgées}}",
+      "stakeTag": "en jeu",
+      "stakeUp": "La mise monte : +{count}",
+      "traverseeExit": "{name} a trouvé l'égalité et quitte la traversée !",
+      "traverseeOut": "a quitté la traversée",
+      "nextTurnButton": "Au tour de {name}",
+      "verdict": {
+        "everyone": "Tout le monde boit {count, plural, one {# gorgée} other {# gorgées}} !",
+        "group": "{names} boivent {count, plural, one {# gorgée} other {# gorgées}} !",
+        "streakReset": "Série remise à 0"
+      }
     },
     "pyramide": {
       "title": "Pyramide",
@@ -1749,9 +1865,6 @@
         "insideOutside": "intérieur/extérieur",
         "suit": "signe"
       },
-      "preludeResult": "{name}: {card} — {result}",
-      "preludeSuccess": "Réussi ✓",
-      "preludeFail": "Raté • +{count} gorgée(s)",
       "page": {
         "gameMode": "Mode de jeu",
         "modes": {
@@ -1772,35 +1885,35 @@
         "height": "Hauteur",
         "rowsCards": "{rows} rangées · {cards} cartes",
         "rulesTitle": "Règles du jeu",
-        "rulesFun": [
-          "Retournez les cartes une par une en partant du bas.",
-          "Quand une carte est retournée, le joueur actif doit boire autant de gorgées que sa valeur.",
-          "La rangée du sommet est le CUL SEC."
-        ],
-        "rulesClassic": [
-          "Mini pré-jeu : prédictions en 4 étapes (couleur → plus/moins → intérieur/extérieur → signe).",
-          "Chaque joueur mémorise ses cartes attribuées secrètement.",
-          "La pyramide est construite sans les cartes des joueurs. Distribuez les gorgées à ceux qui ont la valeur retournée."
-        ]
+        "heightLess": "Une rangée de moins",
+        "heightMore": "Une rangée de plus",
+        "rules": {
+          "fun": {
+            "flip": "Chacun son tour retourne une carte, en partant du bas à gauche.",
+            "drink": "Celui qui retourne boit autant de gorgées que l'étage de la carte : 1 en bas, puis 2, 3…",
+            "summit": "La carte du sommet, c'est cul sec."
+          },
+          "classic": {
+            "prelude": "Pré-jeu : 4 paris chacun (couleur → plus/moins → intérieur/extérieur → signe). Une erreur coûte 1, 2, 3 puis 4 gorgées.",
+            "memorize": "Chacun reçoit des cartes en secret et les mémorise.",
+            "give": "On retourne la pyramide : qui a la valeur de la carte distribue autant de gorgées que l'étage, et un cul sec au sommet."
+          }
+        }
       },
       "game": {
-        "titleClassic": "· Classique",
-        "newGameAria": "Nouvelle partie",
-        "backAria": "Retour aux jeux",
-        "predictions": "Prédictions",
         "questions": {
-          "color": "Quelle couleur ?",
-          "higherLower": "Plus ou moins que {value} ?",
-          "insideOutside": "Intérieur ou extérieur des deux premières ?",
-          "suit": "Quel signe exactement ?"
+          "color": "{name}, rouge ou noire ?",
+          "higherLower": "{name}, plus haut ou plus bas que {value} ?",
+          "insideOutside": "{name}, entre les deux premières ou en dehors ?",
+          "suit": "{name}, quel signe ?"
         },
         "choices": {
           "red": "Rouge ♥♦",
           "black": "Noire ♠♣",
-          "higher": "↑ Plus",
-          "lower": "↓ Moins",
-          "inside": "↔ Intérieur",
-          "outside": "⟷ Extérieur",
+          "higher": "Plus haut",
+          "lower": "Plus bas",
+          "inside": "Entre les deux",
+          "outside": "En dehors",
           "hearts": "♥ Cœur",
           "diamonds": "♦ Carreau",
           "clubs": "♣ Trèfle",
@@ -1811,25 +1924,11 @@
         "mistakes": "Erreurs : {list}",
         "noMistakes": "Sans faute",
         "points": "{pts} pts",
-        "memorizationContinue": "Mémorisation →",
         "memorization": "Mémorisation",
         "seeAll": "Voir tout",
         "hideAll": "Cacher",
-        "nextPlayer": "Joueur suivant →",
-        "start": "Commencer →",
-        "landscapeHint": "Tournez votre téléphone en <strong>paysage</strong> pour une meilleure vue de la pyramide",
-        "scrollHint": "Retournez les cartes une par une • Faites défiler si besoin",
         "progressAria": "Progression : {flipped} cartes retournées sur {total}",
-        "lastCard": "Dernière :",
         "playerCards": "Cartes des joueurs",
-        "noCard": "aucune carte",
-        "next": "Suivant →",
-        "finished": "Terminé ✓",
-        "gameOverAria": "Partie terminée",
-        "flippingAria": "Retournement en cours",
-        "flipNextAria": "Retourner la prochaine carte",
-        "gameOverLive": "Partie terminée.",
-        "cardRevealedLive": "Carte retournée : {value} {suit}",
         "gameFinished": "Partie terminée !",
         "mostPoints": "Plus de points",
         "leastPoints": "Moins de points",
@@ -1839,7 +1938,36 @@
         "revealCardAria": "Révéler la carte {n}",
         "hideCardAria": "Cacher la carte {value} {suit}",
         "revealPlayerCardAria": "Révéler carte {n} de {player}",
-        "hidePlayerCardAria": "Cacher {value} {suit} de {player}"
+        "hidePlayerCardAria": "Cacher {value} {suit} de {player}",
+        "bottomsUp": "Cul sec",
+        "endRecap": "Les {cards} cartes sont retournées",
+        "flip": "Retourner la carte",
+        "flipBy": "{name}, retourne la carte",
+        "memorizationStart": "Mémorisation : {name} commence",
+        "memorizeHint": "Touche une carte pour la voir, puis cache tout avant de passer le téléphone.",
+        "memorizedPassTo": "C'est mémorisé, passe à {name}",
+        "memorizedStart": "C'est mémorisé, on lance la pyramide",
+        "preludeDone": "Pré-jeu terminé",
+        "preludePassTo": "Passe le téléphone à {name}",
+        "preludeSeeSummary": "Voir le bilan du pré-jeu",
+        "preludeStep": "Étape {n} sur 4",
+        "progress": "{flipped} / {total} cartes retournées",
+        "tallyTitle": "Qui a bu combien",
+        "verdict": {
+          "classicBottomsUp": "Si tu l'as, choisis qui boit cul sec",
+          "classicGive": "Si tu l'as, distribue {count, plural, one {# gorgée} other {# gorgées}}",
+          "classicWho": "Qui a un {rank} ?",
+          "floor": "Étage {floor} · {card}",
+          "summit": "Sommet · {card}",
+          "funBottomsUp": "{name} : cul sec !",
+          "funDrinks": "{name} boit {count, plural, one {# gorgée} other {# gorgées}}",
+          "preludeFail": "Raté : {name} boit {count, plural, one {# gorgée} other {# gorgées}}",
+          "preludeSuccess": "Bien vu, {name} ! Rien à boire",
+          "startClassic": "Retourne la première carte",
+          "startFun": "{name} ouvre le bal",
+          "startRule": "Une gorgée par étage en partant du bas, cul sec au sommet.",
+          "startRuleClassic": "Qui a la même valeur distribue une gorgée par étage, cul sec au sommet."
+        }
       }
     },
     "petits-points": {
@@ -1990,75 +2118,70 @@
         "cumulativeDesc": "Les effets multiplicateurs et +/- s'accumulent sur le tour"
       },
       "pinLabels": {
-        "multiplier": "x2",
-        "addBall": "+balle",
-        "addSip": "+1",
-        "subtractSip": "-1",
-        "cancellation": "supprime tous les effets",
-        "colorSwap": "changement de couleur",
-        "mystery": "Aléatoire",
-        "shake": "Changement de gorgée des cases",
-        "roundDrinks": "Tournée Générale",
+        "multiplier": "Gorgées ×2",
+        "addBall": "Balle en plus",
+        "addSip": "+1 gorgée",
+        "subtractSip": "−1 gorgée",
+        "cancellation": "Annulation",
+        "colorSwap": "Couleur inversée",
+        "mystery": "Mystère",
+        "shake": "Cases rebattues",
+        "roundDrinks": "Tournée générale",
         "jackpot": "Jackpot",
         "teleportation": "Téléportation",
-        "gravityFlip": "Gravité ↕",
+        "gravityFlip": "Gravité inversée",
         "slowMotion": "Ralenti",
-        "split": "Split",
-        "scoreSwap": "Swap score",
-        "doubleEffect": "x2 effet",
-        "magnetLeft": "Aimant ←",
-        "magnetRight": "Aimant →"
+        "split": "Division",
+        "scoreSwap": "Compte inversé",
+        "doubleEffect": "Effet doublé",
+        "magnetLeft": "Aimant à gauche",
+        "magnetRight": "Aimant à droite"
       },
       "pinEffects": {
-        "multiplier": "Multiplie les gorgées x2",
-        "addBall": "Lance une balle supplémentaire (même couleur)",
-        "addSip": "Ajoute +1 gorgée au résultat",
-        "subtractSip": "Retire -1 gorgée au résultat (min 0)",
-        "cancellation": "Annule tous les effets de la balle",
-        "colorSwap": "Inverse la couleur de la balle (Rouge <-> Vert)",
-        "mystery": "Déclenche un effet spécial aléatoire (?)",
-        "shake": "Mélange les valeurs des cases du bas !",
-        "roundDrinks": "Tournée Générale ! (+1 gorgée pour tous)",
-        "jackpot": "JACKPOT ! Vaut 7 gorgées fixes",
-        "teleportation": "Téléporte la balle aléatoirement tout en haut du plateau",
-        "gravityFlip": "Inverse la gravité pendant un court instant",
-        "slowMotion": "Ralentit la chute brièvement",
-        "split": "Divise la balle en deux",
-        "scoreSwap": "Inverse le comptage final (Boit/Donne)",
-        "doubleEffect": "Le prochain effet spécial se déclenche deux fois",
-        "magnetLeft": "Aimant vers la gauche temporaire",
-        "magnetRight": "Aimant vers la droite temporaire"
+        "multiplier": "Double les gorgées de la case où tombe la balle.",
+        "addBall": "Lâche une balle de plus, de la même couleur.",
+        "addSip": "Ajoute 1 gorgée au résultat de la balle.",
+        "subtractSip": "Retire 1 gorgée au résultat de la balle (jamais sous 0).",
+        "cancellation": "Efface tous les effets de la balle : seule sa case compte.",
+        "colorSwap": "La balle change aussitôt de couleur : rouge (boit) ↔ verte (donne).",
+        "mystery": "Effet surprise : une balle en plus… ou rien du tout.",
+        "shake": "Tire à nouveau au sort les gorgées des cases du bas.",
+        "roundDrinks": "Toute la table boit une gorgée en fin de partie.",
+        "jackpot": "La balle vaut 7 gorgées, quelle que soit sa case.",
+        "teleportation": "Renvoie la balle en haut du plateau, à un endroit au hasard.",
+        "gravityFlip": "Inverse la gravité un court instant : la balle remonte.",
+        "slowMotion": "Ralentit un instant la chute de la balle.",
+        "split": "Coupe la balle en deux ; la copie garde ses effets.",
+        "scoreSwap": "À l'arrivée, la balle compte à l'envers : boit ↔ donne.",
+        "doubleEffect": "Le prochain pin spécial touché par la balle agit deux fois.",
+        "magnetLeft": "Attire la balle vers la gauche un instant.",
+        "magnetRight": "Attire la balle vers la droite un instant."
       },
-      "roundDrinksBanner": "{label} — chaque joueur boit {count} gorgée(s) !",
-      "roundDrinksSingular": "Tournée Générale",
-      "roundDrinksPlural": "Tournées Générales",
+      "roundDrinksBanner": "{label} — chaque joueur boit {count, plural, one {# gorgée} other {# gorgées}} !",
+      "roundDrinksSingular": "Tournée générale",
+      "roundDrinksPlural": "Tournées générales",
       "noRoundDrinks": "Aucune tournée générale cette partie.",
       "game": {
-        "yourTurn": "Au tour de",
         "drinks": "Boit",
         "gives": "Donne",
         "roundDrinksShort": "Tournée",
-        "launch": "Lâcher les balles",
         "inGame": "En chute…",
-        "nextTurn": "Tour suivant",
         "next": "suivant",
         "specialPins": "Pins spéciaux",
         "results": {
-          "roundDrinksPhase": "Tournées Générales",
-          "detailsPhase": "Détails des Tours",
-          "finalPhase": "Résultats Finaux",
-          "seeDetails": "Voir les détails →",
-          "seeResults": "Voir les résultats →",
+          "roundDrinksPhase": "Tournées générales",
+          "detailsPhase": "Détail des tours",
+          "finalPhase": "Résultats finaux",
+          "seeDetails": "Voir les détails",
+          "seeResults": "Voir les résultats",
           "turn": "Tour {n}",
-          "previous": "← Précédent",
-          "nextPlayer": "Suivant →",
-          "totals": "Totaux →",
-          "newGame": "Nouvelle partie",
+          "previous": "Joueur précédent",
+          "nextPlayer": "Suivant",
+          "totals": "Totaux",
           "back": "Retour",
-          "roundDrinksAll": "🥂 {count} Tournée(s) Générale(s) — tout le monde boit !",
+          "roundDrinksAll": "🥂 {count, plural, one {# tournée générale} other {# tournées générales}} — tout le monde boit !",
           "seeAllHint": "Parcourez tous les joueurs pour afficher les totaux"
         },
-        "turnLabel": "Au tour de",
         "nextUp": "Ensuite",
         "live": {
           "effectsLabel": "Effets touchés par les balles ce tour",
@@ -2091,13 +2214,28 @@
             "magnetLeft": "Aimant",
             "magnetRight": "Aimant"
           }
+        },
+        "launchFor": "{name}, lâche les balles",
+        "progress": "Lancer {n} sur {total}",
+        "allPlayed": "Tout le monde a lancé : place aux résultats !",
+        "turnRoundDrinks": "{count, plural, one {+# tournée générale} other {+# tournées générales}} pour toute la table",
+        "quitConfirm": {
+          "title": "Quitter la partie ?",
+          "description": "Les lancers déjà joués et leurs gorgées seront perdus.",
+          "confirm": "Quitter",
+          "cancel": "Continuer la partie"
+        },
+        "pinFamilies": {
+          "sips": "Gorgées",
+          "path": "Trajectoire",
+          "balls": "Balles",
+          "table": "Table"
         }
       },
       "a11y": {
-        "turnResult": "Résultat : {drinks} gorgées à boire, {gives} à donner.",
+        "turnResult": "{name} : {drinks, plural, one {# gorgée} other {# gorgées}} à boire, {gives} à donner.",
         "roundDrinks": "Tournée générale !",
-        "mute": "Couper le son",
-        "unmute": "Activer le son"
+        "mute": "Couper le son"
       }
     },
     "trial-poursuite": {
@@ -2402,19 +2540,16 @@
         "powerupsHint": "Chaque joueur reçoit une bombe à usage unique : un tir qui touche un carré de 4 cases."
       },
       "game": {
-        "title": "Toucher-Coulé",
         "placementTitle": "Place tes bateaux",
-        "placementHint": "Choisis un bateau puis touche la grille pour le poser.",
+        "placementHint": "Choisis un bateau, puis touche sa case de départ : s'il dépasse du bord, il se recale tout seul. Touche un bateau posé pour le reprendre.",
         "shipLabel": "{size} cases",
-        "horizontal": "↔ Horizontal",
-        "vertical": "↕ Vertical",
-        "random": "🎲 Aléatoire",
+        "horizontal": "Horizontal",
+        "vertical": "Vertical",
+        "random": "Aléatoire",
         "clear": "Effacer",
         "confirmPlacement": "Valider mes bateaux",
         "waitingPlacement": "En attente des autres joueurs…",
         "placedCount": "{placed}/{total} joueurs prêts",
-        "yourTurn": "À toi de tirer !",
-        "turnOf": "Au tour de {name}",
         "hitReplay": "Touché = tu rejoues !",
         "enemyWaters": "Eaux ennemies",
         "yourFleet": "Ta flotte",
@@ -2434,9 +2569,6 @@
         "statAccuracy": "Précision",
         "statDrinks": "Gorgées",
         "finalBoard": "Tableau final",
-        "replay": "Rejouer",
-        "rematchWaiting": "En attente des autres ({count}/{total})",
-        "backToMenu": "Retour au menu",
         "leave": "Quitter",
         "legendShip": "Bateau allié",
         "legendHit": "Touché",
@@ -2444,7 +2576,43 @@
         "legendSunk": "Coulé",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
-        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot"
+        "afkWarningSelf": "À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
+        "phasePlacement": "Placement de la flotte",
+        "phaseBattle": "Bataille navale",
+        "boardInfo": "{mode} · grille {size} × {size}",
+        "leaveConfirm": {
+          "title": "Quitter la partie ?",
+          "description": "Ton équipe continue sans toi : un bot prend ta place si tu n'es pas revenu dans {minutes} min.",
+          "confirm": "Quitter la partie",
+          "cancel": "Rester"
+        },
+        "turnHintMate": "Ton équipe vise les eaux ennemies.",
+        "turnHintEnemy": "L'équipe adverse tire sur ta flotte.",
+        "aimPrompt": "Touche une case des eaux ennemies pour viser.",
+        "aimTarget": "Cible : {cell}",
+        "bombZone": "Zone de la bombe : de {from} à {to}",
+        "fireAt": "Tirer en {cell}",
+        "bombAt": "Bombe en {cell}",
+        "pickCell": "Vise une case",
+        "firing": "Tir en cours…",
+        "tapAlreadyShot": "Case déjà jouée : vise une case vierge.",
+        "bombNoFit": "La bombe ne tient pas ici : vise le coin haut-gauche d'un carré libre de 2 × 2.",
+        "shipOverlap": "Ce bateau en chevauche un autre : choisis une autre case ou tourne-le.",
+        "allShipsPlaced": "Tous tes bateaux sont posés : touche-en un pour le déplacer, ou valide.",
+        "shipLifted": "Bateau repris : touche la grille pour le reposer.",
+        "shipClash": "Un coéquipier a posé un bateau au même endroit : déplace le tien (en rouge).",
+        "actionRaced": "La table a bougé au même moment : réessaie.",
+        "shipsPlacedCount": "{placed}/{total} bateaux posés",
+        "shipPlacedSr": "(posé)",
+        "orientationAria": "Orientation du bateau : {orientation}. Touche pour la changer.",
+        "boardScrollHint": "Fais glisser la grille pour voir toutes les colonnes.",
+        "legendMate": "Bateau d'un coéquipier",
+        "yourTeam": "Ton équipe",
+        "you": "(toi)",
+        "legendMine": "Ton bateau",
+        "playerReadySr": "flotte en place",
+        "playerPlacingSr": "place encore sa flotte",
+        "playerLeftSr": "a quitté la partie"
       },
       "tutorial": {
         "steps": [
@@ -2492,7 +2660,6 @@
         "pillaveurHint": "Les 1 « Pillaveurs » sont jokers : ils comptent pour toutes les faces.",
         "palificoBadge": "🔒 Manche Palifico : plus de jokers, face verrouillée sur {face}",
         "palificoBadgeOpen": "🔒 Manche Palifico : plus de jokers, la première enchère fixe la face",
-        "yourTurn": "À toi : surenchéris ou crie MENTEUR !",
         "turnOf": "Au tour de {name}…",
         "yourDice": "Tes dés",
         "hideDice": "Cacher mes dés",
@@ -2620,7 +2787,25 @@
           "germaine": "…et que ça saute !",
           "bricole": "…ça devrait tenir."
         },
-        "hiddenBluffs": "{count, plural, one {+ # enchère « sans un seul » plus tôt} other {+ # enchères « sans un seul » plus tôt}}"
+        "hiddenBluffs": "{count, plural, one {+ # enchère « sans un seul » plus tôt} other {+ # enchères « sans un seul » plus tôt}}",
+        "phaseBidding": "Enchères",
+        "turnHint": "Surenchéris sur {qty} × {face} ou crie MENTEUR !",
+        "turnHintOpen": "Annonce la première enchère de la manche",
+        "bidAria": "Enchérir : {qty, plural, one {# dé} other {# dés}} de {face}",
+        "qtyLabel": "Quantité",
+        "qtyLess": "Diminuer la quantité",
+        "qtyMore": "Augmenter la quantité",
+        "facesLabel": "Face annoncée",
+        "faceAria": "Face {face}",
+        "confirmDudo": {
+          "title": "Crier « Menteur ! » ?",
+          "description": "Tu paries que l’enchère de {name} ({qty} × {face}) ne tient pas. Les gobelets se lèvent : qui a tort perd un dé."
+        },
+        "confirmCalza": {
+          "title": "Tenter « Calza ! » ?",
+          "description": "Tu paries qu’il y a pile {qty} × {face} sur la table. Juste : tu regagnes un dé. Raté : tu en perds un."
+        },
+        "diceLeft": "{count, plural, one {# dé restant} other {# dés restants}}"
       },
       "tutorial": {
         "steps": [
@@ -2668,9 +2853,8 @@
         "wordHint": "Décris-le sans le dire — l'imposteur a un mot différent…",
         "hideWord": "Cacher mon mot",
         "showWord": "Voir mon mot",
-        "eliminatedYou": "Éliminé — spectateur 👻",
+        "eliminatedYou": "Éliminé — spectateur",
         "cluesTitle": "Indices — manche {n}",
-        "yourTurnClue": "À toi : donne UN indice sur ton mot !",
         "turnOf": "{name} réfléchit à son indice…",
         "pastClues": "Manches précédentes",
         "cluePlaceholder": "Ton indice (un mot, une idée…)",
@@ -2705,7 +2889,7 @@
         },
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
-        "afkWarningSelf": "⚠️ À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
+        "afkWarningSelf": "À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "Mémorise ton mot secret — les indices arrivent…"
@@ -2801,7 +2985,23 @@
           "lucien": "…tranquille.",
           "germaine": "…et que ça saute !",
           "bricole": "…ça devrait tenir."
-        }
+        },
+        "phaseHeader": {
+          "clue": "Tour des indices",
+          "vote": "Vote : qui est l'imposteur ?",
+          "reveal": "Résultat du vote"
+        },
+        "clueProgress": "{n}/{total} indices donnés",
+        "clueHintMine": "Écris UN indice sur ton mot dans la barre en bas.",
+        "clueSendShort": "Envoyer",
+        "voteProgress": "{n}/{total} ont voté",
+        "votedStatus": "Vote envoyé · {n}/{total} ont voté",
+        "votePickHint": "Touche un nom, puis valide en bas. Le vote est secret et définitif.",
+        "voteFor": "Voter contre {name}",
+        "votePickFirst": "Choisis un suspect",
+        "voteChange": "Changer",
+        "accusations": "{count, plural, one {# accusation} other {# accusations}}",
+        "hasVotedMeta": "a voté"
       },
       "tutorial": {
         "steps": [
@@ -2849,7 +3049,12 @@
         "reveal": {
           "realAnswer": "La vraie réponse : « {answer} »",
           "continue": "Manche suivante",
-          "seeResult": "Voir le résultat"
+          "seeResult": "Voir le résultat",
+          "realTag": "La vraie réponse",
+          "bluffBy": "Bluff de {name}",
+          "votedBy": "Choisie par {names}",
+          "noVotes": "Personne ne l'a choisie",
+          "pointsTitle": "Points de la manche"
         },
         "victory": {
           "winnerIs": "{name} remporte la partie !",
@@ -2863,7 +3068,21 @@
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "Première question dans quelques secondes…"
-        }
+        },
+        "phaseTitle": {
+          "submit": "Invente ton bluff",
+          "vote": "Trouve la vraie réponse",
+          "reveal": "Révélation des réponses"
+        },
+        "submitProgress": "Bluffs reçus : {count}/{total}",
+        "voteProgress": "Votes reçus : {count}/{total}",
+        "votePickHint": "Touche la réponse que tu crois vraie, puis valide en bas.",
+        "voteConfirm": "Valider mon vote",
+        "votePickFirst": "Choisis une réponse",
+        "yourVote": "Ton vote",
+        "yourFake": "Ton bluff",
+        "myFakeLabel": "Ton bluff est envoyé",
+        "quoted": "« {text} »"
       },
       "tutorial": {
         "steps": [
@@ -2899,11 +3118,10 @@
         "rounds": "manches"
       },
       "game": {
-        "score": "Espion {spy} · Équipe {crew}",
         "phaseDiscussion": "Discussion",
         "yourLocation": "Le lieu",
-        "youAreSpy": "Tu es l'ESPION 🕵️",
-        "spyHint": "Personne ne sait où vous êtes — pose des questions pour deviner sans te faire démasquer !",
+        "youAreSpy": "Tu es l’espion",
+        "spyHint": "Tu ne connais pas le lieu : écoute, questionne et devine-le sans te faire démasquer.",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "accuseButton": "J'accuse quelqu'un !",
         "accuseWho": "Qui accuses-tu ?",
@@ -2919,7 +3137,10 @@
           "declineButton": "Je ne suis pas d’accord",
           "declined": "Refus enregistré — tu ne suis pas.",
           "for": "Pour",
-          "against": "Contre"
+          "against": "Contre",
+          "confirmTitle": "Soutenir l’accusation contre {target} ?",
+          "confirmBody": "Si la majorité suit, la manche se joue sur ce nom : l’équipe gagne si c’est l’espion, sinon l’espion s’échappe.",
+          "confirm": "Je soutiens"
         },
         "reveal": {
           "location": "Le lieu était : {location}",
@@ -3099,10 +3320,9 @@
           }
         },
         "feedAria": "Fil des échanges",
-        "accusedYou": "⚡ C’est toi qu’on vise !",
+        "accusedYou": "C’est toi qu’on vise !",
         "askedYou": "{name} te demande :",
         "askButton": "Poser une question",
-        "yourTurnToAsk": "À toi de poser une question !",
         "askWho": "À qui la poses-tu ?",
         "askWhich": "Quelle question pour {name} ?",
         "asksLeft": "Questions restantes : {n}/{max}",
@@ -3118,9 +3338,11 @@
         },
         "guess": {
           "strikeHint": "Touche un lieu pour le rayer.",
-          "pickHint": "Touche le lieu que tu devines : un seul essai !",
+          "pickHint": "Choisis le lieu, puis valide en bas : un seul essai !",
           "toGuess": "Je devine le lieu",
-          "toStrike": "Revenir aux ratures"
+          "toStrike": "Revenir aux ratures",
+          "confirm": "Valider : {location}",
+          "pickFirst": "Choisis un lieu"
         },
         "botSay": {
           "question": "{name}, {question}",
@@ -3221,6 +3443,24 @@
           "lucien": "…tranquille.",
           "germaine": "…et que ça saute !",
           "bricole": "…ça devrait tenir."
+        },
+        "roundScore": "Manche {n} · Espion {spy} – Équipe {crew}",
+        "phaseAccusation": "Accusation en cours",
+        "unknownLocation": "? ? ?",
+        "crewRole": "Tu es dans l’équipe",
+        "crewHint": "Réponds juste assez pour prouver que tu connais le lieu, sans le trahir.",
+        "hideRole": "Masquer ma carte",
+        "showRole": "Afficher ma carte",
+        "accusePick": "Choisis un suspect",
+        "accuseConfirm": "Accuser {name}",
+        "askNoBack": "vient de t’interroger",
+        "playerLeft": "a quitté la table",
+        "turn": {
+          "answerMine": "Réponds à {name}",
+          "answerOther": "Répond à {name}",
+          "askMine": "Pose ta question à qui tu veux",
+          "askOther": "Choisit qui interroger",
+          "open": "Chacun peut poser la prochaine question"
         }
       },
       "tutorial": {
@@ -3271,7 +3511,7 @@
         "passButton": "Passer",
         "foundButton": "TROUVÉ !",
         "tabooButton": "TABOU !",
-        "teammateHint": "{name} décrit un mot à voix haute — clique dès que ton équipe trouve !",
+        "teammateHint": "{name} décrit un mot à voix haute : touche TROUVÉ dès que ton équipe le trouve !",
         "opponentHint": "Écoute bien : si {name} prononce un mot interdit, {genre, select, f {dénonce-la} m {dénonce-le} other {crie au tabou}} !",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "roundEnd": {
@@ -3281,7 +3521,12 @@
           "passed": "passés",
           "taboo": "tabous",
           "continue": "Manche suivante",
-          "seeResult": "Voir le résultat"
+          "seeResult": "Voir le résultat",
+          "wordWasLabel": "Le dernier mot était",
+          "nextHintMine": "Tu décris la prochaine manche : prépare-toi !",
+          "nextHint": "Décrit la prochaine manche.",
+          "startMyRound": "Lancer ma manche",
+          "startRoundOf": "Lancer la manche de {name}"
         },
         "victory": {
           "teamAWin": "L'équipe A remporte la partie !",
@@ -3293,7 +3538,17 @@
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "La première manche commence…"
-        }
+        },
+        "roundLabel": "Manche {n} · objectif {target} points",
+        "phaseDescribingTitle": "Description en cours",
+        "describerHint": "Fais deviner le mot à ton équipe sans dire un seul mot interdit.",
+        "theirWord": "Le mot de {name}",
+        "watchWords": "Guette ces mots interdits",
+        "teammateSecret": "Le mot est caché pour ton équipe : écoute et propose à voix haute !",
+        "yourTeam": "Ton équipe",
+        "you": "(toi)",
+        "describerTag": "décrit",
+        "leftTag": "hors ligne"
       },
       "tutorial": {
         "steps": [
@@ -3307,14 +3562,14 @@
           },
           {
             "title": "L'équipe adverse surveille",
-            "body": "Si le décrivant prononce un mot tabou, un adversaire qui l'entend clique TABOU ! — le mot passe, sans point pour personne."
+            "body": "L'équipe adverse voit le mot et ses tabous : si le décrivant en prononce un, un adversaire touche TABOU ! — le mot passe, sans point pour personne."
           }
         ]
       },
       "about": {
-        "p1": "Deux équipes, A et B, et un décrivant qui change à chaque manche, chaque joueur à son tour. Lui seul voit sur son téléphone le mot à faire deviner et ses quatre mots tabous, interdits de séjour dans sa bouche. Il décrit à voix haute, au chat vocal, pendant que son équipe mitraille les propositions.",
+        "p1": "Deux équipes, A et B, et un décrivant qui change à chaque manche, chaque joueur à son tour. Il voit sur son téléphone le mot à faire deviner et ses quatre mots tabous, interdits de séjour dans sa bouche ; l'équipe adverse les voit aussi, son équipe jamais. Il décrit à voix haute, au chat vocal, pendant que son équipe mitraille les propositions.",
         "p2": "Une manche dure 60 secondes et plusieurs mots y défilent : un coéquipier touche TROUVÉ, +1 point pour l'équipe et le mot suivant arrive aussitôt ; le décrivant peut passer un mot trop dur, sans point ; un adversaire qui entend un mot tabou touche TABOU, et le mot saute sans point pour personne. Le bilan dévoile le dernier mot et le compte de la manche. La première équipe au score cible gagne : 15, 20 ou 25, au choix de l'hôte.",
-        "p3": "Les adversaires n'ont pas la carte sous les yeux : ils écoutent, et c'est le fair-play de la table qui arbitre. Décris par l'usage quand la définition est taboue, et passe vite ce qui bloque, le chrono est le vrai adversaire. Quatre joueurs minimum, deux par équipe, jusqu'à seize. Pas de bots pour lancer la partie : un bot ne décrit rien, il ne remplace qu'un joueur parti. Les mots existent en quatre langues. Le jeu ne compte aucune gorgée, seulement les points."
+        "p3": "Les adversaires ont la carte sous les yeux : ils écoutent et guettent le moindre mot interdit, et c'est le fair-play de la table qui arbitre. Décris par l'usage quand la définition est taboue, et passe vite ce qui bloque, le chrono est le vrai adversaire. Quatre joueurs minimum, deux par équipe, jusqu'à seize. Pas de bots pour lancer la partie : un bot ne décrit rien, il ne remplace qu'un joueur parti. Les mots existent en quatre langues. Le jeu ne compte aucune gorgée, seulement les points."
       }
     },
     "crobard": {
@@ -3339,14 +3594,16 @@
         },
         "choosing": {
           "pickWord": "Choisis un mot à dessiner",
-          "waitingFor": "{name} choisit un mot…",
-          "waitingForName": "<b>{name}</b> choisit un mot…"
+          "waitingForName": "<b>{name}</b> choisit un mot…",
+          "getReady": "Prépare-toi à deviner !",
+          "autoPick": "Sans choix à temps, le premier mot est pris"
         },
         "roundEnd": {
           "title": "Bilan de la manche",
           "wordWas": "Le mot était : {word}",
           "continue": "Manche suivante",
-          "seeResult": "Voir le résultat"
+          "seeResult": "Voir le résultat",
+          "wordLabel": "Le mot était"
         },
         "victory": {
           "title": "{name} remporte la partie !",
@@ -3358,7 +3615,21 @@
           "title": "Préparez-vous !",
           "hint": "La première manche commence…"
         },
-        "drawerIs": "<b>{name}</b> dessine"
+        "drawerIs": "<b>{name}</b> dessine",
+        "phase": {
+          "choosing": "Choix du mot",
+          "drawing": "Dessin en cours"
+        },
+        "botDrawer": "Les bots ne dessinent pas : manche écourtée",
+        "drawing": {
+          "guessHint": "Devine le mot dessiné"
+        },
+        "guessLabel": "Ta proposition",
+        "players": {
+          "drawing": "dessine",
+          "found": "a trouvé",
+          "away": "hors ligne"
+        }
       },
       "tutorial": {
         "steps": [
@@ -3405,7 +3676,15 @@
           "previousChain": "Chaîne précédente",
           "nextChain": "Chaîne suivante",
           "finish": "Voir la fin",
-          "waitingLeader": "{name} fait défiler les chaînes pour tout le monde…"
+          "waitingLeader": "{name} dévoile la suite pour tout le monde…",
+          "nextLink": "Dévoiler la suite",
+          "progress": "{current, plural, one {# maillon dévoilé} other {# maillons dévoilés}} sur {total}",
+          "leaderHint": "C'est toi qui dévoiles : attends que tout le monde ait vu.",
+          "linkCounter": "{current}/{total}",
+          "finishConfirm": {
+            "title": "Passer à l'écran de fin ?",
+            "description": "Toute la table quitte les chaînes, et on ne pourra plus les revoir."
+          }
         },
         "victory": {
           "title": "Toutes les chaînes sont révélées !",
@@ -3421,6 +3700,22 @@
           "writing": "Chacun écrit sa phrase de départ",
           "drawing": "Chacun dessine la phrase reçue",
           "guessing": "Chacun devine le dessin reçu"
+        },
+        "phase": {
+          "write": "Phrase de départ",
+          "draw": "Dessin",
+          "guess": "Devinette"
+        },
+        "writeHint": "Une scène, un proverbe, une idée farfelue : quelqu'un devra la dessiner.",
+        "sentTitle": "C'est envoyé !",
+        "sentStatus": "Envoyé · {count}/{total} ont soumis",
+        "sendShort": "Envoyer",
+        "sendPhrase": "Envoyer ma phrase",
+        "playersLabel": "Où en est chacun",
+        "player": {
+          "done": "a rendu son maillon",
+          "pending": "n'a pas encore rendu",
+          "left": "a quitté la partie"
         }
       },
       "tutorial": {
@@ -3441,7 +3736,7 @@
       },
       "about": {
         "p1": "Le téléphone arabe version dessin. Chaque joueur démarre une chaîne avec une phrase de son cru, puis les chaînes circulent de téléphone en téléphone en alternant : tu dessines la phrase reçue, le suivant décrit ton dessin, le suivant dessine sa description… jusqu'à ce que chaque chaîne ait fait le tour de la table. À l'arrivée, plus personne ne reconnaît rien.",
-        "p2": "Soixante secondes pour écrire ta phrase de départ, quatre-vingts pour dessiner, sans texte, puis tu décris ce que tu vois sur le dessin reçu, et on alterne, autant d'étapes que de joueurs. Vient la révélation, LE moment du jeu : chaque chaîne est rejouée du début à la fin. Un meneur fait défiler, et si personne ne touche à rien, la suivante s'affiche au bout de 45 secondes.",
+        "p2": "Soixante secondes pour écrire ta phrase de départ, quatre-vingts pour dessiner, sans texte, puis tu décris ce que tu vois sur le dessin reçu, et on alterne, autant d'étapes que de joueurs. Vient la révélation, LE moment du jeu : chaque chaîne est rejouée du début à la fin, maillon par maillon. Un meneur dévoile la suite pour toute la table et peut revenir à la chaîne précédente ; si personne ne touche à rien, le maillon suivant arrive au bout de 15 secondes, et la chaîne suivante 45 secondes après la chute.",
         "p3": "Officiellement, personne ne gagne ; officieusement, celui dont la chaîne a le plus dérapé a gagné la soirée. Une bonne phrase de départ, c'est une action et un sujet inattendu, « un pingouin braque une boulangerie » ; dessine l'action, pas seulement les personnages, et décris ce que tu vois, pas ce que tu supposes. Pas de bots, chaque maillon est un humain. Aucune gorgée, seulement des fous rires."
       }
     },
@@ -3508,7 +3803,7 @@
       },
       "wheel": {
         "safe": "SAFE",
-        "sips": "{count} gorgées",
+        "sips": "{count, plural, one {# gorgée} other {# gorgées}}",
         "winner": "Gagnant",
         "loser": "Perdant"
       },
@@ -3553,9 +3848,7 @@
         "pile-face": "Pile ou face"
       },
       "online": {
-        "title": "Petit Buveur — En ligne",
         "turn": "Tour {count}",
-        "leave": "Quitter",
         "dice": "Dé",
         "caseLabel": "Case",
         "rollDice": "Lancer le dé",
@@ -3604,7 +3897,17 @@
         "verdictWaiting": "{name} juge si {target} a relevé le défi…",
         "sideWaiting": "{name} choisit pile ou face… ({seconds} s)",
         "sidePrompt": "{actor} lance la pièce pour toi : choisis ton côté !",
-        "secondsLeft": "{seconds} s restantes"
+        "secondsLeft": "{seconds} s restantes",
+        "menu": {
+          "title": "Menu de la partie",
+          "leave": "Quitter la partie"
+        },
+        "leaveConfirm": {
+          "title": "Quitter la partie ?",
+          "description": "Ta place reste libre 3 minutes : passé ce délai, un bot joue à ta place.",
+          "confirm": "Quitter",
+          "cancel": "Rester"
+        }
       },
       "defis": [
         {
@@ -3850,10 +4153,8 @@
       },
       "game": {
         "title": "Le Petit Buveur",
-        "back": "Retour",
         "turn": "Tour {count}",
         "turnOf": "Au tour de",
-        "turnShort": "Au tour",
         "ranking": "Classement",
         "caseLabel": "Case {number}",
         "loading": "Chargement de la partie…",
@@ -3865,12 +4166,11 @@
         "replay": "Rejouer",
         "rollDice": "Lancer le dé",
         "rolling": "Lancement…",
-        "validateEffect": "Validez l'effet…",
         "actionInProgress": "Action en cours…",
         "effectTitle": "Effet de la case",
         "challengeQuestion": "Le joueur a-t-il relevé le défi ?",
         "challengeSuccess": "Défi réussi",
-        "challengeDrink": "A bu {count} gorgée(s)",
+        "challengeDrink": "{count, plural, one {A bu # gorgée} other {A bu # gorgées}}",
         "finalRanking": "Classement final",
         "backToMenu": "Retour au menu",
         "victory": {
@@ -3887,8 +4187,7 @@
           "me": "Moi —"
         },
         "history": {
-          "title": "Action précédente",
-          "selfTarget": "(soi / aucune cible)"
+          "title": "Action précédente"
         },
         "duel": {
           "title": "Duel sur la case",
@@ -4096,9 +4395,12 @@
         "soundOn": "Activer le son",
         "soundOff": "Couper le son",
         "tapToSkip": "Toucher pour passer",
-        "turnActions": "Actions de tour",
         "defaultPlayerName": "Joueur {number}",
-        "notEnoughPlayers": "Il faut au moins 2 joueurs pour commencer une partie !"
+        "notEnoughPlayers": "Il faut au moins 2 joueurs pour commencer une partie !",
+        "rollDiceFor": "{name}, lance le dé",
+        "verdict": {
+          "drinks": "{count, plural, one {boit # gorgée} other {boit # gorgées}}"
+        }
       },
       "tutorial": {
         "steps": [
@@ -4152,7 +4454,7 @@
           "lost": "Tirage : {result} — la cible perd et prend un gage."
         },
         "wheel": {
-          "sips": "{count} gages"
+          "sips": "{count, plural, one {# gage} other {# gages}}"
         },
         "defiWheelChallenge": "Tu prends 2 gages",
         "defis": [
@@ -4167,7 +4469,7 @@
         ],
         "game": {
           "drinksShort": "{count} gage(s)",
-          "challengeDrink": "A pris {count} gage(s)",
+          "challengeDrink": "{count, plural, one {A pris # gage} other {A pris # gages}}",
           "wheel": {
             "drinks": "Roue des gages"
           },
@@ -4224,6 +4526,9 @@
               "Gage géant !",
               "Allez, on y va !"
             ]
+          },
+          "verdict": {
+            "drinks": "{count, plural, one {prend # gage} other {prend # gages}}"
           }
         },
         "online": {
@@ -4267,11 +4572,11 @@
           "fete": "Le monde de la fête"
         },
         "answerPrompt": "Réponds vite : plus tu es rapide, plus tu marques !",
-        "answerSent": "Réponse envoyée — on attend les autres… ⚡",
+        "answerSent": "Réponse envoyée — on attend les autres…",
         "correct": "Bonne réponse : +{points} points !",
         "wrong": "Raté… {sips} gorgées 🍺",
         "wrongSoft": "Raté…",
-        "skipReveal": "Question suivante →",
+        "skipReveal": "Question suivante",
         "victoryTitle": "{name} remporte le quiz !",
         "lastDrinks": "{name} finit son verre 🍻",
         "replay": "Rejouer",
@@ -4280,7 +4585,20 @@
         "countdown": {
           "title": "Préparez-vous !",
           "hint": "La première question arrive…"
-        }
+        },
+        "scorePoints": "{count, plural, one {# pt} other {# pts}}",
+        "streak": "{count} bonnes réponses d’affilée",
+        "phase": {
+          "reveal": "La bonne réponse"
+        },
+        "answersCount": "Réponses : {count}/{total}",
+        "hasAnswered": "a répondu",
+        "yourChoice": "Ton choix",
+        "rightAnswer": "Bonne réponse",
+        "missed": "mauvaise réponse",
+        "noAnswer": "pas de réponse",
+        "liveRanking": "Classement",
+        "skipToPodium": "Voir le podium"
       },
       "tutorial": {
         "steps": [
@@ -4331,11 +4649,11 @@
           "night-guard": "Le salvateur veille…",
           "night-raven": "Le corbeau plane…"
         },
-        "ghostBanner": "👻 Tu es un fantôme : tu vois TOUT… mais chuuut, pas un mot au vocal !",
+        "ghostBanner": "Tu es un fantôme : tu vois TOUT… mais chuuut, pas un mot au vocal !",
         "yourRole": "Ton rôle secret",
         "hideRole": "Cacher mon rôle",
         "showRole": "Voir mon rôle",
-        "accomplices": "Tes complices",
+        "accomplices": "Tes complices : {names}",
         "you": "(toi)",
         "roles": {
           "loup": {
@@ -4373,36 +4691,34 @@
         },
         "revealPrompt": "Mémorise ton rôle !",
         "revealHint": "La nuit tombe dans quelques secondes…",
-        "mayorPrompt": "🎖️ Qui élisez-vous maire ? Son vote comptera double au lynchage.",
+        "mayorPrompt": "Qui élisez-vous maire ? Son vote comptera double au lynchage.",
         "mayorVoted": "Vote enregistré — on attend les autres…",
         "mayorBadge": "{genre, select, f {Maire} m {Maire} other {Maire}} — son vote compte double au lynchage",
-        "youAreMayor": "🎖️ Tu es le maire ! Ton vote compte double au lynchage.",
-        "mayorBanner": "🎖️ {name} {genre, select, f {est la maire} m {est le maire} other {est maire}} — son vote compte double au lynchage.",
+        "youAreMayor": "Tu es le maire ! Ton vote compte double au lynchage.",
+        "mayorBanner": "{name} {genre, select, f {est la maire} m {est le maire} other {est maire}} — son vote compte double au lynchage.",
         "wolfChatTitle": "Chat des loups (privé)",
-        "seerPrompt": "🔮 Qui veux-tu sonder cette nuit ?",
+        "seerPrompt": "Qui veux-tu sonder cette nuit ?",
         "seerDone": "Vision reçue — le village dort encore…",
         "seerResult": "{name} est du camp {team} !",
         "teamLoups": "des LOUPS 🐺",
         "teamVillage": "du village 🧑‍🌾",
-        "wolfPrompt": "🐺 Choisissez votre proie (modifiable jusqu’à la fin)",
-        "wolfPack": "La meute",
-        "witchVictim": "🧪 Les loups ont attaqué {name}…",
-        "witchNoVictim": "🧪 Les loups n’ont mordu personne cette nuit.",
+        "wolfPrompt": "Choisissez votre proie (modifiable jusqu’à la fin)",
+        "wolfPack": "La meute : {votes}",
+        "witchVictim": "Les loups ont attaqué {name}…",
+        "witchNoVictim": "Les loups n’ont mordu personne cette nuit.",
         "witchDone": "Choix scellé — la nuit suit son cours…",
         "witchKillPrompt": "Qui empoisonner ?",
-        "witchCancel": "Annuler",
         "witchSave": "Sauver {name} (potion de vie)",
         "witchKill": "Potion de mort…",
         "witchNone": "Ne rien faire",
         "dawnNobody": "Personne n’est mort cette nuit ! 🎉",
         "dawnDeath": "💀 {name} {genre, select, f {est morte} m {est mort} other {n’a pas survécu à la nuit}} — c’était {role} (+3 🍺)",
         "dawnDeathSoft": "💀 {name} {genre, select, f {est morte} m {est mort} other {n’a pas survécu à la nuit}} — c’était {role}",
-        "hunterPrompt": "🏹 Dernier souffle : emporte quelqu’un !",
+        "hunterPrompt": "Dernier souffle : emporte quelqu’un !",
         "hunterWaiting": "{name} {genre, select, f {arme son fusil} m {arme son fusil} other {arme son fusil}}…",
-        "debatePrompt": "🗣️ Débat : qui est le loup ?",
+        "debatePrompt": "Débat : qui est le loup ?",
         "debateHint": "Accuse, défends-toi, fais équipe — ou au vocal.",
         "speakAccuse": "Accuser",
-        "speakDefend": "Me défendre",
         "speakAlly": "Faire équipe",
         "speakPickAccuse": "Qui accuses-tu ?",
         "speakPickAlly": "Avec qui fais-tu équipe ?",
@@ -4417,8 +4733,8 @@
         "revotePrompt": "Égalité ! Départagez les ex-aequo.",
         "voted": "Vote scellé — on attend les autres…",
         "spectatorVote": "Les vivants votent…",
-        "voteBanner": "⚖️ {genre, select, f {{name} a été lynchée} m {{name} a été lynché} other {Le village a lynché {name}}} — c’était {role}",
-        "voteTieBanner": "⚖️ Égalité au vote — personne n’est sorti",
+        "voteBanner": "{genre, select, f {{name} a été lynchée} m {{name} a été lynché} other {Le village a lynché {name}}} — c’était {role}",
+        "voteTieBanner": "Égalité au vote — personne n’est sorti",
         "village": "Le village ({alive}/{total} vivants)",
         "victory": {
           "village": "Le village a gagné !",
@@ -4430,7 +4746,7 @@
           "rematchWaiting": "En attente des autres ({count}/{total})",
           "backToMenu": "Retour au menu"
         },
-        "sleep": "🌙 Le village dort…",
+        "sleep": "Le village dort…",
         "sleepHint": "Certains rêvent, d’autres complotent…",
         "botSay": {
           "suspect": "Je trouve {name} louche… {target, select, f {elle nous cache un truc} m {il nous cache un truc} other {y a un truc qui cloche}} 🤨",
@@ -4520,17 +4836,40 @@
           "hint": "La composition change à chaque village : Sorcière, Chasseur, Salvateur, Corbeau et Ancien tournent d’une partie à l’autre. Le nombre de loups dépend de la taille de la table (1 à 4-5, 2 à 6-10, 3 à 11-12)."
         },
         "guardPrompt": "Qui protèges-tu des loups cette nuit ?",
-        "guardDone": "Tu veilles sur {name} cette nuit. 🛡️",
+        "guardDone": "Tu veilles sur {name} cette nuit.",
         "guardForbidden": "Interdit : {name} ({genre, select, f {déjà protégée} m {déjà protégé} other {déjà sous ta garde}} la nuit dernière).",
         "ravenPrompt": "Qui marques-tu de ta plume noire ?",
-        "ravenDone": "Ta marque pèse sur {name}. 🐦‍⬛",
-        "ravenMarkBanner": "🐦‍⬛ {name} porte la marque du Corbeau : +2 voix {genre, select, f {contre elle} m {contre lui} other {à son encontre}} au vote !",
+        "ravenDone": "Ta marque pèse sur {name}.",
+        "ravenMarkBanner": "{name} porte la marque du Corbeau : +2 voix {genre, select, f {contre elle} m {contre lui} other {à son encontre}} au vote !",
         "ravenMarkBadge": "{genre, select, f {Marquée par le Corbeau} m {Marqué par le Corbeau} other {Marque du Corbeau}} (+2 voix)",
-        "elderAttackedBanner": "⏳ Vous avez été pris pour cible par les loups cette nuit.",
+        "elderAttackedBanner": "L'Ancien a été attaqué par les loups cette nuit… et a survécu.",
         "dayChatTitle": "Chat du village",
         "ravenRevoteNotice": "La marque du Corbeau (+2 voix) ne compte plus au revote.",
         "hunterMoment": "Le Chasseur arme son fusil !",
-        "votedCount": "{n}/{total} ont voté"
+        "votedCount": "{n}/{total} ont voté",
+        "roundNight": "Nuit {n}",
+        "roundDay": "Jour {n}",
+        "lynch": "Lyncher {name}",
+        "pickSuspect": "Choisis un suspect",
+        "pickPlayer": "Choisis un joueur",
+        "votedStatus": "Vote scellé · {n}/{total}",
+        "accusedTimes": "{count, plural, one {# accusation} other {# accusations}}",
+        "hasVotedMeta": "a voté",
+        "reviewDebate": "Revoir le débat",
+        "deadList": "Hors jeu : {names}",
+        "mayorElect": "Élire {name}",
+        "guardConfirm": "Protéger {name}",
+        "ravenConfirm": "Marquer {name}",
+        "seerConfirm": "Sonder {name}",
+        "hunterConfirm": "Tirer sur {name}",
+        "witchSaveConfirm": "Sauver {name}",
+        "witchKillConfirm": "Empoisonner {name}",
+        "witchPick": "Choisis ta potion",
+        "witchChoicesAria": "Potions de la sorcière",
+        "speakDefendAgainst": "Me défendre face à {name}",
+        "wolfChatUnread": "Chat des loups (privé), nouveau message",
+        "roleHidden": "Rôle masqué",
+        "roleDetails": "Détails de mon rôle"
       },
       "tutorial": {
         "steps": [
@@ -4571,10 +4910,10 @@
         "youAreJudge": "Tu es le juge de cette manche — tu ne joues pas de carte.",
         "judgeIs": "Juge de la manche : {name}",
         "blackLabel": "Carte noire",
-        "playPrompt": "Choisis la réponse la plus drôle de ta main :",
+        "playPrompt": "Choisis la réponse la plus drôle de ta main, puis valide en bas.",
         "played": "Carte abattue ! {count}/{total} ont joué…",
         "judgeWaits": "Les joueurs abattent leurs cartes… {count}/{total}",
-        "judgePickPrompt": "Lis chaque réponse à voix haute, puis couronne la meilleure :",
+        "judgePickPrompt": "Lis chaque réponse à voix haute, puis couronne la meilleure.",
         "judgeReading": "{name} lit les réponses et délibère…",
         "judgeReadAloud": "Astuce : lis-les à voix haute au vocal, c’est là que ça devient drôle.",
         "crowned": {
@@ -4584,17 +4923,27 @@
         },
         "reveal": {
           "continue": "Manche suivante",
-          "seeResult": "Voir le podium"
+          "seeResult": "Voir le podium",
+          "everyone": "Un seul appui lance la suite pour toute la table."
         },
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "victory": {
           "winnerIs": "{name} gagne la soirée !",
           "tie": "Égalité — la couronne est partagée",
-          "finalScore": "Couronnes finales",
-          "replay": "Rejouer",
-          "rematchWaiting": "Revanche {count}/{total}…",
-          "backToMenu": "Retour au menu"
-        }
+          "finalScore": "Couronnes finales"
+        },
+        "playedStatus": "{count}/{total} cartes abattues",
+        "handTitle": "Ta main",
+        "answersTitle": "{count, plural, one {# réponse anonyme} other {# réponses anonymes}}",
+        "tableLabel": "La table",
+        "judgeTag": "juge",
+        "playedTag": "a joué",
+        "awayTag": "absent",
+        "crownsCount": "{count, plural, one {# couronne} other {# couronnes}}",
+        "playCard": "Jouer cette carte",
+        "pickCard": "Choisis une carte",
+        "crownCard": "Couronner cette réponse",
+        "pickAnswer": "Choisis une réponse"
       },
       "tutorial": {
         "steps": [
@@ -4660,7 +5009,6 @@
         "waitingGuess": "L’équipe {team} débat et touche les tuiles…",
         "guessesLeft": "{count} essai(s) restant(s)",
         "pass": "Passer la main",
-        "solutionHint": "Tu vois la solution : or = ton équipe voit ses mots, dos de carte = assassin.",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
         "victory": {
           "teamWins": "L’équipe {team} gagne !",
@@ -4670,7 +5018,36 @@
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"
         },
-        "tvRemaining": "mots à trouver"
+        "tvRemaining": "mots à trouver",
+        "yourTeam": "Ton équipe : {team}",
+        "roleMaster": "Maître-mot",
+        "you": "(toi)",
+        "clueLabel": "Indice :",
+        "clueSendWith": "Donner « {word} · {count} »",
+        "clueOneWord": "Un seul mot, sans espace",
+        "clueOnGrid": "Ce mot est sur la grille : choisis-en un autre",
+        "reveal": "Révéler « {word} »",
+        "pickTile": "Choisis un mot",
+        "pickConfirm": "Mets-toi d’accord avec ton équipe, puis révèle",
+        "passConfirm": {
+          "title": "Passer la main ?",
+          "description": "Ton équipe arrête de deviner : l’équipe {team} prend la main."
+        },
+        "turn": {
+          "clueTeam": "Ton Maître-mot cherche un indice : écoute-le au vocal",
+          "clueOther": "Maître-mot adverse ({team}) : attends ton tour",
+          "guessMine": "Touche un mot de la grille, puis valide en bas",
+          "guessMaster": "Ton équipe devine : pas un mot, pas un geste !"
+        },
+        "legend": {
+          "mine": "Tes mots ({team})",
+          "theirs": "Adverses ({team})",
+          "neutral": "Neutres",
+          "assassin": "Assassin"
+        },
+        "tileNeutral": "neutre",
+        "tileAssassin": "assassin",
+        "tileRevealed": "révélée"
       },
       "tutorial": {
         "steps": [
@@ -4730,7 +5107,7 @@
         "neverNever": "Jamais de la vie",
         "whoPrompt": "Qui de la table…",
         "votePrompt": "Vote en secret !",
-        "voted": "Voté ! {count}/{total}…",
+        "voted": "Vote envoyé · {count}/{total}",
         "minorityDrinks": "La minorité boit 🍺",
         "nextCard": "Carte suivante",
         "seeEnd": "Terminer",
@@ -4742,7 +5119,28 @@
           "rematchWaiting": "Revanche {count}/{total}…",
           "backToMenu": "Retour au menu"
         },
-        "whoDrinks": "Le plus désigné boit 🍺"
+        "whoDrinks": "Le plus désigné boit 🍺",
+        "phaseVote": "Vote secret",
+        "voteProgress": "{count}/{total} ont voté",
+        "pickChoice": "Choisis ta réponse",
+        "pickPlayer": "Choisis un joueur",
+        "confirmVote": "Valider mon vote",
+        "designate": "Désigner {name}",
+        "yourVote": "Ton vote",
+        "minority": "Minorité",
+        "you": "(toi)",
+        "tableLabel": "Joueurs de la table",
+        "votedTag": "a voté",
+        "awayTag": "absent",
+        "who": {
+          "topTitle": "{count, plural, one {Le plus désigné} other {Les plus désignés}}",
+          "topDrinks": "{count, plural, one {Le plus désigné boit 🍺} other {Les plus désignés boivent 🍺}}",
+          "itsYou": "C’est toi !",
+          "votes": "{count, plural, one {# voix} other {# voix}}",
+          "nobody": "Personne n’a été désigné",
+          "rankingTitle": "Les voix de la table",
+          "by": "par {names}"
+        }
       },
       "tutorial": {
         "steps": [
@@ -4812,7 +5210,7 @@
         "flushHint": "Temps écoulé ! Copies ramassées…",
         "submitted": "Copie rendue ! {count}/{total}…",
         "empty": "(vide)",
-        "contest": "Contester cette réponse",
+        "contest": "Contester",
         "nextRound": "Manche suivante",
         "seeEnd": "Voir les scores",
         "waitingReturn": "En attente du retour de {name} — bot dans {seconds}s",
@@ -4826,8 +5224,24 @@
         "leftTable": "{name} a quitté la table — il peut revenir à tout moment.",
         "stopLocked": "STOP dans {seconds} s",
         "nextRoundLocked": "Encore {seconds} s pour lire",
-        "contestNeeds": "Contester — {votes} voix nécessaires",
-        "contestTooFewPlayers": "Table trop petite pour contester : il faut deux autres joueurs."
+        "contestTooFewPlayers": "Table trop petite pour contester : il faut deux autres joueurs.",
+        "phase": {
+          "write": "Lettre {letter}",
+          "reveal": "Comptage des points"
+        },
+        "stopMissing": "{count, plural, one {Encore # case pour crier STOP} other {Encore # cases pour crier STOP}}",
+        "sendingCopy": "Ta copie part…",
+        "contested": "Contestée",
+        "rejected": "Rayée",
+        "contestVotes": "{count} voix sur {votes} pour rayer cette réponse",
+        "contestConfirm": {
+          "title": "Contester la réponse de {name} ?",
+          "description": "« {answer} » ({category}) sera rayée si {votes} joueurs la contestent. Ton vote ne pourra pas être retiré."
+        },
+        "pointsSr": "{count, plural, one {# point} other {# points}}",
+        "handedIn": "copie rendue",
+        "playerLeft": "a quitté la table",
+        "contestTargetSr": "la réponse « {answer} » de {name}"
       },
       "tutorial": {
         "steps": [
@@ -4866,11 +5280,9 @@
           "hint": "Videz votre main. Le dernier porte le Trou."
         },
         "manche": "Manche {n}/{total}",
-        "yourTurn": "À toi de jouer !",
         "turnOf": "Au tour de {name}",
         "freeTrick": "Pli libre — pose ce que tu veux",
         "lastPlayBy": "posé par {name}",
-        "play": "Poser ({count})",
         "pass": "Passer",
         "leadHint": "Tu mènes : simple, paire, brelan ou carré — au choix.",
         "out": "Tu as fini ! Position {rank} — regarde les autres transpirer.",
@@ -4900,7 +5312,29 @@
         "exchangeAsVicePresident": "Le Vice-Trou t’a donné : {cards}",
         "history": {
           "title": "Plis précédents ({count})"
-        }
+        },
+        "phase": {
+          "free": "Pli libre",
+          "trick": "{count, plural, one {Pli en simples} =2 {Pli en paires} =3 {Pli en brelans} other {Pli en carrés}}"
+        },
+        "hint": {
+          "follow": "{count, plural, one {Une carte} =2 {Une paire} =3 {Un brelan} other {Un carré}}, {rank} ou plus — ou passe.",
+          "ouRien": "{rank} ou rien : égale-le, ou passe."
+        },
+        "need": {
+          "size": "Il faut {count, plural, one {une carte seule} =2 {une paire} =3 {un brelan} other {un carré}}.",
+          "rank": "Trop faible : {rank} ou plus."
+        },
+        "closeHint": "Tu peux fermer le pli, même hors de ton tour !",
+        "interludeHint": "La manche suivante démarre seule à la fin du chrono.",
+        "joker": "Joker",
+        "myHand": "Ta main",
+        "playCards": "Poser {cards}",
+        "pickCards": "Choisis tes cartes",
+        "handCount": "{count, plural, one {# carte en main} other {# cartes en main}}",
+        "outPosition": "Main vide · position {rank}",
+        "passed": "a passé",
+        "playerLeft": "a quitté la table"
       },
       "tutorial": {
         "steps": [
@@ -5074,7 +5508,8 @@
       "already": "Ton avis était déjà enregistré : merci !",
       "dismissed": "Pas de souci. Bonne partie !",
       "error": "Envoi impossible pour le moment. Réessaie plus tard.",
-      "tooMany": "Trop d'envois d'un coup : réessaie dans un moment."
+      "tooMany": "Trop d'envois d'un coup : réessaie dans un moment.",
+      "bannerTitle": "Note ta première partie"
     }
   },
   "errors": {
@@ -6163,7 +6598,8 @@
     "resumeMic": "Reprendre le micro",
     "signalLost": "Connexion au vocal perdue — plus personne ne t’entend.",
     "reconnect": "Se reconnecter",
-    "peerFailed": "coupé"
+    "peerFailed": "coupé",
+    "titleWithCount": "Vocal de la partie — {count} en vocal"
   },
   "tv": {
     "brand": "Le Pillaveur",
@@ -6235,8 +6671,32 @@
     "reading": "lit les règles…"
   },
   "partyCanvas": {
-    "clear": "Effacer",
-    "eraser": "Gomme"
+    "clear": "Tout effacer",
+    "eraser": "Gomme",
+    "undo": "Annuler",
+    "undoLabel": "Annuler le dernier trait",
+    "toolsLabel": "Outils de dessin",
+    "colorsLabel": "Couleur du trait",
+    "widthsLabel": "Épaisseur du trait",
+    "colors": {
+      "ink": "Noir",
+      "red": "Rouge",
+      "blue": "Bleu",
+      "green": "Vert",
+      "orange": "Orange",
+      "purple": "Violet"
+    },
+    "widths": {
+      "thin": "Trait fin",
+      "medium": "Trait moyen",
+      "thick": "Trait épais"
+    },
+    "clearConfirm": {
+      "title": "Tout effacer ?",
+      "description": "Tout le dessin disparaît, sans retour possible.",
+      "confirm": "Tout effacer",
+      "cancel": "Garder le dessin"
+    }
   },
   "landing": {
     "hero": {
@@ -6395,6 +6855,24 @@
     "retry": "Réessayer",
     "backToGames": "Retour aux jeux",
     "hubBanner": "Hors ligne : les jeux sur un seul téléphone restent jouables, les tables en ligne attendront le réseau.",
-    "unavailable": "Indisponible hors ligne"
+    "unavailable": "Indisponible hors ligne. Les jeux sur un seul téléphone restent jouables."
+  },
+  "gameUi": {
+    "turn": {
+      "mine": "À toi",
+      "of": "Au tour de {name}",
+      "waiting": "En attente des autres joueurs"
+    },
+    "passPhone": {
+      "lead": "Passe le téléphone à",
+      "label": "Passe le téléphone à {name}"
+    },
+    "targets": {
+      "excluded": "choix interdit",
+      "dead": "hors jeu"
+    },
+    "feed": {
+      "newer": "Nouvelles paroles"
+    }
   }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from 'react'
-import { Mic, Trophy } from 'lucide-react'
+import { Ban, Check, Mic, SkipForward, Trophy, type LucideIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
@@ -72,9 +72,9 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
           </p>
         )}
         <div className="grid w-full grid-cols-3 gap-4">
-          <RoundStat emoji="✅" value={state.roundStats.found} label={t('roundEnd.found')} className="text-emerald-300" />
-          <RoundStat emoji="⏭" value={state.roundStats.passed} label={t('roundEnd.passed')} className="text-white/80" />
-          <RoundStat emoji="🚫" value={state.roundStats.taboo} label={t('roundEnd.taboo')} className="text-red-300" />
+          <RoundStat icon={Check} value={state.roundStats.found} label={t('roundEnd.found')} className="text-emerald-300" />
+          <RoundStat icon={SkipForward} value={state.roundStats.passed} label={t('roundEnd.passed')} className="text-cream/80" />
+          <RoundStat icon={Ban} value={state.roundStats.taboo} label={t('roundEnd.taboo')} className="text-red-300" />
         </div>
       </>
     )
@@ -140,10 +140,10 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
   )
 }
 
-function RoundStat({ emoji, value, label, className }: { emoji: string; value: number; label: string; className: string }) {
+function RoundStat({ icon: Icon, value, label, className }: { icon: LucideIcon; value: number; label: string; className: string }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-3xl border border-white/10 bg-black/20 px-4 py-4">
-      <span aria-hidden className="text-4xl leading-none">{emoji}</span>
+      <Icon aria-hidden className={cn('h-10 w-10', className)} />
       <span className={cn('text-7xl font-black leading-none tabular-nums', className)}>{value}</span>
       <span className={cn('text-2xl font-bold', className)}>{label}</span>
     </div>

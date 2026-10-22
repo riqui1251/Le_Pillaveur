@@ -12,9 +12,16 @@ export interface Choices1220 {
   giveNumber: number
 }
 
+/**
+ * Raison de distribuer : un identifiant, jamais une phrase. Le moteur écrivait
+ * ses raisons en français (« Somme dans ta plage ») et l'écran les glissait
+ * telles quelles dans une phrase traduite : la table anglaise lisait du
+ * français au cœur du résultat. L'écran traduit à partir de la somme.
+ */
+export type GiveReasonId1220 = 'band' | 'parity' | 'giveNum'
+
 export interface GiveReason1220 {
-  id: string
-  label: string
+  id: GiveReasonId1220
 }
 
 export interface PlayerRollResult1220 {
@@ -30,6 +37,8 @@ export interface PlayerRollResult1220 {
 export const TOTAL_MIN = 2
 export const TOTAL_MAX = 12 + 20
 
+export const BANDS_1220: readonly Band1220[] = ['2-10', '11-20', '21-30']
+
 export function bandContains(band: Band1220, total: number): boolean {
   switch (band) {
     case '2-10':
@@ -41,6 +50,11 @@ export function bandContains(band: Band1220, total: number): boolean {
     default:
       return false
   }
+}
+
+/** Plage qui contient la somme (31 et 32 n'en ont aucune). */
+export function bandOf(total: number): Band1220 | null {
+  return BANDS_1220.find((b) => bandContains(b, total)) ?? null
 }
 
 /** Un des chiffres du joueur est sorti sur le dé 12 ou 20, mais la somme n’est pas ce chiffre. */
@@ -64,29 +78,14 @@ export function evaluatePlayerRoll1220(
   const total = d12 + d20
   const giveReasons: GiveReason1220[] = []
 
-  if (bandContains(c.band, total)) {
-    giveReasons.push({
-      id: 'band',
-      label: `Somme dans ta plage (${formatBand(c.band)})`,
-    })
-  }
+  if (bandContains(c.band, total)) giveReasons.push({ id: 'band' })
 
   const isEven = total % 2 === 0
   const parityOk =
     (isEven && c.parity === 'pair') || (!isEven && c.parity === 'impair')
-  if (parityOk) {
-    giveReasons.push({
-      id: 'parity',
-      label: `Parité (${c.parity === 'pair' ? 'pair' : 'impair'})`,
-    })
-  }
+  if (parityOk) giveReasons.push({ id: 'parity' })
 
-  if (total === c.giveNumber) {
-    giveReasons.push({
-      id: 'giveNum',
-      label: `Somme = chiffre donne à boire (${c.giveNumber})`,
-    })
-  }
+  if (total === c.giveNumber) giveReasons.push({ id: 'giveNum' })
 
   const drinkSips = total === c.drinkNumber ? 1 : 0
   const { partial, numbers } = hasPartialDieHit(
@@ -109,15 +108,4 @@ export function evaluatePlayerRoll1220(
     partialHit: partial,
     partialNumbers: numbers,
   }
-}
-
-function formatBand(b: Band1220): string {
-  if (b === '2-10') return '2–10'
-  if (b === '11-20') return '11–20'
-  return '21–30'
-}
-
-export function formatSips(n: number): string {
-  if (Number.isInteger(n)) return `${n}`
-  return n.toFixed(1).replace('.', ',')
 }

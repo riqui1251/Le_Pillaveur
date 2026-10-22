@@ -6,6 +6,7 @@ import {
   reduceTabou,
   toTabouClientView,
   toTabouSpectatorView,
+  tabouSeesCurrentWord,
   TabouEngineError,
   TABOU_COUNTDOWN_MS,
   TABOU_ROUND_MS,
@@ -246,15 +247,51 @@ describe('currentTabouActorId', () => {
 })
 
 describe('vues anti-triche', () => {
-  it('seul le décrivant voit le mot courant pendant la description', () => {
+  it('le décrivant et l’équipe adverse voient le mot et ses tabous ; ses coéquipiers jamais', () => {
+    // make(4) : p0 et p2 en A, p1 et p3 en B ; p0 décrit la première manche.
     const s = make(4)
-    const describerView = toTabouClientView(s, s.describerId)
+    expect(s.describerId).toBe('p0')
+    const describerView = toTabouClientView(s, 'p0')
     expect(describerView.isDescriber).toBe(true)
     expect(describerView.currentWord).toEqual(s.currentWord)
-    const otherId = s.players.find((p) => p.id !== s.describerId)!.id
-    const otherView = toTabouClientView(s, otherId)
-    expect(otherView.isDescriber).toBe(false)
-    expect(otherView.currentWord).toBeNull()
+
+    for (const opponentId of ['p1', 'p3']) {
+      const opponentView = toTabouClientView(s, opponentId)
+      expect(opponentView.isDescriber).toBe(false)
+      expect(opponentView.currentWord).toEqual(s.currentWord)
+      expect(tabouSeesCurrentWord(s, opponentId)).toBe(true)
+    }
+
+    const teammateView = toTabouClientView(s, 'p2')
+    expect(teammateView.isDescriber).toBe(false)
+    expect(teammateView.currentWord).toBeNull()
+    expect(tabouSeesCurrentWord(s, 'p2')).toBe(false)
+    const teammateJson = JSON.stringify(teammateView)
+    expect(teammateJson).not.toContain(s.currentWord!.word)
+    for (const taboo of s.currentWord!.taboo) expect(teammateJson).not.toContain(taboo)
+  })
+
+  it('la manche suivante inverse les rôles : l’autre équipe devine, la première surveille', () => {
+    const s = make(4)
+    const ended = reduceTabou(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + TABOU_ROUND_MS })
+    const next = reduceTabou(ended, { type: 'CONTINUE', playerId: 'p0', now: T0 + TABOU_ROUND_MS + 1 })
+    expect(next.describerId).toBe('p1')
+    expect(toTabouClientView(next, 'p0').currentWord).toEqual(next.currentWord)
+    expect(toTabouClientView(next, 'p2').currentWord).toEqual(next.currentWord)
+    expect(toTabouClientView(next, 'p3').currentWord).toBeNull()
+  })
+
+  it('personne ne voit le mot hors description (compte à rebours, bilan), ni un inconnu', () => {
+    const players = [0, 1, 2, 3].map((i) => ({ id: `p${i}`, name: `P${i}`, team: (i % 2 === 0 ? 'A' : 'B') as 'A' | 'B' }))
+    const countdown = createTabouState(players, WORDS, 'seed', T0)
+    expect(countdown.currentWord).not.toBeNull()
+    for (const id of ['p0', 'p1', 'p2', 'p3']) expect(toTabouClientView(countdown, id).currentWord).toBeNull()
+
+    const s = make(4)
+    const ended = reduceTabou(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + TABOU_ROUND_MS })
+    for (const id of ['p0', 'p1', 'p2', 'p3']) expect(toTabouClientView(ended, id).currentWord).toBeNull()
+
+    expect(toTabouClientView(s, 'intrus').currentWord).toBeNull()
   })
 
   it('le spectateur (TV) ne voit jamais le mot courant', () => {

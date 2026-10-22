@@ -1,7 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import { Crown } from 'lucide-react'
 import type { PetitBuveurT } from '../case-config'
 
 export type CoinSide = 'pile' | 'face'
@@ -18,12 +19,17 @@ function CoinFaceContent({ side }: { side: CoinSide }) {
           : 'border-gold bg-gold-strong text-[#24201A]'
       }`}
     >
-      <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">
+      <span className="font-display text-xs font-bold uppercase tracking-[0.15em]">
         {isPile ? t('pile') : t('face')}
       </span>
-      <span className="mt-0.5 text-3xl font-black sm:text-4xl" aria-hidden>
-        {isPile ? '1' : '👤'}
-      </span>
+      {/* Face : une couronne à l'encre (le 👤 gris se perdait sur l'or cuivré). */}
+      {isPile ? (
+        <span className="mt-0.5 text-3xl font-black sm:text-4xl" aria-hidden>
+          1
+        </span>
+      ) : (
+        <Crown aria-hidden className="mt-1 h-8 w-8 sm:h-9 sm:w-9" strokeWidth={2.25} />
+      )}
     </div>
   )
 }
@@ -34,8 +40,14 @@ type CoinFlipProps = {
 }
 
 export function CoinFlip({ result, isFlipping }: CoinFlipProps) {
+  const reduced = useReducedMotion()
   const landRotation = result === 'face' ? 180 : 0
   const spinRotations = 5 * 360 + landRotation
+  // Moins d'animations : pas de 5 tours en 3D ni de ressort (framer-motion anime
+  // en JS, la règle CSS prefers-reduced-motion ne le touche pas). Le suspense
+  // reste : pièce neutre, résultat caché jusqu'à la fin du lancer.
+  const spinning = isFlipping && !reduced
+  const hideResult = isFlipping && Boolean(reduced)
 
   return (
     <div className="flex items-center justify-center py-4 [perspective:900px]">
@@ -43,21 +55,24 @@ export function CoinFlip({ result, isFlipping }: CoinFlipProps) {
         className="relative h-28 w-28 sm:h-32 sm:w-32 [transform-style:preserve-3d]"
         initial={{ rotateY: 0 }}
         animate={
-          isFlipping
+          spinning
             ? { rotateY: [0, spinRotations * 0.35, spinRotations * 0.72, spinRotations] }
-            : { rotateY: landRotation }
+            : { rotateY: hideResult ? 0 : landRotation }
         }
         transition={
-          isFlipping
-            ? {
-                duration: 2.1,
-                ease: [0.22, 0.68, 0.12, 1],
-                times: [0, 0.45, 0.78, 1],
-              }
-            : { type: 'spring', stiffness: 280, damping: 24 }
+          reduced
+            ? { duration: 0 }
+            : isFlipping
+              ? {
+                  duration: 2.1,
+                  ease: [0.22, 0.68, 0.12, 1],
+                  times: [0, 0.45, 0.78, 1],
+                }
+              : { type: 'spring', stiffness: 280, damping: 24 }
         }
       >
-        {isFlipping && (
+        {/* Halo pulsant coupé quand l'appareil demande moins d'animations. */}
+        {spinning && (
           <motion.div
             className="pointer-events-none absolute -inset-6 rounded-full bg-gold/20 blur-2xl"
             animate={{ opacity: [0.2, 0.65, 0.15], scale: [0.85, 1.2, 0.9] }}
@@ -65,19 +80,30 @@ export function CoinFlip({ result, isFlipping }: CoinFlipProps) {
           />
         )}
 
-        <div
-          className="absolute inset-0 [backface-visibility:hidden]"
-          style={{ transform: 'rotateY(0deg) translateZ(2px)' }}
-        >
-          <CoinFaceContent side="pile" />
-        </div>
+        {hideResult ? (
+          <div
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center rounded-full border-[3px] border-gold bg-gold/20 font-display text-4xl font-black text-gold"
+          >
+            ?
+          </div>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 [backface-visibility:hidden]"
+              style={{ transform: 'rotateY(0deg) translateZ(2px)' }}
+            >
+              <CoinFaceContent side="pile" />
+            </div>
 
-        <div
-          className="absolute inset-0 [backface-visibility:hidden]"
-          style={{ transform: 'rotateY(180deg) translateZ(2px)' }}
-        >
-          <CoinFaceContent side="face" />
-        </div>
+            <div
+              className="absolute inset-0 [backface-visibility:hidden]"
+              style={{ transform: 'rotateY(180deg) translateZ(2px)' }}
+            >
+              <CoinFaceContent side="face" />
+            </div>
+          </>
+        )}
       </motion.div>
     </div>
   )

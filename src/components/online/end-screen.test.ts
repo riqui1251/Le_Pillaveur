@@ -5,6 +5,7 @@ import {
   isTableShareable,
   mayBringTableBack,
   rematchCounter,
+  xpSummaryParts,
   type EndScreenMember,
 } from './end-screen'
 
@@ -161,5 +162,37 @@ describe('endShareClipboardText', () => {
 
   it('sans message : le lien seul', () => {
     expect(endShareClipboardText('  ', 'https://lepillaveur.fr/')).toBe('https://lepillaveur.fr/')
+  })
+})
+
+describe('xpSummaryParts', () => {
+  it('dit le gain, le niveau et les succès, dans cet ordre', () => {
+    expect(
+      xpSummaryParts({ gained: 20, solo: false, level: 1, leveledUp: false, achievements: 2 })
+    ).toEqual([
+      { kind: 'gain', xp: 20, solo: false },
+      { kind: 'level', level: 1, up: false },
+      { kind: 'achievements', count: 2 },
+    ])
+  })
+
+  it('garde le niveau seul sans détail de gain fiable', () => {
+    expect(
+      xpSummaryParts({ gained: null, solo: false, level: 4, leveledUp: false, achievements: 0 })
+    ).toEqual([{ kind: 'level', level: 4, up: false }])
+  })
+
+  it("n'annonce ni « +0 XP » ni « 0 succès »", () => {
+    const parts = xpSummaryParts({ gained: 0, solo: true, level: 5, leveledUp: false, achievements: 0 })
+    expect(parts.map((p) => p.kind)).toEqual(['level'])
+  })
+
+  it('porte le passage de niveau et le gain d’entraînement', () => {
+    expect(
+      xpSummaryParts({ gained: 35, solo: true, level: 3, leveledUp: true, achievements: 0 })
+    ).toEqual([
+      { kind: 'gain', xp: 35, solo: true },
+      { kind: 'level', level: 3, up: true },
+    ])
   })
 })

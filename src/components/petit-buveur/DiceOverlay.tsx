@@ -146,7 +146,7 @@ export function DiceOverlay({
               </motion.div>
             )}
             {onSkip && skipLabel && (
-              <p className="text-[11px] font-medium text-cream/50">{skipLabel}</p>
+              <p className="text-xs font-medium text-cream/70">{skipLabel}</p>
             )}
           </div>
         </motion.div>

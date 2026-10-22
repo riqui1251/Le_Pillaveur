@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Bot, LogIn, Play, Sparkles, Users } from 'lucide-react'
+import { Bot, Loader2, LogIn, Play, Sparkles, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Link } from '@/i18n/navigation'
@@ -15,6 +15,7 @@ import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
+import { cn } from '@/lib/utils'
 
 /**
  * /api/auth/guest répond 200 avec le compte DÉJÀ connecté quand une session
@@ -92,16 +93,21 @@ export function TryBotsGate({
     ? (localizedGames.find((g) => g.id === alternative.id)?.title ?? alternative.title)
     : null
   const loginHref = `/compte?redirect=${encodeURIComponent(`/games/${gameId}`)}`
+  // Bouton principal : le dégradé de la page s'il y en a un, sinon encre sur
+  // or (`primary`). `gameLg` partout : le h-9 par défaut du Button écrasait
+  // le py-5 et le bouton tombait à 36 px.
+  const primary = {
+    variant: accentClassName ? undefined : ('primary' as const),
+    size: 'gameLg' as const,
+    className: cn('w-full', accentClassName),
+  }
 
   // Déjà une session (compte ou invité) : direction le jeu, tout simplement.
   if (user) {
     return (
-      <Button
-        asChild
-        className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}
-      >
+      <Button asChild {...primary}>
         <Link href={game.path}>
-          <Play className="mr-2 h-4 w-4" />
+          <Play className="mr-2 h-4 w-4" aria-hidden />
           {t('play')}
         </Link>
       </Button>
@@ -215,9 +221,9 @@ export function TryBotsGate({
 
   if (!canBots) {
     return (
-      <Button asChild className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}>
+      <Button asChild {...primary}>
         <Link href={loginHref}>
-          <LogIn className="mr-2 h-4 w-4" />
+          <LogIn className="mr-2 h-4 w-4" aria-hidden />
           {t('loginCta')}
         </Link>
       </Button>
@@ -260,21 +266,14 @@ export function TryBotsGate({
             </div>
           </div>
         )}
-        <Button
-          onClick={() => { void openForm() }}
-          className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}
-        >
-          <Bot className="mr-2 h-4 w-4" />
+        <Button onClick={() => { void openForm() }} {...primary}>
+          <Bot className="mr-2 h-4 w-4" aria-hidden />
           {t('cta')}
         </Button>
-        <p className="text-center text-[11px] leading-snug text-white/40">{t('hint')}</p>
-        <Button
-          asChild
-          variant="outline"
-          className="w-full border-white/[0.15] bg-transparent text-sm text-white/70 hover:bg-white/[0.06] hover:text-white"
-        >
+        <p className="text-center text-xs leading-snug text-cream/70">{t('hint')}</p>
+        <Button asChild variant="quiet" size="game" className="w-full">
           <Link href={loginHref}>
-            <LogIn className="mr-2 h-4 w-4" />
+            <LogIn className="mr-2 h-4 w-4" aria-hidden />
             {t('loginCta')}
           </Link>
         </Button>
@@ -291,21 +290,23 @@ export function TryBotsGate({
         maxLength={30}
         required
         autoFocus
-        className="border-white/10 bg-white/[0.05] text-center text-white"
+        className="h-12 border-gold/20 bg-white/[0.05] text-center text-cream"
       />
       {error && <p className="rounded-lg bg-red-500/[0.15] px-3 py-2 text-sm text-red-300">{error}</p>}
-      <Button
-        type="submit"
-        disabled={loading || pseudo.trim().length === 0}
-        className={accentClassName ?? 'w-full rounded-2xl bg-amber-500 py-5 text-base font-bold text-black hover:bg-amber-400'}
-      >
-        {mode === 'friends' ? <Users className="mr-2 h-4 w-4" aria-hidden /> : <Bot className="mr-2 h-4 w-4" />}
+      <Button type="submit" disabled={loading || pseudo.trim().length === 0} {...primary}>
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden />
+        ) : mode === 'friends' ? (
+          <Users className="mr-2 h-4 w-4" aria-hidden />
+        ) : (
+          <Bot className="mr-2 h-4 w-4" aria-hidden />
+        )}
         {loading ? tCommon('loading') : mode === 'friends' ? t('groupFit.openTable') : t('go')}
       </Button>
       {mode === 'friends' && (
         <p className="text-center text-xs leading-snug text-cream/70">{t('groupFit.shareHint')}</p>
       )}
-      <p className="text-center text-[11px] leading-snug text-white/40">{t('guestHintDevice')}</p>
+      <p className="text-center text-xs leading-snug text-cream/70">{t('guestHintDevice')}</p>
       {/* Retour aux choix (bots, potes, autre jeu, connexion) : un toucher
           hésitant sur « Inviter des potes » ne doit pas enfermer le visiteur
           dans un seul chemin — le retour du navigateur quitterait la page. */}
@@ -317,7 +318,7 @@ export function TryBotsGate({
           setError(null)
         }}
         disabled={loading}
-        className="min-h-[44px] w-full text-center text-xs text-white/40 underline underline-offset-2 transition-colors hover:text-white/70 disabled:opacity-50"
+        className="min-h-[44px] w-full text-center text-xs text-cream/70 underline underline-offset-2 transition-colors hover:text-cream disabled:opacity-50"
       >
         {tCommon('cancel')}
       </button>

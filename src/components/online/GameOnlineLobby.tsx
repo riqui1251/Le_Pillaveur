@@ -1,12 +1,13 @@
 ﻿"use client"
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from '@/i18n/navigation'
-import { useTranslations } from 'next-intl'
-import { ArrowLeft, Check, ChevronDown, Copy, Crown, Globe, Lock, LogOut, Mail, Pencil, Play, Plus, Settings, Share2, Tv, UserPlus, Users, X } from 'lucide-react'
+import { useFormatter, useTranslations } from 'next-intl'
+import { ArrowLeft, Bomb, Bot, Check, ChevronDown, Copy, Crown, Flame, Globe, Hourglass, Lock, LogOut, Mail, Pencil, Play, Plus, Settings, Share2, Tv, UserMinus, UserPlus, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { VoiceDockButton } from '@/components/voice/VoiceDockButton'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
@@ -20,6 +21,7 @@ import { GAMES, hasContentIn, soloBotsCount, type GameMeta } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { ConnectionBanner } from '@/components/online/ConnectionBanner'
 import { FriendInviteBanner } from '@/components/online/FriendInviteBanner'
 import { GameBriefing } from '@/components/online/GameBriefing'
 import { RejoinBanner } from '@/components/online/RejoinBanner'
@@ -33,7 +35,7 @@ import { copyText, shareLink } from '@/lib/native-share'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
 import { lgDebateMinutes } from '@/lib/loup-garou/debate'
 import { espionDiscussionMinutes } from '@/lib/espion/discussion'
-import { forceLaunchDecision, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
+import { forceLaunchDecision, lobbyLaunchStatus, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
 type Visibility = (typeof VISIBILITY_OPTIONS)[number]
@@ -44,16 +46,24 @@ interface GameOnlineLobbyProps {
   game?: GameMeta
 }
 
-/** Fond dégradé + conteneur centré partagé par tous les écrans du lobby (parité visuelle avec le pré-jeu local). */
+/**
+ * Conteneur centré partagé par tous les écrans du lobby. Le fond est celui du
+ * cadre de jeu (feutre, mode Soft compris) : les halos pulsés d'ici étaient
+ * en partie morts (`bg-amber-600/15` n'existe pas en Tailwind 3.3) et
+ * tournaient sans fin, même pour qui coupe les animations.
+ *
+ * Le bandeau « Connexion perdue » y prend place EN TÊTE, dans le flux : celui
+ * de la coquille flottait par-dessus le haut de « Quitter » et en
+ * interceptait les touchers. Si le cadre de la page en porte déjà un, c'est
+ * le sien qui parle (un seul bandeau, cf. ConnectionBanner).
+ */
 function LobbyShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-full">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-amber-600/15 blur-[120px] animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-amber-600/10 blur-[100px] animate-[pulse_10s_ease-in-out_infinite_2s]" />
-        <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-emerald-600/10 blur-[90px] animate-[pulse_12s_ease-in-out_infinite_4s]" />
+    <div className="relative min-h-full text-cream">
+      <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-8 pb-12">
+        <ConnectionBanner placement="stage" className="-mx-4 -mt-8 mb-4" />
+        {children}
       </div>
-      <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-8 pb-12">{children}</div>
     </div>
   )
 }
@@ -102,6 +112,18 @@ function GameSwitchSheet({
     ambiance === 'soft'
       ? SWITCHABLE_GAMES.filter((g) => g.softModeReady || g.id === currentGameId)
       : SWITCHABLE_GAMES
+  const rows = games.map((g) => {
+    const current = g.id === currentGameId
+    const blockedReason =
+      !current && g.maxPlayers !== undefined && humans > g.maxPlayers
+        ? tOnline('gameSwitch.tooMany', { count: g.maxPlayers })
+        : !current && !hasContentIn(g, lang)
+          ? tHub('frOnlyHint')
+          : null
+    return { game: g, current, blockedReason }
+  })
+  const available = [...rows.filter((r) => r.current), ...rows.filter((r) => !r.current && r.blockedReason === null)]
+  const unavailable = rows.filter((r) => r.blockedReason !== null)
 
   useEffect(() => {
     // Le focus entre dans la feuille : clavier et lecteur d'écran y sont. Il
@@ -172,14 +194,14 @@ function GameSwitchSheet({
             <h2 id="game-switch-title" className="font-display text-lg font-bold text-cream">
               {tOnline('gameSwitch.cta')}
             </h2>
-            <p className="mt-0.5 text-xs leading-snug text-white/50">{tOnline('gameSwitch.hint')}</p>
+            <p className="mt-0.5 text-xs leading-snug text-cream/70">{tOnline('gameSwitch.hint')}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
             aria-label={tOnline('close')}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white/50 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-cream/70 transition-colors hover:bg-gold/10 hover:text-cream disabled:opacity-40"
           >
             <X className="h-5 w-5" />
           </button>
@@ -189,54 +211,69 @@ function GameSwitchSheet({
             {error}
           </p>
         )}
-        <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-4 pb-2">
-          {games.map((g) => {
-            const current = g.id === currentGameId
-            const tooMany = g.maxPlayers !== undefined && humans > g.maxPlayers
-            const noContent = !current && !hasContentIn(g, lang)
-            const pending = pendingId === g.id
-            const disabled = current || tooMany || noContent || busy
-            return (
-              <li key={g.id}>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  aria-current={current ? 'true' : undefined}
-                  onClick={() => onPick(g)}
-                  className={cn(
-                    'flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors',
-                    current ? 'border-gold/40 bg-gold/10' : 'border-white/10 bg-white/5',
-                    !disabled && 'hover:border-amber-400/40 hover:bg-white/10',
-                    disabled && !current && !pending && 'opacity-45'
-                  )}
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#D8CCAE] bg-cream text-[#24201A]">
-                    <GameIconById id={g.id} className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-white">{titleOf(g.id)}</span>
-                    <span className="block truncate text-xs text-white/45">
-                      {tooMany
-                        ? tOnline('gameSwitch.tooMany', { count: g.maxPlayers ?? 0 })
-                        : noContent
-                          ? tHub('frOnlyHint')
-                          : g.maxPlayers && g.maxPlayers < 20
-                            ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
-                            : tOnline('playersRange.open', { min: g.minPlayers ?? 2 })}
-                    </span>
-                  </span>
-                  {current ? (
-                    <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-gold">
-                      {tOnline('gameSwitch.current')}
-                    </span>
-                  ) : pending ? (
-                    <span aria-hidden className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
-                  ) : null}
-                </button>
-              </li>
+        {/* Jeux possibles d'abord (le jeu en cours en tête) ; ceux que la
+            table ne peut pas prendre sont rangés dessous, sous leur titre,
+            grisés pour de bon (opacity-40 : l'opacity-45 d'avant n'existait
+            pas) avec un cadenas et la raison. Pendant une bascule, tout se
+            grise sauf le jeu demandé. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
+          {[available, unavailable].map((group, groupIndex) =>
+            group.length === 0 ? null : (
+              <div key={groupIndex}>
+                {groupIndex === 1 && (
+                  <p className="mb-1.5 mt-3 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/80">
+                    {tOnline('gameSwitch.unavailableTitle')}
+                    <span aria-hidden className="h-px flex-1 bg-gold/20" />
+                  </p>
+                )}
+                <ul className="space-y-1.5">
+                  {group.map(({ game: g, current, blockedReason }) => {
+                    const pending = pendingId === g.id
+                    const disabled = current || blockedReason !== null || busy
+                    return (
+                      <li key={g.id}>
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          aria-current={current ? 'true' : undefined}
+                          onClick={() => onPick(g)}
+                          className={cn(
+                            'flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition-colors',
+                            current ? 'border-gold/40 bg-gold/10' : 'border-gold/20 bg-felt/40',
+                            !disabled && 'hover:border-amber-400/40 hover:bg-gold/10',
+                            disabled && !current && !pending && 'opacity-40'
+                          )}
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#D8CCAE] bg-cream text-[#24201A]">
+                            <GameIconById id={g.id} surface="card" className="h-5 w-5" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-cream">{titleOf(g.id)}</span>
+                            <span className={cn('block truncate text-xs', blockedReason ? 'text-amber-200' : 'text-cream/70')}>
+                              {blockedReason ??
+                                (g.maxPlayers && g.maxPlayers < 20
+                                  ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
+                                  : tOnline('playersRange.open', { min: g.minPlayers ?? 2 }))}
+                            </span>
+                          </span>
+                          {current ? (
+                            <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-gold">
+                              {tOnline('gameSwitch.current')}
+                            </span>
+                          ) : pending ? (
+                            <span aria-hidden className="h-5 w-5 shrink-0 rounded-full border-2 border-gold/30 border-t-gold motion-safe:animate-spin" />
+                          ) : blockedReason ? (
+                            <Lock aria-hidden className="h-3.5 w-3.5 shrink-0 text-amber-200" />
+                          ) : null}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             )
-          })}
-        </ul>
+          )}
+        </div>
       </div>
     </div>,
     document.body
@@ -297,9 +334,37 @@ function SeatCollection({
 function seatPos(index: number, count: number) {
   const angle = -Math.PI / 2 + (index * 2 * Math.PI) / count
   return {
-    left: `${50 + 42 * Math.cos(angle)}%`,
+    left: `${50 + 40 * Math.cos(angle)}%`,
     top: `${50 + 40 * Math.sin(angle)}%`,
   }
+}
+
+/**
+ * Au-delà, les sièges de 72 px se chevauchaient autour de l'ovale (simulé à
+ * 375 px : 8 paires à 12 places, 16 à 16) — nom d'un joueur sous l'avatar du
+ * suivant, toucher qui ouvrait la mauvaise fiche. Les grandes tablées passent
+ * en liste de sièges sur deux colonnes, sous un ovale qui garde le code.
+ */
+const RING_MAX_SEATS = 8
+
+/**
+ * Option de réglage (format, manches, durées, variantes). Choisie : or plein,
+ * encre dessus — les dégradés par jeu portaient du blanc à 2-3:1 sur leur
+ * bout clair. Pour un invité, le réglage reste lisible mais visiblement
+ * inerte (`disabled:opacity-60`, légende « Réglé par … » au-dessus) : seul
+ * `cursor-not-allowed` le distinguait, invisible au doigt.
+ */
+function optionTone(active: boolean | undefined, isHost: boolean) {
+  return cn(
+    'transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+    active
+      ? 'border-amber-400 bg-amber-500 text-[#24201A] shadow-[0_8px_18px_-12px_rgba(217,164,65,0.8)]'
+      : 'border-gold/20 bg-felt-deep/60 text-cream/80',
+    isHost && !active && 'hover:border-gold/40 hover:bg-gold/10 hover:text-cream'
+  )
+}
+function optionHint(active: boolean | undefined) {
+  return active ? 'text-[#24201A]/90' : 'text-cream/60'
 }
 
 /** Formats d'équipes Toucher-Coulé. */
@@ -311,13 +376,13 @@ const TC_PLAYERS_PER_TEAM: Record<(typeof TC_MODE_OPTIONS)[number], number> = {
   '4v4': 4,
 }
 
-/** Difficultés Petit Buveur (mêmes clés/couleurs que la sélection en local). */
+/** Difficultés Petit Buveur (mêmes clés/couleurs que la sélection en local, en pastille). */
 const PB_DIFFICULTIES = ['facile', 'normal', 'difficile', 'extreme'] as const
-const PB_DIFFICULTY_GRADIENT: Record<(typeof PB_DIFFICULTIES)[number], string> = {
-  facile: 'from-emerald-500 to-green-600 shadow-emerald-500/30',
-  normal: 'from-amber-500 to-yellow-600 shadow-amber-500/30',
-  difficile: 'from-orange-500 to-red-600 shadow-orange-500/30',
-  extreme: 'from-red-600 to-rose-700 shadow-red-500/30',
+const PB_DIFFICULTY_DOT: Record<(typeof PB_DIFFICULTIES)[number], string> = {
+  facile: 'bg-emerald-400',
+  normal: 'bg-amber-300',
+  difficile: 'bg-orange-500',
+  extreme: 'bg-red-600',
 }
 
 /**
@@ -379,9 +444,23 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   // setReady préalable ne passe pas par `loading`).
   const [soloLaunching, setSoloLaunching] = useState(false)
   // Même garde pour « Lancer sans les retardataires », qui enchaîne lui aussi
-  // « prêt » (l'hôte) puis le lancement forcé.
+  // « prêt » (l'hôte) puis le lancement forcé, et pour « Lancer la partie ».
   const [forceLaunching, setForceLaunching] = useState(false)
-  // Retrait d'un joueur par l'hôte : la croix du siège s'ARME au premier
+  const [hostLaunching, setHostLaunching] = useState(false)
+  // Hauteur réelle de la barre fixe du bas (guichet ou table) : l'espace
+  // réservé en fin de page la suit, au lieu d'une estimation qui laissait
+  // passer des réglages sous la barre dès qu'un libellé tenait sur deux lignes.
+  const [bottomBarHeight, setBottomBarHeight] = useState(0)
+  const bottomBarObserverRef = useRef<ResizeObserver | null>(null)
+  const bottomBarRef = useCallback((el: HTMLDivElement | null) => {
+    bottomBarObserverRef.current?.disconnect()
+    bottomBarObserverRef.current = null
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => setBottomBarHeight(el.offsetHeight))
+    observer.observe(el, { box: 'border-box' })
+    bottomBarObserverRef.current = observer
+  }, [])
+  // Retrait d'un joueur par l'hôte : « Retirer » (fiche du siège) s'ARME au premier
   // toucher et n'agit qu'au second, dans les KICK_CONFIRM_MS — une
   // confirmation qui ne demande rien à lire à minuit. Le siège armé est
   // identifié par son userId ; la fenêtre retombe d'elle-même.
@@ -395,6 +474,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   }, [kickArmed])
   const tOnline = useTranslations('onlineLobby')
   const tXp = useTranslations('onlineXp')
+  const format = useFormatter()
   // Choix ouvert/privé proposé au clic « Ouvrir une table » (modifiable
   // ensuite dans les réglages du lobby).
   const [choosingVisibility, setChoosingVisibility] = useState(false)
@@ -563,12 +643,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     const signInHref = `/compte?redirect=${encodeURIComponent(pathname || `/games/${gameId}`)}`
     return (
       <LobbyShell>
-        <div className="rounded-3xl border border-amber-500/20 bg-white/5 p-6 text-center shadow-2xl backdrop-blur-md">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30">
-            <GameIconById id={gameId} className="h-8 w-8 text-white" />
+        <div className="rounded-3xl border border-gold/20 bg-felt-deep/70 p-6 text-center shadow-2xl">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D8CCAE] bg-cream text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
+            <GameIconById id={gameId} surface="card" className="h-8 w-8" />
           </div>
-          <p className="text-sm text-white/70">{tOnline('signIn.prompt')}</p>
-          <Button asChild className="mt-4 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 py-5 text-base font-bold text-white shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-orange-500">
+          <p className="text-sm text-cream/80">{tOnline('signIn.prompt')}</p>
+          <Button asChild variant="primary" size="gameLg" className="mt-4 w-full">
             <Link href={signInHref}>{tOnline('signIn.cta')}</Link>
           </Button>
         </div>
@@ -594,17 +674,13 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       <LobbyShell>
         <div role="status" aria-live="polite" className="flex flex-col items-center gap-4 py-20 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#D8CCAE] bg-cream text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
-            <GameIconById id={movedGame.id} className="h-7 w-7" />
+            <GameIconById id={movedGame.id} surface="card" className="h-7 w-7" />
           </span>
           <p className="font-display text-base font-bold text-cream">
             {tOnline('gameSwitch.moving', { game: catalogTitle(movedGame.id) })}
           </p>
-          <span aria-hidden className="h-6 w-6 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
-          <Button
-            variant="ghost"
-            onClick={() => router.push(movedGame.path)}
-            className="min-h-[44px] text-sm text-gold/80 hover:bg-white/10 hover:text-gold"
-          >
+          <span aria-hidden className="h-6 w-6 rounded-full border-2 border-gold/30 border-t-gold motion-safe:animate-spin" />
+          <Button variant="quiet" size="game" onClick={() => router.push(movedGame.path)}>
             {tOnline('gameSwitch.goToTable')}
           </Button>
         </div>
@@ -624,12 +700,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/jeux"
-            className="flex min-h-[44px] items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-white"
+            className="flex min-h-[44px] items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/70 px-3 py-2 text-sm font-medium text-cream/80 transition-colors hover:bg-gold/10 hover:text-cream"
           >
             <ArrowLeft className="h-4 w-4" />
             {tOnline('back')}
           </Link>
-          <span className="flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+          <span className="flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/10 px-2.5 py-1 text-xs font-semibold text-amber-200">
             <Globe className="h-3 w-3" /> {tOnline('onlineBadge')}
           </span>
         </div>
@@ -637,8 +713,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         {/* Guichet : la carte du jeu tient sur une ligne — l'écran sert à
             REJOINDRE (code, tables ouvertes) ; créer attend en zone pouce. */}
         <div className="mb-4 flex items-center gap-3 rounded-2xl border border-[#D8CCAE] bg-cream px-3 py-2.5 text-[#24201A] shadow-[0_10px_24px_-12px_rgba(0,0,0,0.6)]">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#24201A]/15 bg-[#24201A]/5">
-            <GameIconById id={gameId} className="h-6 w-6" />
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#24201A]/[0.15] bg-[#24201A]/5">
+            <GameIconById id={gameId} surface="card" className="h-6 w-6" />
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
@@ -651,7 +727,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
 
         {wrongRoom && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm text-amber-100">
             <span>{tOnline('errors.inOtherLobby', { game: catalogTitle(room?.gameId) })}</span>
             <div className="flex items-center gap-1">
               {otherRoomGame && (
@@ -677,14 +753,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <FriendInviteBanner onJoin={(roomId) => joinRoom({ roomId })} joining={loading} />
 
             <div className="mb-5">
-              <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/75">
+              <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
                 {tOnline('joinByCode.label')}
-                <span aria-hidden className="h-px flex-1 bg-gold/15" />
+                <span aria-hidden className="h-px flex-1 bg-gold/20" />
               </p>
               <div className="flex gap-2">
                 {/* Cases façon OTP : un input invisible par-dessus, les cases
                     ne font qu'afficher — gros caractères, saisie directe. */}
-                <div className="relative flex min-w-0 flex-1 gap-1.5">
+                <div className="relative flex min-w-0 flex-1 gap-1.5 rounded-xl focus-within:ring-2 focus-within:ring-gold focus-within:ring-offset-2 focus-within:ring-offset-felt-deep">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <span
                       key={i}
@@ -692,8 +768,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       className={cn(
                         'flex h-12 flex-1 items-center justify-center rounded-xl border font-display text-xl font-black',
                         joinCode[i]
-                          ? 'border-gold/40 bg-felt-deep/70 text-white'
-                          : 'border-gold/20 bg-felt-deep/50 text-white/20'
+                          ? 'border-gold/40 bg-felt-deep/70 text-cream'
+                          : 'border-gold/20 bg-felt-deep/50 text-cream/30'
                       )}
                     >
                       {joinCode[i] ?? '•'}
@@ -713,9 +789,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   />
                 </div>
                 <Button
+                  variant={joinCode.trim().length === 6 ? 'primary' : 'quiet'}
+                  size="game"
                   onClick={handleJoinByCode}
                   disabled={loading || joinCode.trim().length !== 6}
-                  className="h-12 shrink-0 rounded-xl border border-white/[0.15] bg-white/10 px-4 text-sm font-semibold text-white hover:bg-white/20"
+                  className="shrink-0 rounded-xl"
                 >
                   {tOnline('joinByCode.submit')}
                 </Button>
@@ -726,9 +804,9 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
         {gameLobbies.length > 0 && (
           <div className="mb-4">
-            <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/75">
+            <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
               {tOnline('openTables.title', { count: gameLobbies.length })}
-              <span aria-hidden className="h-px flex-1 bg-gold/15" />
+              <span aria-hidden className="h-px flex-1 bg-gold/20" />
             </p>
             <ul className="space-y-2">
               {gameLobbies.map((lobby) => (
@@ -741,17 +819,18 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       <Crown className="h-4 w-4 text-amber-300" aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <span className="font-mono text-sm font-bold tracking-wider text-white">{lobby.code}</span>
-                      <p className="truncate text-xs text-white/45">
+                      <span className="font-mono text-sm font-bold tracking-wider text-cream">{lobby.code}</span>
+                      <p className="truncate text-xs text-cream/70">
                         {lobby.hostName} · {tOnline('playersCount', { count: lobby.memberCount })}
                       </p>
                     </div>
                   </div>
                   <Button
-                    size="sm"
+                    variant="primary"
+                    size="game"
                     disabled={loading || wrongRoom}
                     onClick={() => joinRoom({ roomId: lobby.id })}
-                    className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500"
+                    className="shrink-0 rounded-xl"
                   >
                     {tOnline('join')}
                   </Button>
@@ -767,10 +846,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             proposer « Rejoindre » serait promettre l'impossible. */}
         {liveHere.length > 0 && (
           <div className="mb-4">
-            <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold/75">
+            <p className="mb-2 flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
               <LiveDot />
               {tOnline('live.title', { count: liveHere.length })}
-              <span aria-hidden className="h-px flex-1 bg-gold/15" />
+              <span aria-hidden className="h-px flex-1 bg-gold/20" />
             </p>
             <ul className="space-y-2">
               {liveHere.map((live) => (
@@ -779,23 +858,23 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   className="flex items-center gap-2.5 rounded-xl border border-gold/10 bg-felt-deep/50 px-3 py-2.5"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-gold/10">
-                    <GameIconById id={gameId} className="h-4 w-4 text-gold" />
+                    <GameIconById id={gameId} surface="feltGold" className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
                     {/* Aucun pseudo : une table en cours dit combien ils sont
                         et depuis quand, jamais qui joue. */}
-                    <p className="flex items-center gap-1.5 truncate text-sm text-white/85">
+                    <p className="flex items-center gap-1.5 truncate text-sm text-cream">
                       <span className="truncate">
                         {tOnline('playersCount', { count: live.playerCount })}
                       </span>
                       {live.isPrivate && (
                         <Lock
-                          className="h-3 w-3 shrink-0 text-white/40"
+                          className="h-3 w-3 shrink-0 text-cream/60"
                           aria-label={tOnline('recentLaunches.privateTable')}
                         />
                       )}
                     </p>
-                    <p className="truncate text-xs text-white/40">
+                    <p className="truncate text-xs text-cream/60">
                       {live.openedAgoMinutes < 1
                         ? tOnline('live.justOpened')
                         : tOnline('live.openedAgo', { minutes: live.openedAgoMinutes })}
@@ -804,12 +883,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs text-white/35">{tOnline('live.notJoinable')}</p>
+            <p className="mt-2 text-xs text-cream/60">{tOnline('live.notJoinable')}</p>
           </div>
         )}
 
         {liveElsewhere > 0 && (
-          <p className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/15 px-3 py-2 text-xs text-white/45">
+          <p className="mb-4 flex items-center gap-2 rounded-xl border border-dashed border-gold/20 px-3 py-2 text-xs text-cream/70">
             <LiveDot />
             {tOnline('live.elsewhere', { count: liveElsewhere })}
           </p>
@@ -822,21 +901,30 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             dans les réglages du lobby). */}
         {!wrongRoom && (
           <>
-            <div aria-hidden className="h-16" />
-            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+            <div
+              aria-hidden
+              style={bottomBarHeight ? { height: bottomBarHeight } : undefined}
+              className={bottomBarHeight ? undefined : 'h-[calc(5.5rem+env(safe-area-inset-bottom))]'}
+            />
+            <div
+              ref={bottomBarRef}
+              className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/20 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+            >
               <div className="mx-auto w-full max-w-lg">
                 {!choosingVisibility ? (
                   <Button
+                    variant="primary"
+                    size="gameLg"
                     onClick={() => setChoosingVisibility(true)}
                     disabled={loading}
-                    className="h-12 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+                    className="w-full"
                   >
                     <Plus className="mr-1.5 h-4 w-4" />
                     {loading ? tOnline('create.creating') : tOnline('create.cta')}
                   </Button>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-white/50">
+                    <p className="text-center text-xs font-semibold uppercase tracking-wide text-cream/70">
                       {tOnline('create.whoCanJoin')}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
@@ -844,12 +932,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         type="button"
                         onClick={() => void createRoom(gameId, { visibility: 'public' })}
                         disabled={loading}
-                        className="flex flex-col items-center gap-1 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+                        className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
                       >
                         <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-200">
                           <Globe className="h-4 w-4" /> {tOnline('create.openLabel')}
                         </span>
-                        <span className="text-xs leading-tight text-white/45">
+                        <span className="text-xs leading-tight text-cream/70">
                           {tOnline('create.openDesc')}
                         </span>
                       </button>
@@ -857,12 +945,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         type="button"
                         onClick={() => void createRoom(gameId, { visibility: 'private' })}
                         disabled={loading}
-                        className="flex flex-col items-center gap-1 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+                        className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-3 py-2.5 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
                       >
                         <span className="flex items-center gap-1.5 text-sm font-bold text-amber-200">
                           <Lock className="h-4 w-4" /> {tOnline('create.privateLabel')}
                         </span>
-                        <span className="text-xs leading-tight text-white/45">
+                        <span className="text-xs leading-tight text-cream/70">
                           {tOnline('create.privateDesc')}
                         </span>
                       </button>
@@ -871,7 +959,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       type="button"
                       onClick={() => setChoosingVisibility(false)}
                       disabled={loading}
-                      className="min-h-[44px] w-full py-1 text-center text-xs text-white/40 transition-colors hover:text-white/70"
+                      className="min-h-[44px] w-full py-1 text-center text-xs font-semibold text-cream/70 transition-colors hover:text-cream"
                     >
                       {loading ? tOnline('create.creating') : tOnline('create.cancel')}
                     </button>
@@ -944,7 +1032,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     }
   }
 
-  // Premier toucher : arme la croix ; second dans la fenêtre (mais pas dans
+  // Premier toucher : arme « Retirer » ; second dans la fenêtre (mais pas dans
   // le rebond du premier) : retire.
   const handleKickTap = (userId: string) => {
     if (kickArmed !== userId) {
@@ -975,13 +1063,146 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     void refreshRoom(roomId)
   }
 
+  // Où en est la table (logique pure, cf. lobbyLaunchStatus) : l'hôte compte
+  // prêt — c'est lui qui lance —, les invités pas prêts sont nommés. Au
+  // Toucher-Coulé, le plafond est la capacité du format choisi (bots en
+  // complément, pas de minimum), comme côté serveur.
+  const tcMode = (room.settings.tcMode ?? '1v1') as (typeof TC_MODE_OPTIONS)[number]
+  const launchStatus = lobbyLaunchStatus({
+    members: room.members,
+    botCount: botSeatCount,
+    minPlayers: game?.minPlayers ?? 2,
+    maxPlayers: gameId === 'toucher-coule' ? TC_PLAYERS_PER_TEAM[tcMode] * 2 : game?.maxPlayers,
+  })
+  const hostName = room.members.find((m) => m.isHost)?.displayName ?? ''
+  const lateOthers = launchStatus.late.filter((m) => !m.isSelf)
+  const selfLate = launchStatus.late.some((m) => m.isSelf)
+  // Jusqu'à trois prénoms (« Max et Zoé »), au-delà un nombre : la ligne doit
+  // tenir sur un téléphone.
+  const lateNames =
+    lateOthers.length > 0 && lateOthers.length <= 3
+      ? format.list(
+          lateOthers.map((m) => m.displayName),
+          { type: 'conjunction' }
+        )
+      : null
+  const readyCounts = { ready: launchStatus.ready, total: launchStatus.total }
+  const tableStatus =
+    launchStatus.late.length === 0
+      ? tOnline('launch.status.allReady', readyCounts)
+      : selfLate && lateOthers.length === 0
+        ? tOnline('launch.status.waitingYou', readyCounts)
+        : lateNames
+          ? tOnline('launch.status.waitingNames', { ...readyCounts, names: lateNames })
+          : tOnline('launch.status.waitingCount', { ...readyCounts, count: lateOthers.length })
+  // Ce que la barre de l'hôte dit quand il ne peut pas encore lancer.
+  const hostBlockedLabel =
+    launchStatus.missingPlayers > 0
+      ? tOnline('launch.needPlayers', { count: launchStatus.missingPlayers })
+      : launchStatus.tooMany
+        ? tOnline('gameSwitch.tooMany', {
+            count: gameId === 'toucher-coule' ? TC_PLAYERS_PER_TEAM[tcMode] * 2 : (game?.maxPlayers ?? 0),
+          })
+        : lateNames
+          ? tOnline('launch.waitingFor', { ...readyCounts, names: lateNames })
+          : tOnline('launch.waitingForCount', { ...readyCounts, count: lateOthers.length })
+
+  // « Lancer la partie » (hôte) : un seul geste, qui le met prêt puis lance —
+  // comme le lancement avec les bots. Le serveur reste juge (canLaunch) : un
+  // refus s'affiche sous la table.
+  const launchAsHost = async () => {
+    if (hostLaunching || loading) return
+    setHostLaunching(true)
+    try {
+      if (!selfMember?.isReady) await setReady(true)
+      await launchGame()
+    } finally {
+      setHostLaunching(false)
+    }
+  }
+
+  const ringMode = totalSeatCount <= RING_MAX_SEATS
+
+  // Avatar d'un siège : anneau plein émeraude + coche si prêt (l'hôte compte
+  // prêt), anneau pointillé crème sinon — un signe qui ne tient pas qu'à la
+  // couleur, lisible de loin, à la place de la pastille de 10 px.
+  const seatAvatar = (m: (typeof room.members)[number], compact: boolean) => {
+    const ready = m.isReady || m.isHost
+    return (
+      <span
+        className={cn(
+          'relative flex shrink-0 items-center justify-center rounded-full',
+          ready ? 'border-[3px] border-emerald-400' : 'border-2 border-dashed border-cream/40'
+        )}
+      >
+        <OnlinePlayerIcon
+          icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
+          cosmetics={{ preferences: m.preferences, level: m.level, role: m.role }}
+          className={cn(
+            'border border-[#D8CCAE] bg-cream text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]',
+            compact ? 'h-8 w-8 text-sm' : 'h-9 w-9 text-base'
+          )}
+        />
+        {ready && (
+          <span
+            aria-hidden
+            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-felt-deep bg-emerald-400 text-felt-deep"
+          >
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+        )}
+        {/* Crayon d'or au coin libre : on voit que son propre siège se touche. */}
+        {m.isSelf && (
+          <span
+            aria-hidden
+            className="absolute -bottom-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-felt-deep bg-gold text-felt-deep shadow-[0_2px_6px_-2px_rgba(0,0,0,0.7)]"
+          >
+            <Pencil className="h-2.5 w-2.5" />
+          </span>
+        )}
+        {m.isHost && <Crown aria-hidden className="absolute -left-2 -top-2 h-4 w-4 text-amber-300" />}
+      </span>
+    )
+  }
+
+  // Son propre siège ouvre la collection ; celui d'un autre, sa fiche (amitié
+  // et, pour l'hôte, retrait de la table) sous la table. Le nom reste le
+  // contenu du bouton (« Toi », état prêt lu à voix haute) — un aria-label
+  // l'aurait remplacé : « Toucher Toi » ne répondait plus à la commande
+  // vocale (WCAG 2.5.3). Le geste passe en DESCRIPTION, par un texte masqué.
+  const seatButtonProps = (m: (typeof room.members)[number]) => ({
+    type: 'button' as const,
+    onClick: m.isSelf ? openSeatCollection : () => setSeatSel((v) => (v === m.userId ? null : m.userId)),
+    'aria-describedby': m.isSelf ? seatCustomizeId : undefined,
+    'aria-haspopup': m.isSelf ? ('dialog' as const) : undefined,
+    'aria-expanded': m.isSelf ? undefined : seatSel === m.userId,
+  })
+  const seatReadyText = (m: (typeof room.members)[number]) =>
+    m.isReady || m.isHost ? tOnline('seat.ready') : tOnline('seat.notReady')
+  const top5Badge = (m: (typeof room.members)[number]) =>
+    top5.has(m.userId) ? (
+      <span className="shrink-0 text-xs font-bold text-amber-300" title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}>
+        #{top5.get(m.userId)}
+      </span>
+    ) : null
+
+  // Invité : les réglages de l'hôte restent lisibles, grisés, et disent qui
+  // les tient — un toucher sans effet ne s'explique pas tout seul.
+  const hostOnlyLegend = isHost ? null : (
+    <p className="mb-3 flex items-center gap-1.5 text-xs text-cream/70">
+      <Lock aria-hidden className="h-3.5 w-3.5 shrink-0 text-gold/80" />
+      {tOnline('settings.hostOnly', { name: hostName })}
+    </p>
+  )
+
   // Dans le lobby en attente
   return (
     <LobbyShell>
       <div className="mb-5 flex items-center justify-between gap-2">
         <button
+          type="button"
           onClick={() => leaveRoom()}
-          className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 backdrop-blur-md transition-all hover:bg-white/20 hover:text-red-300"
+          className="flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/70 px-3 py-2 text-sm font-medium text-cream/80 transition-colors hover:bg-gold/10 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />
           {tOnline('quit')}
@@ -999,17 +1220,17 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             aria-expanded={showGameSwitch}
             className="flex min-h-[44px] min-w-0 max-w-[13rem] flex-1 items-center gap-2 rounded-xl border border-gold/25 bg-felt-deep/70 px-2.5 text-left transition-colors hover:border-amber-400/40"
           >
-            <GameIconById id={gameId} className="h-5 w-5 shrink-0 text-gold" />
+            <GameIconById id={gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-bold text-white">{catalogTitle(gameId)}</span>
-              <span className="block truncate text-xs leading-tight text-gold/75">{tOnline('gameSwitch.cta')}</span>
+              <span className="block truncate text-xs font-bold text-cream">{catalogTitle(gameId)}</span>
+              <span className="block truncate text-xs leading-tight text-gold/80">{tOnline('gameSwitch.cta')}</span>
             </span>
-            <ChevronDown className="h-4 w-4 shrink-0 text-white/40" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-cream/60" />
           </button>
         )}
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
-          <Globe className="h-3 w-3" /> {tOnline('onlineBadge')}
-        </span>
+        {/* Le micro de la table, en haut et non plus en bulle sur la zone du
+            pouce (rien tant que le vocal n'est pas disponible ici). */}
+        <VoiceDockButton />
       </div>
 
       {isHost && showGameSwitch && (
@@ -1027,145 +1248,56 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {/* La Table Ronde : les joueurs sont assis autour du feutre (même
           langage que le mode TV), le code trône au centre — le toucher le
-          copie. Toucher un siège ouvre les actions d'amitié du joueur ;
-          toucher LE SIEN ouvre sa collection, pour changer de look. */}
-      <div className="relative mx-auto mb-1 h-64 w-full max-w-sm flex-none">
+          copie. Au-delà de RING_MAX_SEATS, l'ovale ne garde que le code et
+          les sièges passent en liste sur deux colonnes. */}
+      <div className={cn('relative mx-auto w-full max-w-sm flex-none', ringMode ? 'mb-3 h-64' : 'mb-3 h-32')}>
         <div
-          className="absolute inset-x-3 inset-y-5 rounded-[50%] border-[3px] border-gold/40 shadow-[inset_0_10px_30px_rgba(0,0,0,0.45),0_10px_24px_-10px_rgba(0,0,0,0.6)]"
-          style={{ background: 'radial-gradient(ellipse at 50% 38%, #17594A 0%, #0F4034 62%, #0C352B 100%)' }}
+          className={cn(
+            'absolute rounded-[50%] border-[3px] border-gold/40 shadow-[inset_0_10px_30px_rgba(0,0,0,0.45),0_10px_24px_-10px_rgba(0,0,0,0.6)]',
+            ringMode ? 'inset-x-3 inset-y-5' : 'inset-x-8 inset-y-1'
+          )}
+          style={{
+            background:
+              'radial-gradient(ellipse at 50% 38%, rgb(255 255 255 / 0.08) 0%, transparent 62%), radial-gradient(ellipse at 50% 38%, rgb(var(--felt-rgb)) 0%, rgb(var(--felt-deep-rgb)) 100%)',
+          }}
         >
           <div aria-hidden className="absolute inset-2 rounded-[50%] border border-gold/20" />
         </div>
-        {room.members.map((m, i) => {
-          const memberCosmetics = { preferences: m.preferences, level: m.level, role: m.role }
-          // Croix « Retirer de la table » : l'hôte seul, sur les AUTRES sièges
-          // (la salle attend, garanti par la branche). Sœur du bouton-siège et
-          // non enfant : un bouton dans un bouton n'existe pas en HTML.
-          const kickable = isHost && !m.isSelf
-          const armed = kickArmed === m.userId
-          return (
+        {ringMode &&
+          room.members.map((m, i) => (
             <div
               key={m.userId}
-              className="absolute w-16 -translate-x-1/2 -translate-y-1/2"
+              className="absolute w-[4.5rem] -translate-x-1/2 -translate-y-1/2"
               style={seatPos(i, totalSeatCount)}
             >
-              {/* Son propre siège n'a pas d'actions d'amitié : il ouvre la
-                  collection. Le nom reste le contenu (« Toi », état prêt) —
-                  un aria-label l'aurait remplacé : « Toucher Toi » ne
-                  répondait plus à la commande vocale (WCAG 2.5.3) et l'état
-                  prêt du joueur n'était plus lu. Le geste passe en
-                  DESCRIPTION, par un texte masqué. */}
-              <button
-                type="button"
-                onClick={
-                  m.isSelf
-                    ? openSeatCollection
-                    : () => setSeatSel((v) => (v === m.userId ? null : m.userId))
-                }
-                aria-describedby={m.isSelf ? seatCustomizeId : undefined}
-                aria-haspopup={m.isSelf ? 'dialog' : undefined}
-                className="flex w-16 flex-col items-center gap-0.5"
-              >
-                <span className="relative">
-                  <OnlinePlayerIcon
-                    icon={m.preferences?.icon ?? (m.isHost ? '👑' : '🌐')}
-                    cosmetics={memberCosmetics}
-                    className="h-9 w-9 border border-[#D8CCAE] bg-cream text-base text-[#24201A] shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
-                  />
-                  {/* Crayon d'or au coin libre de l'avatar (la pastille
-                      « prêt » tient le haut-droit, la couronne le
-                      haut-gauche) : on voit que ce siège-là se touche. */}
-                  {m.isSelf && (
-                    <span
-                      aria-hidden
-                      className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-felt-deep bg-gold text-felt-deep shadow-[0_2px_6px_-2px_rgba(0,0,0,0.7)]"
-                    >
-                      <Pencil className="h-2.5 w-2.5" />
-                    </span>
-                  )}
-                  <span
-                    aria-label={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
-                    title={m.isReady ? tOnline('seat.ready') : tOnline('seat.notReady')}
-                    className={cn(
-                      'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-felt-deep',
-                      m.isReady ? 'bg-emerald-400' : 'bg-white/25'
-                    )}
-                  />
-                  {m.isHost && <Crown className="absolute -left-1.5 -top-1.5 h-3.5 w-3.5 text-amber-400" />}
+              <button {...seatButtonProps(m)} className="flex w-full flex-col items-center gap-1 rounded-xl">
+                {seatAvatar(m, false)}
+                <span className="flex max-w-full items-center gap-0.5 text-sm font-semibold leading-tight text-cream">
+                  <span className="truncate">{m.isSelf ? tOnline('seat.you') : m.displayName}</span>
+                  {top5Badge(m)}
                 </span>
-                <span
-                  className={cn(
-                    'flex max-w-[4rem] items-center gap-0.5 text-xs leading-tight',
-                    armed ? 'font-bold text-red-300' : 'text-white/85'
-                  )}
-                >
-                  <span className="truncate">
-                    {armed ? tOnline('seat.kickConfirm') : m.isSelf ? tOnline('seat.you') : m.displayName}
-                  </span>
-                  {!armed && top5.has(m.userId) && (
-                    <span className="shrink-0 font-bold text-amber-300" title={tOnline('top5Badge', { rank: top5.get(m.userId) ?? 0 })}>
-                      #{top5.get(m.userId)}
-                    </span>
-                  )}
-                </span>
+                <span className="sr-only">{seatReadyText(m)}</span>
               </button>
-              {/* Masqué mais lu comme description (aria-describedby suit
-                  aussi un élément caché) : ni doublon à l'écran, ni dans
-                  le parcours du lecteur d'écran. */}
-              {m.isSelf && (
-                <span id={seatCustomizeId} hidden>
-                  {tOnline('seat.customize')}
-                </span>
-              )}
-              {kickable && (
-                /* Posée à la place de la couronne (jamais sur un siège
-                   retirable : l'hôte ne se retire pas lui-même), à l'opposé de
-                   la pastille « prêt ». Le span porte la position, le bouton
-                   la cible tactile — PAS `.touch-target` : ses 44 px centrés
-                   sur une croix de 20 px recouvraient près de la moitié de
-                   l'avatar, et un doigt qui touchait un ami pour ouvrir son
-                   panneau armait le retrait une fois sur deux. Ici un carré de
-                   32 px ancré vers l'EXTÉRIEUR du siège (haut-gauche) : il
-                   n'effleure que le coin de l'avatar. */
-                <span className="absolute -top-1.5 left-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleKickTap(m.userId)}
-                    aria-label={armed ? tOnline('seat.kickConfirmLabel', { name: m.displayName }) : tOnline('seat.kick', { name: m.displayName })}
-                    title={armed ? tOnline('seat.kickConfirmLabel', { name: m.displayName }) : tOnline('seat.kick', { name: m.displayName })}
-                    className={cn(
-                      "relative flex h-5 w-5 items-center justify-center rounded-full border shadow-[0_2px_6px_-2px_rgba(0,0,0,0.7)] transition-colors after:absolute after:-left-3 after:-top-3 after:h-8 after:w-8 after:content-['']",
-                      armed
-                        ? 'animate-pulse border-red-300 bg-red-500 text-white'
-                        : 'border-white/25 bg-felt-deep text-white/60 hover:border-red-400/60 hover:text-red-300'
-                    )}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
             </div>
-          )
-        })}
-        {/* Sièges bots : avatars discrets après les vrais joueurs, pour que
-            la table paraisse pleine avant le lancement. */}
-        {Array.from({ length: botSeatCount }).map((_, b) => (
-          <span
-            key={`bot-${b}`}
-            className="absolute flex w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 opacity-70"
-            style={seatPos(room.members.length + b, totalSeatCount)}
-          >
+          ))}
+        {/* Sièges bots : après les vrais joueurs, pour que la table paraisse
+            pleine avant le lancement. */}
+        {ringMode &&
+          Array.from({ length: botSeatCount }).map((_, b) => (
             <span
-              aria-hidden
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/10 text-base grayscale shadow-[0_4px_10px_-4px_rgba(0,0,0,0.6)]"
+              key={`bot-${b}`}
+              className="absolute flex w-[4.5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+              style={seatPos(room.members.length + b, totalSeatCount)}
             >
-              🤖
+              <span
+                aria-hidden
+                className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-dashed border-cream/30 bg-felt-deep/70 text-cream/70"
+              >
+                <Bot className="h-5 w-5" />
+              </span>
+              <span className="max-w-full truncate text-xs leading-tight text-cream/60">{tOnline('seat.bot')}</span>
             </span>
-            <span className="max-w-[4rem] truncate text-xs leading-tight text-white/45">
-              {tOnline('seat.bot')}
-            </span>
-          </span>
-        ))}
+          ))}
         <button
           type="button"
           onClick={copyCode}
@@ -1190,12 +1322,82 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </button>
       </div>
 
+      {!ringMode && (
+        <ul className="mb-3 grid grid-cols-2 gap-2">
+          {room.members.map((m) => {
+            const ready = m.isReady || m.isHost
+            return (
+              <li key={m.userId}>
+                <button
+                  {...seatButtonProps(m)}
+                  className={cn(
+                    'flex min-h-[52px] w-full items-center gap-2.5 rounded-xl border px-2.5 py-1.5 text-left transition-colors hover:bg-gold/10',
+                    seatSel === m.userId ? 'border-gold/50 bg-gold/10' : 'border-gold/20 bg-felt-deep/60'
+                  )}
+                >
+                  {seatAvatar(m, true)}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1">
+                      <span className="truncate text-sm font-semibold text-cream">
+                        {m.isSelf ? tOnline('seat.you') : m.displayName}
+                      </span>
+                      {top5Badge(m)}
+                    </span>
+                    <span className={cn('block text-xs', ready ? 'text-emerald-300' : 'text-cream/60')}>
+                      {seatReadyText(m)}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+          {Array.from({ length: botSeatCount }).map((_, b) => (
+            <li
+              key={`bot-${b}`}
+              className="flex min-h-[52px] items-center gap-2.5 rounded-xl border border-dashed border-gold/20 px-2.5 py-1.5"
+            >
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-cream/30 text-cream/70"
+              >
+                <Bot className="h-4 w-4" />
+              </span>
+              <span className="truncate text-sm text-cream/70">{tOnline('seat.bot')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {/* Masqué mais lu comme description (aria-describedby suit aussi un
+          élément caché) : ni doublon à l'écran, ni dans le parcours du
+          lecteur d'écran. */}
+      <span id={seatCustomizeId} hidden>
+        {tOnline('seat.customize')}
+      </span>
+
+      {/* Qui manque, en clair, pour toute la table : la pastille de 10 px
+          ne disait pas qui bloquait. */}
+      {room.members.length > 1 && (
+        <p
+          className={cn(
+            'mb-2 flex items-center justify-center gap-1.5 text-center text-sm font-semibold',
+            launchStatus.late.length === 0 ? 'text-emerald-300' : 'text-cream'
+          )}
+        >
+          {launchStatus.late.length === 0 ? (
+            <Check aria-hidden className="h-4 w-4 shrink-0" />
+          ) : (
+            <Hourglass aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+          )}
+          {tableStatus}
+        </p>
+      )}
+
       {/* Indice d'une ligne, tant que le look est celui de l'inscription
           (voir showLookHint) : le crayon seul ne dit pas ce qu'on
           gagne à toucher. */}
       {showLookHint && !lookSaveFailed && (
-        <p className="mb-2 flex items-center justify-center gap-1.5 text-center text-xs text-white/50">
-          <Pencil aria-hidden className="h-3 w-3 shrink-0 text-gold/70" />
+        <p className="mb-2 flex items-center justify-center gap-1.5 text-center text-xs text-cream/70">
+          <Pencil aria-hidden className="h-3 w-3 shrink-0 text-gold/80" />
           {tOnline('seat.customizeHint')}
         </p>
       )}
@@ -1216,16 +1418,22 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         />
       )}
 
-      {/* Actions d'amitié du siège sélectionné. */}
+      {/* Fiche du siège touché : amitié, et pour l'hôte « Retirer de la
+          table ». Le retrait vivait dans une croix de 20 px posée sur
+          l'avatar, qui chevauchait le siège voisin aux grandes tablées ; ici
+          c'est un bouton de 44 px qui s'ARME au premier toucher et n'agit
+          qu'au second, dans les KICK_CONFIRM_MS. */}
       {seatSel && (() => {
         const m = room.members.find((x) => x.userId === seatSel)
         if (!m || m.isSelf) return null
         const isFriend = friends.some((f) => f.userId === m.userId)
         const incomingReq = incoming.find((r) => r.userId === m.userId)
         const outgoingPending = outgoing.some((r) => r.userId === m.userId)
+        const kickable = isHost
+        const armed = kickArmed === m.userId
         return (
-          <div className="mb-2 flex items-center gap-2 rounded-xl border border-gold/15 bg-felt-deep/70 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">{m.displayName}</span>
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/80 px-3 py-2">
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-cream">{m.displayName}</span>
             {isFriend ? (
               <span className="flex shrink-0 items-center gap-1 text-xs text-emerald-300">
                 <Users className="h-3.5 w-3.5" />
@@ -1235,29 +1443,41 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               <button
                 type="button"
                 onClick={() => acceptRequest(incomingReq.id)}
-                className="shrink-0 rounded-lg bg-emerald-500/20 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/30"
+                className="min-h-[44px] shrink-0 rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-3 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/30"
               >
                 {tFriends('accept')}
               </button>
             ) : outgoingPending ? (
-              <span className="shrink-0 text-xs text-white/40">{tFriends('requestSent')}</span>
+              <span className="shrink-0 text-xs text-cream/70">{tFriends('requestSent')}</span>
             ) : (
-              <button
-                type="button"
-                onClick={() => sendRequestToUser(m.userId)}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-500"
-              >
+              <Button variant="primary" size="game" onClick={() => sendRequestToUser(m.userId)} className="h-11 shrink-0 gap-1.5 rounded-xl px-3 text-xs">
                 <UserPlus className="h-3.5 w-3.5" />
                 {tFriends('sendRequest')}
+              </Button>
+            )}
+            {kickable && (
+              <button
+                type="button"
+                onClick={() => handleKickTap(m.userId)}
+                aria-label={armed ? tOnline('seat.kickConfirmLabel', { name: m.displayName }) : tOnline('seat.kick', { name: m.displayName })}
+                className={cn(
+                  'flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition-colors',
+                  armed
+                    ? 'border-red-300 bg-suit-red text-cream'
+                    : 'border-red-400/40 bg-red-500/10 text-red-300 hover:bg-red-500/20'
+                )}
+              >
+                <UserMinus className="h-3.5 w-3.5" />
+                {armed ? tOnline('seat.kickConfirm') : tOnline('seat.kickAction')}
               </button>
             )}
             <button
               type="button"
               onClick={() => setSeatSel(null)}
               aria-label={tOnline('close')}
-              className="touch-target flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white/40 hover:text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-cream/70 hover:bg-gold/10 hover:text-cream"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         )
@@ -1282,19 +1502,22 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             ? Math.min(Math.max(missing, soloBotsCount(game) - botsCount), Math.max(0, maxBots - botsCount))
             : missing
         return (
-          <div className="mb-3 flex items-center gap-3 rounded-2xl border border-violet-400/25 bg-violet-500/10 px-3.5 py-3">
-            <span className="text-xl" aria-hidden>🤖</span>
+          <div className="mb-3 flex items-center gap-3 rounded-2xl border border-gold/25 bg-felt-deep/70 px-3.5 py-3">
+            <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-gold">
+              <Bot className="h-5 w-5" />
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white">{tOnline('botsCallout.title', { count: missing })}</p>
-              <p className="text-xs leading-snug text-white/50">{tOnline('botsCallout.hint')}</p>
+              <p className="text-sm font-bold text-cream">{tOnline('botsCallout.title', { count: missing })}</p>
+              <p className="text-xs leading-snug text-cream/70">{tOnline('botsCallout.hint')}</p>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="quiet"
+              size="game"
               onClick={() => updateSettings({ botsCount: botsCount + fill })}
-              className="min-h-[44px] shrink-0 rounded-xl bg-violet-500/25 px-3 py-2 text-xs font-bold text-violet-100 transition-colors hover:bg-violet-500/40"
+              className="h-11 shrink-0 whitespace-normal rounded-xl px-3 text-xs leading-tight"
             >
               {tOnline('botsCallout.fill')}
-            </button>
+            </Button>
           </div>
         )
       })()}
@@ -1303,14 +1526,14 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         <button
           type="button"
           onClick={() => void shareTableLink()}
-          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 py-2.5 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-gold/30 bg-felt-deep/60 px-2 py-2.5 text-xs font-bold text-cream transition-colors hover:bg-gold/10"
         >
           {linkShare === 'copied' ? (
             <Check className="h-3.5 w-3.5" />
           ) : linkShare === 'failed' ? (
             <X className="h-3.5 w-3.5" />
           ) : (
-            <Share2 className="h-3.5 w-3.5" />
+            <Share2 className="h-3.5 w-3.5 text-gold" />
           )}
           {linkShare === 'copied'
             ? tOnline('share.linkCopied')
@@ -1322,25 +1545,25 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           type="button"
           onClick={() => setShowTv((v) => !v)}
           aria-expanded={showTv}
-          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-gold/30 bg-felt-deep/60 px-2 py-2.5 text-xs font-bold text-cream transition-colors hover:bg-gold/10"
         >
-          <Tv className="h-3.5 w-3.5 text-amber-300" />
+          <Tv className="h-3.5 w-3.5 shrink-0 text-gold" />
           {tTv('modeTv')}
         </button>
         <button
           type="button"
           onClick={() => setShowInvite((v) => !v)}
           aria-expanded={showInvite}
-          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-white/80 transition-colors hover:text-white"
+          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-gold/30 bg-felt-deep/60 px-2 py-2.5 text-xs font-bold text-cream transition-colors hover:bg-gold/10"
         >
-          <Mail className="h-3.5 w-3.5 text-amber-300" />
+          <Mail className="h-3.5 w-3.5 shrink-0 text-gold" />
           {tOnline('invites.inviteFriend')}
         </button>
       </div>
 
       {showTv && (
-        <div className="mb-3 flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-center">
-          <p className="text-xs leading-relaxed text-white/60">{tTv('modeTvHint')}</p>
+        <div className="mb-3 flex flex-col items-center gap-3 rounded-2xl border border-gold/20 bg-felt-deep/70 px-4 py-4 text-center">
+          <p className="text-xs leading-relaxed text-cream/70">{tTv('modeTvHint')}</p>
           <p className="rounded-xl border border-[#D8CCAE] bg-cream px-5 py-2 font-mono text-3xl font-black tracking-[0.3em] text-[#24201A]">
             {room.code}
           </p>
@@ -1357,25 +1580,25 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 href={`/tv/${room.code}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/20"
+                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-amber-400/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/20"
               >
                 <Tv className="h-3.5 w-3.5" />
                 {tTv('openTvScreen')}
               </a>
-              <p className="text-xs leading-relaxed text-white/40">{tTv('openTvScreenHint')}</p>
+              <p className="text-xs leading-relaxed text-cream/60">{tTv('openTvScreenHint')}</p>
             </>
           )}
           <JoinQR
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${room.code}`}
             size={128}
           />
-          <p className="text-xs text-white/40">{tTv('scanToJoin')}</p>
+          <p className="text-xs text-cream/60">{tTv('scanToJoin')}</p>
         </div>
       )}
 
       {showInvite && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-300/70">
+        <div className="mb-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tOnline('invites.inviteFriend')}
           </p>
           {/* Le QR d'abord : le moyen le plus direct de faire entrer quelqu'un
@@ -1386,15 +1609,15 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               size={132}
             />
             <p className="font-mono text-lg font-black tracking-[0.25em] text-cream">{room.code}</p>
-            <p className="max-w-[16rem] text-xs leading-relaxed text-white/45">{tOnline('invites.qrHint')}</p>
+            <p className="max-w-[16rem] text-xs leading-relaxed text-cream/70">{tOnline('invites.qrHint')}</p>
           </div>
           {isHost && visibility !== 'public' && (
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/30">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-gold/80">
               {tOnline('invites.friendsTitle')}
             </p>
           )}
           {isHost && visibility !== 'public' && (friends.length === 0 ? (
-            <p className="text-sm text-white/40">{tOnline('invites.noFriendsToInvite')}</p>
+            <p className="text-sm text-cream/70">{tOnline('invites.noFriendsToInvite')}</p>
           ) : (
             <ul className="space-y-2">
               {friends
@@ -1407,8 +1630,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       className="flex items-center justify-between gap-3 rounded-xl border border-gold/10 bg-felt-deep/60 px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-white/20')} />
-                        <span className="truncate text-sm font-medium text-white">{f.displayName}</span>
+                        <span className={cn('h-2 w-2 shrink-0 rounded-full', f.isOnline ? 'bg-emerald-400' : 'bg-cream/30')} />
+                        <span className="truncate text-sm font-medium text-cream">{f.displayName}</span>
                       </div>
                       <button
                         type="button"
@@ -1416,8 +1639,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         onClick={() => handleInviteFriend(f.userId)}
                         aria-label={tOnline('invites.inviteFriend')}
                         className={cn(
-                          'flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors',
-                          invited ? 'bg-white/10 text-white/40' : 'bg-amber-600 text-white hover:bg-amber-500'
+                          'flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold transition-colors',
+                          invited ? 'border border-gold/20 text-cream/70' : 'bg-amber-500 text-[#24201A] hover:bg-amber-400'
                         )}
                       >
                         <Mail className="h-3.5 w-3.5" />
@@ -1432,7 +1655,6 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'toucher-coule' && (() => {
-        const tcMode = (room.settings.tcMode ?? '1v1') as (typeof TC_MODE_OPTIONS)[number]
         const perTeam = TC_PLAYERS_PER_TEAM[tcMode]
         const teams = room.settings.tcTeams ?? {}
         const myTeam = user ? teams[user.id] : undefined
@@ -1440,10 +1662,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           room.members.filter((m) => teams[m.userId] === team).slice(0, perTeam)
         return (
           <>
-            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-300/70">
+            <div className="mb-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
                 {tTc('mode')}
               </p>
+              {hostOnlyLegend}
               <div className="grid grid-cols-4 gap-2">
                 {TC_MODE_OPTIONS.map((value) => {
                   const active = tcMode === value
@@ -1454,16 +1677,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       disabled={!isHost}
                       onClick={() => updateSettings({ tcMode: value })}
                       title={tTc(`modes.${value}.desc`)}
-                      className={cn(
-                        'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
-                        active
-                          ? 'border-transparent bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-lg shadow-sky-500/25'
-                          : 'border-white/10 bg-white/5 text-white/60',
-                        isHost && !active && 'hover:bg-white/10 hover:text-white'
-                      )}
+                      className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
                     >
                       <span className="block text-sm font-bold">{tTc(`modes.${value}.label`)}</span>
-                      <span className={cn('mt-0.5 block break-words text-xs leading-tight hyphens-auto', active ? 'text-white/80' : 'text-white/35')}>
+                      <span className={cn('mt-0.5 block break-words text-xs leading-tight hyphens-auto', optionHint(active))}>
                         {tTc(`modes.${value}.desc`)}
                       </span>
                     </button>
@@ -1472,8 +1689,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               </div>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-300/70">
+            <div className="mb-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
                 {tTc('teams')}
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -1499,8 +1716,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                             <li
                               key={i}
                               className={cn(
-                                'truncate rounded-lg px-2 py-1 text-xs',
-                                member ? 'bg-black/25 font-medium text-white' : 'bg-white/5 text-white/35'
+                                'truncate rounded-lg px-2 py-1',
+                                member ? 'bg-black/25 text-sm font-medium text-cream' : 'bg-white/5 text-xs text-cream/60'
                               )}
                             >
                               {member ? (
@@ -1524,8 +1741,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                           type="button"
                           onClick={() => setTeam(team)}
                           className={cn(
-                            'w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-colors',
-                            team === 'A' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-rose-600 hover:bg-rose-500'
+                            'min-h-[44px] w-full rounded-lg py-1.5 text-xs font-bold text-cream transition-colors',
+                            team === 'A' ? 'bg-sky-700 hover:bg-sky-800' : 'bg-rose-700 hover:bg-rose-800'
                           )}
                         >
                           {tTc('joinTeam')}
@@ -1535,11 +1752,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )
                 })}
               </div>
-              <p className="mt-2 text-xs text-white/40">{tTc('botsFill')}</p>
+              <p className="mt-2 text-xs text-cream/60">{tTc('botsFill')}</p>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-300/70">
+            <div className="mb-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
                 {tTc('variants')}
               </p>
               {(() => {
@@ -1548,17 +1765,15 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   <button
                     type="button"
                     disabled={!isHost}
+                    aria-pressed={active}
                     onClick={() => updateSettings({ tcPowerups: !active })}
-                    className={cn(
-                      'w-full rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
-                      active
-                        ? 'border-transparent bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-lg'
-                        : 'border-white/10 bg-white/5 text-white/60',
-                      isHost && !active && 'hover:bg-white/10 hover:text-white'
-                    )}
+                    className={cn('w-full rounded-xl border px-3 py-3 text-left', optionTone(active, isHost))}
                   >
-                    <span className="block text-sm font-black">💣 {tTc('powerups')}</span>
-                    <span className={cn('mt-0.5 block text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className="flex items-center gap-1.5 text-sm font-black">
+                      <Bomb aria-hidden className="h-4 w-4 shrink-0" />
+                      {tTc('powerups')}
+                    </span>
+                    <span className={cn('mt-0.5 block text-xs', optionHint(active))}>
                       {tTc('powerupsHint')}
                     </span>
                   </button>
@@ -1573,25 +1788,27 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           à rien — visibilité, bots et options du jeu vivent dedans.
           (Les équipes Toucher-Coulé restent au-dessus : c'est un choix de
           JOUEUR, pas un réglage d'hôte.) */}
-      <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md">
+      <div className="mb-4 overflow-hidden rounded-2xl border border-gold/20 bg-felt-deep/70">
         <button
           type="button"
           onClick={() => setShowSettings((v) => !v)}
           aria-expanded={showSettings}
-          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
+          className="flex min-h-[48px] w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-cream transition-colors hover:bg-gold/10"
         >
-          <Settings className="h-4 w-4 shrink-0 text-amber-300" />
+          <Settings className="h-4 w-4 shrink-0 text-gold" />
           <span className="shrink-0">{tOnline('settings.title')}</span>
-          <span className="min-w-0 flex-1 truncate text-left text-xs font-normal text-white/40">
+          <span className="min-w-0 flex-1 truncate text-left text-xs font-normal text-cream/70">
             · {tOnline(`visibility.${visibility}`)}
             {(room.settings.botsCount ?? 0) > 0 && ` · ${tOnline('settings.botsSummary', { count: room.settings.botsCount ?? 0 })}`}
           </span>
-          <ChevronDown className={cn('h-4 w-4 shrink-0 text-white/40 transition-transform', showSettings && 'rotate-180')} />
+          {!isHost && <Lock aria-hidden className="h-3.5 w-3.5 shrink-0 text-cream/60" />}
+          <ChevronDown className={cn('h-4 w-4 shrink-0 text-cream/60 transition-transform', showSettings && 'rotate-180')} />
         </button>
-        <div className={cn('border-t border-white/10 p-4 pb-0', !showSettings && 'hidden')}>
+        <div className={cn('border-t border-gold/20 p-4 pb-0', !showSettings && 'hidden')}>
+          {hostOnlyLegend}
 
-      <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-300/70">
+      <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
           {tOnline('visibility.title')}
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -1605,13 +1822,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 disabled={!isHost}
                 onClick={() => updateSettings({ visibility: value })}
                 title={tOnline(`visibility.${value}Desc`)}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
-                  active
-                    ? 'border-transparent bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-lg'
-                    : 'border-white/10 bg-white/5 text-white/60',
-                  isHost && !active && 'hover:bg-white/10 hover:text-white'
-                )}
+                className={cn('flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
               >
                 <Icon className="h-4 w-4" />
                 <span className="text-xs font-bold">{tOnline(`visibility.${value}`)}</span>
@@ -1622,8 +1833,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       </div>
 
       {gameId === 'petit-buveur' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tPb('difficulty')}
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -1635,16 +1846,13 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ difficulty: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
-                    active
-                      ? `border-transparent bg-gradient-to-r ${PB_DIFFICULTY_GRADIENT[value]} text-white shadow-lg`
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-left', optionTone(active, isHost))}
                 >
-                  <span className="block text-sm font-bold">{tPb(`difficulties.${value}.label`)}</span>
-                  <span className={cn('mt-0.5 block text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className="flex items-center gap-1.5 text-sm font-bold">
+                    <span aria-hidden className={cn('h-2.5 w-2.5 shrink-0 rounded-full border border-black/20', PB_DIFFICULTY_DOT[value])} />
+                    {tPb(`difficulties.${value}.label`)}
+                  </span>
+                  <span className={cn('mt-0.5 block text-xs', optionHint(active))}>
                     {tPb(`difficulties.${value}.desc`)}
                   </span>
                 </button>
@@ -1659,32 +1867,35 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const botsCount = Math.max(0, room.settings.botsCount ?? 0)
         const maxBots = Math.max(0, (game.maxPlayers ?? 12) - room.members.length)
         return (
-          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
+          <div className="mb-4 rounded-2xl border border-gold/10 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white">🤖 {tOnline('botsFill.title')}</p>
-                <p className="mt-0.5 text-xs text-white/45">
+                <p className="flex items-center gap-1.5 text-sm font-bold text-cream">
+                  <Bot aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                  {tOnline('botsFill.title')}
+                </p>
+                <p className="mt-0.5 text-xs text-cream/70">
                   {tOnline('botsFill.hint', { min: game.minPlayers ?? 2 })}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-2 py-1.5">
+              <div className="flex shrink-0 items-center gap-1 rounded-xl border border-gold/20 bg-felt-deep/60 p-1">
                 <button
                   type="button"
                   disabled={!isHost || botsCount <= 0}
                   onClick={() => updateSettings({ botsCount: botsCount - 1 })}
-                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/[0.15] disabled:opacity-30"
+                  className="game-grid-cell flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-lg font-black text-cream transition-colors hover:bg-gold/20 disabled:opacity-30"
                   aria-label="-1 bot"
                 >
                   −
                 </button>
-                <span className="w-6 text-center text-lg font-black tabular-nums text-white">
+                <span className="w-6 text-center text-lg font-black tabular-nums text-cream">
                   {botsCount}
                 </span>
                 <button
                   type="button"
                   disabled={!isHost || botsCount >= maxBots}
                   onClick={() => updateSettings({ botsCount: botsCount + 1 })}
-                  className="game-grid-cell flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-lg font-black text-white transition-colors hover:bg-white/[0.15] disabled:opacity-30"
+                  className="game-grid-cell flex h-11 w-11 items-center justify-center rounded-lg bg-white/10 text-lg font-black text-cream transition-colors hover:bg-gold/20 disabled:opacity-30"
                   aria-label="+1 bot"
                 >
                   +
@@ -1696,8 +1907,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       })()}
 
       {gameId === 'quiz' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-cyan-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tQuiz('questionCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1709,16 +1920,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ quizCount: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tQuiz('questions')}
                   </span>
                 </button>
@@ -1729,8 +1934,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'bluff' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-rose-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tBluff('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1742,16 +1947,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ bluffRounds: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-rose-600 to-amber-500 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tBluff('rounds')}
                   </span>
                 </button>
@@ -1762,8 +1961,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'sans-filtre' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tSf('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1775,16 +1974,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ sfRounds: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-zinc-700 to-amber-600 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tSf('rounds')}
                   </span>
                 </button>
@@ -1795,8 +1988,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'dilemmes' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-rose-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tDil('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1808,50 +2001,37 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ dilRounds: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-rose-700 to-amber-600 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tDil('rounds')}
                   </span>
                 </button>
               )
             })}
           </div>
-          {/* Mode coquin 🌶️ : cartes grivoises par sous-entendu, opt-in de l'hôte. */}
+          {/* Mode coquin : cartes grivoises par sous-entendu, opt-in de l'hôte. */}
           <button
             type="button"
             disabled={!isHost}
+            aria-pressed={Boolean(room.settings.dilCoquin)}
             onClick={() => updateSettings({ dilCoquin: !room.settings.dilCoquin })}
-            className={cn(
-              'mt-3 flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-all disabled:cursor-not-allowed',
-              room.settings.dilCoquin
-                ? 'border-transparent bg-gradient-to-r from-rose-700 to-pink-600 text-white shadow-lg'
-                : 'border-white/10 bg-white/5 text-white/60',
-              isHost && !room.settings.dilCoquin && 'hover:bg-white/10 hover:text-white'
-            )}
+            className={cn('mt-3 flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left', optionTone(room.settings.dilCoquin, isHost))}
           >
             <span>
-              <span className="block text-sm font-black">{tDil('coquin')} 🌶️</span>
-              <span
-                className={cn(
-                  'mt-0.5 block text-xs',
-                  room.settings.dilCoquin ? 'text-white/80' : 'text-white/35'
-                )}
-              >
+              <span className="flex items-center gap-1.5 text-sm font-black">
+                <Flame aria-hidden className="h-4 w-4 shrink-0" />
+                {tDil('coquin')}
+              </span>
+              <span className={cn('mt-0.5 block text-xs', optionHint(room.settings.dilCoquin))}>
                 {tDil('coquinHint')}
               </span>
             </span>
             <span
               className={cn(
-                'text-xs font-bold uppercase tracking-wide',
-                room.settings.dilCoquin ? 'text-white' : 'text-white/30'
+                'shrink-0 text-xs font-bold uppercase tracking-wide',
+                room.settings.dilCoquin ? 'text-[#24201A]' : 'text-cream/60'
               )}
             >
               {room.settings.dilCoquin ? tDil('coquinOn') : tDil('coquinOff')}
@@ -1861,8 +2041,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'petit-bac' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-sky-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tPbc('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1874,16 +2054,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ pbcRounds: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-sky-700 to-amber-600 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tPbc('rounds')}
                   </span>
                 </button>
@@ -1894,8 +2068,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'president' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tPre('manchesCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -1907,16 +2081,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ preManches: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-emerald-800 to-amber-600 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tPre('manches')}
                   </span>
                 </button>
@@ -1928,8 +2096,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
 
       {gameId === 'espion' && (
         <>
-          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-cyan-400/70">
+          <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
               {tEspion('discussionMin')}
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -1944,16 +2112,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     type="button"
                     disabled={!isHost}
                     onClick={() => updateSettings({ espionDiscussionMin: value })}
-                    className={cn(
-                      'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                      active
-                        ? 'border-transparent bg-gradient-to-r from-slate-600 to-cyan-500 text-white shadow-lg'
-                        : 'border-white/10 bg-white/5 text-white/60',
-                      isHost && !active && 'hover:bg-white/10 hover:text-white'
-                    )}
+                    className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                   >
                     <span className="block text-lg font-black">{value}</span>
-                    <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                       {tEspion('minutes')}
                     </span>
                   </button>
@@ -1961,8 +2123,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
               })}
             </div>
           </div>
-          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-cyan-400/70">
+          <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
               {tEspion('roundsToWin')}
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -1974,16 +2136,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     type="button"
                     disabled={!isHost}
                     onClick={() => updateSettings({ espionRoundsToWin: value })}
-                    className={cn(
-                      'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                      active
-                        ? 'border-transparent bg-gradient-to-r from-slate-600 to-cyan-500 text-white shadow-lg'
-                        : 'border-white/10 bg-white/5 text-white/60',
-                      isHost && !active && 'hover:bg-white/10 hover:text-white'
-                    )}
+                    className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                   >
                     <span className="block text-lg font-black">{value}</span>
-                    <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                       {tEspion('rounds')}
                     </span>
                   </button>
@@ -1999,8 +2155,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const teamMembers = (team: 'A' | 'B') => room.members.filter((m) => teams[m.userId] === team)
         const myTeam = user ? teams[user.id] : undefined
         return (
-          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+          <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
               {tMc('teams')}
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -2020,10 +2176,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     </p>
                     <ul className="mb-2 min-h-[1.75rem] space-y-1">
                       {inTeam.length === 0 && (
-                        <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/35">{tMc('autoSlot')}</li>
+                        <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-cream/60">{tMc('autoSlot')}</li>
                       )}
                       {inTeam.map((member) => (
-                        <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-xs font-medium text-white">
+                        <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-sm font-medium text-cream">
                           {member.preferences?.icon && (
                             <span aria-hidden className="mr-1">
                               <PlayerAvatarGlyph value={member.preferences.icon} />
@@ -2038,8 +2194,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                         type="button"
                         onClick={() => setTeam(team)}
                         className={cn(
-                          'w-full rounded-lg py-1.5 text-xs font-semibold transition-colors',
-                          team === 'A' ? 'bg-amber-600 text-black hover:bg-amber-500' : 'bg-red-700 text-white hover:bg-red-600'
+                          'min-h-[44px] w-full rounded-lg py-1.5 text-xs font-bold transition-colors',
+                          team === 'A' ? 'bg-amber-500 text-[#24201A] hover:bg-amber-400' : 'bg-red-700 text-cream hover:bg-red-800'
                         )}
                       >
                         {tMc('joinTeam')}
@@ -2049,7 +2205,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 )
               })}
             </div>
-            <p className="mt-2 text-xs text-white/40">{tMc('teamsHint')}</p>
+            <p className="mt-2 text-xs text-cream/60">{tMc('teamsHint')}</p>
           </div>
         )
       })()}
@@ -2060,8 +2216,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const myTeam = user ? teams[user.id] : undefined
         return (
           <>
-            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400/70">
+            <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
                 {tTabou('teams')}
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -2081,10 +2237,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       </p>
                       <ul className="mb-2 min-h-[1.75rem] space-y-1">
                         {inTeam.length === 0 && (
-                          <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/35">{tTabou('openSeat')}</li>
+                          <li className="rounded-lg bg-white/5 px-2 py-1 text-xs text-cream/60">{tTabou('openSeat')}</li>
                         )}
                         {inTeam.map((member) => (
-                          <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-xs font-medium text-white">
+                          <li key={member.userId} className="truncate rounded-lg bg-black/25 px-2 py-1 text-sm font-medium text-cream">
                             {member.preferences?.icon && (
                               <span aria-hidden className="mr-1">
                                 <PlayerAvatarGlyph value={member.preferences.icon} />
@@ -2099,8 +2255,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                           type="button"
                           onClick={() => setTeam(team)}
                           className={cn(
-                            'w-full rounded-lg py-1.5 text-xs font-semibold text-white transition-colors',
-                            team === 'A' ? 'bg-sky-600 hover:bg-sky-500' : 'bg-rose-600 hover:bg-rose-500'
+                            'min-h-[44px] w-full rounded-lg py-1.5 text-xs font-bold text-cream transition-colors',
+                            team === 'A' ? 'bg-sky-700 hover:bg-sky-800' : 'bg-rose-700 hover:bg-rose-800'
                           )}
                         >
                           {tTabou('joinTeam')}
@@ -2110,11 +2266,11 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   )
                 })}
               </div>
-              <p className="mt-2 text-xs text-white/40">{tTabou('teamRule')}</p>
+              <p className="mt-2 text-xs text-cream/60">{tTabou('teamRule')}</p>
             </div>
 
-            <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-emerald-400/70">
+            <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
                 {tTabou('targetScore')}
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -2126,16 +2282,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       type="button"
                       disabled={!isHost}
                       onClick={() => updateSettings({ tabouTargetScore: value })}
-                      className={cn(
-                        'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                        active
-                          ? 'border-transparent bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg'
-                          : 'border-white/10 bg-white/5 text-white/60',
-                        isHost && !active && 'hover:bg-white/10 hover:text-white'
-                      )}
+                      className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                     >
                       <span className="block text-lg font-black">{value}</span>
-                      <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                      <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                         {tTabou('points')}
                       </span>
                     </button>
@@ -2148,8 +2298,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       })()}
 
       {gameId === 'crobard' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tCrobard('roundsCount')}
           </p>
           <div className="grid grid-cols-3 gap-2">
@@ -2161,16 +2311,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ crobardRounds: value })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tCrobard('rounds')}
                   </span>
                 </button>
@@ -2181,8 +2325,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'loup-garou' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tLg('debate')}
           </p>
           <div className="grid grid-cols-5 gap-2">
@@ -2197,16 +2341,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ lgDebateMin: value })}
-                  className={cn(
-                    'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-slate-600 to-amber-500 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
-                  <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                     {tLg('minutes')}
                   </span>
                 </button>
@@ -2219,22 +2357,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <button
               type="button"
               disabled={!isHost}
+              aria-pressed={Boolean(room.settings.lgExtraWolf)}
               onClick={() => updateSettings({ lgExtraWolf: !room.settings.lgExtraWolf })}
-              className={cn(
-                'mt-2 w-full rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
-                room.settings.lgExtraWolf
-                  ? 'border-transparent bg-gradient-to-r from-slate-600 to-amber-500 text-white shadow-lg'
-                  : 'border-white/10 bg-white/5 text-white/60',
-                isHost && !room.settings.lgExtraWolf && 'hover:bg-white/10 hover:text-white'
-              )}
+              className={cn('mt-2 w-full rounded-xl border px-3 py-3 text-left', optionTone(room.settings.lgExtraWolf, isHost))}
             >
               <span className="block text-sm font-black">{tLg('extraWolf')}</span>
-              <span
-                className={cn(
-                  'mt-0.5 block text-xs',
-                  room.settings.lgExtraWolf ? 'text-white/80' : 'text-white/35'
-                )}
-              >
+              <span className={cn('mt-0.5 block text-xs', optionHint(room.settings.lgExtraWolf))}>
                 {tLg('extraWolfHint')}
               </span>
             </button>
@@ -2243,8 +2371,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
       )}
 
       {gameId === 'menteur' && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-orange-400/70">
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
             {tMenteur('variants')}
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -2260,17 +2388,12 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   key={key}
                   type="button"
                   disabled={!isHost}
+                  aria-pressed={active}
                   onClick={() => updateSettings({ [key]: !active })}
-                  className={cn(
-                    'rounded-xl border px-3 py-3 text-left transition-all disabled:cursor-not-allowed',
-                    active
-                      ? 'border-transparent bg-gradient-to-r from-orange-600 to-red-500 text-white shadow-lg'
-                      : 'border-white/10 bg-white/5 text-white/60',
-                    isHost && !active && 'hover:bg-white/10 hover:text-white'
-                  )}
+                  className={cn('rounded-xl border px-3 py-3 text-left', optionTone(active, isHost))}
                 >
                   <span className="block text-sm font-black">{label}</span>
-                  <span className={cn('mt-0.5 block text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                  <span className={cn('mt-0.5 block text-xs', optionHint(active))}>
                     {hint}
                   </span>
                 </button>
@@ -2286,8 +2409,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         const current = Math.min(room.settings.imposteurCount ?? imposteurCountFor(estPlayers), maxCount)
         const options = Array.from({ length: maxCount }, (_, i) => i + 1)
         return (
-          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+          <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
               {tImposteur('count')}
             </p>
             <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
@@ -2299,16 +2422,10 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     type="button"
                     disabled={!isHost}
                     onClick={() => updateSettings({ imposteurCount: value })}
-                    className={cn(
-                      'rounded-xl border px-2 py-3 text-center transition-all disabled:cursor-not-allowed',
-                      active
-                        ? 'border-transparent bg-gradient-to-r from-amber-500 to-amber-700 text-white shadow-lg'
-                        : 'border-white/10 bg-white/5 text-white/60',
-                      isHost && !active && 'hover:bg-white/10 hover:text-white'
-                    )}
+                    className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
                   >
                     <span className="block text-lg font-black">{value}</span>
-                    <span className={cn('mt-0.5 block truncate text-xs', active ? 'text-white/80' : 'text-white/35')}>
+                    <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
                       {tImposteur(value > 1 ? 'imposteursPlural' : 'imposteurSingular')}
                     </span>
                   </button>
@@ -2322,103 +2439,103 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
         </div>
       </div>
 
-      {error && <p className="mt-4 text-center text-sm text-red-300">{error}</p>}
-
-      {!isHost && (
-        <p className="mt-2 text-center text-sm text-white/50">
-          {tOnline('launch.waitingForHost', { name: room.members.find((m) => m.isHost)?.displayName ?? '' })}
-        </p>
-      )}
-
-      {/* Espace réservé pour que la barre fixe ne masque pas le contenu —
-          plus haut quand elle porte la ligne « sans les retardataires », et
-          safe-area comprise : la barre la prend (pb), l'espace doit la
-          prendre aussi, sinon 34 px de réglages passent sous elle sur iPhone. */}
+      {/* Espace réservé à la hauteur MESURÉE de la barre fixe (libellé sur
+          deux lignes, ligne « sans les retardataires », safe-area) : rien ne
+          passe sous elle. Avant la première mesure, une estimation. */}
       <div
         aria-hidden
-        className={cn(
-          'h-[calc(5rem+env(safe-area-inset-bottom))]',
-          showForceLaunch && 'h-[calc(8rem+env(safe-area-inset-bottom))]'
-        )}
+        style={bottomBarHeight ? { height: bottomBarHeight } : undefined}
+        className={bottomBarHeight ? undefined : 'h-[calc(6rem+env(safe-area-inset-bottom))]'}
       />
 
-      {/* Prêt + Lancer : fixes en zone pouce, safe-area comprise. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/15 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      {/* L'action du moment, fixe en zone pouce, safe-area comprise. Hôte : un
+          seul bouton « Lancer » (il compte prêt, cf. lobbyLaunchStatus), ou
+          l'attente en clair — plus de bouton grisé à 2:1 qui portait le
+          compte. Invité : « Je suis prêt » en or, puis l'état « Prêt », avec
+          de quoi se raviser. */}
+      <div
+        ref={bottomBarRef}
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/20 bg-felt-deep/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+      >
+        {/* Un refus (lancement, prêt, réglage) se lit là où le doigt vient
+            de toucher, pas en fin de page sous les réglages. */}
+        {error && (
+          <p role="alert" className="mx-auto mb-2 w-full max-w-lg text-center text-sm font-semibold text-red-300">
+            {error}
+          </p>
+        )}
         <div className="mx-auto flex w-full max-w-lg items-center gap-3">
           {canLaunchSoloWithBots ? (
-            /* Hôte seul + bots suffisants : un seul geste au lieu de deux
-               (« prêt » puis « lancer » sont enchaînés par le handler). */
+            /* Hôte seul + bots suffisants : « prêt » puis « lancer » enchaînés. */
             <Button
+              variant="primary"
+              size="gameLg"
               onClick={() => void launchSoloWithBots()}
               disabled={soloLaunching || loading}
-              className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex-1 gap-2"
             >
-              <Play className="mr-1.5 h-4 w-4" />
+              <Play className="h-4 w-4" />
               {tOnline('launch.withBots')}
             </Button>
-          ) : (
-            <>
+          ) : isHost ? (
+            launchStatus.launchable ? (
               <Button
-                onClick={() => setReady(!selfMember?.isReady)}
-                className={cn(
-                  'h-12 rounded-2xl border text-sm font-semibold transition-all',
-                  isHost ? 'flex-[0.8]' : 'flex-1',
-                  selfMember?.isReady
-                    ? 'border-emerald-400/30 bg-emerald-500/[0.15] text-emerald-200 hover:bg-emerald-500/20'
-                    : 'border-white/[0.15] bg-white/5 text-white hover:bg-white/10'
-                )}
+                variant="primary"
+                size="gameLg"
+                onClick={() => void launchAsHost()}
+                disabled={hostLaunching || loading}
+                className="flex-1 gap-2"
               >
-                {selfMember?.isReady ? tOnline('readyButton.on') : tOnline('readyButton.off')}
+                <Play className="h-4 w-4" />
+                {tOnline('launch.cta')}
               </Button>
-
-              {isHost && (
-                <Button
-                  onClick={() => launchGame()}
-                  disabled={!room.canLaunch || loading}
-                  className="h-12 flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Play className="mr-1.5 h-4 w-4" />
-                  {(() => {
-                    // Minimum PAR JEU (affichage — la vérité serveur est dans le
-                    // registre game-adapters, synchronisée par test avec GAMES).
-                    // Les bots ajoutés comptent dans le total.
-                    const meta = GAMES.find((g) => g.id === gameId)
-                    const bots = meta?.botsFillable ? Math.max(0, room.settings.botsCount ?? 0) : 0
-                    const minPlayers = Math.max(1, (meta?.minPlayers ?? 2) - bots)
-                    return room.canLaunch
-                      ? tOnline('launch.cta')
-                      : room.members.length < minPlayers
-                        ? tOnline('launch.minPlayers', { count: minPlayers })
-                        : tOnline('readyCount', {
-                            ready: room.members.filter((m) => m.isReady).length,
-                            total: room.members.length,
-                          })
-                  })()}
-                </Button>
-              )}
-            </>
+            ) : (
+              <p
+                role="status"
+                className="flex min-h-[56px] flex-1 items-center justify-center gap-2 rounded-2xl border border-gold/40 bg-felt-deep px-4 py-2 text-center text-sm font-semibold leading-snug text-cream"
+              >
+                <Hourglass aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                {hostBlockedLabel}
+              </p>
+            )
+          ) : selfMember?.isReady ? (
+            <div className="flex min-h-[56px] flex-1 items-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/[0.15] py-1.5 pl-4 pr-1.5">
+              <Check aria-hidden className="h-5 w-5 shrink-0 text-emerald-300" />
+              <p role="status" className="min-w-0 flex-1 text-sm font-semibold leading-snug text-emerald-100">
+                {tOnline('launch.guestReady', { name: hostName, ...readyCounts })}
+              </p>
+              <button
+                type="button"
+                onClick={() => void setReady(false)}
+                className="min-h-[44px] shrink-0 rounded-xl px-3 text-xs font-semibold text-cream/80 underline underline-offset-2 transition-colors hover:bg-gold/10 hover:text-cream"
+              >
+                {tOnline('launch.notYet')}
+              </button>
+            </div>
+          ) : (
+            <Button variant="primary" size="gameLg" onClick={() => void setReady(true)} className="flex-1 gap-2">
+              <Check className="h-5 w-5" />
+              {tOnline('readyButton.off')}
+            </Button>
           )}
         </div>
         {/* Sous le lancement, discret : « Lancer sans les retardataires ».
-            Désactivé (titre + rappel en clair, un titre ne se lit pas au
-            doigt) tant que ceux qui restent ne font pas le minimum du jeu.
-            Cible tactile par la boîte elle-même (py-2 : 32 px), pas par
-            `.touch-target` : ses 44 px centrés débordaient sous la rangée
-            Prêt/Lancer, et le bas de ces boutons aurait déclenché un
-            lancement forcé. */}
+            Désactivé (rappel en clair, un titre ne se lit pas au doigt) tant
+            que ceux qui restent ne font pas le minimum du jeu. Une boîte de
+            44 px DANS le flux, sous la rangée : pas de `.touch-target`, dont
+            la zone centrée débordait sur le bouton de lancement. */}
         {showForceLaunch && (
           <div className="mx-auto mt-1 w-full max-w-lg text-center">
             <button
               type="button"
               onClick={() => void launchWithoutLate()}
               disabled={!forceLaunch.allowed || forceLaunching || loading}
-              title={forceLaunch.allowed ? undefined : tOnline('launch.forceBlocked', { count: forceLaunch.missing })}
-              className="px-3 py-2 text-xs font-semibold text-amber-200/80 underline-offset-2 transition-colors hover:text-amber-100 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
+              className="min-h-[44px] px-3 text-xs font-semibold text-amber-200 underline-offset-2 transition-colors hover:text-amber-100 hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:no-underline"
             >
               {tOnline('launch.force', { count: forceLaunch.late })}
             </button>
             {!forceLaunch.allowed && (
-              <p className="mt-0.5 text-xs text-cream/70">
+              <p className="text-xs text-cream/70">
                 {tOnline('launch.forceBlocked', { count: forceLaunch.missing })}
               </p>
             )}

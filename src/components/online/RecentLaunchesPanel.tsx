@@ -36,7 +36,7 @@ export function RecentLaunchesPanel({ items }: { items: RecentLaunchItem[] }) {
 
   return (
     <section className="min-w-0">
-      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-white/35">
+      <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-cream/70">
         {t('title')}
       </p>
       {/* Rangée défilante : `tabIndex` la rend atteignable au clavier — sans
@@ -54,21 +54,21 @@ export function RecentLaunchesPanel({ items }: { items: RecentLaunchItem[] }) {
           return (
             <li
               key={item.id}
-              className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] py-1.5 pl-2 pr-3"
+              className="flex shrink-0 items-center gap-2.5 rounded-2xl border border-gold/20 bg-felt-deep/70 py-1.5 pl-2 pr-3"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-white/50">
-                <GameIconById id={item.gameId} className="h-3.5 w-3.5 text-amber-200/80" />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-felt">
+                <GameIconById id={item.gameId} surface="felt" className="h-5 w-5" />
               </span>
               <span className="min-w-0">
-                <span className="flex max-w-[9rem] items-center gap-1 truncate text-xs font-semibold text-white/85">
+                <span className="flex max-w-[9rem] items-center gap-1 truncate text-xs font-semibold text-cream">
                   <span className="truncate">{label}</span>
                   {/* Cadenas : table privée ou sur invitation. Le jeu est dit,
                       l'effectif et les pseudos ne le sont pas. */}
                   {item.isPrivate && (
-                    <Lock className="h-2.5 w-2.5 shrink-0 text-white/40" aria-label={t('privateTable')} />
+                    <Lock className="h-3.5 w-3.5 shrink-0 text-cream/60" aria-label={t('privateTable')} />
                   )}
                 </span>
-                <span className="block text-xs text-white/40">
+                <span className="block text-xs text-cream/70">
                   {ago(item.startedAgoMinutes)}
                   {item.playerCount !== null && ` · ${t('players', { count: item.playerCount })}`}
                 </span>

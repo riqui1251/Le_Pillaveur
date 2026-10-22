@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { forceLaunchDecision, MC_TEAM_MIN_PLAYERS, type ForceLaunchSeat } from './lobby-launch'
+import { forceLaunchDecision, lobbyLaunchStatus, MC_TEAM_MIN_PLAYERS, type ForceLaunchSeat } from './lobby-launch'
 
 /**
  * Le raccourci « Lancer sans les retardataires » doit tenir ces promesses :
@@ -122,5 +122,59 @@ describe('forceLaunchDecision', () => {
       })
       expect(d.allowed).toBe(true)
     })
+  })
+})
+
+describe('lobbyLaunchStatus', () => {
+  const seat = (name: string, isReady: boolean, isHost = false) => ({ name, isReady, isHost })
+
+  it("l'hôte n'est jamais un retardataire : ses amis prêts, il peut lancer", () => {
+    const s = lobbyLaunchStatus({
+      members: [seat('Léa', false, true), seat('Max', true), seat('Zoé', true), seat('Tom', true)],
+      botCount: 0,
+      minPlayers: 2,
+    })
+    expect(s.ready).toBe(4)
+    expect(s.total).toBe(4)
+    expect(s.late).toEqual([])
+    expect(s.launchable).toBe(true)
+  })
+
+  it('nomme les invités attendus, dans l’ordre de la table', () => {
+    const s = lobbyLaunchStatus({
+      members: [seat('Léa', false, true), seat('Max', false), seat('Zoé', true), seat('Tom', false)],
+      botCount: 0,
+      minPlayers: 2,
+    })
+    expect(s.late.map((m) => m.name)).toEqual(['Max', 'Tom'])
+    expect(s.ready).toBe(2)
+    expect(s.launchable).toBe(false)
+  })
+
+  it('sous le minimum du jeu : rien à lancer, le manque est compté bots compris', () => {
+    const seul = lobbyLaunchStatus({ members: [seat('Léa', true, true)], botCount: 0, minPlayers: 4 })
+    expect(seul.missingPlayers).toBe(3)
+    expect(seul.launchable).toBe(false)
+    const avecBots = lobbyLaunchStatus({ members: [seat('Léa', false, true)], botCount: 3, minPlayers: 4 })
+    expect(avecBots.missingPlayers).toBe(0)
+    expect(avecBots.launchable).toBe(true)
+  })
+
+  it('au-delà du maximum (humains ou total avec bots) : bloqué', () => {
+    const humains = lobbyLaunchStatus({
+      members: [seat('A', true, true), seat('B', true), seat('C', true)],
+      botCount: 0,
+      minPlayers: 1,
+      maxPlayers: 2,
+    })
+    expect(humains.tooMany).toBe(true)
+    expect(humains.launchable).toBe(false)
+    const total = lobbyLaunchStatus({ members: [seat('A', true, true), seat('B', true)], botCount: 2, minPlayers: 2, maxPlayers: 3 })
+    expect(total.tooMany).toBe(true)
+  })
+
+  it('bots négatifs (réglage corrompu) : zéro ; table vide : jamais lançable', () => {
+    expect(lobbyLaunchStatus({ members: [seat('A', true, true)], botCount: -2, minPlayers: 2 }).missingPlayers).toBe(1)
+    expect(lobbyLaunchStatus({ members: [], botCount: 0, minPlayers: 1 }).launchable).toBe(false)
   })
 })

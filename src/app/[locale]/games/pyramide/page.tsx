@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Layers, Minus, Plus, Shuffle } from 'lucide-react'
 import Game from './components/game'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
@@ -11,7 +12,11 @@ import {
   PrelobbyDisclosure,
   PrelobbySection,
 } from '@/components/game/LocalGamePrelobby'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
+const MIN_HEIGHT = 3
+const MAX_HEIGHT = 6
 
 export default function PyramidePage() {
   const t = useTranslations('games.pyramide')
@@ -42,8 +47,9 @@ export default function PyramidePage() {
 
   const totalCards = (pyramidHeight * (pyramidHeight + 1)) / 2
   const rowsCardsLabel = t('page.rowsCards', { rows: pyramidHeight, cards: totalCards })
-  const funRules = t.raw('page.rulesFun') as string[]
-  const classicRules = t.raw('page.rulesClassic') as string[]
+  const rules = gameMode === 'fun'
+    ? [t('page.rules.fun.flip'), t('page.rules.fun.drink'), t('page.rules.fun.summit')]
+    : [t('page.rules.classic.prelude'), t('page.rules.classic.memorize'), t('page.rules.classic.give')]
 
   return (
     <LocalGamePrelobby
@@ -59,7 +65,9 @@ export default function PyramidePage() {
               key={value}
               active={gameMode === value}
               onClick={() => setGameMode(value)}
-              icon={value === 'fun' ? '🎲' : '🃏'}
+              icon={value === 'fun'
+                ? <Shuffle className="h-5 w-5 text-gold" />
+                : <Layers className="h-5 w-5 text-gold" />}
               title={t(`page.modes.${value}.label`)}
               description={t(`page.modes.${value}.desc`)}
             />
@@ -101,14 +109,35 @@ export default function PyramidePage() {
 
       <PrelobbySection
         label={t('page.height')}
-        action={
-          <div className="flex items-center gap-2">
-            <span className="font-display text-2xl font-bold text-gold">{pyramidHeight}</span>
-            <span className="text-xs text-cream/60">{rowsCardsLabel}</span>
-          </div>
-        }
+        action={<span className="text-xs text-cream/70">{rowsCardsLabel}</span>}
       >
-        <div className="flex flex-col items-center gap-0.5 py-1" aria-hidden="true">
+        {/* Sélecteur − N + : le curseur natif faisait 6 px de haut, une cible
+            ratée sur deux au doigt, et sans surface visible sur le feutre. */}
+        <div className="flex items-center justify-center gap-5">
+          <Button
+            variant="quiet"
+            size="gameIcon"
+            aria-label={t('page.heightLess')}
+            disabled={pyramidHeight <= MIN_HEIGHT}
+            onClick={() => setPyramidHeight(h => Math.max(MIN_HEIGHT, h - 1))}
+          >
+            <Minus aria-hidden className="h-5 w-5" />
+          </Button>
+          <p aria-live="polite" className="w-12 text-center font-display text-3xl font-bold leading-none tabular-nums text-gold">
+            <span aria-hidden>{pyramidHeight}</span>
+            <span className="sr-only">{rowsCardsLabel}</span>
+          </p>
+          <Button
+            variant="quiet"
+            size="gameIcon"
+            aria-label={t('page.heightMore')}
+            disabled={pyramidHeight >= MAX_HEIGHT}
+            onClick={() => setPyramidHeight(h => Math.min(MAX_HEIGHT, h + 1))}
+          >
+            <Plus aria-hidden className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="mt-3 flex flex-col items-center gap-0.5" aria-hidden="true">
           {Array.from({ length: pyramidHeight }, (_, i) => (
             <div key={i} className="flex gap-0.5">
               {Array.from({ length: i + 1 }, (_, j) => (
@@ -120,22 +149,6 @@ export default function PyramidePage() {
             </div>
           ))}
         </div>
-        <div className="mt-2 flex items-center gap-3">
-          <span className="text-xs text-cream/50" aria-hidden="true">3</span>
-          <input
-            id="pyramid-height"
-            type="range"
-            min={3}
-            max={6}
-            step={1}
-            value={pyramidHeight}
-            aria-label={t('page.height')}
-            aria-valuetext={rowsCardsLabel}
-            onChange={e => setPyramidHeight(Number(e.target.value))}
-            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-black/30 accent-amber-500"
-          />
-          <span className="text-xs text-cream/50" aria-hidden="true">6</span>
-        </div>
       </PrelobbySection>
 
       <PrelobbyDisclosure
@@ -144,7 +157,7 @@ export default function PyramidePage() {
         onToggle={() => setShowRules(v => !v)}
       >
         <div className="space-y-1.5 text-sm text-cream/70">
-          {(gameMode === 'fun' ? funRules : classicRules).map((rule, i) => (
+          {rules.map((rule, i) => (
             <p key={i}>{rule}</p>
           ))}
         </div>

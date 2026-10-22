@@ -128,7 +128,7 @@ export function TvTelephoneDessine({ room, state }: { room: TvRoomDto; state: Te
   }
 
   if (state.phase === 'reveal' && state.revealChain) {
-    const layout = revealLayout(state.revealChain.links.length)
+    const layout = revealLayout(state.revealChain.linkCount)
     const leaderName = state.players.find((p) => p.id === room.currentTurnUserId)?.name ?? ''
     return (
       <div className="flex h-full w-full flex-col gap-4 px-6 py-4">

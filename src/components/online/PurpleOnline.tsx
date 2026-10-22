@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { AlertTriangle, Check, Flag, Loader2 } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { PhaseCountdown } from './PhaseCountdown'
+import { PhaseHeader } from './PhaseHeader'
+import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
+import { TurnBanner } from '@/components/game/TurnBanner'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { parsePurpleState, type PurpleSyncedState, type SerializedCard } from '@/lib/online-game-state'
+import { parsePurpleState, type PurpleSyncedState } from '@/lib/online-game-state'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
@@ -18,56 +22,46 @@ import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { GameIconById } from '@/components/hub/GameIconById'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import {
+  PURPLE_BET_META,
+  PURPLE_BET_TYPES,
+  PurpleBetButton,
+  PurpleBetGrid,
+  PurpleDrawnCards,
+  PurpleHistory,
+  PurplePotRow,
+  PurpleVerdictDialog,
+  type PurpleBetType,
+} from '@/app/[locale]/games/purple/components/purple-ui'
 
 /** Purple en ligne : jeu tour par tour, cagnotte « patate chaude ». Aucune
- * info cachée (tirage public dès qu'il a lieu). */
+ * info cachée (tirage public dès qu'il a lieu). Cartes, paris et verdict
+ * viennent du jeu local (purple-ui) : même allure dans les deux modes. */
 
 /** Avertissement AFK affiché 1 min avant l'expulsion (comme les autres jeux). */
 const AFK_WARN_AFTER_MS = ONLINE_REPLACE_GRACE_MS - 60_000
 
-type BetType = 'rouge' | 'double-rouge' | 'noir' | 'double-noir' | 'purple' | 'double-purple'
+// Barre de décision À MON TOUR : ligne d'enjeu, « Je continue » (56),
+// « Passer » (48), écarts et zone sûre. Au-delà des tailles d'OnlineActionBar.
+const DECISION_PADDING = 'pb-[calc(12rem+env(safe-area-inset-bottom,0px))]'
 
-const BET_META: Record<BetType, { cards: number; gulps: number; labelKey: string; emoji: string }> = {
-  'rouge':         { cards: 1, gulps: 1, labelKey: 'rouge',        emoji: '🔴' },
-  'double-rouge':  { cards: 2, gulps: 2, labelKey: 'doubleRouge',  emoji: '🔴🔴' },
-  'noir':          { cards: 1, gulps: 1, labelKey: 'noir',         emoji: '⚫' },
-  'double-noir':   { cards: 2, gulps: 2, labelKey: 'doubleNoir',   emoji: '⚫⚫' },
-  'purple':        { cards: 2, gulps: 2, labelKey: 'purple',       emoji: '🟣' },
-  'double-purple': { cards: 4, gulps: 4, labelKey: 'doublePurple', emoji: '🟣🟣' },
+type PurpleMove = 'bet' | 'continue' | 'pass' | 'close-reveal' | 'end'
+
+function isBetType(bet: string | null): bet is PurpleBetType {
+  return bet !== null && bet in PURPLE_BET_META
 }
 
-const BET_STYLE: Record<BetType, { from: string; to: string; border: string }> = {
-  'rouge':         { from: 'from-red-600',    to: 'to-red-800',     border: 'border-red-500/40' },
-  'double-rouge':  { from: 'from-red-500',    to: 'to-rose-700',    border: 'border-red-400/40' },
-  'noir':          { from: 'from-zinc-700',   to: 'to-zinc-900',    border: 'border-zinc-500/40' },
-  'double-noir':   { from: 'from-zinc-600',   to: 'to-neutral-900', border: 'border-zinc-400/40' },
-  'purple':        { from: 'from-violet-600', to: 'to-purple-800',  border: 'border-violet-500/40' },
-  'double-purple': { from: 'from-violet-500', to: 'to-fuchsia-800', border: 'border-violet-400/40' },
-}
-
-const BET_TYPES: BetType[] = ['rouge', 'double-rouge', 'noir', 'double-noir', 'purple', 'double-purple']
-
-function PlayingCardUI({ card, size = 'lg' }: { card: SerializedCard; size?: 'sm' | 'lg' }) {
-  const isRed = card.color === 'red'
-  if (size === 'sm') {
-    return (
-      <div className="flex h-14 w-10 shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/20 bg-white shadow-md">
-        <span className={cn('text-xs font-extrabold leading-none', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.value}</span>
-        <span className={cn('text-sm leading-none', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.suit}</span>
-      </div>
-    )
+/** Joueur qui reprendra la main : le suivant encore à table (comme le moteur). */
+function nextActiveIndex(view: PurpleSyncedState): number {
+  const n = view.players.length
+  for (let i = 1; i <= n; i += 1) {
+    const idx = (view.currentPlayer + i) % n
+    if (!view.players[idx]?.leftAt) return idx
   }
-  return (
-    <div className={cn(
-      'flex h-32 w-20 sm:h-36 sm:w-24 flex-col items-center justify-center rounded-2xl border-2 bg-white shadow-xl',
-      isRed ? 'border-red-400' : 'border-gray-800',
-    )}>
-      <span className={cn('text-3xl sm:text-4xl font-extrabold', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.value}</span>
-      <span className={cn('text-2xl sm:text-3xl leading-tight', isRed ? 'text-red-600' : 'text-[#24201A]')}>{card.suit}</span>
-    </div>
-  )
+  return view.currentPlayer
 }
 
 export function PurpleOnline() {
@@ -76,6 +70,10 @@ export function PurpleOnline() {
   const t = useTranslations('games.purple')
   const tCommon = useTranslations('common')
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
+  const [confirmDialog, confirm] = useConfirmAction()
+  const reduceMotion = useReducedMotion()
+  // Geste parti, en attente du serveur : roue sur le bouton touché.
+  const [pending, setPending] = useState<{ move: PurpleMove; bet?: PurpleBetType } | null>(null)
 
   const inGame = room?.gameId === 'purple' && room.status === 'playing'
   const tutorial = useGameTutorial('purple', inGame)
@@ -156,8 +154,8 @@ export function PurpleOnline() {
 
   if (!view || !user || !room) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+      <div className="flex flex-1 items-center justify-center p-6 text-cream/70">
+        <div className="h-8 w-8 rounded-full border-2 border-gold/30 border-t-gold motion-safe:animate-spin" />
       </div>
     )
   }
@@ -166,15 +164,30 @@ export function PurpleOnline() {
   const sendAction = (body: Record<string, unknown>) =>
     postAction({ ...body, expectedVersion: room.stateVersion })
 
+  const play = async (move: PurpleMove, body: Record<string, unknown>, bet?: PurpleBetType) => {
+    setPending({ move, bet })
+    try {
+      await sendAction(body)
+    } finally {
+      setPending(null)
+    }
+  }
+
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const finished = view.phase === 'finished'
   const currentActor = view.players[view.currentPlayer]
   const isMyTurn = currentActor?.id === user.id
+  const currentName = currentActor?.name ?? ''
+  const nextName = view.players[nextActiveIndex(view)]?.name ?? ''
 
   // ── Écran de fin ──────────────────────────────────────────────────────────
   if (finished) {
+    // Bilan nommé : qui a bu combien, du plus arrosé au plus sobre.
+    const tally = [...view.players].sort(
+      (a, b) => (view.gameResults[b.id] ?? 0) - (view.gameResults[a.id] ?? 0)
+    )
     return (
       <OnlineEndScreen
         rematchVotes={view.rematchVotes ?? []}
@@ -182,27 +195,29 @@ export function PurpleOnline() {
         onLeave={leaveRoom}
         header={
           <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
+            initial={reduceMotion ? false : { scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 220, damping: 18 }}
             className="flex flex-col items-center gap-2 text-center"
           >
-            <span className="text-5xl">🟣</span>
+            <GameIconById id="purple" surface="felt" className="h-12 w-12" />
             <h2 className="font-display text-3xl font-bold text-gold">{t('online.finishedTitle')}</h2>
-            <p className="text-sm text-white/60">{t('online.totalCards', { count: view.totalCardsDrawn })}</p>
+            <p className="text-sm text-cream/70">{t('online.totalCards', { count: view.totalCardsDrawn })}</p>
           </motion.div>
         }
         ranking={
-          <div className="grid w-full max-w-sm grid-cols-1 gap-2">
-            {view.players.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+          <ol aria-label={t('tallyTitle')} className="grid w-full max-w-sm grid-cols-1 gap-2">
+            {tally.map((p) => (
+              <li key={p.id} className="flex items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/70 px-3 py-2">
                 <RankCrest role={cosmetics.get(p.id)?.role} size="sm" />
-                <span className="text-sm" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-xs font-semibold" />
-                <span className="text-xs font-bold text-amber-300">{view.gameResults[p.id] ?? 0} 🍺</span>
-              </div>
+                <span className="text-lg leading-none" aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
+                <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 flex-1 truncate text-sm font-semibold" />
+                <span className="shrink-0 text-sm font-bold tabular-nums text-gold">
+                  {tCommon('sipsCount', { count: view.gameResults[p.id] ?? 0 })}
+                </span>
+              </li>
             ))}
-          </div>
+          </ol>
         }
         // Aucune progression n'existait sur ce jeu : XP de participation.
         xp={<XpGainBanner won={false} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
@@ -211,204 +226,204 @@ export function PurpleOnline() {
   }
 
   // ── Phase play ────────────────────────────────────────────────────────────
+  const deciding = view.isCorrect === true && view.canContinue
+  const betting = !view.canContinue && !view.pendingReveal
+  const lastBet = isBetType(view.lastBet) ? view.lastBet : null
+
+  // « Terminer » termine la partie sur TOUS les téléphones : il était seul
+  // collé en bas, sous le pouce, et partait au premier toucher.
+  const askEnd = async () => {
+    const ok = await confirm({
+      title: t('online.endConfirm.title'),
+      description: t('online.endConfirm.description'),
+      confirmLabel: t('online.endConfirm.confirm'),
+      cancelLabel: t('online.endConfirm.cancel'),
+      tone: 'danger',
+    })
+    if (!ok) return
+    // Sans verrou de version, comme au 1220 : pendant le dialogue, bots et
+    // autres joueurs font monter la version, et le 409 (muet) avalait la fin.
+    // Le moteur valide déjà l'acteur et la phase. Un second envoi rattrape
+    // une écriture vraiment simultanée.
+    setPending({ move: 'end' })
+    try {
+      const res = await postAction({ action: 'end' })
+      if (res?.status === 409) await postAction({ action: 'end' })
+    } finally {
+      setPending(null)
+    }
+  }
+
+  const barStatus = view.pendingReveal
+    ? t('mustDrink', { name: currentName, count: view.amountToDrink })
+    : isMyTurn
+      ? t('decision.stakeSelf', { count: view.drinkCounter })
+      : deciding
+        ? t('decision.waiting', { name: currentName })
+        : t('online.waitingBet', { name: currentName })
+
+  const turnHint = isMyTurn ? (deciding ? t('decision.hint') : betting ? t('chooseBet') : undefined) : undefined
+
   return (
-    <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-      <div className="flex justify-end">
-        <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
-      </div>
-      {tutorial.open && <GameTutorialModal gameId="purple" onClose={tutorial.close} />}
-
-      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
-      {actionError && (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-          {actionError}
-        </div>
-      )}
-      {leftPlayer?.leftAt && (
-        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
-            {({ seconds }) => t('online.waitingReturn', { name: leftPlayer.name, seconds })}
-          </PhaseCountdown>
-        </div>
-      )}
-
-      {afkWatch && afkTarget && (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-          <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
-            {({ seconds }) =>
-              afkTarget.id === user.id
-                ? t('online.afkWarningSelf', { seconds })
-                : t('online.afkWarning', { name: afkTarget.name, seconds })
-            }
-          </PhaseCountdown>
-        </div>
-      )}
-
-      {/* ── Joueur actif ─────────────────────────────────────────────── */}
-      {currentActor && (
-        <div className="flex items-center gap-3 rounded-2xl border border-gold/15 bg-felt-deep/70 p-3">
-          <RankCrest role={cosmetics.get(currentActor.id)?.role} />
-          <span className="text-2xl" aria-hidden><PlayerAvatarGlyph value={iconOf(currentActor)} /></span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-white/40">{isMyTurn ? t('online.yourTurn') : t('yourTurn')}</p>
-            <OnlinePlayerName
-              name={currentActor.name}
-              cosmetics={cosmetics.get(currentActor.id)}
-              className="truncate font-bold"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="rounded-xl border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-center">
-              <p className="text-xs uppercase tracking-wide text-violet-400/70">{t('counter')}</p>
-              <p className="text-lg font-extrabold text-violet-300">
-                {view.drinkCounter}<span className="ml-0.5 text-xs">🍺</span>
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-center">
-              <p className="text-sm font-bold text-white/60">{t('cardsLeft', { count: view.deck.length })}</p>
-              {newDeckFlash && (
-                <p className="text-xs font-semibold text-violet-300">{t('newDeck')}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Cartes tirées ────────────────────────────────────────────── */}
-      {view.drawnCards.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <div className="flex flex-wrap justify-center gap-3">
-            {view.drawnCards.map((card, i) => <PlayingCardUI key={i} card={card} />)}
-          </div>
-          {view.isCorrect === true && view.canContinue && (
-            <div className="mt-4 space-y-3 text-center">
-              <p className="font-semibold text-emerald-400">
-                {t('correct', { count: view.lastBet ? BET_META[view.lastBet as BetType]?.gulps ?? 0 : 0 })}
-              </p>
-              {isMyTurn ? (
-                <div className="flex justify-center gap-2">
-                  <button
-                    onClick={() => void sendAction({ action: 'continue' })}
-                    disabled={busy}
-                    className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2 text-sm font-semibold text-white hover:from-amber-400 hover:to-amber-500 disabled:opacity-50"
-                  >
-                    {tCommon('continue')}
-                  </button>
-                  <button
-                    onClick={() => void sendAction({ action: 'pass' })}
-                    disabled={busy}
-                    className="rounded-xl border border-white/[0.15] bg-white/[0.05] px-5 py-2 text-sm text-white/70 hover:bg-white/10 disabled:opacity-50"
-                  >
-                    {tCommon('pass')}
-                  </button>
-                </div>
-              ) : (
-                <p className="text-xs text-white/40">{t('online.waitingDecision', { name: currentActor?.name ?? '' })}</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Boutons de paris ─────────────────────────────────────────── */}
-      {!view.canContinue && !view.pendingReveal && (
-        <div className="space-y-2">
-          <p className="text-center text-xs font-semibold uppercase tracking-widest text-gold/60">
-            {isMyTurn ? t('chooseBet') : t('online.waitingBet', { name: currentActor?.name ?? '' })}
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {BET_TYPES.map((bet) => {
-              const s = BET_STYLE[bet]
-              const cfg = BET_META[bet]
-              return (
-                <button
-                  key={bet}
-                  onClick={() => void sendAction({ action: 'bet', bet })}
-                  disabled={busy || !isMyTurn}
-                  className={cn(
-                    'relative overflow-hidden rounded-2xl border py-4 text-center font-semibold text-white transition-all active:scale-95 disabled:opacity-40',
-                    s.border,
-                  )}
-                >
-                  <div className={cn('absolute inset-0 bg-gradient-to-br opacity-80', s.from, s.to)} />
-                  <div className="relative">
-                    <p className="mb-1 text-lg leading-none">{cfg.emoji}</p>
-                    <p className="text-xs font-bold">{t(`bets.${cfg.labelKey}` as 'bets.rouge')}</p>
-                    <p className="text-xs text-white/60">{tCommon('sipsCount', { count: cfg.gulps })}</p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Historique des cartes ────────────────────────────────────── */}
-      {view.cardHistory.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/30">{t('lastCards')}</p>
-          <div className="flex flex-wrap gap-2">
-            {view.cardHistory.map((card, i) => <PlayingCardUI key={i} card={card} size="sm" />)}
-          </div>
-        </div>
-      )}
-
-      <div className="sticky bottom-3">
-        <Button
-          onClick={() => void sendAction({ action: 'end' })}
-          disabled={busy}
-          variant="outline"
-          className="w-full rounded-2xl border-white/[0.15] bg-white/5 py-3 text-sm font-semibold text-white/70 hover:bg-white/10"
-        >
-          {t('online.endGame')}
-        </Button>
-      </div>
-
-      {/* ── Dialog mauvaise réponse ──────────────────────────────────── */}
-      <AnimatePresence>
-        {view.pendingReveal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          >
-            <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-red-500/20 bg-[#0d0814] p-6 shadow-2xl">
-              <div className="absolute inset-0 opacity-10" style={{ background: 'radial-gradient(ellipse at 50% 0%, #ef4444, transparent 70%)' }} />
-              <div className="relative space-y-4 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/15 text-3xl">
-                  😬
-                </div>
-                <div>
-                  <p className="text-lg font-extrabold text-white">{t('wrongCombo')}</p>
-                  <p className="mt-1 text-sm text-white/60">
-                    {t('mustDrink', { name: currentActor?.name ?? '', count: view.amountToDrink })}
-                  </p>
-                </div>
-                {isMyTurn ? (
-                  <button
-                    onClick={() => void sendAction({ action: 'close-reveal' })}
-                    disabled={busy}
-                    className="w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-bold text-white hover:from-amber-400 hover:to-amber-500 disabled:opacity-50"
-                  >
-                    {tCommon('understoodNext')}
-                  </button>
-                ) : (
-                  <p className="text-xs text-white/40">{t('online.waitingDecision', { name: currentActor?.name ?? '' })}</p>
-                )}
-              </div>
-              {isMyTurn && (
-                <button
-                  onClick={() => void sendAction({ action: 'close-reveal' })}
-                  className="absolute right-4 top-4 text-white/30 hover:text-white/60"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </motion.div>
+    <>
+      {confirmDialog}
+      <div
+        className={cn(
+          'flex flex-1 flex-col gap-3 p-3 text-cream sm:mx-auto sm:w-full sm:max-w-lg',
+          deciding && isMyTurn ? DECISION_PADDING : onlineActionBarPadding('default')
         )}
-      </AnimatePresence>
-    </div>
+      >
+        <PhaseHeader
+          phase={view.pendingReveal ? t('wrongCombo') : deciding ? t('online.phaseDecision') : t('online.phaseBet')}
+          right={
+            <>
+              <Button
+                variant="ghost"
+                size="gameIcon"
+                onClick={() => void askEnd()}
+                disabled={busy}
+                aria-label={t('online.endGame')}
+                title={t('online.endGame')}
+                className="border border-gold/20 bg-felt-deep/60 text-cream/80 hover:bg-gold/10 hover:text-gold"
+              >
+                {pending?.move === 'end' ? (
+                  <Loader2 aria-hidden className="h-5 w-5 motion-safe:animate-spin" />
+                ) : (
+                  <Flag aria-hidden className="h-5 w-5" />
+                )}
+              </Button>
+              <TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />
+            </>
+          }
+        />
+        {tutorial.open && <GameTutorialModal gameId="purple" onClose={tutorial.close} />}
+
+        {/* Un seul « à qui le tour », juste sous l'en-tête : les alertes
+            (refus, départ, inactivité) ne le repoussent plus vers le bas. */}
+        {currentActor && (
+          <TurnBanner
+            mine={isMyTurn}
+            name={currentActor.name}
+            avatar={<PlayerAvatarGlyph value={iconOf(currentActor)} />}
+            hint={turnHint}
+            alertOnMine
+          />
+        )}
+
+        {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
+        {actionError && (
+          <div className="rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-200">
+            {actionError}
+          </div>
+        )}
+        {leftPlayer?.leftAt && (
+          <div className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
+            <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+              {({ seconds }) => t('online.waitingReturn', { name: leftPlayer.name, seconds })}
+            </PhaseCountdown>
+          </div>
+        )}
+
+        {afkWatch && afkTarget && (
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-200">
+            {afkTarget.id === user.id && <AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />}
+            <PhaseCountdown endsAt={turnStartedAt + ONLINE_REPLACE_GRACE_MS}>
+              {({ seconds }) =>
+                afkTarget.id === user.id
+                  ? t('online.afkWarningSelf', { seconds })
+                  : t('online.afkWarning', { name: afkTarget.name, seconds })
+              }
+            </PhaseCountdown>
+          </div>
+        )}
+
+        <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
+          <PurplePotRow counter={view.drinkCounter} cardsLeft={view.deck.length} newDeck={newDeckFlash} />
+        </section>
+
+        {/* ── Cartes tirées ────────────────────────────────────────────── */}
+        {view.drawnCards.length > 0 && (
+          <section className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+            <PurpleDrawnCards cards={view.drawnCards} drawKey={view.totalCardsDrawn} />
+            {deciding && (
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-center font-semibold text-emerald-300">
+                <Check aria-hidden className="h-5 w-5 shrink-0" />
+                {t('correct', { count: lastBet ? PURPLE_BET_META[lastBet].gulps : 0 })}
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* ── Paris ────────────────────────────────────────────────────── */}
+        {betting && (
+          <PurpleBetGrid label={t('chooseBet')}>
+            {PURPLE_BET_TYPES.map((bet) => (
+              <PurpleBetButton
+                key={bet}
+                bet={bet}
+                onClick={() => void play('bet', { action: 'bet', bet }, bet)}
+                disabled={busy || !isMyTurn}
+                pending={pending?.move === 'bet' && pending.bet === bet}
+              />
+            ))}
+          </PurpleBetGrid>
+        )}
+
+        <PurpleHistory cards={view.cardHistory} />
+      </div>
+
+      {/* L'action du tour sous le pouce. Montée toute la partie : sa ligne
+          d'état (enjeu, attente) n'est annoncée que si elle change. */}
+      <OnlineActionBar status={barStatus} maxWidthClass="max-w-lg">
+        {deciding && isMyTurn && (
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="primary"
+              size="gameLg"
+              className={cn('w-full', pending?.move === 'continue' && 'disabled:opacity-100')}
+              disabled={busy}
+              onClick={() => void play('continue', { action: 'continue' })}
+            >
+              {pending?.move === 'continue' && <Loader2 aria-hidden className="mr-2 h-5 w-5 motion-safe:animate-spin" />}
+              {t('decision.continueSelf')}
+            </Button>
+            <Button
+              variant="quiet"
+              size="game"
+              className={cn('w-full whitespace-normal leading-tight', pending?.move === 'pass' && 'disabled:opacity-100')}
+              disabled={busy}
+              onClick={() => void play('pass', { action: 'pass' })}
+            >
+              {pending?.move === 'pass' && <Loader2 aria-hidden className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" />}
+              {t('decision.pass', { name: nextName, count: view.drinkCounter })}
+            </Button>
+          </div>
+        )}
+      </OnlineActionBar>
+
+      {/* ── Verdict : qui boit combien, sur tous les téléphones ──────────── */}
+      <PurpleVerdictDialog
+        open={view.pendingReveal}
+        name={currentName}
+        amount={view.amountToDrink}
+        cards={view.drawnCards}
+        onDismiss={isMyTurn && !busy ? () => void play('close-reveal', { action: 'close-reveal' }) : undefined}
+      >
+        {isMyTurn ? (
+          <Button
+            variant="primary"
+            size="gameLg"
+            className={cn('w-full whitespace-normal leading-tight', pending?.move === 'close-reveal' && 'disabled:opacity-100')}
+            disabled={busy}
+            onClick={() => void play('close-reveal', { action: 'close-reveal' })}
+          >
+            {pending?.move === 'close-reveal' && <Loader2 aria-hidden className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" />}
+            {t('nextTurn', { name: nextName })}
+          </Button>
+        ) : (
+          <p className="text-sm text-cream/80">{t('online.waitingDecision', { name: currentName })}</p>
+        )}
+      </PurpleVerdictDialog>
+    </>
   )
 }

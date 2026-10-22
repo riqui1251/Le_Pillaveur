@@ -175,7 +175,7 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
         {state.phase === 'vote' && state.phaseEndsAt !== null ? (
           <PhaseCountdown endsAt={state.phaseEndsAt} tickMs={400}>
             {({ leftMs }) => (
-              <TvTimeBar timeLeftMs={leftMs} totalMs={DIL_VOTE_MS} dangerMs={8_000} colorClass="bg-gold" dangerClass="bg-suit-red" />
+              <TvTimeBar timeLeftMs={leftMs} totalMs={DIL_VOTE_MS} dangerMs={8_000} colorClass="bg-gold" dangerClass="bg-red-400" />
             )}
           </PhaseCountdown>
         ) : (

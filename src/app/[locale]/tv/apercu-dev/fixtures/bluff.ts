@@ -9,13 +9,16 @@ const GAME = 'bluff'
 /** Questions choisies : la plus longue du pool, des réponses longues, puis une courte. */
 const PROMPT_IDS = ['fr-sp-106', 'fr-fe-26', 'fr-fe-129', 'fr-ec-131', 'fr-fe-130', 'fr-sp-125']
 
-/** Bluffs plausibles (≤ 60 caractères), dont un très long et un qui tombe sur la vraie réponse. */
+/**
+ * Bluffs plausibles (≤ 60 caractères), dont un très long. Jamais la vraie
+ * réponse : le moteur la refuse à un humain (FAKE_TAKEN).
+ */
 const FAKES = [
   'Nadia Comăneci',
   'Une Ivanovna dont plus personne ne se souvient du prénom',
   'Svetlana Khorkina',
   'Ludmilla Tourischeva',
-  'Larissa Latynina',
+  'Nellie Kim',
   'Elena Moukhina',
   'Natalia Kuchinskaya',
   'Polina Astakhova',

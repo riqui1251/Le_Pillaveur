@@ -228,6 +228,7 @@ import {
 } from '@/lib/telephone-dessine/server-adapter'
 import {
   currentTelephoneActorId,
+  telephoneBotRevealDelayMs,
   toTelephoneClientView,
   TELEPHONE_MIN_PLAYERS,
   TELEPHONE_MAX_PLAYERS,
@@ -1323,6 +1324,8 @@ const crobardAdapter: GameAdapter = {
       input = { type: 'draw-stroke', stroke: body.stroke as Stroke }
     } else if (body.action === 'clear') {
       input = { type: 'clear' }
+    } else if (body.action === 'undo-stroke') {
+      input = { type: 'undo-stroke' }
     } else if (body.action === 'guess' && typeof body.text === 'string') {
       input = { type: 'guess', text: body.text }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
@@ -1410,10 +1413,12 @@ const telephoneAdapter: GameAdapter = {
       }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
       input = { type: 'advance', phaseKey: body.phaseKey }
-    } else if (body.action === 'continue') {
-      input = { type: 'continue' }
-    } else if (body.action === 'previous') {
-      input = { type: 'previous' }
+    } else if (body.action === 'continue' || body.action === 'previous') {
+      // Clé du cran vu par le meneur : un geste qui croise l'échéance devient PHASE_CHANGED (409).
+      input = {
+        type: body.action,
+        phaseKey: typeof body.phaseKey === 'string' ? body.phaseKey : undefined,
+      }
     } else if (body.action === 'bot') {
       input = { type: 'bot' }
     } else if (body.action === 'replace-left') {
@@ -1442,7 +1447,8 @@ const telephoneAdapter: GameAdapter = {
   markLeft: (state, userId, at) => markTelephonePlayerLeft(state as TelephoneState, userId, at),
   rejoin: (state, userId) => rejoinTelephonePlayer(state as TelephoneState, userId),
   // TelephoneDessineOnline : échéance de phase + maillons des bots (tous d'un
-  // coup) ou bot meneur du reveal (2,5 s). Seule adaptation : le client ne
+  // coup) ou bot meneur du reveal (un maillon toutes les 4 s, 8 s une fois la
+  // chaîne complète : le temps de la regarder). Seule adaptation : le client ne
   // demande le coup des bots que tant que SON propre maillon n'est pas parti
   // (`haveISubmitted`), une notion de « moi » que le serveur n'a pas — il le
   // demande tant qu'un bot n'a pas rendu le sien, ce que le moteur exige de
@@ -1463,7 +1469,7 @@ const telephoneAdapter: GameAdapter = {
         !pendingBot && !revealActorIsBot
           ? null
           : state.phase === 'reveal'
-            ? 2500
+            ? telephoneBotRevealDelayMs(state)
             : botTickDelayMs(pendingBot?.name, rand),
     })
   },

@@ -64,9 +64,9 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#07060b]',
                 active
                   ? id === 'soft'
-                    ? 'bg-emerald-400 text-black shadow-[0_0_18px_rgba(52,211,153,0.35)]'
-                    : 'bg-amber-400 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]'
-                  : 'text-white/65 hover:bg-white/[0.06] hover:text-white'
+                    ? 'bg-emerald-400 text-[#24201A] shadow-[0_0_18px_rgba(52,211,153,0.35)]'
+                    : 'bg-cream text-[#24201A] shadow-[0_0_14px_rgba(243,234,211,0.25)]'
+                  : 'text-cream/70 hover:bg-white/[0.06] hover:text-cream'
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -78,12 +78,12 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
       {/* Ce que la bascule change vraiment, en une ligne : sans elle, le
           joueur voit le site changer de couleur sans comprendre pourquoi. */}
       {hint && (
-        <p id="ambiance-hint" className="mt-1 px-2 text-[11px] leading-snug text-white/45">
+        <p id="ambiance-hint" className="mt-1 px-2 text-xs leading-snug text-cream/70">
           {t(mode === 'soft' ? 'hintSoft' : 'hintAlcool')}
         </p>
       )}
       {showModeration && (
-        <p id="ambiance-moderation" className="mt-1 px-2 text-[11px] font-medium leading-snug text-white/70">
+        <p id="ambiance-moderation" className="mt-1 px-2 text-xs font-medium leading-snug text-cream/80">
           {t('moderation')}
         </p>
       )}

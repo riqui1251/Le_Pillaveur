@@ -5,9 +5,11 @@ import { useTranslations } from 'next-intl'
 import { Globe } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+import { OnlineGameStage } from '@/components/online/OnlineGameStage'
 import { GameShowcase } from '@/components/online/GameShowcase'
 import { Button } from '@/components/ui/button'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
+import { SHOWCASE_ACCENT } from '@/components/online/showcase-accent'
 
 // Composant en ligne chargé À LA DEMANDE : le visiteur qui ne voit que la
 // vitrine n'a pas à télécharger le lobby, le briefing et la bibliothèque
@@ -18,13 +20,9 @@ const TabouOnline = dynamic(
   { loading: () => <OnlineGameSkeleton gameId="tabou" /> }
 )
 
-/** Dégradé du jeu sur le bouton principal — vitrine en attente, « passer en ligne » et TryBotsGate. */
-const ACCENT =
-  'w-full rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-600 py-5 text-base font-bold text-white shadow-lg shadow-teal-500/25 hover:from-emerald-600 hover:to-teal-500'
-
 /**
  * Tabou Vocal — jeu EN LIGNE uniquement : le mot secret et les tabous
- * transitent par le serveur, seul le décrivant les voit. Pas de bots au
+ * transitent par le serveur, l'équipe qui devine ne les voit jamais. Pas de bots au
  * lancement (botsFillable absent) : TryBotsGate n'offre donc au visiteur que
  * la connexion.
  */
@@ -35,29 +33,29 @@ export default function TabouPage() {
   if (loading) {
     // Même vitrine que hors salle, bouton principal désactivé : le HTML rendu
     // au build — celui que lit Googlebot — est déjà ce que le visiteur verra.
-    return <GameShowcase gameId="tabou" accentClassName={ACCENT} note={t('onlineOnly')} pending />
+    return <GameShowcase gameId="tabou" accentClassName={SHOWCASE_ACCENT} note={t('onlineOnly')} pending />
   }
 
   if (user?.playMode === 'online') {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-y-auto bg-gray-950 sm:top-[3.75rem]">
+      <OnlineGameStage>
         <TabouOnline />
-      </div>
+      </OnlineGameStage>
     )
   }
 
   return (
-    <GameShowcase gameId="tabou" accentClassName={ACCENT} note={t('onlineOnly')}>
+    <GameShowcase gameId="tabou" accentClassName={SHOWCASE_ACCENT} note={t('onlineOnly')}>
       {user ? (
         <Button
           onClick={() => { void setPlayMode('online') }}
-          className={`${ACCENT} transition-all`}
+          className={`${SHOWCASE_ACCENT} transition-all`}
         >
           <Globe className="mr-2 h-4 w-4" />
           {t('switchOnline')}
         </Button>
       ) : (
-        <TryBotsGate gameId="tabou" accentClassName={ACCENT} />
+        <TryBotsGate gameId="tabou" accentClassName={SHOWCASE_ACCENT} />
       )}
     </GameShowcase>
   )

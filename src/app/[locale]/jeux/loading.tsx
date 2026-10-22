@@ -5,8 +5,8 @@
  * sans rien : ici la vitrine se dessine au premier tap.
  *
  * Mêmes conteneurs, au pixel, que HubShell (mode compact) + GamesGrid :
- * largeur `max-w-6xl`, gouttières, hauteur RÉSERVÉE des bascules (celle que
- * la page garde tant que l'auth n'a pas répondu), barre de recherche collée
+ * largeur `max-w-6xl`, gouttières, barre de soirée de 56 px (hauteur que la
+ * page garde tant que l'auth n'a pas répondu), barre de recherche collée
  * et grille 3/4/6 colonnes de cartes crème — pour qu'aucun bloc ne saute
  * quand le contenu remplace le squelette. L'en-tête serveur (h1 + accroche)
  * est rendu par le layout du segment et reste affiché au-dessus.
@@ -31,40 +31,43 @@ export default function JeuxLoading() {
       </div>
 
       <div className="container relative mx-auto max-w-6xl px-4 pb-16 pt-3 motion-safe:animate-pulse sm:px-6 sm:pt-4">
-        {/* Bascules mode / ambiance : la page réserve cette hauteur tant que
-            l'auth n'a pas répondu — même réserve ici, contenu plus bas
-            qu'elle pour que ce soit elle qui fasse foi. */}
-        <div className="mb-3">
-          <div className="flex min-h-[6.75rem] flex-col gap-2 sm:min-h-[4.75rem] sm:flex-row sm:items-start sm:gap-3">
-            <div className="h-12 rounded-xl bg-white/[0.05] sm:max-w-sm sm:flex-1" />
-            <div className="h-12 rounded-xl bg-white/[0.05] sm:max-w-sm sm:flex-1" />
+        {/* Barre de soirée (h-14, PartyBar) puis puces des collections : la
+            page garde la hauteur de la barre tant que l'auth n'a pas répondu
+            — même réserve ici. `mt-2` : sur la page, la région muette
+            d'OfflineBanner précède la barre dans le même `space-y-2`. */}
+        <div className="mb-3 space-y-2">
+          <div className="mt-2 h-14 rounded-2xl border border-gold/30 bg-felt-deep/90" />
+          <div className="flex gap-1.5">
+            <div className="h-[30px] w-24 shrink-0 rounded-full border border-gold/20" />
+            <div className="h-[30px] w-24 shrink-0 rounded-full border border-gold/20" />
+            <div className="h-[30px] w-28 shrink-0 rounded-full border border-gold/20" />
           </div>
         </div>
 
-        {/* Barre de recherche collée sous la navbar — mêmes marges négatives
-            et même hauteur de champ (h-10) que GamesGrid. */}
-        <div className="sticky top-14 z-30 -mx-4 mb-3 border-b border-gold/10 bg-felt-deep/85 px-4 pb-2 pt-1.5 backdrop-blur-md sm:top-[3.75rem] sm:-mx-6 sm:px-6">
+        {/* Barre de recherche collée sous la navbar — mêmes marges négatives,
+            même fond plein et même hauteur de champ (h-11) que GamesGrid. */}
+        <div className="sticky top-14 z-30 -mx-4 mb-3 border-b border-gold/20 bg-felt-deep px-4 pb-2 pt-1.5 sm:top-[3.75rem] sm:-mx-6 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="h-10 flex-1 rounded-md border border-white/10 bg-white/[0.05]" />
+            <div className="h-11 flex-1 rounded-md border border-gold/20 bg-white/[0.05]" />
             <div className="h-3 w-10 shrink-0 rounded bg-white/10" />
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {SECTIONS.map((count, i) => (
             <section key={i}>
-              {/* Titre de famille : la hauteur d'un h2 en 11px avec son filet or. */}
-              <div className="mb-1.5 flex h-4 items-center gap-2">
+              {/* Intertitre : la hauteur d'un h2 en 12-13 px avec son filet or. */}
+              <div className="mb-1.5 flex h-5 items-center gap-2">
                 <span className="h-2.5 w-24 rounded bg-gold/25" />
                 <span aria-hidden className="h-px flex-1 bg-gold/15" />
               </div>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
                 {Array.from({ length: count }, (_, j) => (
                   // Même boîte qu'une PlayingCard du hub : bord de 1px autour
-                  // d'un article de 7rem (7,5rem dès `sm`).
+                  // d'un article de 7,5rem.
                   <div
                     key={j}
-                    className="min-h-[calc(7rem+2px)] rounded-xl border border-[#D8CCAE]/60 bg-cream/75 sm:min-h-[calc(7.5rem+2px)]"
+                    className="min-h-[calc(7.5rem+2px)] rounded-xl border border-[#D8CCAE]/60 bg-cream/75"
                   />
                 ))}
               </div>

@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { getCaseMeta, CASE_FAMILY_STYLE } from '@/lib/petit-buveur/case-families'
+import { CaseToken } from './CaseToken'
 import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
@@ -55,12 +56,12 @@ export function CaseRevealCard({
           initial={reduced ? {} : { scale: 0, rotate: -30 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: 'spring', stiffness: 380, damping: 16, delay: reduced ? 0 : 0.08 }}
-          className="text-xl leading-none"
+          className="inline-flex"
           aria-hidden
         >
-          {meta.icon}
+          <CaseToken caseType={caseType} size={32} />
         </motion.span>
-        <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-semibold', style.chip)}>
+        <span className={cn('rounded-full border px-2.5 py-0.5 text-sm font-bold', style.chip)}>
           {label}
         </span>
         {headerExtra}

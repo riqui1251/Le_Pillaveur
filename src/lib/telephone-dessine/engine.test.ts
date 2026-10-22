@@ -11,8 +11,13 @@ import {
   TELEPHONE_WRITE_MS,
   TELEPHONE_DRAW_MS,
   TELEPHONE_REVEAL_MS,
+  TELEPHONE_REVEAL_LINK_MS,
+  TELEPHONE_BOT_REVEAL_CHAIN_MS,
+  TELEPHONE_BOT_REVEAL_LINK_MS,
+  telephoneBotRevealDelayMs,
   type TelephoneState,
 } from './engine'
+import { parseTelephoneState, serializeTelephoneState } from './server-adapter'
 import { phaseKey } from '@/lib/online/phase-clock'
 
 const T0 = 1_000_000
@@ -207,10 +212,16 @@ describe('partie complète (N=3) jusqu’au reveal', () => {
       expect(s.chains[id]).toHaveLength(3)
     }
 
+    // Chaque chaîne se dévoile maillon par maillon, puis vient la suivante.
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([0, 0])
     s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
-    expect(s.revealIdx).toBe(1)
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([0, 1])
     s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
-    expect(s.revealIdx).toBe(2)
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([0, 2])
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([1, 0])
+    for (let i = 0; i < 5; i += 1) s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([2, 2])
     s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
     expect(s.phase).toBe('finished')
     expect(s.phaseEndsAt).toBeNull()
@@ -237,10 +248,18 @@ describe('partie complète (N=3) jusqu’au reveal', () => {
     expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p1', now: T0 })).toThrow('NOT_LEADER')
 
     s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
-    expect(s.revealIdx).toBe(1)
-    s = reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0', now: T0 })
-    expect(s.revealIdx).toBe(0)
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([0, 1])
     expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0', now: T0 })).toThrow('ALREADY_FIRST_CHAIN')
+    for (let i = 0; i < 2; i += 1) s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([1, 0])
+    s = reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0', now: T0 })
+    // La chaîne déjà vue revient ENTIÈRE, avec le plein temps d'affichage.
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([0, 2])
+    expect(s.phaseEndsAt).toBe(T0 + TELEPHONE_REVEAL_MS)
+    expect(() => reduceTelephone(s, { type: 'PREVIOUS', playerId: 'p0', now: T0 })).toThrow('ALREADY_FIRST_CHAIN')
+    // Repartir en avant depuis la chaîne entière : la suivante reprend à son premier maillon.
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect([s.revealIdx, s.revealLinkIdx]).toEqual([1, 0])
   })
 })
 
@@ -261,24 +280,22 @@ describe('révélation indépendante du meneur (horloge de phase)', () => {
   it('le reveal porte une échéance serveur (plus de phase sans horloge)', () => {
     const s = upToReveal()
     expect(s.phase).toBe('reveal')
-    expect(s.phaseEndsAt).toBe(T0 + TELEPHONE_REVEAL_MS)
+    expect(s.phaseEndsAt).toBe(T0 + TELEPHONE_REVEAL_LINK_MS)
   })
 
-  it('ADVANCE fait défiler les chaînes puis termine, MÊME sans meneur', () => {
+  it('ADVANCE dévoile maillon par maillon puis chaîne par chaîne, MÊME sans meneur', () => {
     let s = upToReveal()
     // Le meneur s'endort : personne ne clique, seule l'échéance agit.
-    for (let i = 1; i <= 2; i += 1) {
-      const at = T0 + i * TELEPHONE_REVEAL_MS
+    const seen: [number, number][] = []
+    for (let guard = 0; guard < 20 && s.phase === 'reveal'; guard += 1) {
+      const at = s.phaseEndsAt!
       s = reduceTelephone(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: at })
-      expect(s.phase).toBe('reveal')
-      expect(s.revealIdx).toBe(i)
-      expect(s.phaseEndsAt).toBe(at + TELEPHONE_REVEAL_MS)
+      if (s.phase !== 'reveal') break
+      seen.push([s.revealIdx, s.revealLinkIdx])
+      // Courte entre deux maillons, pleine une fois la chaîne entière à l'écran.
+      expect(s.phaseEndsAt).toBe(at + (s.revealLinkIdx === 2 ? TELEPHONE_REVEAL_MS : TELEPHONE_REVEAL_LINK_MS))
     }
-    s = reduceTelephone(s, {
-      type: 'ADVANCE',
-      claimedKey: phaseKey(s),
-      now: T0 + 3 * TELEPHONE_REVEAL_MS,
-    })
+    expect(seen).toEqual([[0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]])
     expect(s.phase).toBe('finished')
     expect(s.phaseEndsAt).toBeNull()
   })
@@ -289,14 +306,101 @@ describe('révélation indépendante du meneur (horloge de phase)', () => {
     expect(() => reduceTelephone(s, { type: 'ADVANCE', claimedKey: key, now: T0 + 1_000 })).toThrow(
       'NOT_EXPIRED'
     )
-    // Le meneur a fait défiler avant l'échéance : le tick retardataire vise
+    // Le meneur a dévoilé avant l'échéance : le tick retardataire vise
     // une phase qui n'existe plus (idempotence structurelle).
     const led = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 + 5_000 })
-    expect(led.revealIdx).toBe(1)
-    expect(led.phaseEndsAt).toBe(T0 + 5_000 + TELEPHONE_REVEAL_MS)
+    expect(led.revealLinkIdx).toBe(1)
+    expect(led.phaseEndsAt).toBe(T0 + 5_000 + TELEPHONE_REVEAL_LINK_MS)
     expect(() =>
-      reduceTelephone(led, { type: 'ADVANCE', claimedKey: key, now: T0 + TELEPHONE_REVEAL_MS })
+      reduceTelephone(led, { type: 'ADVANCE', claimedKey: key, now: T0 + TELEPHONE_REVEAL_LINK_MS })
     ).toThrow('PHASE_CHANGED')
+  })
+
+  it("le geste du meneur qui croise l'échéance ne fait pas franchir un second cran", () => {
+    const s = upToReveal()
+    const seen = phaseKey(s)
+    // L'échéance dévoile le maillon 1 ; la vue du meneur montrait encore le 0.
+    const ticked = reduceTelephone(s, { type: 'ADVANCE', claimedKey: seen, now: s.phaseEndsAt! })
+    expect(ticked.revealLinkIdx).toBe(1)
+    expect(() =>
+      reduceTelephone(ticked, { type: 'CONTINUE', playerId: 'p0', now: T0, claimedKey: seen })
+    ).toThrow('PHASE_CHANGED')
+    expect(() =>
+      reduceTelephone(ticked, { type: 'PREVIOUS', playerId: 'p0', now: T0, claimedKey: seen })
+    ).toThrow('PHASE_CHANGED')
+    // Avec la clé à jour, le cran part normalement.
+    const led = reduceTelephone(ticked, { type: 'CONTINUE', playerId: 'p0', now: T0, claimedKey: phaseKey(ticked) })
+    expect(led.revealLinkIdx).toBe(2)
+  })
+})
+
+describe('révélation maillon par maillon (vues)', () => {
+  /** Table de 3 joueurs en reveal, avec des devinettes reconnaissables. */
+  function revealTable(): TelephoneState {
+    let s = make(3)
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'Départ zéro', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'Départ un', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'Départ deux', now: T0 })
+    const stroke = { points: [0.1, 0.1, 0.9, 0.9], color: '#020617', width: 6 }
+    for (const id of ['p0', 'p1', 'p2']) s = reduceTelephone(s, { type: 'SUBMIT', playerId: id, strokes: [stroke], now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'Chute zéro', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'Chute un', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'Chute deux', now: T0 })
+    return s
+  }
+
+  it("les maillons pas encore dévoilés ne quittent pas le serveur, ni vers un joueur ni vers la TV", () => {
+    let s = revealTable()
+    expect(s.phase).toBe('reveal')
+    for (const view of [toTelephoneClientView(s, 'p1'), toTelephoneSpectatorView(s)]) {
+      expect(view.revealChain?.links).toHaveLength(1)
+      expect(view.revealChain?.linkCount).toBe(3)
+      expect(view.revealLinkIdx).toBe(0)
+      expect(JSON.stringify(view)).not.toContain('Chute')
+    }
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect(toTelephoneSpectatorView(s).revealChain?.links.map((l) => l.type)).toEqual(['text', 'draw'])
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    const full = toTelephoneClientView(s, 'p2').revealChain!
+    expect(full.links).toHaveLength(3)
+    expect(full.links[2]).toMatchObject({ type: 'text', text: expect.stringMatching(/^Chute/) })
+  })
+
+  it('un bot meneur laisse la chaîne entière plus longtemps à l’écran que chaque maillon', () => {
+    let s = revealTable()
+    expect(telephoneBotRevealDelayMs(s)).toBe(TELEPHONE_BOT_REVEAL_LINK_MS)
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect(telephoneBotRevealDelayMs(s)).toBe(TELEPHONE_BOT_REVEAL_LINK_MS)
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect(s.revealLinkIdx).toBe(2)
+    expect(telephoneBotRevealDelayMs(s)).toBe(TELEPHONE_BOT_REVEAL_CHAIN_MS)
+    expect(TELEPHONE_BOT_REVEAL_CHAIN_MS).toBeGreaterThan(TELEPHONE_BOT_REVEAL_LINK_MS)
+    s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    expect([s.revealIdx, telephoneBotRevealDelayMs(s)]).toEqual([1, TELEPHONE_BOT_REVEAL_LINK_MS])
+  })
+
+  it('en fin de partie, la dernière chaîne reste entière', () => {
+    let s = revealTable()
+    for (let guard = 0; guard < 20 && s.phase === 'reveal'; guard += 1) {
+      s = reduceTelephone(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    }
+    expect(s.phase).toBe('finished')
+    const chain = toTelephoneSpectatorView(s).revealChain!
+    expect(chain.links).toHaveLength(3)
+    expect(chain.linkCount).toBe(3)
+  })
+
+  it('une révélation lancée avant le dévoilement progressif reprend avec la chaîne entière', () => {
+    const s = revealTable()
+    const legacy = JSON.parse(serializeTelephoneState(s)) as Partial<TelephoneState>
+    delete legacy.revealLinkIdx
+    const parsed = parseTelephoneState(JSON.stringify(legacy))!
+    expect(parsed.revealLinkIdx).toBe(2)
+    expect(toTelephoneClientView(parsed, 'p0').revealChain?.links).toHaveLength(3)
+    // Hors révélation, le champ manquant repart de zéro.
+    const contributing = JSON.parse(serializeTelephoneState(make(3))) as Partial<TelephoneState>
+    delete contributing.revealLinkIdx
+    expect(parseTelephoneState(JSON.stringify(contributing))!.revealLinkIdx).toBe(0)
   })
 })
 

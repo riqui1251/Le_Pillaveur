@@ -409,7 +409,7 @@ function GameBarLabel({ gameId, title }: { gameId: string; title: string }) {
   return (
     <>
       <span aria-hidden>
-        <GameIconById id={gameId} className="mr-1.5 inline-block h-4 w-4 align-middle text-gold" />
+        <GameIconById id={gameId} surface="feltGold" className="mr-1.5 inline-block h-5 w-5 align-middle" />
       </span>
       {title}
     </>
@@ -2986,7 +2986,7 @@ function GamesBody({
                       <tr key={row.gameId} className="border-t border-white/[0.07] align-top">
                         <th scope="row" className="py-2 pr-2 text-left font-medium text-white">
                           <span className="flex min-w-0 items-center gap-1.5">
-                            <GameIconById id={row.gameId} className="h-4 w-4 shrink-0 text-gold" />
+                            <GameIconById id={row.gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
                             <span className="min-w-0 break-words">{row.gameTitle}</span>
                           </span>
                           {details.length > 0 && (
@@ -4888,7 +4888,7 @@ function SupervisionDashboard() {
                         return (
                           <LiveTableRow
                             key={tbl.id}
-                            icon={tbl.gameId ? <GameIconById id={tbl.gameId} className="h-4 w-4 shrink-0 text-gold" /> : undefined}
+                            icon={tbl.gameId ? <GameIconById id={tbl.gameId} surface="feltGold" className="h-5 w-5 shrink-0" /> : undefined}
                             gameTitle={tbl.gameTitle}
                             code={tbl.code}
                             status={tbl.status}

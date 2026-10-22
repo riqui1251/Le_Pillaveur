@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Lightbulb, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { TUTORIAL_VISUALS } from '@/lib/online/tutorial-visuals'
 
@@ -65,10 +67,11 @@ export function TutorialReopenButton({
   const t = useTranslations('gameTutorial')
   return (
     <button
+      type="button"
       onClick={onClick}
       aria-label={t('reopenAria')}
       className={cn(
-        'touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white',
+        'touch-target flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-felt-deep/60 text-gold transition-colors hover:bg-gold/10',
         className
       )}
     >
@@ -91,9 +94,50 @@ export function GameTutorialModal({
   const [idx, setIdx] = useState(0)
   const step = steps[idx]
   const isLast = idx === steps.length - 1
-  if (!step) return null
+  const titleId = useId()
+  const reduceMotion = useReducedMotion()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const nextRef = useRef<HTMLButtonElement>(null)
 
-  return (
+  // Modale : le focus entre sur « Suivant » et revient à la fermeture sur ce
+  // qui l'avait ouverte (l'ampoule) ; Échap ferme, Tab tourne dans la carte.
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    nextRef.current?.focus()
+    return () => {
+      if (opener?.isConnected) opener.focus()
+    }
+  }, [])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusables = Array.from(panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled])'))
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const inside = document.activeElement instanceof Node && panelRef.current.contains(document.activeElement)
+      if (e.shiftKey && (!inside || document.activeElement === first)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  if (!step || typeof document === 'undefined') return null
+
+  // Porté sur <body> : rendu dans la scène des jeux en ligne (OnlineGameStage,
+  // contexte d'empilement en z-20), le voile restait sous la Navbar et sous
+  // les barres d'action, quel que soit son z-index.
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -102,21 +146,26 @@ export function GameTutorialModal({
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        initial={reduceMotion ? { opacity: 0 } : { scale: 0.92, opacity: 0, y: 10 }}
+        animate={reduceMotion ? { opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
+        exit={reduceMotion ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
+        transition={reduceMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 300, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-sm rounded-2xl border border-[#D8CCAE] bg-cream p-5 text-[#24201A] shadow-2xl"
       >
         <div className="flex items-center justify-between">
-          <span className="rounded-full border border-[#24201A]/12 bg-[#24201A]/5 px-2 py-0.5 font-display text-xs font-bold text-[#4A443A]">
+          <span className="rounded-full border border-[#24201A]/[0.12] bg-[#24201A]/5 px-2 py-0.5 font-display text-xs font-bold text-[#4A443A]">
             {t('stepCounter', { n: idx + 1, total: steps.length })}
           </span>
           <button
+            type="button"
             onClick={onClose}
             aria-label={t('close')}
-            className="touch-target flex h-7 w-7 items-center justify-center rounded-lg text-[#6B6455] transition-colors hover:bg-[#24201A]/8 hover:text-[#24201A]"
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-[#6B6455] transition-colors hover:bg-[#24201A]/[0.08] hover:text-[#24201A]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -126,23 +175,23 @@ export function GameTutorialModal({
 
         <motion.div
           key={idx}
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 12 }}
+          animate={reduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
           transition={{ duration: 0.2 }}
           className="mt-3 min-h-[5.5rem] space-y-1.5 text-center"
         >
-          <h3 className="font-display text-lg font-bold">{step.title}</h3>
+          <h3 id={titleId} className="font-display text-lg font-bold">{step.title}</h3>
           <p className="text-sm leading-relaxed text-[#4A443A]">{step.body}</p>
         </motion.div>
 
         <div className="mt-4 flex items-center justify-between gap-2">
-          <div className="flex gap-1">
+          <div aria-hidden className="flex gap-1">
             {steps.map((_, i) => (
               <span
                 key={i}
                 className={cn(
                   'h-1.5 w-1.5 rounded-full transition-colors',
-                  i === idx ? 'bg-gold' : 'bg-[#24201A]/15'
+                  i === idx ? 'bg-gold' : 'bg-[#24201A]/20'
                 )}
               />
             ))}
@@ -150,23 +199,29 @@ export function GameTutorialModal({
           <div className="flex gap-2">
             {idx > 0 && (
               <button
+                type="button"
                 onClick={() => setIdx((v) => v - 1)}
                 aria-label={t('prev')}
-                className="touch-target flex h-8 w-8 items-center justify-center rounded-lg border border-[#24201A]/12 bg-[#24201A]/5 text-[#6B6455] hover:bg-[#24201A]/10"
+                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#24201A]/[0.12] bg-[#24201A]/5 text-[#4A443A] hover:bg-[#24201A]/10"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
-            <button
+            <Button
+              ref={nextRef}
+              type="button"
+              variant="primary"
+              size="game"
               onClick={() => (isLast ? onClose() : setIdx((v) => v + 1))}
-              className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-1.5 text-xs font-bold text-black hover:from-amber-400 hover:to-amber-500"
+              className="gap-1"
             >
               {isLast ? t('gotIt') : t('next')}
-              {!isLast && <ChevronRight className="h-3.5 w-3.5" />}
-            </button>
+              {!isLast && <ChevronRight className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }

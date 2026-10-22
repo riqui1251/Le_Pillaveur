@@ -11,7 +11,7 @@ Deux équipes s'affrontent. À chaque manche, un orateur voit un mot à faire de
 1. **Les équipes** se forment au lobby (A contre B).
 2. **L'orateur** voit le mot + ses tabous sur son téléphone ; son équipe écoute au vocal.
 3. **Ça devine** à toute vitesse pendant 60 secondes : mot trouvé = point, on passe au suivant, le chrono tourne.
-4. Trop dur ? On peut passer. Un tabou prononcé annule le mot — c'est l'équipe adverse qui le signale.
+4. Trop dur ? On peut passer. Un tabou prononcé annule le mot — l'équipe adverse, qui voit la carte et ses tabous, le signale.
 5. Chacun devient orateur à son tour ; la première équipe au score cible gagne.
 
 ## Victoire

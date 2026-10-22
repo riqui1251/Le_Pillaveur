@@ -36,13 +36,13 @@ export type LocalGameEvent = (typeof LOCAL_GAME_EVENTS)[number]
 export type LocalGameReport = { gameId: string; event: LocalGameEvent }
 
 /**
- * Jeux locaux SANS écran de fin : une partie de 1220, de Purple ou de la Roue
- * des gorgées ne « se termine » pas, on la quitte — ils n'envoient donc jamais
+ * Jeux locaux SANS écran de fin : une partie de la Roue des gorgées ne « se
+ * termine » pas, on la quitte — ils n'envoient donc jamais
  * de 'end'. Listés ici pour que la Supervision le dise sur leur ligne au lieu
  * d'afficher un « 0 terminée » qui passerait pour un abandon. À tenir à jour
  * si un de ces jeux gagne un écran de fin (et y monte FirstGameFeedbackCard).
  */
-export const LOCAL_GAMES_WITHOUT_END_SCREEN: readonly string[] = ['1220', 'purple', 'roue-des-gorgees']
+export const LOCAL_GAMES_WITHOUT_END_SCREEN: readonly string[] = ['roue-des-gorgees']
 
 /**
  * Un jeu que l'on mesure : connu du catalogue et jouable sur un seul

@@ -3,8 +3,9 @@
 import { memo, type CSSProperties } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion } from 'framer-motion'
+import { CirclePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SPECIAL_PIN_COLORS } from '@/lib/plinko-pins'
+import { SPECIAL_PIN_COLORS, type SpecialPinType } from '@/lib/plinko-pins'
 import { JACKPOT_VALUE, type BallColor } from '../plinko-scoring'
 import {
   ballsInCategory,
@@ -45,16 +46,22 @@ function useLiveText() {
       case 'multiplier': return `×${token.factor}`
       case 'add': return `+${token.n}`
       case 'subtract': return `−${token.n}`
-      case 'swapped': return `🔄 ${t('game.live.swapped')}`
+      case 'swapped': return t('game.live.swapped')
     }
   }
   return { t, categoryLabel, hitLabel, formatModifier }
 }
 
-function PinDot({ type }: { type: LivePinHit['type'] }) {
+const PIN_DOT_SIZE = {
+  sm: 'h-5 w-5 border text-[12px]',
+  md: 'h-6 w-6 border-2 text-[13px]',
+} as const
+
+/** Pastille d'un pion spécial hors plateau (bande d'effets, bulles, légende, récapitulatif) : couleur de sa famille, glyphe ≥ 12 px. */
+export function PinDot({ type, size = 'sm', className }: { type: SpecialPinType; size?: keyof typeof PIN_DOT_SIZE; className?: string }) {
   const c = SPECIAL_PIN_COLORS[type]
   return (
-    <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-black leading-none text-black/80', c.border, c.bg)}>
+    <span aria-hidden className={cn('flex shrink-0 items-center justify-center rounded-full leading-none', PIN_DOT_SIZE[size], c.border, c.bg, className)}>
       {c.glyph}
     </span>
   )
@@ -75,15 +82,15 @@ function LivePinChip({ hit, label, reduceMotion, className }: { hit: LivePinHit;
       <PinDot type={hit.type} />
       {(hit.type === 'mystery' || hit.inert) && (
         <>
-          <span aria-hidden className="text-[11px] font-bold leading-none text-cream/60">→</span>
+          <span aria-hidden className="text-xs font-bold leading-none text-cream/70">→</span>
           {nothing
-            ? <span aria-hidden className="text-[11px] font-bold leading-none text-cream/60">∅</span>
+            ? <span aria-hidden className="text-xs font-bold leading-none text-cream/70">∅</span>
             : hit.resolved && <PinDot type={hit.resolved} />}
         </>
       )}
       {/* En ligne et non en exposant : la bande de hauteur fixe rognerait un badge débordant. */}
       {hit.doubled && (
-        <span aria-hidden className="rounded-full bg-gold px-0.5 text-[11px] font-black leading-none text-black">×2</span>
+        <span aria-hidden className="rounded-full bg-gold px-0.5 text-xs font-black leading-none text-[#24201A]">×2</span>
       )}
     </motion.span>
   )
@@ -98,12 +105,16 @@ function LiveSegment({ ball, first, isCumulativeMode, reduceMotion }: { ball: Li
   const hiddenMobile = Math.max(0, ball.hits.length - MOBILE_CHIPS)
   return (
     <span className={cn('flex shrink-0 items-center gap-1', !first && 'border-l border-gold/[0.15] pl-1.5')}>
-      {!ball.isMain && <span role="img" aria-label={t('game.live.extraBall')} className="text-[11px] leading-none">🎱</span>}
+      {!ball.isMain && (
+        <span role="img" aria-label={t('game.live.extraBall')} className="flex shrink-0">
+          <CirclePlus aria-hidden className="h-3.5 w-3.5 text-cream/80" />
+        </span>
+      )}
       {hiddenMobile > 0 && (
-        <span className={cn('text-[11px] font-bold leading-none text-cream/60 sm:hidden')}>+{hiddenMobile}</span>
+        <span className={cn('text-xs font-bold leading-none text-cream/70 sm:hidden')}>+{hiddenMobile}</span>
       )}
       {hiddenWide > 0 && (
-        <span className="hidden text-[11px] font-bold leading-none text-cream/60 sm:inline">+{hiddenWide}</span>
+        <span className="hidden text-xs font-bold leading-none text-cream/70 sm:inline">+{hiddenWide}</span>
       )}
       {ball.hits.slice(start).map((hit, i) => (
         <LivePinChip
@@ -115,7 +126,7 @@ function LiveSegment({ ball, first, isCumulativeMode, reduceMotion }: { ball: Li
         />
       ))}
       {summary.length > 0 && (
-        <span className={cn('whitespace-nowrap font-display text-[11px] font-bold tabular-nums leading-none sm:text-xs', ball.category === 'red' ? 'text-red-300' : 'text-emerald-300')}>
+        <span className={cn('whitespace-nowrap font-display text-xs font-bold tabular-nums leading-none', ball.category === 'red' ? 'text-red-300' : 'text-emerald-300')}>
           {summary.join(' · ')}
         </span>
       )}
@@ -126,7 +137,7 @@ function LiveSegment({ ball, first, isCumulativeMode, reduceMotion }: { ball: Li
 /**
  * Bande de hauteur fixe (« Boit » | « Donne ») posée en haut du plateau, sous les balles (z-20).
  * Bas de bande à 30 px (mobile) / 28 px (sm) : au-dessus de la 1re rangée de pions, même plateau à 360 px
- * (mobile 6 rangées → pion spécial à 43 px ; sm 8 rangées → 30 px). Masquée au repos.
+ * (pion spécial de 24 px : mobile 6 rangées → haut du pion à 39 px ; sm 8 rangées → 28 px). Masquée au repos.
  */
 export const LiveEffectsBar = memo(function LiveEffectsBar({ live, idle, isCumulativeMode, reduceMotion }: {
   live: LiveBalls
@@ -149,13 +160,13 @@ export const LiveEffectsBar = memo(function LiveEffectsBar({ live, idle, isCumul
         const segments = ballsInCategory(live, category).filter((b) => !b.isMain || b.hits.length > 0)
         return (
           <div key={category} className={cn('flex min-w-0 items-center gap-1.5 overflow-hidden px-1.5', category === 'green' && 'border-l border-gold/[0.15]')}>
-            <span className={cn('flex shrink-0 items-center gap-1 font-display text-[11px] font-bold leading-none', category === 'red' ? 'text-red-300' : 'text-emerald-300')}>
+            <span className={cn('flex shrink-0 items-center gap-1 font-display text-xs font-bold leading-none', category === 'red' ? 'text-red-300' : 'text-emerald-300')}>
               <span aria-hidden className={cn('h-2 w-2 rounded-full', category === 'red' ? 'bg-suit-red' : 'bg-emerald-700')} />
               {categoryLabel(category)}
             </span>
             <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-hidden">
               {segments.length === 0
-                ? <span className="truncate text-[11px] italic text-cream/60">{t('game.live.none')}</span>
+                ? <span className="truncate text-xs italic text-cream/70">{t('game.live.none')}</span>
                 : segments.map((ball, i) => (
                   <LiveSegment key={ball.id} ball={ball} first={i === 0} isCumulativeMode={isCumulativeMode} reduceMotion={reduceMotion} />
                 ))}
@@ -202,7 +213,7 @@ export const LiveSlotValues = memo(function LiveSlotValues({ live, slot, base, r
           key={ball.id}
           aria-hidden
           className={cn(
-            'flex h-[17px] w-full max-w-[30px] items-center justify-center rounded-[5px] border px-px font-display text-[11px] font-bold leading-none tabular-nums tracking-tight text-cream transition-opacity duration-300 sm:h-5 sm:max-w-[44px] sm:text-xs',
+            'flex h-[17px] w-full max-w-[30px] items-center justify-center rounded-[5px] border px-px font-display text-xs font-bold leading-none tabular-nums tracking-tight text-cream transition-opacity duration-300 sm:h-5 sm:max-w-[44px]',
             ball.category === 'red' ? 'bg-suit-red' : 'bg-emerald-700',
             ball.category !== ball.id ? 'border-dashed border-cream/80' : 'border-transparent',
             faded && 'opacity-0',
@@ -233,7 +244,8 @@ export const PinBubbleLayer = memo(function PinBubbleLayer({ bubbles, reduceMoti
         const shown = hit.type === 'mystery' && hit.resolved ? hit.resolved : hit.type
         const nothing = (hit.type === 'mystery' && !hit.resolved) || hit.inert
         const short = nothing ? t('game.live.nothing') : t(`game.live.short.${shown}`)
-        const glyph = SPECIAL_PIN_COLORS[shown].glyph
+        // « +1 », « −1 », « ×2 » : la pastille dit déjà le libellé court.
+        const repeatsGlyph = !nothing && short === SPECIAL_PIN_COLORS[shown].text
         return (
           <div key={key} aria-hidden className="pointer-events-none absolute z-40 max-w-[45%]" style={bubblePosition(x, y)}>
             <motion.div
@@ -241,14 +253,19 @@ export const PinBubbleLayer = memo(function PinBubbleLayer({ bubbles, reduceMoti
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.18 }}
               className={cn(
-                'flex max-w-full items-center gap-1 overflow-hidden whitespace-nowrap rounded-full border px-1.5 py-0.5 font-display text-[11px] font-bold leading-none text-cream shadow-lg sm:text-xs',
+                'flex max-w-full items-center gap-1 overflow-hidden whitespace-nowrap rounded-full border py-0.5 pl-0.5 pr-1.5 font-display text-xs font-bold leading-none text-cream shadow-lg',
                 category === 'red' ? 'border-red-300/60 bg-suit-red' : 'border-emerald-300/60 bg-emerald-700',
               )}
             >
-              <span className="shrink-0">{SPECIAL_PIN_COLORS[hit.type].glyph}</span>
-              {hit.type === 'mystery' && <span className="shrink-0">→{hit.resolved ? glyph : ''}</span>}
-              {short !== glyph && <span className="min-w-0 truncate">{short}</span>}
-              {hit.doubled && <span className="shrink-0 text-gold">×2</span>}
+              <PinDot type={hit.type} />
+              {hit.type === 'mystery' && hit.resolved && (
+                <>
+                  <span className="shrink-0">→</span>
+                  <PinDot type={hit.resolved} />
+                </>
+              )}
+              {!repeatsGlyph && <span className="min-w-0 truncate">{short}</span>}
+              {hit.doubled && <span className="shrink-0 rounded-full bg-gold px-1 py-px text-[#24201A]">×2</span>}
             </motion.div>
           </div>
         )

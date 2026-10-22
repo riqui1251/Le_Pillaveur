@@ -2,18 +2,27 @@
 
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Ear, Mic, SkipForward, Trophy } from 'lucide-react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { ArrowRight, Ban, Check, Loader2, Mic, SkipForward, Trophy, WifiOff, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
 import { PhaseCountdown } from './PhaseCountdown'
 import { PhaseCountdownLaunch } from './PhaseCountdownLaunch'
+import { PhaseHeader } from './PhaseHeader'
+import { TurnBanner } from '@/components/game/TurnBanner'
 import { Button } from '@/components/ui/button'
+import { PlayingCard, PlayingCardBack } from '@/components/ui/PlayingCard'
 import { cn } from '@/lib/utils'
-import type { TabouClientView, TabouTeam } from '@/lib/tabou/engine'
-import { TABOU_ROUND_MS } from '@/lib/tabou/engine'
+import {
+  TABOU_BOT_DESCRIBER_ROUND_MS,
+  TABOU_ROUND_MS,
+  type TabouClientView,
+  type TabouPlayerView,
+  type TabouTeam,
+} from '@/lib/tabou/engine'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
@@ -25,10 +34,14 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { genreOf } from './bot-speech/bot-speech-feed'
 
 /**
- * TABOU VOCAL en ligne (serveur-autoritaire). `currentWord` n'est envoyé
- * qu'au décrivant (`isDescriber`) tant que la manche est en cours ; les
- * autres ne voient que le timer et leur bouton de rôle (coéquipier =
- * TROUVÉ, adversaire = TABOU). `lastRoundWord` devient public au bilan.
+ * TABOU VOCAL en ligne (serveur-autoritaire). Pendant la manche, `currentWord`
+ * va au décrivant et à l'équipe adverse, qui guette les mots interdits pour
+ * crier TABOU — jamais aux coéquipiers, qui devinent (cf. tabouSeesCurrentWord).
+ * `lastRoundWord` devient public au bilan.
+ *
+ * Compte à rebours, manche et bilan partagent un même arbre : le bandeau de
+ * tour y reste monté, et sonne quand le rôle de décrivant ARRIVE au joueur
+ * (dès le bilan qui l'annonce) au lieu de se remonter muet à chaque phase.
  */
 
 function parseView(json: string | null | undefined): TabouClientView | null {
@@ -41,16 +54,76 @@ function parseView(json: string | null | undefined): TabouClientView | null {
   }
 }
 
-const TEAM_STYLES: Record<TabouTeam, { chip: string; card: string; text: string }> = {
-  A: { chip: 'border-sky-400/25 bg-sky-500/10 text-sky-200', card: 'border-sky-400/30 bg-sky-500/10', text: 'text-sky-300' },
-  B: { chip: 'border-rose-400/25 bg-rose-500/10 text-rose-200', card: 'border-rose-400/30 bg-rose-500/10', text: 'text-rose-300' },
+/** Couleurs de CONTENU des équipes (bleu ciel / rose), texte ≥ 4,5:1 sur le feutre. */
+const TEAM_STYLES: Record<TabouTeam, { card: string; text: string; ring: string }> = {
+  A: { card: 'border-sky-400/30 bg-sky-500/10', text: 'text-sky-300', ring: 'ring-2 ring-sky-300/60' },
+  B: { card: 'border-rose-400/30 bg-rose-500/10', text: 'text-rose-300', ring: 'ring-2 ring-rose-300/60' },
+}
+
+/**
+ * Carte du mot, crème et encre : le mot en titre, ses quatre interdits en
+ * rouge carreau. Pas de fond teinté sous les interdits : le rouge sur crème
+ * tient 5:1, sur un voile rose il tombait sous 4,5:1.
+ */
+function WordCard({
+  label,
+  word,
+  tabooLabel,
+  taboo,
+}: {
+  label: string
+  word: string
+  tabooLabel: string
+  taboo: readonly string[]
+}) {
+  return (
+    <PlayingCard suit="heart" rank="Q" className="px-5 pb-4 pt-5 text-center">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6B6455]">{label}</p>
+      <p className="mt-1 break-words font-display text-3xl font-bold leading-tight">{word}</p>
+      <div aria-hidden className="mx-auto my-3 h-px w-16 bg-[#24201A]/20" />
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-suit-red">{tabooLabel}</p>
+      <ul className="mt-2 grid grid-cols-2 gap-2">
+        {taboo.map((w) => (
+          <li
+            key={w}
+            className="flex min-h-[2.5rem] items-center justify-center gap-1.5 break-words rounded-lg border border-suit-red/40 px-2 py-1.5 text-base font-bold leading-tight text-suit-red"
+          >
+            <Ban aria-hidden className="h-4 w-4 shrink-0" />
+            <span className="min-w-0">{w}</span>
+          </li>
+        ))}
+      </ul>
+    </PlayingCard>
+  )
+}
+
+function StatTile({
+  icon: Icon,
+  iconClassName,
+  value,
+  label,
+}: {
+  icon: LucideIcon
+  iconClassName: string
+  value: number
+  label: string
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3 text-center">
+      <Icon aria-hidden className={cn('h-5 w-5', iconClassName)} />
+      <span className="font-display text-3xl font-bold tabular-nums leading-none text-cream">{value}</span>
+      <span className="text-sm font-semibold text-cream/80">{label}</span>
+    </div>
+  )
 }
 
 export function TabouOnline() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.tabou.game')
+  const tc = useTranslations('common')
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
+  const reduceMotion = useReducedMotion()
 
   const inGame = room?.gameId === 'tabou' && room.status === 'playing'
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
@@ -92,17 +165,19 @@ export function TabouOnline() {
 
   if (!view || !user || !room) {
     return (
-      <div className="flex flex-1 items-center justify-center p-6 text-white/60">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-400/30 border-t-emerald-400" />
+      <div role="status" className="flex flex-1 items-center justify-center p-6">
+        <Loader2 aria-hidden className="h-8 w-8 text-gold motion-safe:animate-spin" />
+        <span className="sr-only">{tc('loading')}</span>
       </div>
     )
   }
 
   const me = view.players.find((p) => p.id === user.id)
   const describer = view.players.find((p) => p.id === view.describerId)
+  const describerName = describer?.name ?? ''
   const myTeam = me?.team
-  const isTeammate = !view.isDescriber && myTeam && describer?.team === myTeam
-  const isOpponent = !view.isDescriber && myTeam && describer?.team !== myTeam
+  const isTeammate = !view.isDescriber && Boolean(myTeam) && describer?.team === myTeam
+  const isOpponent = !view.isDescriber && Boolean(myTeam) && Boolean(describer) && describer?.team !== myTeam
   const finished = view.phase === 'finished'
   const won = finished && myTeam && view.winnerTeam === myTeam
 
@@ -113,6 +188,61 @@ export function TabouOnline() {
   const sendAction = (body: Record<string, unknown>) =>
     postAction({ ...body, expectedVersion: room.stateVersion })
 
+  const renderTeams = (showScores: boolean) => (
+    <div className="grid grid-cols-2 gap-2">
+      {(['A', 'B'] as const).map((team) => {
+        const mine = team === myTeam
+        const teamName = team === 'A' ? t('teamA') : t('teamB')
+        return (
+          <section
+            key={team}
+            aria-label={teamName}
+            className={cn('min-w-0 rounded-2xl border p-3', TEAM_STYLES[team].card, mine && TEAM_STYLES[team].ring)}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={cn('text-sm font-bold uppercase tracking-wide', TEAM_STYLES[team].text)}>{teamName}</p>
+                {mine && <p className="text-xs font-semibold text-cream/80">{t('yourTeam')}</p>}
+              </div>
+              {showScores && (
+                <span className="font-display text-3xl font-bold tabular-nums leading-none text-cream">
+                  {view.scores[team]}
+                </span>
+              )}
+            </div>
+            <ul className="mt-2 space-y-1.5">
+              {view.players.filter((p) => p.team === team).map((p) => (
+                <li
+                  key={p.id}
+                  className={cn('flex min-w-0 items-center gap-1.5 text-sm font-semibold text-cream', p.leftAt && 'opacity-40')}
+                >
+                  <span aria-hidden className="shrink-0 text-base leading-none">
+                    <PlayerAvatarGlyph value={iconOf(p)} />
+                  </span>
+                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} className="min-w-0 break-words" />
+                  {p.id === user.id && <span className="shrink-0 text-xs font-medium text-cream/70">{t('you')}</span>}
+                  {/* Au bilan, le micro resterait sur l'ANCIEN décrivant alors que le
+                      bandeau annonce le suivant : marqueur limité à la manche. */}
+                  {(view.phase === 'countdown' || view.phase === 'describing') && p.id === view.describerId && (
+                    <>
+                      <Mic aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+                      <span className="sr-only">{t('describerTag')}</span>
+                    </>
+                  )}
+                  {p.leftAt && (
+                    <>
+                      <WifiOff aria-hidden className="h-4 w-4 shrink-0" />
+                      <span className="sr-only">{t('leftTag')}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      })}
+    </div>
+  )
 
   // ── Écran de fin ─────────────────────────────────────────────────────────
   if (finished) {
@@ -123,188 +253,268 @@ export function TabouOnline() {
         rematchVotes={view.rematchVotes ?? []}
         onRematch={voteRematch}
         onLeave={leaveRoom}
-        rematchClassName="from-emerald-600 to-teal-500"
         header={
           <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
+            initial={reduceMotion ? false : { scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 220, damping: 18 }}
             className="flex flex-col items-center gap-2 text-center"
           >
-            <Trophy className={cn('h-14 w-14', view.winnerTeam === 'A' ? 'text-sky-400' : 'text-rose-400')} />
+            <Trophy aria-hidden className={cn('h-14 w-14', view.winnerTeam === 'A' ? 'text-sky-300' : 'text-rose-300')} />
             <h2 className="font-display text-3xl font-bold text-gold">
               {view.winnerTeam === 'A' ? t('victory.teamAWin') : t('victory.teamBWin')}
             </h2>
-            <p className="text-sm text-white/60">{t('score', { a: view.scores.A, b: view.scores.B })}</p>
+            <p className="text-base font-semibold text-cream/80">{t('score', { a: view.scores.A, b: view.scores.B })}</p>
           </motion.div>
         }
+        ranking={<div className="w-full max-w-sm">{renderTeams(true)}</div>}
         xp={<XpGainBanner won={Boolean(won)} playerIds={view.players.map((p) => p.id)} className="w-full max-w-sm" />}
       />
     )
   }
 
-  // ── Compte à rebours de lancement ────────────────────────────────────────
-  if (view.phase === 'countdown') {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-white">
-        <p className="text-sm font-bold uppercase tracking-widest text-emerald-300/80">{t('countdown.title')}</p>
-        <PhaseCountdownLaunch endsAt={view.phaseEndsAt} className="text-8xl font-black tabular-nums text-emerald-200" />
-        <p className="text-xs font-semibold text-white/50">{t('countdown.hint')}</p>
-      </div>
-    )
-  }
+  // ── Compte à rebours, manche en cours, bilan : un seul arbre ─────────────
+  const countdown = view.phase === 'countdown'
+  const describing = view.phase === 'describing'
+  const roundEnd = view.phase === 'roundEnd'
+  const gameDecided = view.scores.A >= view.targetScore || view.scores.B >= view.targetScore
+  const roundTotal = describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
 
-  // ── Bilan de manche ───────────────────────────────────────────────────────
-  if (view.phase === 'roundEnd') {
-    const target = view.targetScore
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center text-white">
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-300/80">{t('roundEnd.title')}</p>
-        {view.lastRoundWord && (
-          <p className="text-2xl font-black">{t('roundEnd.wordWas', { word: view.lastRoundWord.word })}</p>
-        )}
-        <div className="flex gap-4 text-sm font-bold">
-          <span className="text-emerald-300">✅ {view.roundStats.found} {t('roundEnd.found')}</span>
-          <span className="text-white/50">⏭ {view.roundStats.passed} {t('roundEnd.passed')}</span>
-          <span className="text-red-300">🚫 {view.roundStats.taboo} {t('roundEnd.taboo')}</span>
-        </div>
-        <p className="text-sm font-bold text-emerald-200">{t('score', { a: view.scores.A, b: view.scores.B })}</p>
-        <Button
-          onClick={() => void sendAction({ action: 'continue' })}
-          disabled={busy}
-          className="w-full max-w-xs rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 py-4 text-sm font-bold"
-        >
-          {view.scores.A >= target || view.scores.B >= target ? t('roundEnd.seeResult') : t('roundEnd.continue')}
-        </Button>
-      </div>
-    )
-  }
+  // En pleine manche, la carte dit déjà tout au décrivant : son bandeau
+  // s'allège pour que la carte entière tienne sur un petit écran.
+  const roleHint = view.isDescriber
+    ? countdown
+      ? t('describerHint')
+      : undefined
+    : isTeammate
+      ? t('teammateHint', { name: describerName })
+      : isOpponent
+        ? t('opponentHint', { name: describerName, genre: genreOf(describer) })
+        : undefined
 
-  // ── Manche en cours (describing) ─────────────────────────────────────────
+  // Au bilan, le bandeau annonce le PROCHAIN décrivant (même rotation que le moteur).
+  const order = view.describerOrder ?? []
+  const nextDescriber: TabouPlayerView | undefined =
+    roundEnd && !gameDecided && order.length > 0
+      ? view.players.find((p) => p.id === order[(view.describerIdx + 1) % order.length])
+      : undefined
+  const turn: { player: TabouPlayerView; mine: boolean; hint?: string } | null = roundEnd
+    ? nextDescriber
+      ? {
+          player: nextDescriber,
+          mine: nextDescriber.id === user.id,
+          hint: nextDescriber.id === user.id ? t('roundEnd.nextHintMine') : t('roundEnd.nextHint'),
+        }
+      : null
+    : describer
+      ? { player: describer, mine: view.isDescriber, hint: roleHint }
+      : null
+
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
+  const hasBar = describing || roundEnd
+
+  const busyIcon = (Icon: LucideIcon) =>
+    busy ? (
+      <Loader2 aria-hidden className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" />
+    ) : (
+      <Icon aria-hidden className="mr-2 h-5 w-5 shrink-0" />
+    )
+
+  const statsLine = (
+    <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-semibold">
+      <span className="inline-flex items-center gap-1">
+        <Check aria-hidden className="h-4 w-4 text-emerald-300" />
+        <span className="tabular-nums text-cream">{view.roundStats.found}</span> {t('roundEnd.found')}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <SkipForward aria-hidden className="h-4 w-4 text-cream/70" />
+        <span className="tabular-nums text-cream">{view.roundStats.passed}</span> {t('roundEnd.passed')}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <Ban aria-hidden className="h-4 w-4 text-red-300" />
+        <span className="tabular-nums text-cream">{view.roundStats.taboo}</span> {t('roundEnd.taboo')}
+      </span>
+    </span>
+  )
+
+  const barStatus = actionError ? (
+    <span className="font-semibold text-red-300">{actionError}</span>
+  ) : describing ? (
+    statsLine
+  ) : null
+
+  const phaseTitle = countdown ? t('countdown.title') : roundEnd ? t('roundEnd.title') : t('phaseDescribingTitle')
+
   return (
     <>
-    <div className="flex flex-1 flex-col gap-3 p-3 pb-6 text-white sm:mx-auto sm:w-full sm:max-w-lg">
-      <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white/80">{t('score', { a: view.scores.A, b: view.scores.B })}</span>
-          <span className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
-              {t('phaseDescribing')}
+      <div
+        className={cn(
+          'flex flex-1 flex-col gap-3 p-3 sm:mx-auto sm:w-full sm:max-w-lg',
+          hasBar ? onlineActionBarPadding('tall') : 'pb-6'
+        )}
+      >
+        <PhaseHeader
+          round={t('roundLabel', { n: view.round, target: view.targetScore })}
+          phase={phaseTitle}
+          endsAt={describing ? view.phaseEndsAt : null}
+          total={roundTotal}
+          dangerMs={describer?.isBot ? 0 : 15_000}
+          right={<TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />}
+          status={
+            <span className="flex flex-wrap items-center gap-x-2">
+              <span className="text-sky-300">
+                {t('teamA')} <span className="font-bold tabular-nums text-cream">{view.scores.A}</span>
+              </span>
+              <span aria-hidden className="text-cream/60">·</span>
+              <span className="text-rose-300">
+                {t('teamB')} <span className="font-bold tabular-nums text-cream">{view.scores.B}</span>
+              </span>
             </span>
-            <TutorialReopenButton onClick={tutorial.reopen} className="h-7 w-7" />
-          </span>
-        </div>
-        {view.phaseEndsAt !== null && (
-          <PhaseCountdown
-            variant="bar"
-            endsAt={view.phaseEndsAt}
-            total={TABOU_ROUND_MS}
-            dangerMs={15_000}
-            colorClassName="bg-emerald-400"
-            dangerClassName="bg-red-400"
+          }
+        />
+
+        {turn && (
+          <TurnBanner
+            mine={turn.mine}
+            name={turn.player.name}
+            avatar={<PlayerAvatarGlyph value={iconOf(turn.player)} />}
+            hint={turn.hint}
+            alertOnMine
           />
         )}
+
+        {leftPlayer?.leftAt && (
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
+            <WifiOff aria-hidden className="h-4 w-4 shrink-0 text-gold" />
+            <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
+              {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
+            </PhaseCountdown>
+          </div>
+        )}
+
+        {countdown && (
+          <div className="flex flex-col items-center gap-2 py-4 text-center">
+            <PhaseCountdownLaunch
+              endsAt={view.phaseEndsAt}
+              className="font-display text-8xl font-bold tabular-nums text-cream"
+            />
+            <p className="text-sm font-semibold text-cream/80">{t('countdown.hint')}</p>
+          </div>
+        )}
+
+        {describing &&
+          (view.currentWord && (view.isDescriber || isOpponent) ? (
+            <motion.div
+              key={view.currentWord.word}
+              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <WordCard
+                label={view.isDescriber ? t('yourWord') : t('theirWord', { name: describerName })}
+                word={view.currentWord.word}
+                tabooLabel={view.isDescriber ? t('tabooWords') : t('watchWords')}
+                taboo={view.currentWord.taboo}
+              />
+            </motion.div>
+          ) : isTeammate ? (
+            <div className="flex items-center gap-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+              <PlayingCardBack className="h-24 w-16 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <Mic aria-hidden className="mb-1 h-6 w-6 text-gold" />
+                <p className="text-base font-semibold leading-snug text-cream/80">{t('teammateSecret')}</p>
+              </div>
+            </div>
+          ) : null)}
+
+        {roundEnd && (
+          <>
+            {view.lastRoundWord && (
+              <WordCard
+                label={t('roundEnd.wordWasLabel')}
+                word={view.lastRoundWord.word}
+                tabooLabel={t('tabooWords')}
+                taboo={view.lastRoundWord.taboo}
+              />
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              <StatTile icon={Check} iconClassName="text-emerald-300" value={view.roundStats.found} label={t('roundEnd.found')} />
+              <StatTile icon={SkipForward} iconClassName="text-cream/70" value={view.roundStats.passed} label={t('roundEnd.passed')} />
+              <StatTile icon={Ban} iconClassName="text-red-300" value={view.roundStats.taboo} label={t('roundEnd.taboo')} />
+            </div>
+          </>
+        )}
+
+        {renderTeams(false)}
       </div>
 
-      {/* Coup refusé (mauvaise phase, pas ton tour, expulsion…) — 3 s */}
-      {actionError && (
-        <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-center text-xs font-semibold text-red-100">
-          {actionError}
-        </div>
-      )}
-      {leftPlayer?.leftAt && (
-        <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs font-semibold text-amber-100">
-          <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
-            {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
-          </PhaseCountdown>
-        </div>
+      {hasBar && (
+        <OnlineActionBar status={barStatus} maxWidthClass="max-w-lg">
+          {describing && view.isDescriber ? (
+            <Button
+              variant="quiet"
+              size="gameLg"
+              className="w-full"
+              disabled={busy}
+              aria-busy={busy}
+              onClick={() => void sendAction({ action: 'pass' })}
+            >
+              {busyIcon(SkipForward)}
+              {t('passButton')}
+            </Button>
+          ) : describing && isTeammate ? (
+            <Button
+              variant="primary"
+              size="gameLg"
+              className="w-full text-lg"
+              disabled={busy}
+              aria-busy={busy}
+              onClick={() => void sendAction({ action: 'found' })}
+            >
+              {busyIcon(Check)}
+              {t('foundButton')}
+            </Button>
+          ) : describing && isOpponent ? (
+            <Button
+              variant="danger"
+              size="gameLg"
+              className="w-full text-lg"
+              disabled={busy}
+              aria-busy={busy}
+              onClick={() => void sendAction({ action: 'taboo-called' })}
+            >
+              {busyIcon(Ban)}
+              {t('tabooButton')}
+            </Button>
+          ) : roundEnd ? (
+            <Button
+              variant="primary"
+              size="gameLg"
+              className="w-full"
+              disabled={busy}
+              aria-busy={busy}
+              onClick={() => void sendAction({ action: 'continue' })}
+            >
+              {busyIcon(gameDecided ? Trophy : ArrowRight)}
+              {/* Libellé nominatif : n'importe qui peut lancer, et le chrono du
+                  prochain décrivant part aussitôt (pas de compte à rebours). */}
+              <span className="min-w-0 truncate">
+                {gameDecided
+                  ? t('roundEnd.seeResult')
+                  : nextDescriber
+                    ? nextDescriber.id === user.id
+                      ? t('roundEnd.startMyRound')
+                      : t('roundEnd.startRoundOf', { name: nextDescriber.name })
+                    : t('roundEnd.continue')}
+              </span>
+            </Button>
+          ) : null}
+        </OnlineActionBar>
       )}
 
-      {view.isDescriber && view.currentWord ? (
-        <div className="space-y-3 rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-600/15 to-transparent p-4 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-white/40">{t('yourWord')}</p>
-          <p className="text-3xl font-black tracking-wide">{view.currentWord.word}</p>
-          <div>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-red-300/70">{t('tabooWords')}</p>
-            <div className="flex flex-wrap justify-center gap-1.5">
-              {view.currentWord.taboo.map((w) => (
-                <span key={w} className="rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-200">
-                  {w}
-                </span>
-              ))}
-            </div>
-          </div>
-          <Button
-            onClick={() => void sendAction({ action: 'pass' })}
-            disabled={busy}
-            variant="outline"
-            className="w-full rounded-xl border-white/[0.15] bg-white/5 py-3 text-sm font-bold text-white/80 hover:bg-white/10"
-          >
-            <SkipForward className="mr-2 h-4 w-4" /> {t('passButton')}
-          </Button>
-        </div>
-      ) : isTeammate ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center">
-          <Mic className="h-8 w-8 text-emerald-300" />
-          <p className="text-sm font-semibold text-white/80">
-            {t('teammateHint', { name: describer?.name ?? '' })}
-          </p>
-          <Button
-            onClick={() => void sendAction({ action: 'found' })}
-            disabled={busy}
-            className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 py-6 text-lg font-black"
-          >
-            {t('foundButton')}
-          </Button>
-        </div>
-      ) : isOpponent ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-          <Ear className="h-7 w-7 text-white/50" />
-          <p className="text-sm font-semibold text-white/60">
-            {t('opponentHint', { name: describer?.name ?? '', genre: genreOf(describer) })}
-          </p>
-          <Button
-            onClick={() => void sendAction({ action: 'taboo-called' })}
-            disabled={busy}
-            variant="outline"
-            className="w-full rounded-xl border-red-400/30 bg-red-500/10 py-3 text-sm font-bold text-red-200 hover:bg-red-500/20"
-          >
-            {t('tabooButton')}
-          </Button>
-        </div>
-      ) : null}
-
-      {/* Joueurs par équipe */}
-      <div className="grid grid-cols-2 gap-2">
-        {(['A', 'B'] as const).map((team) => (
-          <div key={team} className={cn('rounded-xl border p-2', TEAM_STYLES[team].card)}>
-            <p className={cn('mb-1.5 text-xs font-bold uppercase tracking-wide', TEAM_STYLES[team].text)}>
-              {team === 'A' ? t('teamA') : t('teamB')}
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {view.players.filter((p) => p.team === team).map((p) => (
-                <span
-                  key={p.id}
-                  className={cn(
-                    'flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold',
-                    TEAM_STYLES[team].chip,
-                    p.id === view.describerId && 'ring-1 ring-white/50',
-                    p.leftAt && 'opacity-40'
-                  )}
-                >
-                  <span aria-hidden><PlayerAvatarGlyph value={iconOf(p)} /></span>
-                  <OnlinePlayerName name={p.name} cosmetics={cosmetics.get(p.id)} />
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-    <AnimatePresence>
-      {tutorial.open && <GameTutorialModal gameId="tabou" onClose={tutorial.close} />}
-    </AnimatePresence>
+      <AnimatePresence>
+        {tutorial.open && <GameTutorialModal gameId="tabou" onClose={tutorial.close} />}
+      </AnimatePresence>
     </>
   )
 }

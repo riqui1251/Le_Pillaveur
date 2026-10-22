@@ -1,5 +1,6 @@
-import { createElement } from 'react'
+import { createElement, type ComponentProps, type FunctionComponent } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { NextIntlClientProvider } from 'next-intl'
 import { describe, expect, it } from 'vitest'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 import { BotSpeechFeed, type BotSpeechFeedProps } from './BotSpeechFeed'
@@ -10,6 +11,12 @@ import { TV_FEED_SIZE, speechFeedItems, type LineTranslator } from './bot-speech
  * suite tourne sous Node, sans DOM — ce qu'on vérifie est le balisage d'un
  * rendu, pas l'animation ni le défilement.
  */
+
+const IntlProvider = NextIntlClientProvider as FunctionComponent<
+  Omit<ComponentProps<typeof NextIntlClientProvider>, 'children'>
+>
+/** Le seul texte du socle lu par le fil : la pastille « Nouvelles paroles », jamais rendue au montage. */
+const MESSAGES = { gameUi: { feed: { newer: 'Nouvelles paroles' } } }
 
 type Kind = 'accuse' | 'cheer' | 'mystery'
 
@@ -43,15 +50,19 @@ function fakeTr(calls: { key: string; values?: Record<string, string> }[] = []):
 
 function render(props: Partial<BotSpeechFeedProps<Kind>> & Pick<BotSpeechFeedProps<Kind>, 'speeches'>): string {
   return renderToStaticMarkup(
-    createElement(BotSpeechFeed<Kind>, {
-      round: 1,
-      players: PLAYERS,
-      iconOf: () => '🤖',
-      variant: 'phone',
-      tr: fakeTr(),
-      feedAria: 'Fil des paroles',
-      ...props,
-    })
+    createElement(
+      IntlProvider,
+      { locale: 'fr', messages: MESSAGES, timeZone: 'Europe/Paris' },
+      createElement(BotSpeechFeed<Kind>, {
+        round: 1,
+        players: PLAYERS,
+        iconOf: () => '🤖',
+        variant: 'phone',
+        tr: fakeTr(),
+        feedAria: 'Fil des paroles',
+        ...props,
+      })
+    )
   )
 }
 
@@ -107,5 +118,40 @@ describe('BotSpeechFeed', () => {
       speaker: 'f',
       target: 'm',
     })
+  })
+
+  it('téléphone : bulles de 14 px en crème, auteur sur sa ligne en or, même texte que la TV', () => {
+    const speeches = [sp('b1', 'accuse', 'h'), sp('b2', 'accuse', 'b1')]
+    const phone = render({ speeches, meId: 'h' })
+    expect(phone).not.toMatch(/text-xs\b|text-white/)
+    expect(phone).toContain('text-sm')
+    // La bulle qui me vise ressort du fil ; l'autre reste sur le feutre. Sur
+    // son fond or, l'auteur passe en or pâle (l'or pur y tombe à 4,4:1).
+    const items = [...phone.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((m) => m[1])
+    expect(items[0]).toContain('bg-gold/20')
+    expect(items[0]).toContain('class="block font-bold leading-tight text-amber-200"')
+    expect(items[1]).not.toContain('bg-gold/20')
+    expect(items[1]).toContain('class="block font-bold leading-tight text-gold"')
+    const text = (html: string) =>
+      [...html.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((m) => m[1].replace(/<[^>]+>/g, '').trim())
+    expect(text(phone)).toEqual(text(render({ speeches, variant: 'tv' })))
+    expect(text(phone)[0]).toBe('🤖Raoul Je vise Riqui')
+  })
+
+  it('« all » (défaut) : le fil est la région annoncée ; « aimed » : le fil se tait, une région à part attend', () => {
+    const speeches = [sp('b1', 'accuse', 'h')]
+    const all = render({ speeches, meId: 'h' })
+    expect(all.startsWith('<ul aria-live="polite"')).toBe(true)
+    expect(all).not.toContain('role="status"')
+    const aimed = render({ speeches, meId: 'h', live: 'aimed' })
+    expect(aimed.startsWith('<ul aria-live="off"')).toBe(true)
+    // Montée vide : l'historique présent au montage ne s'annonce pas.
+    expect(aimed).toContain('<p role="status" aria-live="polite" aria-atomic="true" class="sr-only"></p>')
+    // La TV garde son fil annoncé, quel que soit le réglage.
+    expect(render({ speeches, variant: 'tv', live: 'aimed' }).startsWith('<ul aria-live="polite"')).toBe(true)
+  })
+
+  it('la pastille « Nouvelles paroles » n’existe pas au montage : le fil commence en bas', () => {
+    expect(render({ speeches: [sp('b1', 'accuse', 'h')] })).not.toContain('Nouvelles paroles')
   })
 })

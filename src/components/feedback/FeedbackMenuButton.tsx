@@ -20,7 +20,7 @@ export function FeedbackMenuButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left text-white/70 transition-colors hover:bg-white/[0.08] hover:text-white"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/[0.15] text-violet-300">
         <MessageCircle className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">

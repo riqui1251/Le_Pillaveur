@@ -153,14 +153,14 @@ export function RecentTables() {
 
   return (
     <section>
-      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/70">
-        <History className="h-4 w-4 text-amber-300" />
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-cream/80">
+        <History className="h-4 w-4 text-gold" aria-hidden />
         {t('title')}
       </div>
 
       {failed ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-2">
-          <p className="text-xs text-white/50">{t('error')}</p>
+          <p className="text-xs text-cream/70">{t('error')}</p>
           <button
             type="button"
             onClick={() => { void load() }}
@@ -172,18 +172,18 @@ export function RecentTables() {
       ) : tables === null ? (
         <p
           aria-busy="true"
-          className="animate-pulse rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4 text-center text-xs text-white/40"
+          className="motion-safe:animate-pulse rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4 text-center text-xs text-cream/70"
         >
           {t('loading')}
         </p>
       ) : tables.length === 0 ? (
-        <p className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4 text-center text-xs text-white/40">
+        <p className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-4 text-center text-xs text-cream/70">
           {t('empty')}
         </p>
       ) : (
         <>
           {seated && (
-            <p id={inRoomId} className="mb-2 text-[11px] text-white/45">
+            <p id={inRoomId} className="mb-2 text-xs text-cream/70">
               {t('inRoom')}
             </p>
           )}
@@ -206,12 +206,12 @@ export function RecentTables() {
                   className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5"
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-amber-200">
-                      <GameIconById id={table.gameId} className="h-4 w-4" />
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-felt">
+                      <GameIconById id={table.gameId} surface="felt" className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{title}</p>
-                      <p className="truncate text-[11px] text-white/45">
+                      <p className="truncate text-sm font-medium text-cream">{title}</p>
+                      <p className="truncate text-xs text-cream/70">
                         {now !== null && (
                           <>
                             <time dateTime={table.finishedAt}>
@@ -227,7 +227,7 @@ export function RecentTables() {
                     <span
                       className={cn(
                         'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
-                        won ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/10 text-red-300/90'
+                        won ? 'bg-emerald-500/[0.15] text-emerald-300' : 'bg-red-500/10 text-red-300/90'
                       )}
                     >
                       {table.rank !== null ? t('rank', { rank: table.rank }) : won ? t('win') : t('loss')}
@@ -255,18 +255,18 @@ export function RecentTables() {
                                 key={p.userId}
                                 className={cn(
                                   'flex h-7 w-7 items-center justify-center rounded-full border-2 border-felt-deep text-[11px] font-bold',
-                                  p.isFriend ? 'bg-amber-500/30 text-amber-100' : 'bg-white/15 text-white/75'
+                                  p.isFriend ? 'bg-amber-500/30 text-amber-100' : 'bg-white/[0.15] text-cream/80'
                                 )}
                               >
                                 {initialOf(p.name)}
                               </span>
                             ))}
                           </span>
-                          <span className="min-w-0 truncate text-xs text-white/60" aria-hidden>
+                          <span className="min-w-0 truncate text-xs text-cream/70" aria-hidden>
                             {shown.map((p) => p.name).join(', ')}
                           </span>
                           {extra > 0 && (
-                            <span className="shrink-0 text-xs font-semibold text-white/40" aria-hidden>
+                            <span className="shrink-0 text-xs font-semibold text-cream/60" aria-hidden>
                               {t('more', { count: extra })}
                             </span>
                           )}
@@ -285,9 +285,9 @@ export function RecentTables() {
                           aria-label={busyKey === key ? undefined : t('rematchLabel', { game: title })}
                           aria-busy={busyKey === key || undefined}
                           aria-describedby={seated ? inRoomId : undefined}
-                          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl bg-amber-500/90 px-3 text-xs font-semibold text-black transition-colors hover:bg-amber-400 disabled:opacity-50"
+                          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl bg-amber-500 px-3 text-xs font-bold text-[#24201A] transition-colors hover:bg-amber-400 disabled:opacity-40"
                         >
-                          <RotateCcw className="h-3.5 w-3.5" />
+                          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                           {busyKey === key ? t('rematching') : t('rematch')}
                         </button>
                       )}
@@ -297,7 +297,7 @@ export function RecentTables() {
                   {/* Qui sera invité, dit AVANT le clic : l'invitation est
                       réservée aux amis (route /invite, not_friends). */}
                   {canReplay && table.partners.length > 0 && (
-                    <p className="mt-1.5 text-[11px] leading-snug text-white/40">
+                    <p className="mt-1.5 text-xs leading-snug text-cream/70">
                       {others === 0
                         ? t('inviteAll', { count: friends })
                         : friends === 0

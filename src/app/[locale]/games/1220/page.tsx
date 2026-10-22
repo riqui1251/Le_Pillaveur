@@ -6,6 +6,7 @@ import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { useRouter } from "@/i18n/navigation"
 import { useAuth } from '@/components/providers/AuthProvider'
 import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
+import { OnlineGameStage } from '@/components/online/OnlineGameStage'
 import { GameShowcase } from '@/components/online/GameShowcase'
 import { LocalGamePrelobby } from '@/components/game/LocalGamePrelobby'
 
@@ -42,9 +43,9 @@ export default function Game1220Page() {
   // Mode en ligne : lobby + partie serveur-autoritaire (indépendant du flux local).
   if (user?.playMode === 'online') {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-y-auto bg-[#07060b] sm:top-[3.75rem]">
+      <OnlineGameStage>
         <Game1220Online />
-      </div>
+      </OnlineGameStage>
     )
   }
 

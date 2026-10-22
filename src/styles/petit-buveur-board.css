@@ -2,8 +2,9 @@
 
 .pb-board {
   position: relative;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  /* Au téléphone, chaque pixel rendu aux cases : 6 colonnes tiennent dans
+     ~315 px, la case passe de 42 à 48 px. */
+  padding: 0.5rem;
   border-radius: 1rem;
   border: 1px solid rgb(var(--gold-rgb) / 0.2);
   background-color: rgb(var(--felt-deep-rgb) / 0.85);
@@ -11,6 +12,12 @@
     radial-gradient(circle at 1px 1px, rgb(var(--gold-rgb) / 0.05) 1px, transparent 0);
   background-size: 20px 20px;
   box-shadow: inset 0 1px 0 rgb(var(--cream-rgb) / 0.04);
+}
+
+@media (min-width: 640px) {
+  .pb-board {
+    padding: 0.75rem;
+  }
 }
 
 .pb-board-grid {
@@ -71,17 +78,21 @@
 
 /* Spécificité volontairement plus forte que les utilitaires posés par le jeu
    local et la version en ligne (text-[8px], text-cream/30, text-white/30) :
-   crème à 0,75 = contraste ≥ 5,6:1 sur toutes les cases, feutre Soft et case
-   active (fond or) compris ; 11 px minimum au téléphone. */
+   crème à 0,85 sur sa pastille de feutre = contraste ≥ 8:1 sur toutes les
+   cases, feutre Soft et case active (fond or) compris ; 12 px, c'est une
+   information de jeu. */
 .pb-board .pb-board-case:not(.pb-board-start) .pb-board-case-num {
-  color: rgb(var(--cream-rgb) / 0.75);
-  font-size: 11px;
+  color: rgb(var(--cream-rgb) / 0.85);
+  font-size: 12px;
 }
 
-@media (min-width: 640px) {
-  .pb-board .pb-board-case:not(.pb-board-start) .pb-board-case-num {
-    font-size: 12px;
-  }
+/* Le numéro passe AU-DESSUS des pions, sur une pastille de feutre : dès
+   trois pions, celui du coin le cachait (case de départ, grappes). */
+.pb-board-case-num {
+  z-index: 3;
+  padding: 1px 3px;
+  border-radius: 4px;
+  background: rgb(var(--felt-deep-rgb) / 0.8);
 }
 
 .pb-board-players {

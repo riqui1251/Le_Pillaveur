@@ -1,33 +1,52 @@
 "use client"
 
 import type { ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Target } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
+import { CaseToken } from '@/components/petit-buveur/CaseToken'
 import { cn } from '@/lib/utils'
 
 /**
  * Fenêtre de décision du Petit Buveur en ligne (cible, verdict, pile ou face,
- * Chance, téléport) : plein écran en bas sur mobile, centrée sur desktop.
+ * Chance, téléport) : feuille du bas sur mobile, centrée sur desktop.
  * Non fermable : la partie attend ce choix.
+ *
+ * Elle tient dans l'écran (max 92dvh) : en-tête compact, contenu qui défile,
+ * pied collé (`footer`) pour les actions rapides — à huit joueurs, le titre
+ * et la consigne ne partent plus au-dessus du viewport.
  */
+/**
+ * Le focus entre dans la feuille à l'ouverture : au clavier, Tab partait
+ * sinon du bouton resté derrière le voile. Fonction de module : référence
+ * stable, appelée au montage seulement.
+ */
+export function focusOnMount(el: HTMLElement | null) {
+  el?.focus({ preventScroll: true })
+}
+
 export function ChoiceSheet({
   ariaLabel,
   caseLabel,
+  caseType,
   title,
   hint,
   icon,
   children,
-  scroll = false,
+  footer,
 }: {
   ariaLabel: string
   caseLabel: string
+  /** Type de la case : son jeton (même icône que le plateau et la carte de case). */
+  caseType?: string
   title: string
   hint?: ReactNode
   icon?: ReactNode
   children: ReactNode
-  /** Contenu long (liste de cibles) : défilement interne. */
-  scroll?: boolean
+  /** Actions collées en bas de la feuille (Aléatoire / Moi…). */
+  footer?: ReactNode
 }) {
+  const reduced = useReducedMotion()
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -36,38 +55,54 @@ export function ChoiceSheet({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
-      className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[105] flex items-end justify-center bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-4"
     >
       <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+        exit={reduced ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.97 }}
         transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-        className={cn(
-          'z-[100] w-full max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-felt-deep shadow-2xl',
-          scroll && 'flex max-h-[85dvh] flex-col'
-        )}
+        tabIndex={-1}
+        ref={focusOnMount}
+        className="z-[100] flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-gold/25 bg-felt-deep text-cream shadow-2xl outline-none"
       >
-        <div className="flex flex-col items-center gap-2 border-b border-gold/20 bg-gradient-to-br from-amber-600/20 to-transparent px-5 pb-4 pt-5 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20 ring-1 ring-amber-400/30">
-            {icon ?? <Target className="h-6 w-6 text-amber-300" aria-hidden />}
+        <div className="shrink-0 border-b border-gold/20 px-4 pb-3 pt-4">
+          <div className="flex items-center gap-3">
+            {caseType ? (
+              <CaseToken caseType={caseType} size={40} />
+            ) : (
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/10 ring-1 ring-gold/30">
+                {icon ?? <Target className="h-5 w-5 text-gold" aria-hidden />}
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gold">{caseLabel}</p>
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold leading-tight text-cream">
+                {caseType && icon ? <span className="shrink-0 [&>svg]:h-5 [&>svg]:w-5">{icon}</span> : null}
+                {title}
+              </h2>
+            </div>
           </div>
-          <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-2.5 py-0.5 text-xs font-semibold text-amber-100">
-            {caseLabel}
-          </span>
-          <h3 className="text-lg font-bold text-cream">{title}</h3>
-          {hint && <div className="max-w-[20rem] text-sm text-cream/70">{hint}</div>}
+          {hint && <div className="mt-2 text-sm text-cream/80">{hint}</div>}
         </div>
-        <div className={cn('p-4 sm:p-5', scroll && 'min-h-0 overflow-y-auto')}>{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">{children}</div>
+        {footer && (
+          <div className="shrink-0 border-t border-gold/20 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
+            {footer}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )
 }
 
-/** Bouton principal (or) des fenêtres de décision. */
-export const PRIMARY_CHOICE =
-  'flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-base font-bold text-felt-deep shadow-lg transition-colors hover:bg-amber-400 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream'
+const CHOICE = 'w-full gap-2 whitespace-normal px-3 leading-tight'
 
-/** Bouton secondaire (feutre) des fenêtres de décision. */
-export const SECONDARY_CHOICE =
-  'flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-xl border border-gold/30 bg-felt px-4 py-3 text-base font-bold text-cream transition-colors hover:border-gold/60 hover:bg-felt-deep active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400'
+/** Bouton principal (encre sur or) des fenêtres de décision — variante du socle, 48 px. */
+export const PRIMARY_CHOICE = cn(buttonVariants({ variant: 'primary', size: 'game' }), CHOICE)
+
+/** Bouton secondaire (feutre, filet or) des fenêtres de décision. */
+export const SECONDARY_CHOICE = cn(buttonVariants({ variant: 'quiet', size: 'game' }), CHOICE)
+
+/** Geste qui fait boire (« A bu ») : crème sur rouge carreau. */
+export const DANGER_CHOICE = cn(buttonVariants({ variant: 'danger', size: 'game' }), CHOICE)

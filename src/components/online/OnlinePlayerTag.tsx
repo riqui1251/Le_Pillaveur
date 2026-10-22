@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import type { RoomDto } from '@/lib/online-room'
 import type { OnlinePreferences } from '@/lib/online-preferences'
 import { crestTierForRole, roleLabel, type CrestTier } from '@/lib/roles'
@@ -126,6 +127,8 @@ export function OnlineLevelBadge({
   cosmetics?: MemberCosmetics | null
   className?: string
 }) {
+  // Infobulle traduite : « Niveau 7 » s'affichait en français à toutes les tables.
+  const t = useTranslations('onlineXp')
   if (!cosmetics) return null
   return (
     <span
@@ -133,7 +136,7 @@ export function OnlineLevelBadge({
         'inline-flex shrink-0 items-center rounded-full border border-sky-400/30 bg-sky-500/10 px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-sky-300',
         className
       )}
-      title={`Niveau ${cosmetics.level}`}
+      title={t('level', { level: cosmetics.level })}
     >
       {cosmetics.level}
     </span>

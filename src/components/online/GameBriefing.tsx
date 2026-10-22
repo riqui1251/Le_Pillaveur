@@ -94,9 +94,12 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-3xl border border-[#D8CCAE] bg-cream text-[#24201A] shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-[#24201A]/8 bg-[#24201A]/[0.03] px-5 py-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#24201A]/12 bg-[#24201A]/5">
-            <GameIconById id={gameId} className="h-5 w-5 text-[#24201A]" />
+        {/* Filets d'encre en crans valides : `/8` et `/12` ne génèrent rien
+            en Tailwind 3.3, et la bordure retombait sur `--border`, un vert
+            sapin (bleu nuit en Soft) très visible sur la crème. */}
+        <div className="flex items-center gap-3 border-b border-[#24201A]/10 bg-[#24201A]/[0.03] px-5 py-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#24201A]/20 bg-[#24201A]/5">
+            <GameIconById id={gameId} surface="card" className="h-7 w-7" />
           </div>
           <div className="min-w-0">
             <p className="font-display text-sm font-bold text-[#24201A]">{t('title')}</p>
@@ -125,7 +128,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
 
           {hasAcked ? (
             <div className="rounded-2xl border border-emerald-600/25 bg-emerald-600/10 p-5 text-center">
-              <Check className="mx-auto h-8 w-8 text-emerald-700" />
+              <Check className="mx-auto h-8 w-8 text-emerald-700" aria-hidden />
               <p className="mt-2 text-sm font-bold text-emerald-800">{t('youAreReady')}</p>
             </div>
           ) : (
@@ -155,7 +158,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                     key={i}
                     className={cn(
                       'h-1.5 w-1.5 rounded-full transition-colors',
-                      i === idx ? 'bg-gold' : 'bg-[#24201A]/15'
+                      i === idx ? 'bg-gold' : 'bg-[#24201A]/20'
                     )}
                   />
                 ))}
@@ -166,26 +169,34 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                   <Button
                     onClick={() => setIdx((i) => Math.max(0, i - 1))}
                     variant="outline"
-                    className="rounded-2xl border-[#24201A]/[0.15] bg-transparent px-3 py-5 text-[#4A443A] hover:bg-[#24201A]/5"
+                    size="gameLg"
+                    // `hover:text-[#24201A]` : sans lui, le `hover:text-accent-foreground`
+                    // de la variante outline passait la flèche en crème sur la crème.
+                    className="w-14 shrink-0 border-[#24201A]/20 bg-transparent px-0 text-[#4A443A] hover:bg-[#24201A]/5 hover:text-[#24201A]"
                     aria-label={t('prev')}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" aria-hidden />
                   </Button>
                 )}
                 {isLast ? (
+                  // Crème sur émeraude 700 (4,7:1) : le blanc sur le dégradé
+                  // émeraude 600 restait sous 4,5:1.
                   <Button
                     onClick={() => void postAck(false)}
                     disabled={sending}
-                    className="flex-1 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 py-5 text-base font-bold text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-500 hover:to-teal-600"
+                    size="gameLg"
+                    className="flex-1 bg-emerald-700 font-bold text-cream shadow-lg hover:bg-emerald-800 active:scale-[0.98] disabled:opacity-40"
                   >
-                    <Check className="mr-2 h-5 w-5" /> {t('ready')}
+                    <Check className="mr-2 h-5 w-5" aria-hidden /> {t('ready')}
                   </Button>
                 ) : (
                   <Button
                     onClick={() => setIdx((i) => Math.min(steps.length - 1, i + 1))}
-                    className="flex-1 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 py-5 text-base font-bold text-black shadow-lg shadow-amber-500/25 hover:from-amber-400 hover:to-amber-500"
+                    variant="primary"
+                    size="gameLg"
+                    className="flex-1"
                   >
-                    {t('next')} <ChevronRight className="ml-2 h-5 w-5" />
+                    {t('next')} <ChevronRight className="ml-2 h-5 w-5" aria-hidden />
                   </Button>
                 )}
               </div>
@@ -194,7 +205,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                 <button
                   onClick={() => void postAck(false)}
                   disabled={sending}
-                  className="mt-2 w-full rounded-xl py-2 text-center text-xs font-semibold text-[#6B6455] transition-colors hover:text-[#24201A]"
+                  className="mt-2 min-h-[44px] w-full rounded-xl py-2 text-center text-xs font-semibold text-[#6B6455] transition-colors hover:text-[#24201A]"
                 >
                   {t('skip')}
                 </button>
@@ -205,9 +216,9 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
       </div>
 
       {/* Qui a fini de lire */}
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-xl backdrop-blur-md">
-        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/40">
-          <Users className="h-3.5 w-3.5" />
+      <div className="rounded-3xl border border-gold/20 bg-felt-deep/70 p-4 shadow-xl">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-cream/70">
+          <Users className="h-4 w-4" aria-hidden />
           {t('waitingCount', { n: acks.length, total: room.members.length })}
         </p>
         <ul className="space-y-1.5">
@@ -218,21 +229,26 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
                 key={m.userId}
                 className={cn(
                   'flex items-center gap-2 rounded-xl border px-3 py-2',
-                  ready ? 'border-emerald-400/25 bg-emerald-500/10' : 'border-white/8 bg-white/4'
+                  // `/8` et `/4` ne généraient rien : les lignes en attente
+                  // n'avaient ni fond ni bord, à côté des lignes prêtes.
+                  ready ? 'border-emerald-400/25 bg-emerald-500/10' : 'border-white/10 bg-white/5'
                 )}
               >
                 <OnlinePlayerIcon
                   icon={m.preferences?.icon}
                   className="h-6 w-6 shrink-0 bg-white/10 text-white/80"
                 />
-                <span className="min-w-0 flex-1 truncate text-xs font-bold text-white/85">
+                <span className="min-w-0 flex-1 truncate text-sm font-bold text-cream">
                   {m.displayName}
-                  {m.isSelf && <span className="text-white/40"> {t('you')}</span>}
+                  {m.isSelf && <span className="font-normal text-cream/60"> {t('you')}</span>}
                 </span>
                 {ready ? (
-                  <span className="shrink-0 text-xs font-bold text-emerald-300">✓ {t('done')}</span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-emerald-300">
+                    <Check className="h-3.5 w-3.5" aria-hidden />
+                    {t('done')}
+                  </span>
                 ) : (
-                  <span className="shrink-0 text-xs text-white/35">{t('reading')}</span>
+                  <span className="shrink-0 text-xs text-cream/60">{t('reading')}</span>
                 )}
               </li>
             )

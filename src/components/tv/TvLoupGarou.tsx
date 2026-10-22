@@ -10,10 +10,12 @@ import {
   FlaskConical,
   Hourglass,
   Medal,
+  MessageCircle,
   Moon,
   Shield,
   Skull,
   Sparkles,
+  Scale,
   Sun,
   Target,
   Trophy,
@@ -242,7 +244,10 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
   } else if (state.phase === 'day-debate') {
     center = (
       <>
-        <p className="font-display text-4xl font-black text-cream">{t('debatePrompt')}</p>
+        <p className="flex items-center gap-3 font-display text-4xl font-black text-cream">
+          <MessageCircle aria-hidden className="h-10 w-10 shrink-0 text-gold" />
+          {t('debatePrompt')}
+        </p>
         {ravenBanner}
         {/* Le fil garde les dernières paroles en bas ; s'il déborde, c'est
             la plus ancienne qui sort par le haut, en fondu, jamais la plus récente. */}
@@ -332,7 +337,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
           ) : (
             <Sun aria-hidden className="h-9 w-9 text-gold" />
           )}
-          {t('round', { n: Math.max(1, state.round) })}
+          {t(isNight || state.phase === 'reveal-role' ? 'roundNight' : 'roundDay', { n: Math.max(1, state.round) })}
         </span>
         <span className="shrink-0 font-display text-2xl font-bold uppercase tracking-widest text-gold">
           {t(`phases.${state.phase}`)}
@@ -346,7 +351,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
             className="h-4 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10"
             barClassName="h-full rounded-full"
             colorClassName="bg-gold"
-            dangerClassName="bg-suit-red"
+            dangerClassName="bg-red-400"
           />
         ) : (
           <span className="flex-1" />
@@ -368,7 +373,9 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
           {(showVoteBanner || showMayorBanner) && (
             <div className="flex w-full shrink-0 flex-col gap-1 pt-1">
               {showVoteBanner && lastVote && (
-                <p className="truncate text-xl font-semibold text-white/80">
+                <p className="flex items-center justify-center gap-2 text-xl font-semibold text-cream/80">
+                  <Scale aria-hidden className="h-6 w-6 shrink-0 text-gold" />
+                  <span className="truncate">
                   {lastVote.eliminatedId
                     ? t('voteBanner', {
                         name: nameOf(lastVote.eliminatedId),
@@ -376,11 +383,13 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
                         role: lastVote.role ? roleName(lastVote.role) : '—',
                       })
                     : t('voteTieBanner')}
+                  </span>
                 </p>
               )}
               {showMayorBanner && (
-                <p className="truncate text-xl font-semibold text-amber-100/90">
-                  {t('mayorBanner', { name: nameOf(state.mayorId), genre: genreOfPlayer(state.mayorId) })}
+                <p className="flex items-center justify-center gap-2 text-xl font-semibold text-amber-100/90">
+                  <Medal aria-hidden className="h-6 w-6 shrink-0 text-gold" />
+                  <span className="truncate">{t('mayorBanner', { name: nameOf(state.mayorId), genre: genreOfPlayer(state.mayorId) })}</span>
                 </p>
               )}
             </div>

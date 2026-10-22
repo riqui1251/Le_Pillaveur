@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   Check,
+  ChevronDown,
   ChevronsUp,
   Flame,
   Loader2,
@@ -33,6 +34,8 @@ import {
 import { DEFAULT_ONLINE_PREFERENCES, type OnlinePreferences } from '@/lib/online-preferences'
 import { nextWeekStreakBonus, streakThisWeek } from '@/lib/online/streak'
 import type { XpGainDetail } from '@/lib/online/xp'
+import { cn } from '@/lib/utils'
+import { xpSummaryParts } from './end-screen'
 
 /**
  * Fin de partie : le gain d'XP, le niveau atteint, la série de la semaine et
@@ -54,9 +57,9 @@ import type { XpGainDetail } from '@/lib/online/xp'
  * UNE seule incitation sous l'XP, par ordre de priorité :
  *  1. passage de niveau : carte « Nouveau : … » + « Équiper maintenant » ;
  *  2. 1re partie : rien — la place revient à l'avis de 1re partie, que
- *     l'écran de fin pose juste en dessous. Guide, carte invité et avis
- *     empilés faisaient défiler trois appels à l'action (~650 px à 375 px)
- *     avant « Rejouer » ;
+ *     l'écran de fin pose en bandeau au-dessus de « Rejouer ». Guide, carte
+ *     invité et avis empilés faisaient défiler trois appels à l'action
+ *     (~650 px à 375 px) avant « Rejouer » ;
  *  3. look encore par défaut : une ligne discrète et un lien « Personnaliser
  *     mon profil » (cf. isDefaultOnlineLook) — pas une carte : elle revient
  *     à chaque fin de partie tant que le joueur garde la chope.
@@ -67,6 +70,12 @@ import type { XpGainDetail } from '@/lib/online/xp'
  *
  * La collection s'ouvre SUR PLACE, jamais par une navigation : quitter
  * l'écran de fin coûte la revanche et la place à table.
+ *
+ * Version COMPACTE par défaut : une ligne « +20 XP · Niveau 1 · 2 succès »
+ * et un bouton « Détails » qui déplie la barre, la série, les succès et
+ * l'incitation. Empilées, ces cartes faisaient défiler l'écran de fin ; le
+ * passage de niveau reste fêté sur la ligne même. La ligne invité, qui dit
+ * ce que le joueur perdrait, reste visible.
  */
 
 const FILLER_BOT_RE = /^bot-\d+$/
@@ -121,6 +130,7 @@ const PROFILE_LINK =
 
 export function XpGainBanner({
   playerIds,
+  compact = true,
   className,
 }: {
   /**
@@ -131,6 +141,8 @@ export function XpGainBanner({
   won?: boolean
   /** Ids des joueurs de l'état FINAL (comptes + bots) — sert au filtre anti-abus. */
   playerIds: string[]
+  /** true (défaut) : une ligne et « Détails » ; false : tout déplié, sans bouton. */
+  compact?: boolean
   className?: string
 }) {
   const t = useTranslations('onlineXp')
@@ -153,6 +165,8 @@ export function XpGainBanner({
   // Issue du dernier enregistrement depuis la collection ouverte ici.
   const [lookStatus, setLookStatus] = useState<'saved' | 'failed' | null>(null)
   const savedRef = useRef<HTMLParagraphElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const detailsId = useId()
 
   const currentGain = fresh && progression ? gainForCurrentXp(progression.xp, rawGain) : null
 
@@ -225,7 +239,7 @@ export function XpGainBanner({
             className="flex items-center justify-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2"
           >
             <Trophy aria-hidden className="h-3.5 w-3.5 shrink-0 text-amber-300" />
-            <span className="text-[11px] font-bold text-amber-100">
+            <span className="text-xs font-bold text-amber-100">
               {t('achievementUnlocked', { name: tAchievements(`items.${type}.title`) })}
             </span>
           </div>
@@ -373,7 +387,7 @@ export function XpGainBanner({
       className="mt-2 flex min-h-[44px] items-center gap-2 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-left transition-colors hover:border-amber-400/50 hover:bg-amber-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
     >
       <ShieldAlert aria-hidden className="h-3.5 w-3.5 shrink-0 text-amber-300" />
-      <span className="min-w-0 flex-1 text-[11px] leading-snug text-amber-100/90">
+      <span className="min-w-0 flex-1 text-xs leading-snug text-amber-100/90">
         {guestHeadline}{' '}
         <span className="font-bold text-amber-200 underline underline-offset-2">{t('guestSaveCta')}</span>
       </span>
@@ -417,61 +431,59 @@ export function XpGainBanner({
     }
   }
 
-  const mainCard = soloCapped ? (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+  const cappedCard = (
+    <div className="rounded-2xl border border-gold/20 bg-felt-deep/70 px-4 py-3">
       <div className="flex items-center justify-center gap-2">
-        <Users aria-hidden className="h-4 w-4 shrink-0 text-white/40" />
-        <span className="text-xs text-white/60">{t('soloCapped')}</span>
+        <Users aria-hidden className="h-4 w-4 shrink-0 text-cream/60" />
+        <span className="text-xs text-cream/70">{t('soloCapped')}</span>
       </div>
     </div>
-  ) : (
-    <div
-      className={
-        leveledUp
-          ? 'rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-4 py-3'
-          : 'rounded-2xl border border-white/10 bg-white/5 px-4 py-3'
-      }
+  )
+
+  const gainLabel = lastGain ? (
+    <span className="text-sm font-bold text-amber-200">
+      {isSolo ? t('soloGained', { xp: lastGain.total }) : t('gained', { xp: lastGain.total })}
+    </span>
+  ) : null
+
+  const levelLabel = leveledUp ? (
+    <motion.span
+      initial={reduceMotion ? false : { scale: 0.6 }}
+      animate={{ scale: 1 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.6 }}
+      className="flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/20 px-2.5 py-0.5 text-xs font-black text-amber-100"
     >
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Star aria-hidden className="h-4 w-4 shrink-0 text-amber-300" />
-        {lastGain && (
-          <span className="text-sm font-bold text-amber-200">
-            {isSolo ? t('soloGained', { xp: lastGain.total }) : t('gained', { xp: lastGain.total })}
-          </span>
-        )}
-        {leveledUp ? (
-          <motion.span
-            initial={reduceMotion ? false : { scale: 0.6 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.6 }}
-            className="flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/20 px-2.5 py-0.5 text-xs font-black text-amber-100"
-          >
-            <ChevronsUp aria-hidden className="h-3.5 w-3.5" />
-            {t('levelUp', { level: progress.level })}
-          </motion.span>
-        ) : (
-          <span className="text-xs text-white/50">{t('level', { level: progress.level })}</span>
-        )}
-        {streakLabel && (
-          <span className="flex items-center gap-1 rounded-full border border-orange-400/40 bg-orange-500/20 px-2.5 py-0.5 text-[11px] font-bold text-orange-200">
-            <Flame aria-hidden className="h-3.5 w-3.5" />
-            {streakLabel}
-          </span>
-        )}
-      </div>
+      <ChevronsUp aria-hidden className="h-3.5 w-3.5" />
+      {t('levelUp', { level: progress.level })}
+    </motion.span>
+  ) : (
+    <span className="text-xs text-cream/70">{t('level', { level: progress.level })}</span>
+  )
+
+  const streakPill = streakLabel ? (
+    <span className="flex items-center gap-1 rounded-full border border-orange-400/40 bg-orange-500/20 px-2.5 py-0.5 text-xs font-bold text-orange-200">
+      <Flame aria-hidden className="h-3.5 w-3.5" />
+      {streakLabel}
+    </span>
+  ) : null
+
+  // Série, barre et prochain déblocage : le corps de la carte d'XP, dépliée
+  // ou non (en version compacte, la ligne du haut est déjà dans le résumé).
+  const progressBody = (
+    <>
       {/* Le détail du total : « dont +30 XP de série » — le chiffre annoncé
           et la barre disent enfin la même chose. */}
       {lastGain && lastGain.streakBonus > 0 && (
-        <p className="mt-1 text-center text-xs text-orange-200/70">
+        <p className="mt-1 text-center text-xs text-orange-200/80">
           {t('streakBonus', { xp: lastGain.streakBonus })}
         </p>
       )}
       {streakNext !== null && (
-        <p className="mt-0.5 text-center text-xs text-orange-200/70">
+        <p className="mt-0.5 text-center text-xs text-orange-200/80">
           {t('streakNextWeek', { xp: streakNext })}
         </p>
       )}
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cream/10">
         <motion.div
           initial={reduceMotion ? false : { width: 0 }}
           animate={{
@@ -481,45 +493,162 @@ export function XpGainBanner({
           className="h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-300"
         />
       </div>
-      <p className="mt-1 text-center text-xs tabular-nums text-white/40">
+      <p className="mt-1 text-center text-xs tabular-nums text-cream/60">
         {t('progress', { current: progress.current, required: progress.required })}
       </p>
       {nextLabel && next && (
-        <p className="mt-0.5 text-center text-xs text-amber-200/60">
+        <p className="mt-0.5 text-center text-xs text-amber-200/80">
           {t('nextUnlock', { level: next.level, name: nextLabel })}
         </p>
       )}
-      {isSolo && <p className="mt-1 text-center text-xs text-white/50">{t('soloHint')}</p>}
-    </div>
+      {isSolo && <p className="mt-1 text-center text-xs text-cream/70">{t('soloHint')}</p>}
+    </>
+  )
+
+  const cardFrame = leveledUp
+    ? 'rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 px-4 py-3'
+    : 'rounded-2xl border border-gold/20 bg-felt-deep/70 px-4 py-3'
+
+  const collection = (
+    <OnlineCollection
+      open={collectionOpen}
+      onOpenChange={setCollectionOpen}
+      displayName={user.onlineDisplayName ?? user.displayName}
+      role={user.role}
+      // Couleur forcée comme sur la fiche compte : le catalogue en ligne n'en a qu'une.
+      preferences={{
+        ...DEFAULT_ONLINE_PREFERENCES,
+        ...user.onlinePreferences,
+        color: DEFAULT_ONLINE_PREFERENCES.color,
+      }}
+      progression={progression}
+      onSave={handleSave}
+      contentClassName={COLLECTION_LAYER}
+      overlayClassName={COLLECTION_LAYER}
+    />
+  )
+
+  const appear = {
+    initial: reduceMotion ? false : { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay: 0.35 },
+  } as const
+
+  if (!compact) {
+    return (
+      <motion.div {...appear} className={className}>
+        {soloCapped ? (
+          cappedCard
+        ) : (
+          <div className={cardFrame}>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Star aria-hidden className="h-4 w-4 shrink-0 text-amber-300" />
+              {gainLabel}
+              {levelLabel}
+              {streakPill}
+            </div>
+            {progressBody}
+          </div>
+        )}
+        {achievementsCard}
+        {guideCard}
+        {guestCard}
+        {collection}
+      </motion.div>
+    )
+  }
+
+  // ── Version compacte (écran de fin) : une ligne, le reste dans « Détails » ──
+  // Le dock d'actions est fixe : ce qui est ici ne repousse plus « Rejouer »,
+  // mais une pile de cartes sous le classement noyait encore l'essentiel.
+  const parts = xpSummaryParts({
+    gained: lastGain ? lastGain.total : null,
+    solo: isSolo,
+    level: progress.level,
+    leveledUp,
+    achievements: unlockedTypes.length,
+  })
+  const hasDetails = !soloCapped || achievementsCard !== null || guideCard !== null
+  const achievementNames = unlockedTypes.map((type) =>
+    t('achievementUnlocked', { name: tAchievements(`items.${type}.title`) })
+  )
+
+  const summary = soloCapped ? (
+    <span className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left text-xs leading-snug text-cream/70">
+      <Users aria-hidden className="h-4 w-4 shrink-0 text-cream/60" />
+      {t('soloCapped')}
+    </span>
+  ) : (
+    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-1 py-1.5">
+      <Star aria-hidden className="h-4 w-4 shrink-0 text-amber-300" />
+      {parts.map((part, index) => (
+        <Fragment key={part.kind}>
+          {index > 0 && (
+            <span aria-hidden className="text-cream/60">
+              ·
+            </span>
+          )}
+          {part.kind === 'gain' ? (
+            gainLabel
+          ) : part.kind === 'level' ? (
+            levelLabel
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-100">
+              <Trophy aria-hidden className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+              {t('achievementsCount', { count: part.count })}
+              {/* Les noms restent lus, dépliant fermé. */}
+              {!expanded &&
+                achievementNames.map((name) => (
+                  <span key={name} className="sr-only">
+                    {name}
+                  </span>
+                ))}
+            </span>
+          )}
+        </Fragment>
+      ))}
+    </span>
   )
 
   return (
-    <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.35 }}
-      className={className}
-    >
-      {mainCard}
-      {achievementsCard}
-      {guideCard}
+    <motion.div {...appear} className={className}>
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-2xl border px-3',
+          leveledUp ? 'border-amber-400/40 bg-amber-500/[0.15]' : 'border-gold/20 bg-felt-deep/70'
+        )}
+      >
+        {summary}
+        {hasDetails && (
+          <button
+            type="button"
+            onClick={() => setExpanded((open) => !open)}
+            aria-expanded={expanded}
+            aria-controls={expanded ? detailsId : undefined}
+            className="-mr-1.5 inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-xl px-2.5 text-xs font-bold text-gold transition-colors [touch-action:manipulation] hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
+          >
+            {t('details')}
+            <ChevronDown
+              aria-hidden
+              className={cn('h-4 w-4 shrink-0 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')}
+            />
+          </button>
+        )}
+      </div>
+      {expanded && (
+        <div id={detailsId}>
+          {!soloCapped && (
+            <div className={cn('mt-2', cardFrame)}>
+              {streakPill && <div className="flex justify-center">{streakPill}</div>}
+              {progressBody}
+            </div>
+          )}
+          {achievementsCard}
+          {guideCard}
+        </div>
+      )}
       {guestCard}
-      <OnlineCollection
-        open={collectionOpen}
-        onOpenChange={setCollectionOpen}
-        displayName={user.onlineDisplayName ?? user.displayName}
-        role={user.role}
-        // Couleur forcée comme sur la fiche compte : le catalogue en ligne n'en a qu'une.
-        preferences={{
-          ...DEFAULT_ONLINE_PREFERENCES,
-          ...user.onlinePreferences,
-          color: DEFAULT_ONLINE_PREFERENCES.color,
-        }}
-        progression={progression}
-        onSave={handleSave}
-        contentClassName={COLLECTION_LAYER}
-        overlayClassName={COLLECTION_LAYER}
-      />
+      {collection}
     </motion.div>
   )
 }

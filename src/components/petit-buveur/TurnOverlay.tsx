@@ -5,7 +5,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { playGameSound } from '@/lib/sound/game-sounds'
 
 /**
- * Flash plein écran au changement de tour — partagé local + online.
+ * Flash plein écran au changement de tour — en ligne (le jeu local, un seul
+ * téléphone qui circule, passe par PassPhoneOverlay : « Passe le téléphone à… »).
  *
  * S'affiche ~1,1 s quand `activeKey` change (pas au premier rendu). En ligne,
  * une courte vibration prévient le joueur quand c'est SON tour (mobile).
@@ -118,7 +119,7 @@ export function TurnOverlay({
               ) : (
                 <p className="font-display text-lg font-bold text-cream">{labelOf}</p>
               )}
-              <p className="mt-0.5 max-w-[14rem] truncate text-sm text-cream/60">{name}</p>
+              <p className="mt-0.5 max-w-[14rem] truncate text-sm text-cream/80">{name}</p>
             </div>
           </motion.div>
         </motion.div>
