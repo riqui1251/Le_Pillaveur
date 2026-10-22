@@ -12,6 +12,12 @@
 
 # testing
 /coverage
+# Playwright (e2e) : rapports, traces, captures d'écran et base jetable
+/test-results/
+/playwright-report/
+/blob-report/
+/e2e/screenshots/
+/e2e/.tmp/
 
 # next.js
 /.next/

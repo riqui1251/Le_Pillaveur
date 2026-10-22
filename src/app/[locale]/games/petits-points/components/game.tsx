@@ -465,6 +465,7 @@ export default function Game({ players, onGameEnd, difficulty, updatePlayerStats
                  <div className="flex justify-center">
            <div 
              ref={boardRef}
+             data-testid="petits-points-board"
              className="relative game-square max-w-[440px] bg-gradient-to-br from-gray-800 to-gray-900 rounded-full border-4 border-gray-600 cursor-pointer"
              onClick={handleBoardClick}
            >

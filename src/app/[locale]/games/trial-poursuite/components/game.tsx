@@ -597,7 +597,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
                 </div>
               </div>
 
-              <div className="flex justify-center space-x-4">
+              {/* flex-wrap : côte à côte, « Réussi » et « Non réussi » faisaient
+                  ~430 px et débordaient des deux bords d'un écran de 390. */}
+              <div className="flex flex-wrap justify-center gap-3">
                 {gameState === 'playing' && (
                   <>
                     <Button

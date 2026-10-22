@@ -1637,6 +1637,16 @@
         "balloonAria": "Ballon {color}",
         "startRace": "Commencer la Course !"
       },
+      "colors": {
+        "red": "rouge",
+        "blue": "bleu",
+        "green": "vert",
+        "yellow": "jaune",
+        "purple": "violet",
+        "orange": "orange",
+        "pink": "rose",
+        "cyan": "cyan"
+      },
       "results": {
         "title": "Course Terminée !",
         "winnerBalloon": "Le ballon {color} a gagné !",
@@ -1802,6 +1812,11 @@
       "legend": "Légende",
       "summary": "Résumé",
       "wheelInfo": "Roue générée automatiquement — Risque: {risk}, Segments: {count}",
+      "riskNames": {
+        "faible": "faible",
+        "moyen": "moyen",
+        "eleve": "élevé"
+      },
       "wheelHint": "Contenu: SAFE et gorgées 1 à 12, avec répétitions. Plus la valeur est élevée, plus le segment est petit.",
       "segmentSips": "{count} gorgées",
       "settings": {

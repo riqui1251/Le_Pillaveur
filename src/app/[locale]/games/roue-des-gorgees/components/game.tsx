@@ -213,7 +213,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, riskLevel,
     <GameShell title={t('title')} onBack={onGameEnd} actionBar={actionBar} fill maxWidth={800}>
     <div className="space-y-4">
       <Card className="p-4">
-        <div className="text-sm text-slate-300">{t('wheelInfo', { risk: riskLevel, count: segments.length })}</div>
+        <div className="text-sm text-slate-300">{t('wheelInfo', { risk: t(`riskNames.${riskLevel}`), count: segments.length })}</div>
         <div className="text-xs text-slate-400">{t('wheelHint')}</div>
       </Card>
 

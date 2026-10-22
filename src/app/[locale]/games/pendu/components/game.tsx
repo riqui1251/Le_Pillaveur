@@ -940,7 +940,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
             </div>
             
 
-            <div className="text-center space-y-4 md:space-y-8 mt-2 md:mt-4">
+            {/* mt-12 sur téléphone : le joueur et le minuteur sont posés en
+                absolu dans les coins, et le dessin centré venait les recouvrir. */}
+            <div className="text-center space-y-4 md:space-y-8 mt-12 md:mt-4">
               {/* Dessin du pendu - Version SVG */}
               <div className="flex justify-center relative">
                 {/* Pendu complet en fond si timeout */}

@@ -14,6 +14,7 @@ import { useSelectedPlayers } from '@/hooks/useSelectedPlayers';
 
 export default function BallonSurprisePage() {
   const t = useTranslations('games.ballon-surprise');
+  const tColors = useTranslations('games.ballon-surprise.colors');
   const { players: allPlayers, updatePlayerStats } = usePlayers();
   const { selectedIds } = useSelectedPlayers();
   const statsFlushedRef = React.useRef(false);
@@ -85,7 +86,7 @@ export default function BallonSurprisePage() {
             <div className="text-center p-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg shadow-lg">
               <h2 className="text-2xl font-bold mb-4 text-yellow-400">{t('results.title')}</h2>
               <p className="text-xl mb-2">
-                {t('results.winnerBalloon', { color: raceResult.winnerColor.toUpperCase() })}
+                {t('results.winnerBalloon', { color: tColors(raceResult.winnerColor).toUpperCase() })}
               </p>
               {winnerPlayer ? (
                 <p className="text-lg mb-4">
@@ -93,7 +94,7 @@ export default function BallonSurprisePage() {
                 </p>
               ) : (
                 <p className="text-lg mb-4">
-                  {t('results.noWinner', { color: raceResult.winnerColor, count: raceResult.sips })}
+                  {t('results.noWinner', { color: tColors(raceResult.winnerColor), count: raceResult.sips })}
                 </p>
               )}
 
