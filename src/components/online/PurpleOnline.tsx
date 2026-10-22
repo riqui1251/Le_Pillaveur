@@ -269,8 +269,7 @@ export function PurpleOnline() {
         : t('online.waitingBet', { name: currentName })
 
   const turnHint = isMyTurn ? (deciding ? t('decision.hint') : betting ? t('chooseBet') : undefined) : undefined
-  const soft = user.ambianceMode === 'soft'
-  const speechFeed = <PurpleSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" soft={soft} />
+  const speechFeed = <PurpleSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
 
   return (
     <>

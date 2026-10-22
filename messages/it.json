@@ -1736,7 +1736,7 @@
         "handOff": "Regalino, {name}! Scotta 🔥",
         "handOff_2": "La patata bollente è tua, {name} 🥔",
         "handOff_3": "{name}, ti lascio il piatto. Buona fortuna 😇",
-        "lament": "Che sfiga… Non ridere, {name} 😩",
+        "lament": "Che sfortuna… Non ridere, {name} 😩",
         "lament_2": "{speaker, select, f {Ho fatto un disastro} m {Ho fatto un disastro} other {Disastro totale}}… Vendicami, {name} 😩",
         "lament_3": "Le carte mi odiano, {name}. È ufficiale.",
         "mock": "Salute, {name}! Tutto d’un fiato 🍻",

@@ -3,8 +3,9 @@
 import { useTranslations } from 'next-intl'
 import { purpleSpeechRound, PURPLE_DRINK_SPEECH_KINDS } from '@/lib/purple/engine'
 import type { PurpleSyncedSpeech } from '@/lib/online-game-state'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { BotSpeechFeed, type FeedPlayer } from '../bot-speech/BotSpeechFeed'
-import { hideSpeechKinds, type LineTranslator } from '../bot-speech/bot-speech-feed'
+import { ambianceLineTranslator, hideSpeechKinds, type LineTranslator } from '../bot-speech/bot-speech-feed'
 
 /**
  * Fil des paroles du Purple (téléphone, verdict et TV) : le fil commun aux
@@ -15,32 +16,35 @@ import { hideSpeechKinds, type LineTranslator } from '../bot-speech/bot-speech-f
  * précédente (purpleSpeechRound), clés stables malgré l'élagage du moteur
  * (`speechBase`). Pour un spectateur « Sans alcool », les paroles qui parlent
  * de boire (PURPLE_DRINK_SPEECH_KINDS) sont masquées, les autres gardent leur
- * place et leur phrase.
+ * place et leur phrase, et le tic qui trinque se tait (ambianceLineTranslator).
  */
 export function PurpleSpeechFeed({
   view,
   iconOf,
   meId,
   variant,
-  soft = false,
+  soft,
 }: {
   view: { turn?: number; speech?: readonly PurpleSyncedSpeech[]; speechBase?: number; players: readonly FeedPlayer[] }
   iconOf: (p: FeedPlayer) => string
   /** Spectateur local ; absent sur la TV (aucune bulle n'y est surlignée). */
   meId?: string | null
   variant: 'phone' | 'tv'
+  /** Ambiance imposée (tests) ; sinon celle du compte ou de l'appareil. */
   soft?: boolean
 }) {
   const t = useTranslations('games.purple')
-  const tr: LineTranslator = {
-    has: (key) => t.has(key),
-    format: (key, values) => t(key, values),
-  }
+  const { mode } = useAmbianceMode()
+  const sober = soft ?? mode === 'soft'
+  const tr: LineTranslator = ambianceLineTranslator(
+    { has: (key) => t.has(key), format: (key, values) => t(key, values) },
+    sober
+  )
   const round = purpleSpeechRound(view)
 
   return (
     <BotSpeechFeed
-      speeches={hideSpeechKinds(view.speech ?? [], soft ? PURPLE_DRINK_SPEECH_KINDS : [])}
+      speeches={hideSpeechKinds(view.speech ?? [], sober ? PURPLE_DRINK_SPEECH_KINDS : [])}
       round={round}
       sinceRound={round - 1}
       indexBase={view.speechBase ?? 0}

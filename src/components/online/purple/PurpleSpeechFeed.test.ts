@@ -24,6 +24,7 @@ const PLAYERS = [
   { id: 'b1', name: 'Raoul', isBot: true },
   { id: 'b2', name: 'Gépéto', isBot: true },
   { id: 'b3', name: 'Bernadette', isBot: true },
+  { id: 'b4', name: 'Marcel', isBot: true },
 ]
 const sp = (playerId: string, kind: PurpleSpeechKind, targetId: string, round = 0): PurpleSpeech => ({
   playerId,
@@ -73,6 +74,13 @@ describe('PurpleSpeechFeed', () => {
     const soft = bubbles(render({ turn: 0, speech }, { soft: true }))
     expect(all).toHaveLength(4)
     expect(soft).toEqual([all[0], all[2], all[3]])
+  })
+
+  it('« Sans alcool » : le tic qui trinque (Marcel) se tait aussi', () => {
+    const tic = (catalogue('fr') as { games: { purple: { botTic: Record<string, string> } } }).games.purple.botTic.marcel
+    const speech = [sp('b4', 'lament', 'h')]
+    expect(bubbles(render({ turn: 0, speech }))[0]).toContain(tic)
+    expect(bubbles(render({ turn: 0, speech }, { soft: true }))[0]).not.toContain(tic)
   })
 
   it('fenêtre : celle des tours en cours et la précédente ; élagage du moteur sans changer une bulle', () => {

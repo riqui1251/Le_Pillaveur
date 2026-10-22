@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { IntlMessageFormat } from 'intl-messageformat'
 import { PURPLE_DRINK_SPEECH_KINDS, PURPLE_SPEECH_KINDS } from '@/lib/purple/engine'
 import {
+  DRINK_WORDS,
   SPEECH_LOCALES,
   describeSpeechCatalogue,
   flattenSpeechCatalogue,
@@ -28,12 +29,6 @@ describeSpeechCatalogue({
   maxChars: 70,
 })
 
-const DRINK: Record<string, RegExp> = {
-  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|sant[ée]|tchin|trinqu|ap[ée]ro/i,
-  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass/i,
-  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind/i,
-  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind/i,
-}
 const NEXT_CARD: Record<string, RegExp> = {
   fr: /prochaine carte|carte suivante|la suivante|sera rouge|sera noire/i,
   en: /next card|next one will|will be red|will be black/i,
@@ -60,7 +55,7 @@ describe.each(SPEECH_LOCALES)('purple/%s', (locale) => {
       for (const genre of GENRES) {
         const line = String(format.format({ name: 'Mauricette', speaker: genre, target: genre }))
         expect(line, `${key} : ${line}`).not.toMatch(NEXT_CARD[locale])
-        if (!DRINK_KINDS.includes(kindOf(key))) expect(line, `${key} : ${line}`).not.toMatch(DRINK[locale])
+        if (!DRINK_KINDS.includes(kindOf(key))) expect(line, `${key} : ${line}`).not.toMatch(DRINK_WORDS[locale])
       }
     }
   })

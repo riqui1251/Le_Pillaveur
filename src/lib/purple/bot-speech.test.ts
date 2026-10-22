@@ -16,7 +16,8 @@ import {
   type PurpleSpeechKind,
   type PurpleState,
 } from './engine'
-import { purpleBotSpeech, purpleTalkChance, type PurpleSpeechEvent } from './bot-speech'
+import { purpleBotSpeech, purpleTalkBase, type PurpleSpeechEvent } from './bot-speech'
+import { reactionTalkChance } from '@/lib/online/reaction-speech'
 import { withPurpleBotTalk } from './server-adapter'
 
 const always = (v: number) => () => v
@@ -78,7 +79,8 @@ describe('le coup et ses réactions', () => {
     const { after, event } = bet(state, 'noir')
     // Le suivant de Bernadette est Riqui : la lamentation vise un humain, elle passe devant.
     expect(speak(state, after, event, always(0))).toEqual([{ playerId: 'b3', kind: 'lament', targetId: 'h' }])
-    expect(speak(state, after, event, seq(0, 0.99, 0))).toEqual([{ playerId: 'b1', kind: 'mock', targetId: 'b3' }])
+    // Deux tirages par option : l'orateur, puis son dé de parole.
+    expect(speak(state, after, event, seq(0, 0.99, 0, 0))).toEqual([{ playerId: 'b1', kind: 'mock', targetId: 'b3' }])
   })
 
   it('un bot continue sur une cagnotte chargée : dare ; il passe la main : handOff au nouveau porteur', () => {
@@ -148,10 +150,12 @@ describe('plafond, sobriété et anti-triche', () => {
     expect({ ...talked, speech: undefined, speechBase: undefined }).toEqual({ ...after, speech: undefined, speechBase: undefined })
   })
 
-  it('les chances suivent le bavardage, l’audace et le trait, jamais systématiques', () => {
-    for (const kind of PURPLE_SPEECH_KINDS) expect(purpleTalkChance(kind, botTraitsFor('Gépéto'), 10)).toBeLessThan(1)
-    expect(purpleTalkChance('panache', botTraitsFor('Dédé'))).toBeGreaterThan(purpleTalkChance('panache', botTraitsFor('Huguette')))
-    expect(purpleTalkChance('mock', botTraitsFor('Paulette'), 5)).toBeGreaterThan(purpleTalkChance('mock', botTraitsFor('Paulette'), 1))
+  it('les chances suivent le bavardage, l’audace et la cagnotte, jamais systématiques', () => {
+    const chance = (kind: PurpleSpeechKind, name: string, pot = 0) =>
+      reactionTalkChance(purpleTalkBase(kind, botTraitsFor(name), pot), botTraitsFor(name))
+    for (const kind of PURPLE_SPEECH_KINDS) expect(chance(kind, 'Gépéto', 10)).toBeLessThan(1)
+    expect(chance('panache', 'Dédé')).toBeGreaterThan(chance('panache', 'Huguette'))
+    expect(chance('handOff', 'Paulette', 5)).toBeGreaterThan(chance('handOff', 'Paulette', 1))
   })
 })
 
