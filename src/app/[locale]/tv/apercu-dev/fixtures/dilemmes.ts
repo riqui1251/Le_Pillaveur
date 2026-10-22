@@ -10,6 +10,7 @@ import {
   reduceDil,
   DIL_COUNTDOWN_MS,
   type DilCard,
+  type DilSay,
   type DilState,
 } from '@/lib/dilemmes/engine'
 import { onlineRoom, previewMembers, type PreviewMember, type TvPreviewFixture, type TvPreviewStep } from '../fixture-kit'
@@ -91,14 +92,17 @@ class Game {
     return this
   }
 
-  /** `choice` : 'A' | 'B' | id visé ; un bot sans choix imposé vote comme le serveur (dilBotChoice). */
-  vote(playerId: string, choice?: string): this {
+  /**
+   * `choice` : 'A' | 'B' | id visé ; un bot sans choix imposé vote comme le
+   * serveur (dilBotChoice). `say` : la parole qu'un bot joint à son vote.
+   */
+  vote(playerId: string, choice?: string, say?: DilSay): this {
     this.clock += 900
     const player = this.state.players.find((p) => p.id === playerId)
     const card = dilCurrentCard(this.state)
     const resolved =
       choice ?? (player && card ? dilBotChoice(this.state, player, card, this.rand) : null) ?? 'A'
-    this.state = reduceDil(this.state, { type: 'VOTE', playerId, choice: resolved, now: this.clock })
+    this.state = reduceDil(this.state, { type: 'VOTE', playerId, choice: resolved, now: this.clock, say })
     return this
   }
 
@@ -202,6 +206,13 @@ export function build(): TvPreviewFixture[] {
   const doneFew = new Game('prefer', 2, 1, 'tv-dil-fin-few').advance().skipRounds(10)
   doneFew.state = { ...doneFew.state, rematchVotes: ['u1'] }
 
+  // Les bots parlent (Barnabé, Gépéto) : une taquinerie avec le vote, puis
+  // la réaction à la révélation (dérivée de la vue, comme sur les téléphones).
+  const talk = new Game('never', 2, 2, 'tv-dil-paroles').advance()
+  const talkSteps = [talk.vote('bot-2', 'B', { kind: 'confess', targetId: 'u1' }).step('vote, Gépéto taquine')]
+  talk.vote('u1', 'A').vote('u2', 'B').vote('bot-1', 'B')
+  talkSteps.push(talk.step('révélation, réaction d’un bot'))
+
   return [
     { id: 'compte-a-rebours', label: 'Compte à rebours, 16 joueurs', steps: [countdown.step('compte à rebours')] },
     { id: 'prefere-16', label: 'Tu préfères, 16 joueurs', steps: preferSteps },
@@ -220,5 +231,6 @@ export function build(): TvPreviewFixture[] {
       ],
     },
     { id: 'fin-3', label: 'Fin de partie, 2 joueurs et un bot', steps: [doneFew.step('fin, revanche 1/2 (bot hors quorum)')] },
+    { id: 'paroles', label: 'Les bots parlent : Je n’ai jamais, 2 joueurs et 2 bots', steps: talkSteps },
   ]
 }

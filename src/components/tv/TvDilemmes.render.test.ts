@@ -59,6 +59,19 @@ describe('TvDilemmes — écran TV', () => {
     expect(find('qui-16', 'révélation').html).toContain('Le plus désigné boit')
   })
 
+  it('les paroles des bots sous la carte, effacées tant qu’aucune bulle n’est dite', () => {
+    for (const label of ['vote, Gépéto taquine', 'révélation, réaction d’un bot']) {
+      const { html } = find('paroles', label)
+      expect(html).toContain('max-h-[7rem]')
+      expect(html).toMatch(/Gépéto<\/span> /)
+    }
+    // À la révélation, une réaction s'ajoute à la taquinerie.
+    expect((find('paroles', 'révélation, réaction d’un bot').html.match(/rounded-tl-sm/g) ?? []).length).toBe(2)
+    const silent = find('prefere-16', 'vote, 9/16 ont voté').html
+    expect(silent).not.toContain('max-h-[7rem]')
+    expect(silent).toContain('aria-live="polite"')
+  })
+
   it('départ et fin de partie', () => {
     expect(find('depart', 'vote, attente du retour').html).toContain('En attente du retour de')
     expect(find('fin', 'fin, revanche 3/16').html).toContain('Revanche 3/16')

@@ -90,12 +90,15 @@ describe('sfRevealReactions', () => {
     // Riqui juge, Léa est couronnée ; Gépéto (farceur) et Mauricette (suiveuse) ont 3 de bavardage.
     const s = crowned([human('h', 'Riqui'), human('l', 'Léa'), bot('g', 'Gépéto'), bot('m', 'Mauricette')], 'l')
     expect(s.judgeId).toBe('h')
-    expect(reactions(s)).toEqual([said('g', 'robbed', 'h'), said('m', 'bravo', 'l')])
+    const out = reactions(s)
+    expect(out).toHaveLength(2)
+    expect(out).toContainEqual(said('g', 'robbed', 'h'))
+    expect(out).toContainEqual(said('m', 'bravo', 'l'))
   })
 
   it('un bot couronné remercie le juge humain ; couronné par un juge bot, il nargue un humain de la manche', () => {
     const thanks = crowned([human('h', 'Riqui'), human('l', 'Léa'), bot('g', 'Gépéto'), bot('m', 'Marcel')], 'g')
-    expect(reactions(thanks)[0]).toEqual(said('g', 'thanks', 'h'))
+    expect(reactions(thanks)).toContainEqual(said('g', 'thanks', 'h'))
     // Table solo : Josiane juge (premier joueur), couronne Gépéto ; Riqui a joué.
     const solo = crowned([bot('j', 'Josiane'), human('h', 'Riqui'), bot('g', 'Gépéto'), bot('k', 'Kéké')], 'g')
     expect(solo.judgeId).toBe('j')
@@ -106,8 +109,11 @@ describe('sfRevealReactions', () => {
   })
 
   it('le juge bot salue l’humain qu’il a couronné', () => {
-    const solo = crowned([bot('j', 'Josiane'), human('h', 'Riqui'), bot('g', 'Gépéto'), bot('k', 'Kéké')], 'h')
-    expect(reactions(solo)[0]).toEqual(said('j', 'crown', 'h'))
+    // Gépéto et Kéké n'ont rien abattu : seul le juge a de quoi réagir.
+    const solo = crowned([bot('j', 'Josiane'), human('h', 'Riqui'), bot('g', 'Gépéto'), bot('k', 'Kéké')], 'h', {
+      skip: ['g', 'k'],
+    })
+    expect(reactions(solo)).toEqual([said('j', 'crown', 'h')])
   })
 
   it('un bot au bout de son plafond se tait ; un converti ne réagit jamais', () => {

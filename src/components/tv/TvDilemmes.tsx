@@ -3,7 +3,7 @@
 import { Check, Scale } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
-import { DIL_VOTE_MS, type DilClientView, type DilPlayerView } from '@/lib/dilemmes/engine'
+import { DIL_VOTE_MS, type DilClientView } from '@/lib/dilemmes/engine'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { cn } from '@/lib/utils'
@@ -11,7 +11,10 @@ import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import { TvBigCountdown, TvTimeBar } from './tv-shared'
+import { TV_FEED_SIZE, speechFeedItems } from '@/components/online/bot-speech/bot-speech-feed'
+import { DilemmesSpeechFeed } from '@/components/online/dilemmes/DilemmesSpeechFeed'
+import { dilRevealReactions } from '@/lib/dilemmes/reveal-reactions'
+import { TV_FEED_CLIP, TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /** À partir de là, le libellé d'un « Tu préfères » révélé rétrécit : la place va aux pseudos (16 votants max). */
 const CROWDED_SIDE = 7
@@ -29,7 +32,7 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
   const card = state.card
   const reveal = state.phase === 'reveal' ? state.lastReveal ?? [] : []
   const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? '—'
-  const iconOf = (p: DilPlayerView) =>
+  const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
   const active = state.players.filter((p) => !p.leftAt)
   const votedCount = active.filter((p) => p.hasVoted).length
@@ -65,6 +68,9 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
 
   const isReveal = state.phase === 'reveal'
   const leftPlayer = state.players.find((p) => !p.isBot && p.leftAt)
+  // Mêmes bulles que le fil (paroles de la manche + réaction à la révélation).
+  const withFeed =
+    speechFeedItems([...(state.speech ?? []), ...dilRevealReactions(state)], state.round, null, TV_FEED_SIZE).length > 0
   const votersOf = (choice: string) => reveal.filter((r) => r.choice === choice)
   const kindLabel = card ? t(`kinds.${card.kind}`) : ''
 
@@ -227,6 +233,13 @@ export function TvDilemmes({ room, state }: { room: TvRoomDto; state: DilClientV
           </div>
         )}
         {card?.kind === 'who' && whoTiles()}
+      </div>
+
+      {/* Les paroles des bots sous la carte, les dernières seulement (boîte
+          bornée, rognée en haut). Sans bulle, la boîte s'efface mais le fil
+          reste monté (région live née avant la 1re parole). */}
+      <div className={withFeed ? cn(TV_FEED_CLIP, 'max-h-[7rem] items-center') : 'hidden'}>
+        <DilemmesSpeechFeed view={state} iconOf={iconOf} variant="tv" />
       </div>
 
       {state.phase === 'vote' && card?.kind !== 'who' && (

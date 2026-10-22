@@ -5309,6 +5309,84 @@
           "nobody": "Personne n’a été désigné",
           "rankingTitle": "Les voix de la table",
           "by": "par {names}"
+        },
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "easy": "Facile, celle-là. Pas vrai, {name} ?",
+          "easy_2": "J’ai même pas hésité. Et toi, {name} ?",
+          "easy_3": "Réponse évidente ! {name}, tu traînes ? 😏",
+          "tough": "Aïe, dur de choisir… Et toi, {name} ?",
+          "tough_2": "{name}, qui a écrit cette carte ? C’est cruel 😩",
+          "tough_3": "J’ai voté, mais je ne suis pas {speaker, select, f {fière} m {fier} other {à l’aise}}, {name}.",
+          "confess": "{name}, je te vois rougir d’ici 😏",
+          "confess_2": "Avoue, {name}, tu l’as déjà fait !",
+          "confess_3": "Celle-là, {name}, je parie que tu connais 😇",
+          "outvoted": "Vous avez tous tort. Surtout toi, {name}.",
+          "outvoted_2": "On est peu, mais on a raison, {name} 😤",
+          "outvoted_3": "Sérieux, {name} ? Je ne vous comprends pas 🙄",
+          "teaseMinority": "Alors {name}, on aime se faire remarquer ? 😏",
+          "teaseMinority_2": "{name}, la majorité a parlé. {speaker, select, f {Désolée} m {Désolé} other {Pardon}} 😇",
+          "teaseMinority_3": "{name}, tu le sens bien, ton choix ? 😂",
+          "twin": "{name}, on est sur la même longueur d’onde 🤝",
+          "twin_2": "Toi et moi, {name}, même combat !",
+          "twin_3": "Enfin quelqu’un de sensé : {name} !",
+          "spill": "{name}… vraiment ?! On veut les détails 😳",
+          "spill_2": "Toi, {name} ? Je ne te voyais pas comme ça 😮",
+          "spill_3": "{name}, tu nous racontes ? On a le temps 🍿",
+          "designated": "Moi ?! C’est un complot, {name} !",
+          "designated_2": "{name}, je note, je note… 📝",
+          "designated_3": "Merci du vote, {name}. Je m’en souviendrai 😤",
+          "called": "Le peuple a parlé, {name} 😂",
+          "called_2": "{name}, toute la table a pensé à toi 😂",
+          "called_3": "Aucune surprise, {name} 😏"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "outvoted": "Je me trompe peut-être, {name}… mais je persiste.",
+            "outvoted_2": "{name}, chacun ses goûts, hein 😅",
+            "teaseMinority": "Chacun son avis, {name}, c’est très bien comme ça.",
+            "teaseMinority_2": "{name}, c’est courageux, ce choix 🙂"
+          },
+          "farceur": {
+            "outvoted": "Minoritaire, mais avec du style, {name} 😎",
+            "outvoted_2": "{name}, l’histoire me donnera raison 📜",
+            "teaseMinority": "{name}, rebelle jusqu’au bout 🤘",
+            "teaseMinority_2": "Tu fais bande à part, {name} ? 😜"
+          },
+          "suiveur": {
+            "outvoted": "Ah… j’aurais dû voter comme vous, {name} 😅",
+            "outvoted_2": "{name}, la prochaine fois, je te suis !",
+            "teaseMinority": "Je fais comme tout le monde, {name}. Toi, non 😄",
+            "teaseMinority_2": "{name}, pas facile d’être à contre-courant, hein ?"
+          },
+          "agressif": {
+            "outvoted": "N’importe quoi, {name}. Vous avez tous tort.",
+            "outvoted_2": "{name}, je conteste ce résultat 😤",
+            "teaseMinority": "{name}, perdu ! La majorité t’écrase 😈",
+            "teaseMinority_2": "Ha ! {name}, rejoins le bon camp la prochaine fois."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
         }
       },
       "tutorial": {

@@ -364,10 +364,12 @@ export type ReactionCandidate<K extends string> = {
  * publique et une graine tirée de la manche — tous les téléphones et la TV
  * rendent les mêmes bulles, sans Math.random.
  *
- * Les candidates arrivent dans l'ordre de préférence du jeu ; celles qui
- * visent un humain passent devant (tri stable). L'auteur doit être un bot à
- * persona (ni humain, ni converti, qui garde son pseudo humain) à qui il
- * reste du plafond de la manche, min(engineCap, bavardage), paroles de l'état
+ * Les candidates de chaque auteur arrivent dans son ordre de préférence ;
+ * celles qui visent un humain passent devant, puis les auteurs dans un ordre
+ * tiré de la graine — jamais l'ordre de la table, où le premier bavard assis
+ * aurait parlé à chaque révélation. L'auteur doit être un bot à persona (ni
+ * humain, ni converti, qui garde son pseudo humain) à qui il reste du
+ * plafond de la manche, min(engineCap, bavardage), paroles de l'état
  * comprises. Un seul tirage par auteur, sur sa première candidate : il parle
  * s'il tombe sous bavardage/3. Au plus `max` réactions.
  */
@@ -391,8 +393,14 @@ export function seededReactions<K extends string>({
 }): BotSpeech<K>[] {
   const byId = new Map(players.map((p) => [p.id, p]))
   const said = (id: string) => speech.filter((sp) => sp.round === round && sp.playerId === id).length
-  const ordered = [...candidates].sort((a, b) => Number(b.aimsHuman) - Number(a.aimsHuman))
   const rng = createRng(seed)
+  const authors = [...new Set(candidates.map((c) => c.speech.playerId))]
+  const turn = new Map(rng.shuffle(authors).map((id, i) => [id, i]))
+  const turnOf = (c: ReactionCandidate<K>) => turn.get(c.speech.playerId) ?? 0
+  // Tri stable : à rang et auteur égaux, l'ordre de préférence du jeu.
+  const ordered = [...candidates].sort(
+    (a, b) => Number(b.aimsHuman) - Number(a.aimsHuman) || turnOf(a) - turnOf(b)
+  )
   const rolled = new Set<string>()
   const out: BotSpeech<K>[] = []
   for (const { speech: sp } of ordered) {

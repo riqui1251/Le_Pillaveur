@@ -95,19 +95,25 @@ describe('bluffRevealReactions', () => {
     expect(reactions(gone)).toEqual([])
   })
 
-  it('priorité aux réactions qui visent un humain, deux au plus, dans l’ordre de la table', () => {
+  it('priorité aux réactions qui visent un humain, deux au plus', () => {
     expect(BLUFF_REVEAL_REACTIONS_MAX).toBe(2)
     // Gépéto salue Riqui plutôt que de répondre à Marcel ; Marcel répond à
-    // Riqui, pas à Gépéto qu'il a piégé ; Josiane arrive après le plafond.
-    expect(reactions(revealOf(TALKERS, MIXED))).toEqual([said('g', 'bravo', 'h'), said('m', 'fooled', 'h')])
+    // Riqui, pas à Gépéto qu'il a piégé ; Josiane aussi, s'il reste de la place.
+    const human = [said('g', 'bravo', 'h'), said('m', 'fooled', 'h'), said('j', 'fooled', 'h')]
+    for (const seed of ['a', 'b', 'c', 'd', 'e']) {
+      const out = reactions(revealOf(TALKERS, MIXED, seed))
+      expect(out).toHaveLength(2)
+      for (const sp of out) expect(human).toContainEqual(sp)
+    }
   })
 
   it('un bot dont la manche a épuisé le plafond se tait ; un converti ne réagit jamais', () => {
     const s = revealOf(TALKERS, MIXED)
     const view = toBluffSpectatorView(s)
+    const byAuthor = (out: BluffSpeech[]) => [...out].sort((a, b) => a.playerId.localeCompare(b.playerId))
     const full: BluffReactionView = { ...view, speech: [said('m', 'proud', 'h'), said('m', 'sure', 'h')] }
     expect(BLUFF_SPEECH_CAP).toBe(2)
-    expect(bluffRevealReactions(full)).toEqual([said('g', 'bravo', 'h'), said('j', 'fooled', 'h')])
+    expect(byAuthor(bluffRevealReactions(full))).toEqual([said('g', 'bravo', 'h'), said('j', 'fooled', 'h')])
     // Une parole de la manche précédente ne compte pas.
     const past: BluffReactionView = { ...view, speech: full.speech!.map((sp) => ({ ...sp, round: -1 })) }
     expect(bluffRevealReactions(past)).toEqual(reactions(s))
@@ -115,7 +121,7 @@ describe('bluffRevealReactions', () => {
       ...view,
       players: view.players.map((p) => (p.id === 'm' ? { ...p, name: 'Riqui2' } : p)),
     }
-    expect(bluffRevealReactions(converted).map((sp) => sp.playerId)).toEqual(['g', 'j'])
+    expect(byAuthor(bluffRevealReactions(converted)).map((sp) => sp.playerId)).toEqual(['g', 'j'])
   })
 
   it('chaque réaction dit vrai sur la révélation, vise un autre joueur encore là, un bot ne parle qu’une fois', () => {

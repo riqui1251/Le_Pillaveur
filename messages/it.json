@@ -5309,6 +5309,84 @@
           "nobody": "Nessuno ha ricevuto voti",
           "rankingTitle": "I voti del tavolo",
           "by": "da {names}"
+        },
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "easy": "Facile, questa. Vero, {name}?",
+          "easy_2": "Non ho neanche esitato. E tu, {name}?",
+          "easy_3": "Risposta ovvia! {name}, ci pensi ancora? 😏",
+          "tough": "Ahi, che scelta difficile… E tu, {name}?",
+          "tough_2": "{name}, chi ha scritto questa carta? È crudele 😩",
+          "tough_3": "Ho votato, ma non sono {speaker, select, f {tranquilla} m {tranquillo} other {in pace}}, {name}.",
+          "confess": "{name}, ti vedo arrossire da qui 😏",
+          "confess_2": "Confessa, {name}, l’hai già fatto!",
+          "confess_3": "Questa, {name}, scommetto che la conosci 😇",
+          "outvoted": "Avete tutti torto. Soprattutto tu, {name}.",
+          "outvoted_2": "Siamo pochi, ma abbiamo ragione, {name} 😤",
+          "outvoted_3": "Sul serio, {name}? Non vi capisco 🙄",
+          "teaseMinority": "Allora, {name}, ci piace distinguerci? 😏",
+          "teaseMinority_2": "{name}, la maggioranza ha parlato. {speaker, select, f {Scusa} m {Scusa} other {Scusa}} 😇",
+          "teaseMinority_3": "{name}, ti senti a posto con questa scelta? 😂",
+          "twin": "{name}, siamo sulla stessa lunghezza d’onda 🤝",
+          "twin_2": "Io e te, {name}, stessa squadra!",
+          "twin_3": "Finalmente qualcuno di sensato: {name}!",
+          "spill": "{name}… davvero?! Vogliamo i dettagli 😳",
+          "spill_2": "Tu, {name}? Non me l’aspettavo 😮",
+          "spill_3": "{name}, ce lo racconti? Abbiamo tempo 🍿",
+          "designated": "Io?! È un complotto, {name}!",
+          "designated_2": "{name}, prendo nota, prendo nota… 📝",
+          "designated_3": "Grazie del voto, {name}. Me ne ricorderò 😤",
+          "called": "Il popolo ha parlato, {name} 😂",
+          "called_2": "{name}, tutto il tavolo ha pensato a te 😂",
+          "called_3": "Nessuna sorpresa, {name} 😏"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "outvoted": "Forse sbaglio, {name}… ma resto della mia idea.",
+            "outvoted_2": "{name}, de gustibus, eh 😅",
+            "teaseMinority": "Ognuno ha la sua opinione, {name}, va benissimo.",
+            "teaseMinority_2": "{name}, che scelta coraggiosa 🙂"
+          },
+          "farceur": {
+            "outvoted": "Minoranza, ma con stile, {name} 😎",
+            "outvoted_2": "{name}, la storia mi darà ragione 📜",
+            "teaseMinority": "{name}, ribelle fino alla fine 🤘",
+            "teaseMinority_2": "Fai di testa tua, {name}? 😜"
+          },
+          "suiveur": {
+            "outvoted": "Ops… dovevo votare come voi, {name} 😅",
+            "outvoted_2": "{name}, la prossima volta ti seguo!",
+            "teaseMinority": "Faccio come tutti, {name}. Tu no 😄",
+            "teaseMinority_2": "{name}, non è facile andare controcorrente, eh?"
+          },
+          "agressif": {
+            "outvoted": "Assurdo, {name}. Avete tutti torto.",
+            "outvoted_2": "{name}, contesto questo risultato 😤",
+            "teaseMinority": "{name}, hai perso! La maggioranza ti schiaccia 😈",
+            "teaseMinority_2": "Ah! {name}, la prossima volta scegli il lato giusto."
+          }
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
         }
       },
       "tutorial": {

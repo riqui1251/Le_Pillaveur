@@ -5309,6 +5309,84 @@
           "nobody": "Nobody got a vote",
           "rankingTitle": "The table’s votes",
           "by": "from {names}"
+        },
+        "feedAria": "Table chatter",
+        "botSay": {
+          "easy": "Easy one. Right, {name}?",
+          "easy_2": "Didn’t even hesitate. You, {name}?",
+          "easy_3": "Obvious answer! {name}, still thinking? 😏",
+          "tough": "Ouch, tough call… What about you, {name}?",
+          "tough_2": "{name}, who wrote this card? It’s cruel 😩",
+          "tough_3": "I voted, but I’m not {speaker, select, f {proud} m {proud} other {comfortable}}, {name}.",
+          "confess": "{name}, I can see you blushing from here 😏",
+          "confess_2": "Admit it, {name}, you’ve done it!",
+          "confess_3": "That one, {name}, I bet you know all about it 😇",
+          "outvoted": "You’re all wrong. Especially you, {name}.",
+          "outvoted_2": "Few of us, but we’re right, {name} 😤",
+          "outvoted_3": "Seriously, {name}? I don’t get you people 🙄",
+          "teaseMinority": "So, {name}, we like to stand out? 😏",
+          "teaseMinority_2": "{name}, the majority has spoken. {speaker, select, f {Sorry} m {Sorry} other {Sorry}} 😇",
+          "teaseMinority_3": "{name}, feeling good about that choice? 😂",
+          "twin": "{name}, we’re on the same wavelength 🤝",
+          "twin_2": "You and me, {name}, same team!",
+          "twin_3": "Finally, someone sensible: {name}!",
+          "spill": "{name}… really?! We want details 😳",
+          "spill_2": "You, {name}? Didn’t see that coming 😮",
+          "spill_3": "{name}, care to tell us? We’ve got time 🍿",
+          "designated": "Me?! It’s a conspiracy, {name}!",
+          "designated_2": "{name}, I’m taking notes… 📝",
+          "designated_3": "Thanks for the vote, {name}. I won’t forget 😤",
+          "called": "The people have spoken, {name} 😂",
+          "called_2": "{name}, the whole table thought of you 😂",
+          "called_3": "No surprise there, {name} 😏"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "outvoted": "Maybe I’m wrong, {name}… but I’m sticking to it.",
+            "outvoted_2": "{name}, to each their own, right? 😅",
+            "teaseMinority": "Everyone’s entitled to their opinion, {name}.",
+            "teaseMinority_2": "{name}, that’s a brave choice 🙂"
+          },
+          "farceur": {
+            "outvoted": "Minority, but with style, {name} 😎",
+            "outvoted_2": "{name}, history will prove me right 📜",
+            "teaseMinority": "{name}, a rebel to the end 🤘",
+            "teaseMinority_2": "Going solo, {name}? 😜"
+          },
+          "suiveur": {
+            "outvoted": "Oops… should’ve voted like you lot, {name} 😅",
+            "outvoted_2": "{name}, next time I’m following you!",
+            "teaseMinority": "I do what everyone does, {name}. You don’t 😄",
+            "teaseMinority_2": "{name}, not easy going against the flow, huh?"
+          },
+          "agressif": {
+            "outvoted": "Nonsense, {name}. You’re all wrong.",
+            "outvoted_2": "{name}, I contest this result 😤",
+            "teaseMinority": "{name}, you lose! The majority crushes you 😈",
+            "teaseMinority_2": "Ha! {name}, join the right side next time."
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {

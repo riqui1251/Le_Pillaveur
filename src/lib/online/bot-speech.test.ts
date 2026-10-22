@@ -428,9 +428,24 @@ describe('seededReactions : les réactions dérivées d’une révélation', () 
     seededReactions({ candidates, players, speech, round: 3, engineCap: 2, max, seed })
 
   it('les candidates qui visent un humain passent devant, un tirage par auteur, au plus `max`', () => {
-    const out = run([cand('g', 'm', false, 'a'), cand('m', 'g', false), cand('g', 'h', true, 'b'), cand('m', 'h', true)], [], 's', 1)
-    expect(out).toEqual([cand('g', 'h', true, 'b').speech])
-    expect(run([cand('g', 'm', false, 'a'), cand('g', 'h', true, 'b'), cand('m', 'h', true)]).map((sp) => sp.playerId)).toEqual(['g', 'm'])
+    for (const seed of ['s', 't', 'u', 'v']) {
+      const out = run([cand('g', 'm', false, 'a'), cand('m', 'g', false), cand('g', 'h', true, 'b'), cand('m', 'h', true)], [], seed, 1)
+      expect(out).toHaveLength(1)
+      expect(out[0].targetId).toBe('h')
+      const two = run([cand('g', 'm', false, 'a'), cand('g', 'h', true, 'b'), cand('m', 'h', true)], [], seed)
+      expect(two.map((sp) => sp.playerId).sort()).toEqual(['g', 'm'])
+      expect(two.find((sp) => sp.playerId === 'g')?.kind).toBe('b')
+    }
+  })
+
+  it('l’ordre des auteurs est tiré de la graine : le premier bavard à table ne monopolise pas la parole', () => {
+    let first = 0
+    for (let n = 0; n < 400; n += 1) {
+      const [out] = run([cand('g', 'h', true), cand('m', 'h', true)], [], `tour-${n}`, 1)
+      if (out.playerId === 'g') first += 1
+    }
+    expect(first / 400).toBeGreaterThan(0.35)
+    expect(first / 400).toBeLessThan(0.65)
   })
 
   it('jamais un humain, un converti, une parole à soi, ni un bot au bout de son plafond (manche en cours seulement)', () => {
