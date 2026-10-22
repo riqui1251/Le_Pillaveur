@@ -160,12 +160,14 @@ export type EngineClientView = Omit<EngineState, 'rngState' | 'lastEffectiveCase
  * La case tirée reste CACHÉE tant que l'acteur choisit sa cible : comme en
  * local (« l'effet de la case sera révélé après ton choix »), on vise à
  * l'aveugle — case à cible (Défi, Question, Double case, case rejouée
- * comprises) et Pile ou face. Échange, Vote, Défi en chaîne, Téléport, Chance,
- * roue et dé de la honte s'annoncent avant le choix, comme leurs fenêtres
- * locales.
+ * comprises) et Pile ou face —, et pendant le duel qui la précède. Échange,
+ * Vote, Défi en chaîne, Téléport, Chance, roue et dé de la honte s'annoncent
+ * avant le choix, comme leurs fenêtres locales.
  */
 export function hidesDrawnCase(p: EnginePending | null | undefined): boolean {
-  if (!p || p.stage) return false
+  if (!p) return false
+  if (p.stage === 'duel') return true
+  if (p.stage) return false
   return p.needsTarget || p.caseType === 'pile-face'
 }
 
@@ -186,9 +188,13 @@ export function toClientView(state: EngineState): EngineClientView {
   delete view.lastEffectiveCase
   const p = state.pending
   if (!p || !hidesDrawnCase(p)) return view as EngineClientView
+  const pending: EnginePending =
+    p.stage === 'duel'
+      ? { caseType: 'normal', playerId: p.playerId, needsTarget: false, hidden: true, stage: 'duel', opponents: p.opponents ?? [] }
+      : { caseType: 'normal', playerId: p.playerId, needsTarget: true, hidden: true }
   return {
     ...(view as EngineClientView),
-    pending: { caseType: 'normal', playerId: p.playerId, needsTarget: true, hidden: true },
+    pending,
     lastCase: null,
     log: withoutDrawnCaseTypes(state.log),
   }

@@ -11,6 +11,7 @@ import {
   caseDescription,
   deciderIdOf,
   defiTextAt,
+  duelMessage,
   landingIndex,
   noteMessage,
   outcomeSignature,
@@ -67,6 +68,10 @@ export function outcomeTitle(texts: PbTexts, outcome: LastOutcome): string {
 /** Verdict du défi, choix Chance, notes du moteur — les lignes sous les pastilles du téléphone. */
 export function outcomeLines(texts: PbTexts, outcome: LastOutcome, nameOf: (id: string | null | undefined) => string): string[] {
   const lines: string[] = []
+  if (outcome.duel) {
+    const msg = duelMessage(outcome.duel, nameOf(outcome.actorId), nameOf(outcome.duel.opponentId))
+    lines.push(texts.t(msg.key, msg.values))
+  }
   if (outcome.succeeded === true) {
     lines.push(texts.t('game.outcomes.challengeSuccess', { player: nameOf(outcome.targetId) }))
   }
@@ -114,7 +119,17 @@ export function onlinePending(view: EngineView, texts: PbTexts): TvPbPending | n
   const pending = view.pending
   if (!pending) return null
   const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? ''
-  // Cible choisie à l'aveugle : comme la diffusion du jeu local, la case reste cachée.
+  // Duel avant la case, puis cible choisie à l'aveugle : comme la diffusion du jeu local, la case reste cachée.
+  if (pending.stage === 'duel') {
+    return {
+      caseType: 'duel',
+      icon: '⚔️',
+      title: texts.t('game.duel.title'),
+      detail: texts.t('game.duel.rules'),
+      targetId: null,
+      waiting: { kind: 'choice', name: nameOf(deciderIdOf(view)) },
+    }
+  }
   if (pending.hidden) {
     return {
       caseType: 'target',

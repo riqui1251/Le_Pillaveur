@@ -92,6 +92,27 @@ describe('cible choisie à l’aveugle, comme en local : la vue ne trahit pas la
     }
   })
 
+  it('duel avant la case : adversaires et décideur visibles, la case tirée non', () => {
+    const s = pendingWith({ type: 'piege', effect: 0 }, { stage: 'duel', opponents: ['u2'], needsTarget: false })
+    expect(hidesDrawnCase(s.pending)).toBe(true)
+    const view = toClientView(s)
+    expect(view.pending).toEqual({
+      caseType: 'normal',
+      playerId: 'u1',
+      needsTarget: false,
+      hidden: true,
+      stage: 'duel',
+      opponents: ['u2'],
+    })
+    expect(view.lastCase).toBeNull()
+    expect(JSON.stringify(view)).not.toContain('piege')
+    // Passer le duel (aucun adversaire) : la case se joue — ici une cible encore à choisir, toujours cachée.
+    const passed = applyRoomAction(s, 'u1', { type: 'resolve', choice: {} })
+    if (!passed.ok) throw new Error(passed.error)
+    expect(toClientView(passed.state).pending).toEqual({ caseType: 'normal', playerId: 'u1', needsTarget: true, hidden: true })
+    expect(JSON.stringify(toClientView(passed.state))).not.toContain('piege')
+  })
+
   it('Vote, Échange, Défi en chaîne, Téléport, roue, Chance, verdict et côté : annoncés comme en local', () => {
     const visible = [
       pendingWith({ type: 'vote', effect: 3 }),

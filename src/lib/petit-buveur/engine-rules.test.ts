@@ -59,6 +59,13 @@ function protect(s: EngineState, id: string): void {
   p.protectionTurnsLeft = 3
 }
 
+/** ROLL de l'acteur ; le duel proposé sur une case occupée est passé (ces scénarios portent sur la case). */
+function rollPastDuel(before: EngineState): EngineState {
+  const id = before.players[before.currentPlayer].id
+  const rolled = reduce(before, { type: 'ROLL', playerId: id })
+  return rolled.pending?.stage === 'duel' ? resolve(rolled, id) : rolled
+}
+
 /** Première graine dont le ROLL vérifie `accept` (les scénarios dépendent du dé et de la case tirée). */
 function rollUntil(
   make: (seed: number) => EngineState,
@@ -67,7 +74,7 @@ function rollUntil(
 ): { before: EngineState; after: EngineState } {
   for (let seed = 0; seed < max; seed += 1) {
     const before = make(seed)
-    const after = reduce(before, { type: 'ROLL', playerId: before.players[before.currentPlayer].id })
+    const after = rollPastDuel(before)
     if (accept(after, before)) return { before, after }
   }
   throw new Error('aucune graine ne produit ce scénario')
@@ -150,7 +157,7 @@ describe('#0 Répétition, Rewind et Double case', () => {
     let seen = 0
     for (let seed = 0; seed < 40000 && seen < 40; seed += 1) {
       const before = base([0, 5, 8], `dbl-pool-${seed}`)
-      const after = reduce(before, { type: 'ROLL', playerId: 'a' })
+      const after = rollPastDuel(before)
       if (after.lastCase?.type !== 'double-case') continue
       seen += 1
       const cases = after.pending?.cases ?? after.lastOutcome?.cases
@@ -493,6 +500,111 @@ describe('#36 Case Normale : aucun ciblage', () => {
   })
 })
 
+describe('Duel sur case partagée, comme en local', () => {
+  /** Duel en attente sur la case 4 (a et b), avant la case `c`. */
+  const duelOn = (c: EngineCase, seed: string | number = 'duel', positions = [4, 4, 9]) =>
+    withPending(base(positions, seed), c, { stage: 'duel', opponents: ['b'], needsTarget: false })
+  const normal: EngineCase = { type: 'normal', effect: 0 }
+
+  it('arrivé au dé sur une case occupée : duel proposé avant la case, contre les présents ; jamais au départ', () => {
+    let offered = 0
+    for (let seed = 0; seed < 300; seed += 1) {
+      const s = base([3, 4, 4], `duel-any-${seed}`)
+      player(s, 'c').leftAt = 1
+      const rolled = reduce(s, { type: 'ROLL', playerId: 'a' })
+      if (rolled.lastDice === 1) {
+        offered += 1
+        // c, parti, n'est pas un adversaire ; la case tirée attend la fin du duel.
+        expect(rolled.pending).toMatchObject({ stage: 'duel', playerId: 'a', needsTarget: false, opponents: ['b'] })
+        expect(rolled.pending?.case).toEqual(rolled.lastCase)
+        expect(rolled.lastOutcome).toBeNull()
+      } else {
+        expect(rolled.pending?.stage).not.toBe('duel')
+      }
+    }
+    expect(offered).toBeGreaterThan(10)
+    const anchoredAtStart = base([0, 0, 9], 'duel-start')
+    player(anchoredAtStart, 'a').anchored = true
+    expect(reduce(anchoredAtStart, { type: 'ROLL', playerId: 'a' }).pending?.stage).not.toBe('duel')
+  })
+
+  it('passer le duel : la case tirée se joue, sans duel ni recul', () => {
+    const done = resolve(duelOn({ type: 'solo', effect: 1 }), 'a')
+    expect(done.lastInteraction).toBeNull()
+    expect(done.lastOutcome).toMatchObject({ caseType: 'solo', actorId: 'a' })
+    expect(done.lastOutcome?.duel).toBeUndefined()
+    expect(player(done, 'a')).toMatchObject({ position: 4, drinks: 1 })
+    expect(player(done, 'b').position).toBe(4)
+  })
+
+  it('duel : une chance sur deux, le perdant recule d’une case ; la case se joue ensuite', () => {
+    const winners = new Set<boolean>()
+    for (let seed = 0; seed < 40; seed += 1) {
+      const done = resolve(duelOn(normal, `duel-${seed}`), 'a', { targetId: 'b' })
+      const inter = done.lastInteraction
+      if (inter?.kind !== 'duel') throw new Error('duel sans tirage')
+      winners.add(inter.challengerWins)
+      expect(player(done, 'a').position).toBe(inter.challengerWins ? 4 : 3)
+      expect(player(done, 'b').position).toBe(inter.challengerWins ? 3 : 4)
+      expect(done.lastOutcome).toMatchObject({
+        caseType: 'normal',
+        duel: { opponentId: 'b', challengerWins: inter.challengerWins, loserProtected: false },
+      })
+      expect(done.phase).toBe('playing')
+      expect(done.currentPlayer).toBe(1)
+    }
+    expect(winners).toEqual(new Set([true, false]))
+  })
+
+  it('perdant protégé, challenger compris : il ne recule pas', () => {
+    for (let seed = 0; seed < 20; seed += 1) {
+      const s = duelOn(normal, `duel-prot-${seed}`)
+      protect(s, 'a')
+      protect(s, 'b')
+      const done = resolve(s, 'a', { targetId: 'b' })
+      expect(player(done, 'a').position).toBe(4)
+      expect(player(done, 'b').position).toBe(4)
+      expect(done.lastOutcome?.duel?.loserProtected).toBe(true)
+    }
+  })
+
+  it('adversaire hors de la case, soi-même ou inconnu : refusé', () => {
+    const s = duelOn(normal)
+    for (const targetId of ['c', 'a', 'zzz']) {
+      expect(errorOf(() => resolve(s, 'a', { targetId }))).toBe('INVALID_TARGET')
+    }
+    expect(errorOf(() => resolve(s, 'b', { targetId: 'a' }))).toBe('NOT_YOUR_INTERACTION')
+  })
+
+  it('le duel s’attache à l’effet de la case, même quand elle attend encore une cible', () => {
+    const fought = resolve(duelOn({ type: 'gorgée', effect: 3 }, 'duel-then-target'), 'a', { targetId: 'b' })
+    expect(fought.pending).toMatchObject({ caseType: 'gorgée', needsTarget: true })
+    expect(fought.pending?.stage).toBeUndefined()
+    expect(fought.lastInteraction?.kind).toBe('duel')
+    const note = fought.duelNote
+    expect(note?.opponentId).toBe('b')
+    const done = resolve(fought, 'a', { targetId: 'c' })
+    expect(done.lastOutcome).toMatchObject({ caseType: 'gorgée', targetId: 'c', duel: note })
+    expect(done.duelNote).toBeNull()
+    // Le duel ne se rattache qu'une fois : le tour suivant repart sans.
+    const next = reduce(done, { type: 'ROLL', playerId: 'b' })
+    expect(next.lastOutcome?.duel).toBeUndefined()
+  })
+
+  it('bot : relève le duel ou passe, au hasard du moteur', () => {
+    const picks = new Set<string | undefined>()
+    for (let seed = 0; seed < 40; seed += 1) {
+      const s = duelOn(normal, `duel-bot-${seed}`)
+      s.players[0].isBot = true
+      const auto = autoAction(s)
+      const choice = (auto.action as Extract<EngineAction, { type: 'RESOLVE_INTERACTION' }>).choice
+      picks.add(choice?.targetId)
+      expect(() => reduce(auto.state, auto.action)).not.toThrow()
+    }
+    expect(picks).toEqual(new Set(['b', undefined]))
+  })
+})
+
 describe('#55 Cible inexistante refusée', () => {
   const gorgee: EngineCase = { type: 'gorgée', effect: 4 }
 
@@ -660,6 +772,7 @@ function randomChoice(state: EngineState, r: () => number): InteractionChoice {
   const pick = <T,>(xs: T[]): T => xs[Math.floor(r() * xs.length)]
   if (p.stage === 'side') return { side: pick(['pile', 'face'] as const) }
   if (p.stage === 'verdict') return { succeeded: r() < 0.5 }
+  if (p.stage === 'duel') return { targetId: pick([...(p.opponents ?? []), undefined]) }
   const actor = state.players[state.currentPlayer].id
   const noSelf = p.caseType === 'echange' || p.caseType === 'defi-chaine'
   const targets = state.players.filter((x) => !(noSelf && x.id === actor)).map((x) => x.id)

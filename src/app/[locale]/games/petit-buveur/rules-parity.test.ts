@@ -22,7 +22,7 @@ import {
   resolveExchange,
   resolveTeleport,
 } from './apply-case'
-import { addDrinks, isShielded, tickTurnEnd, type FreshLinks } from './local-rules'
+import { addDrinks, applyDuelResult, isShielded, tickTurnEnd, type FreshLinks } from './local-rules'
 import { resolveNoTargetCase } from './resolve-case'
 
 /**
@@ -464,6 +464,36 @@ describe('Parité local / en ligne : tirages au hasard, même générateur, mêm
           }
         })
       }
+    }
+  }
+})
+
+describe('Parité local / en ligne : duel sur case partagée', () => {
+  const PROTECTED_ACTOR: Seat[] = [
+    { id: 'a', position: 6, protectedTurns: 3 },
+    { id: 'b', position: 6 },
+    { id: 'c', position: 1 },
+  ]
+  for (const [table, seats] of Object.entries({ partagee: SHARED_TABLE, acteurProtege: PROTECTED_ACTOR })) {
+    const opponents = seats.filter(s => s.id !== 'a' && s.position === seats[0].position).map(s => s.id)
+    for (const opponent of opponents) {
+      it(`${table} · duel contre ${opponent}, gagné et perdu`, () => {
+        const issues = new Set<boolean>()
+        for (let seed = 0; seed < 30; seed++) {
+          const state = engineState(seats, { type: 'normal', effect: 0 }, false, `duel-${seed}`)
+          const after = reduce(
+            { ...state, pending: { ...state.pending!, stage: 'duel', opponents } },
+            { type: 'RESOLVE_INTERACTION', playerId: 'a', choice: { targetId: opponent } }
+          )
+          const inter = after.lastInteraction
+          if (inter?.kind !== 'duel') throw new Error('duel sans tirage')
+          issues.add(inter.challengerWins)
+          const local = applyDuelResult(localPlayers(seats), 'a', opponent, inter.challengerWins)
+          expect(byId(after.players)).toEqual(byId(localPassTurn(local.players)))
+          expect(inter.loserProtected).toBe(local.loserProtected)
+        }
+        expect(issues).toEqual(new Set([true, false]))
+      })
     }
   }
 })

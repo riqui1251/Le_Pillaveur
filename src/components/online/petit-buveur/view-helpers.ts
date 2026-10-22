@@ -1,4 +1,5 @@
 import type {
+  DuelNote,
   EnginePending,
   EnginePlayer,
   EngineState,
@@ -23,13 +24,15 @@ export function deciderIdOf(view: Pick<EngineView, 'phase' | 'pending' | 'player
   return view.players[view.currentPlayer]?.id ?? null
 }
 
-export type ChoiceKind = 'target' | 'verdict' | 'side' | 'chance' | 'teleport' | 'confirm'
+export type ChoiceKind = 'target' | 'verdict' | 'side' | 'duel' | 'chance' | 'teleport' | 'confirm'
 
 /**
  * Fenêtre à ouvrir pour la décision en attente. Lit `pending.needsTarget`,
- * jamais `needsTarget(type)` : une méta-case dépend de la case rejouée.
+ * jamais `needsTarget(type)` : une méta-case dépend de la case rejouée. Case
+ * cachée (cible à l'aveugle) : `needsTarget` seul, « Moi » compris.
  */
 export function choiceOf(pending: EnginePending): { kind: ChoiceKind; allowSelf: boolean } {
+  if (pending.stage === 'duel') return { kind: 'duel', allowSelf: false }
   if (pending.stage === 'verdict') return { kind: 'verdict', allowSelf: false }
   if (pending.stage === 'side') return { kind: 'side', allowSelf: false }
   if (pending.needsTarget) return { kind: 'target', allowSelf: true }
@@ -148,6 +151,16 @@ export function noteMessage(note: OutcomeNote, nameOf: (id: string) => string, a
       return { key: 'game.outcomes.safeCaseBoard', values: { player: nameOf(actorId) } }
     case 'no-effect':
       return { key: 'online.notes.noEffect', values: {} }
+  }
+}
+
+/** Issue d'un duel (clé sous games.petit-buveur), les mêmes phrases que le jeu local. */
+export function duelMessage(duel: DuelNote, challengerName: string, opponentName: string): NoteMessage {
+  const [winner, loser] = duel.challengerWins ? [challengerName, opponentName] : [opponentName, challengerName]
+  if (duel.loserProtected) return { key: 'game.outcomes.duelLoserProtected', values: { winner, loser } }
+  return {
+    key: duel.challengerWins ? 'game.outcomes.duelChallengerWins' : 'game.outcomes.duelOpponentWins',
+    values: { challenger: challengerName, opponent: opponentName },
   }
 }
 

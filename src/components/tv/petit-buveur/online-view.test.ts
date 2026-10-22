@@ -108,6 +108,16 @@ describe('onlineScreenModel — rien avant le téléphone', () => {
     expect(JSON.stringify(model)).not.toContain(base(`caseTypes.${s.pending!.case!.type}`))
   })
 
+  it('duel sur case partagée : « Duel sur la case » sans la case, puis l’issue sur la carte', () => {
+    const { s } = playUntil((x) => x.pending?.stage === 'duel')
+    const waiting = onlineScreenModel(toClientView(s), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(s) }, null)
+    expect(waiting.pending).toMatchObject({ caseType: 'duel', icon: '⚔️', title: 'Duel sur la case', targetId: null })
+    expect(waiting.pending?.detail).toBe(base('game.duel.rules'))
+    const { s: fought } = playUntil((x) => !x.pending && Boolean(x.lastOutcome?.duel) && x.lastOutcome?.caseType === x.lastCase?.type)
+    const model = onlineScreenModel(toClientView(fought), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(fought) }, null)
+    expect(model.card?.lines[0]).toMatch(/^⚔️ Duel terminé/)
+  })
+
   it('carte de la case jouée : sa consigne, comme au téléphone', () => {
     const { s } = playUntil((x) => !x.pending && x.lastCase?.type === 'bombe' && Boolean(x.lastOutcome))
     const model = onlineScreenModel(toClientView(s), [], texts, { diceActive: false, diceRolling: false, spectacleActive: false, board: settledBoard(s) }, null)

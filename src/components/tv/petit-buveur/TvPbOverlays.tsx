@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { LastInteraction } from '@/lib/petit-buveur/engine'
-import { interactionDrinks, outcomeText, type SpectacleLabels } from '@/components/petit-buveur/InteractionSpectacle'
+import { duelSegment, interactionDrinks, outcomeText, type SpectacleLabels } from '@/components/petit-buveur/InteractionSpectacle'
 import { drinkIcon } from '@/components/petit-buveur/drink-feedback'
 import type { TvPbPlayer } from './model'
 import type { PbTexts } from './online-view'
@@ -153,6 +153,63 @@ function TvWheel({
   )
 }
 
+const DUEL_SEGMENTS = 12
+
+/** Roue du duel en grand : secteurs pairs « gagnant » (or) pour le challenger, impairs « perdant » (rouge). */
+function TvDuelWheel({
+  segment,
+  reduced,
+  showOutcome,
+  labels,
+}: {
+  segment: number
+  reduced: boolean
+  showOutcome: boolean
+  labels: SpectacleLabels
+}) {
+  const segAngle = 360 / DUEL_SEGMENTS
+  const finalRotation = 360 * 5 - (segment * segAngle + segAngle / 2)
+  const stillRotation = showOutcome ? finalRotation % 360 : 0
+  const gradient = useMemo(() => {
+    const stops = Array.from({ length: DUEL_SEGMENTS }, (_, i) => {
+      const color = i % 2 === 0 ? 'rgb(var(--gold-rgb))' : 'rgb(var(--suit-red-rgb))'
+      return `${color} ${i * segAngle}deg ${(i + 1) * segAngle}deg`
+    })
+    return `conic-gradient(${stops.join(', ')})`
+  }, [segAngle])
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative">
+        <div aria-hidden className="absolute -top-5 left-1/2 z-10 -translate-x-1/2 text-5xl leading-none">
+          🔻
+        </div>
+        <motion.div
+          initial={{ rotate: 0 }}
+          animate={{ rotate: reduced ? stillRotation : finalRotation }}
+          transition={reduced ? { duration: 0 } : { duration: 4.5, ease: [0.12, 0.68, 0.16, 1] }}
+          className="relative h-[22rem] w-[22rem] rounded-full border-[0.25rem] border-gold/60 shadow-2xl"
+          style={{ backgroundImage: gradient }}
+        >
+          <span
+            aria-hidden
+            className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-gold/60 bg-felt-deep text-4xl"
+          >
+            ⚔️
+          </span>
+        </motion.div>
+      </div>
+      <div className="flex items-center gap-8 rounded-full border border-gold/30 bg-felt-deep/90 px-6 py-1.5 text-xl font-bold text-cream/90">
+        <span className="flex items-center gap-2">
+          <span aria-hidden className="h-5 w-5 rounded-full bg-gold" /> {labels.duelWinner}
+        </span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden className="h-5 w-5 rounded-full bg-suit-red" /> {labels.duelLoser}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function TvCoin({
   flip,
   labels,
@@ -244,10 +301,19 @@ export function TvPbSpectacle({
     deHonteForward: texts.t('online.spectacle.deHonteForward'),
     deHonteBack: texts.t('online.spectacle.deHonteBack'),
     deHonteCannotBack: texts.t('online.spectacle.deHonteCannotBack'),
+    duelWinnerStays: texts.t.raw('game.duel.winnerStays') as string,
+    duelOpponentWins: texts.t.raw('game.duel.opponentWins') as string,
+    duelLoserProtected: texts.t.raw('game.duel.loserProtected') as string,
+    duelWinner: texts.t('wheel.winner'),
+    duelLoser: texts.t('wheel.loser'),
   }
   const actor = interaction ? players.find((p) => p.id === interaction.actorId) ?? null : null
   const targetName =
-    interaction?.kind === 'pile-face' ? players.find((p) => p.id === interaction.targetId)?.name ?? '' : ''
+    interaction?.kind === 'pile-face'
+      ? players.find((p) => p.id === interaction.targetId)?.name ?? ''
+      : interaction?.kind === 'duel'
+        ? players.find((p) => p.id === interaction.opponentId)?.name ?? ''
+        : ''
 
   return (
     <AnimatePresence>
@@ -262,7 +328,7 @@ export function TvPbSpectacle({
           <div className="flex flex-col items-center gap-6 px-8">
             <div className="flex max-w-[56rem] items-center gap-4 rounded-full border border-gold/30 bg-felt-deep/90 py-2 pl-3 pr-8">
               <span className="shrink-0 rounded-full border border-gold/40 bg-gold/[0.15] px-4 py-1 text-2xl font-bold text-gold">
-                {texts.t(`caseTypes.${interaction.kind}`)}
+                {interaction.kind === 'duel' ? texts.t('game.duel.title') : texts.t(`caseTypes.${interaction.kind}`)}
               </span>
               {actor && <TvPbPawn player={actor} size={3} />}
               <span className="truncate text-4xl font-black text-cream">{actor?.name ?? ''}</span>
@@ -282,6 +348,9 @@ export function TvPbSpectacle({
             {interaction.kind === 'de-honte' && (
               <TvShameDie value={interaction.value} settled={showOutcome} reduced={reduced} />
             )}
+            {interaction.kind === 'duel' && (
+              <TvDuelWheel segment={duelSegment(interaction)} reduced={reduced} showOutcome={showOutcome} labels={labels} />
+            )}
             <p
               className={cn(
                 'rounded-3xl border-2 px-8 py-3 text-center font-display text-5xl font-bold shadow-xl',
@@ -291,7 +360,7 @@ export function TvPbSpectacle({
                 !showOutcome && 'invisible'
               )}
             >
-              {showOutcome ? outcomeText(interaction, labels, targetName, actorFrom) : '\u00a0'}
+              {showOutcome ? outcomeText(interaction, labels, targetName, actorFrom, actor?.name ?? '') : '\u00a0'}
             </p>
           </div>
         </motion.div>
