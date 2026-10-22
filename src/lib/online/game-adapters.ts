@@ -789,7 +789,11 @@ const quizAdapter: GameAdapter = {
     const state = rawState as QuizState
     let input: QuizRoomActionInput
     if (body.action === 'answer' && typeof body.choice === 'number') {
-      input = { type: 'answer', choice: body.choice }
+      input = {
+        type: 'answer',
+        choice: body.choice,
+        ...(typeof body.phaseKey === 'string' ? { phaseKey: body.phaseKey } : {}),
+      }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
       input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'continue') {

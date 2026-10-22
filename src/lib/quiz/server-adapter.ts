@@ -11,6 +11,7 @@ import {
   type QuizState,
 } from './engine'
 import { quizAnswerSay, quizRevealSay } from './bot-speech'
+import { phaseKey } from '@/lib/online/phase-clock'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getQuizQuestions } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -81,7 +82,12 @@ export function parseQuizState(json: string | null): QuizState | null {
 }
 
 export type QuizRoomActionInput =
-  | { type: 'answer'; choice: number }
+  /**
+   * `phaseKey` : la question à laquelle répond le joueur. La réponse part sans
+   * verrou de version — les bots qui répondent en même temps la faisaient
+   * refuser (409 muet, buzzer rouvert) — mais jamais sur une autre question.
+   */
+  | { type: 'answer'; choice: number; phaseKey?: string }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue' }
   | { type: 'bot' }
@@ -113,6 +119,9 @@ function reduceQuizRoomAction(
   try {
     switch (input.type) {
       case 'answer':
+        if (input.phaseKey !== undefined && input.phaseKey !== phaseKey(state)) {
+          return { ok: false, error: 'PHASE_CHANGED' }
+        }
         return {
           ok: true,
           state: reduceQuiz(state, {

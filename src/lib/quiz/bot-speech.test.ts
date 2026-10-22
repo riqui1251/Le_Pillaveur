@@ -406,3 +406,26 @@ describe('simulation : sobriété et validité sur des parties entières', () =>
     expect(total).toBeLessThan(800)
   })
 })
+
+describe('réponse d’un humain : liée à sa question, pas à la version', () => {
+  it('passe après la réponse d’un bot qui a fait monter la version', () => {
+    const s0 = make([HUMAN, bot('b1', 'Raoul')])
+    const key = phaseKey(s0)
+    const s1 = answer(s0, 'b1', true)
+    expect(s1.version).toBeGreaterThan(s0.version)
+    const res = applyQuizRoomAction(s1, 'h', { type: 'answer', choice: 0, phaseKey: key }, NEVER)
+    expect(res.ok).toBe(true)
+  })
+
+  it('refusée si la question a changé depuis le toucher (requête arrivée à la question suivante)', () => {
+    const s0 = make([HUMAN, HUMAN2, bot('b1', 'Raoul')])
+    const key = phaseKey(s0)
+    const revealed = close(s0)
+    let s2 = next(revealed, revealed.phaseEndsAt ?? T0 + 120_000)
+    if (s2.phase !== 'question') s2 = reduceQuiz(s2, { type: 'ADVANCE', claimedKey: phaseKey(s2), now: s2.phaseEndsAt! })
+    expect(s2.phase).toBe('question')
+    expect(s2.qIdx).toBe(1)
+    const res = applyQuizRoomAction(s2, 'h', { type: 'answer', choice: 0, phaseKey: key }, NEVER)
+    expect(res).toEqual({ ok: false, error: 'PHASE_CHANGED' })
+  })
+})

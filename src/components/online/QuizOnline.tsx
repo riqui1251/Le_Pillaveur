@@ -243,7 +243,9 @@ export function QuizOnline() {
     // Deux touchers dans la même image : la première case gagne, comme
     // l'envoi (le hook ne laisse partir qu'une requête à la fois).
     setPending((cur) => (cur && cur.phaseKey === phaseKey ? cur : { phaseKey, choice: idx }))
-    const res = await sendAction({ action: 'answer', choice: idx })
+    // Sans verrou de version : les bots répondent dans la même seconde et le
+    // refus (409 muet) rouvrait le buzzer. La question visée reste vérifiée.
+    const res = await postAction({ action: 'answer', choice: idx, phaseKey })
     // null : toucher écarté par ce verrou. Refus : la case se rouvre. Succès :
     // la roue tient jusqu'à ce que la vue rapporte le choix.
     if (res && !res.ok) setPending((cur) => (cur?.choice === idx ? null : cur))
