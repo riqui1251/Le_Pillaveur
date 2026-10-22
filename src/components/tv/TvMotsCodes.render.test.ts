@@ -80,6 +80,21 @@ describe('TvMotsCodes — vue spectateur', () => {
     expect(html).toMatch(/2\/16/)
   })
 
+  it('revanche : même quorum que les téléphones, un votant parti de la table ne compte plus', () => {
+    const room = fixtures.find((f) => f.id === 'table-16')!.steps[9].room!
+    const view = JSON.parse(room.gameStateJson!) as MCClientView
+    const gone = view.rematchVotes[0]
+    const members = room.members.filter((m) => m.userId !== gone)
+    const html = renderToStaticMarkup(
+      createElement(
+        NextIntlClientProvider,
+        { locale: 'fr', messages, timeZone: 'Europe/Paris', onError: () => {} } as unknown as ComponentProps<typeof NextIntlClientProvider>,
+        createElement(TvMotsCodes, { room: { ...room, members }, state: view })
+      )
+    )
+    expect(html).toMatch(new RegExp(`>${view.rematchVotes.length - 1}(<!-- -->)?/(<!-- -->)?${members.length}<`))
+  })
+
   it('14 joueurs dans une équipe : noms toujours en text-xl, en-tête resserré', () => {
     const { html } = render('equipes-14-2', 1)
     expect(html).not.toContain('text-lg font-bold')

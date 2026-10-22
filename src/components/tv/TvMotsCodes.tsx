@@ -15,6 +15,7 @@ import {
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
+import { rematchCounter } from '@/components/online/end-screen'
 import { PlayingCardBack } from '@/components/ui/PlayingCard'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
@@ -142,7 +143,6 @@ function TeamColumn({
 }
 
 export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientView }) {
-  void room
   const t = useTranslations('games.mots-codes.game')
   const tTv = useTranslations('tv')
   const finished = state.phase === 'finished'
@@ -151,8 +151,8 @@ export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientV
   const teamName = (team: MCTeam) => (team === 'gold' ? t('teamGold') : t('teamRed'))
   const activeMaster = state.players.find((p) => p.team === state.activeTeam && p.isSpymaster)
   const leftPlayer = playing ? state.players.find((p) => !p.isBot && p.leftAt) : undefined
-  const humans = state.players.filter((p) => !p.isBot).length
-  const rematchVotes = state.rematchVotes?.length ?? 0
+  // Même quorum que les téléphones (OnlineEndScreen) : les membres de la table et leurs seuls votes.
+  const rematch = rematchCounter(room.members, state.rematchVotes ?? [], null)
   const compact = (['gold', 'red'] as const).some((team) => state.players.filter((p) => p.team === team).length > 9)
 
   const column = (team: MCTeam) => (
@@ -194,9 +194,9 @@ export function TvMotsCodes({ room, state }: { room: TvRoomDto; state: MCClientV
               {state.loseReason === 'assassin' && (
                 <p className="text-2xl font-bold text-red-300">{t('victory.assassin')}</p>
               )}
-              {rematchVotes > 0 && (
+              {rematch.count > 0 && (
                 <p className="text-xl font-semibold text-white/80">
-                  {tTv('rematchPending')} <span className="tabular-nums">{rematchVotes}/{humans}</span>
+                  {tTv('rematchPending')} <span className="tabular-nums">{rematch.count}/{rematch.total}</span>
                 </p>
               )}
             </div>
