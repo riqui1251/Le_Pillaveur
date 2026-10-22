@@ -1,4 +1,5 @@
 import {
+  addCrobardSpeech,
   createCrobardState,
   reduceCrobard,
   type CrobardState,
@@ -215,6 +216,32 @@ function midTable(): TvPreviewFixture {
   }
 }
 
+/** Réactions des bots : encouragement, commentaire du dessin, premier trouvé, bilan. */
+function botChatter(): TvPreviewFixture {
+  const { list, state: s0 } = table(2, 3, 4, 'apercu-tv-crobard-paroles')
+  const [drawerId, guesserId] = list.map((m) => m.userId)
+  const choosing = addCrobardSpeech(
+    { ...advance(s0), drawerId },
+    { playerId: 'bot-1', kind: 'go', targetId: drawerId }
+  )
+  let drawing = addCrobardSpeech(draw(choose(choosing, 'Bougie'), PICTURE.length), {
+    playerId: 'bot-2',
+    kind: 'puzzled',
+    targetId: drawerId,
+  })
+  drawing = addCrobardSpeech(guess(drawing, 1), { playerId: 'bot-3', kind: 'first', targetId: guesserId })
+  const roundEnd = addCrobardSpeech(advance(drawing), { playerId: 'bot-1', kind: 'bravo', targetId: drawerId })
+  return {
+    id: 'paroles-bots',
+    label: 'Réactions des bots, 2 joueurs + 3 bots',
+    steps: [
+      step('choix du mot, encouragement', withDeadline(choosing), list),
+      step('dessin, commentaire et premier trouvé', withDeadline(drawing), list),
+      step('bilan, bravo au dessinateur', roundEnd, list),
+    ],
+  }
+}
+
 export function build(): TvPreviewFixture[] {
-  return [fullGame(), smallGame(), playerLeft(), midTable()]
+  return [fullGame(), smallGame(), playerLeft(), midTable(), botChatter()]
 }

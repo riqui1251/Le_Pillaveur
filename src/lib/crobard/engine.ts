@@ -1,6 +1,7 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { roundCoord } from './simplify'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * CROBARD (Pictionary apéro) — moteur PUR, serveur-autoritaire.
@@ -102,6 +103,52 @@ export type CrobardPlayer = {
 
 export type CrobardPhase = 'countdown' | 'choosing' | 'drawing' | 'roundEnd' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.crobard.game) : une
+ * RÉACTION à ce que toute la table vient de voir, écrite par l'adaptateur
+ * dans la même réduction que le coup auquel elle répond (aucun tick de plus).
+ * Le kind est le seul message, calculé sur la vue spectateur : jamais le mot
+ * ni les trois choix du dessinateur.
+ *   • début de manche : go (un bot encourage le dessinateur), skip (un bot
+ *     dessinateur passe son tour) ;
+ *   • pendant le dessin : puzzled / admire (un bot commente le dessin, selon
+ *     son caractère), erase (le dessinateur efface tout) ;
+ *   • bonne réponse : first (le premier à trouver), found (les suivants) ;
+ *   • bilan : bravo (au moins un a trouvé), stumped (personne).
+ */
+export type CrobardSpeechKind =
+  | 'go'
+  | 'skip'
+  | 'puzzled'
+  | 'admire'
+  | 'erase'
+  | 'first'
+  | 'found'
+  | 'bravo'
+  | 'stumped'
+export type CrobardSpeech = BotSpeech<CrobardSpeechKind>
+/** Une parole à écrire : le bot qui parle, son kind, le joueur qu'il nomme. */
+export type CrobardSay = SpeechMove<CrobardSpeechKind>
+
+/** La phase où chaque kind peut naître. */
+const CROBARD_SPEECH_PHASE: Record<CrobardSpeechKind, CrobardPhase> = {
+  go: 'choosing',
+  skip: 'choosing',
+  puzzled: 'drawing',
+  admire: 'drawing',
+  erase: 'drawing',
+  first: 'drawing',
+  found: 'drawing',
+  bravo: 'roundEnd',
+  stumped: 'roundEnd',
+}
+
+export const CROBARD_SPEECH_KINDS = Object.keys(CROBARD_SPEECH_PHASE) as CrobardSpeechKind[]
+/** Paroles max par bot et par manche ; le bavardage du persona borne en dessous. */
+export const CROBARD_SPEECH_CAP = 2
+/** Bulles max de toute la table par manche : seize bots ne couvrent pas le dessin de bulles. */
+export const CROBARD_ROUND_SPEECH_MAX = 4
+
 export type CrobardState = TimedPhaseState & {
   version: number
   phase: CrobardPhase
@@ -128,6 +175,12 @@ export type CrobardState = TimedPhaseState & {
   rematchVotes: string[]
   /** SECRET serveur. */
   rngState: number
+  /**
+   * PUBLIC — paroles des bots, celles de la manche en cours et de la
+   * précédente au plus (le CONTINUE ne garde que la manche qui s'achève).
+   * Optionnel : un état sérialisé avant son arrivée n'en a pas.
+   */
+  speech?: CrobardSpeech[]
 }
 
 export type CrobardAction =
@@ -255,6 +308,7 @@ export function createCrobardState(
     winnerId: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -386,10 +440,13 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       if (!state.players.some((p) => p.id === action.playerId)) {
         throw new CrobardEngineError('UNKNOWN_PLAYER')
       }
+      // Le fil ne garde que la manche qui s'achève : jamais plus de deux manches.
+      const speech = (state.speech ?? []).filter((sp) => sp.round === state.round)
       if (state.round >= state.totalRounds) {
         const winner = [...state.players].sort((a, b) => b.score - a.score)[0]
         return {
           ...state,
+          speech,
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
@@ -402,6 +459,7 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       const drawerIdx = (state.drawerIdx + 1) % state.drawerOrder.length
       return {
         ...state,
+        speech,
         drawerIdx,
         drawerId: state.drawerOrder[drawerIdx],
         wordChoices: picked,
@@ -467,6 +525,34 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
         `UNKNOWN_ACTION_${String((exhaustive as { type?: string }).type)}`
       )
     }
+  }
+}
+
+// ─── Paroles des bots ────────────────────────────────────────────────────────
+
+/**
+ * Le fil après la parole `say`, écrite à la manche courante. La réaction
+ * accompagne le coup qui l'a fait naître : même version d'état. Refusée
+ * (CrobardEngineError) hors de sa phase, d'un orateur qui n'est pas un bot
+ * assis, vers un joueur absent ou vers soi, au-delà du plafond du bot ou de
+ * la table — l'adaptateur garde alors le coup sans la parole.
+ */
+export function addCrobardSpeech(state: CrobardState, say: CrobardSay): CrobardState {
+  if (!CROBARD_SPEECH_KINDS.includes(say.kind)) throw new CrobardEngineError('INVALID_KIND')
+  if (state.phase !== CROBARD_SPEECH_PHASE[say.kind]) throw new CrobardEngineError('SPEECH_OUT_OF_PHASE')
+  const speaker = state.players.find((p) => p.id === say.playerId)
+  if (!speaker || !speaker.isBot || speaker.leftAt) throw new CrobardEngineError('INVALID_SPEAKER')
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.leftAt || target.id === speaker.id) throw new CrobardEngineError('INVALID_TARGET')
+  const speech = state.speech ?? []
+  const round = speech.filter((sp) => sp.round === state.round)
+  if (round.length >= CROBARD_ROUND_SPEECH_MAX) throw new CrobardEngineError('TABLE_TALK_FULL')
+  if (round.filter((sp) => sp.playerId === speaker.id).length >= CROBARD_SPEECH_CAP) {
+    throw new CrobardEngineError('ALREADY_SPOKE')
+  }
+  return {
+    ...state,
+    speech: [...speech, { playerId: speaker.id, kind: say.kind, targetId: target.id, round: state.round }],
   }
 }
 

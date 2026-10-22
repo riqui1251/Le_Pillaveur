@@ -3732,6 +3732,90 @@
           "drawing": "drawing",
           "found": "found it",
           "away": "offline"
+        },
+        "feedAria": "Table chatter",
+        "botSay": {
+          "go": "Pencils ready, {name}! We can’t wait 🎨",
+          "go_2": "{name}, draw us a masterpiece!",
+          "go_3": "Come on {name}, show us your magic touch ✏️",
+          "skip": "{name}, I draw like a toddler: I’ll pass!",
+          "skip_2": "{speaker, select, f {Sorry} m {Sorry} other {My bad}}, {name}, my doodles scare people. I pass!",
+          "skip_3": "I’ll pass, {name}. Even my stick figures flop 😅",
+          "puzzled": "Uh… what is that, {name}? 🤔",
+          "puzzled_2": "{name}, I’m tilting my head every which way… nothing 🙃",
+          "puzzled_3": "Lovely scribble, {name}. But of what? 😅",
+          "admire": "Ooh, nice line work, {name}!",
+          "admire_2": "{name}, it’s taking shape, I can feel it ✨",
+          "admire_3": "Such confident strokes, {name} 👏",
+          "erase": "Wipe it all and start over, {name}? 😅",
+          "erase_2": "{name}, back to square one? Hang in there!",
+          "erase_3": "Blank page, {name}… the suspense is killing me 😬",
+          "first": "Already?! Nice one, {name} ⚡",
+          "first_2": "How did you get it so fast, {name}?!",
+          "first_3": "{name} guesses faster than their own shadow 🤠",
+          "found": "Bravo, {name}! 👏",
+          "found_2": "{name} got it! Me, still nothing…",
+          "found_3": "Nice one, {name}. I’m still looking 🤔",
+          "bravo": "Beautifully drawn, {name}! 🎨",
+          "bravo_2": "{name}, this belongs in a gallery! 🖼️",
+          "bravo_3": "Great work, {name}. Even I could’ve… no, actually 😅",
+          "stumped": "Oh, THAT’s what it was?! Sorry, {name} 🙈",
+          "stumped_2": "{name}, I swear I was trying really hard 😅",
+          "stumped_3": "Nobody? Let’s call it abstract art, {name} 🖌️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "go": "Take your time, {name}. We’re watching calmly.",
+            "go_2": "{name}, one line at a time and all will be well.",
+            "found": "Well spotted, {name}. Neatly guessed.",
+            "found_2": "{name}, nice. I’m still thinking it over."
+          },
+          "farceur": {
+            "go": "{name}, if it’s ugly, we’ll say it’s on purpose 😜",
+            "go_2": "Your turn, {name}. No stick figures, okay? 😏",
+            "found": "{name} got it! Cheating or psychic? 🔮",
+            "found_2": "Got it?! {name}, you’ve got a hidden talent 🕵️"
+          },
+          "suiveur": {
+            "go": "Everyone’s cheering you on, so I am too, {name}!",
+            "go_2": "{name}, we’re all crossing our fingers for you. Me too 🤞",
+            "found": "Bravo {name}! Everyone’s clapping, so I clap too 👏",
+            "found_2": "{name} got it? Then I’m {speaker, select, f {delighted} m {delighted} other {over the moon}}!"
+          },
+          "agressif": {
+            "go": "{name}, draw fast, we haven’t got all night!",
+            "go_2": "Come on {name}, no scribbles, I’m judging 😈",
+            "found": "About time, {name}!",
+            "found_2": "{name} got it. Fine. Next!"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…ta-da!"
+        },
+        "botTicAlt": {
+          "gaston": "Hold your horses!"
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {

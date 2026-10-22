@@ -17,10 +17,21 @@ import { PartyCanvas } from '@/components/online/PartyCanvas'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { rematchCounter } from '@/components/online/end-screen'
+import { TV_FEED_SIZE, speechFeedItems } from '@/components/online/bot-speech/bot-speech-feed'
+import { CrobardSpeechFeed } from '@/components/online/crobard/CrobardSpeechFeed'
 import { cn } from '@/lib/utils'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 type RowTone = 'drawer' | 'found' | 'plain'
+
+/**
+ * Le fil ne défile pas sur la TV : calé en bas de sa colonne et rogné en
+ * haut s'il déborde, les dernières réactions restent lisibles. À côté de la
+ * toile, il cède la place au tableau des seize joueurs : deux ou trois bulles.
+ */
+const FEED_CLIP = 'flex min-h-0 w-full shrink-0 flex-col justify-end overflow-hidden'
+const FEED_ROOMY = 'max-h-[13rem]'
+const FEED_BESIDE_CANVAS = 'max-h-[9rem]'
 
 /**
  * Tableau des joueurs : une colonne jusqu'à 8, deux au-delà (16 au plus) —
@@ -91,6 +102,14 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
   const roundLabel = t('round', { round: state.round, total: state.totalRounds })
   const toneOf = (p: CrobardPlayerView): RowTone =>
     p.id === state.drawerId ? 'drawer' : state.correctGuessers.includes(p.id) ? 'found' : 'plain'
+  // Réactions des bots de la manche ; sans aucune, chaque colonne garde sa hauteur.
+  const talking = speechFeedItems(state.speech ?? [], state.round, null, TV_FEED_SIZE).length > 0
+  const feedIn = (height: string) =>
+    talking ? (
+      <div className={cn(FEED_CLIP, height)}>
+        <CrobardSpeechFeed view={state} iconOf={iconOf} variant="tv" />
+      </div>
+    ) : null
 
   if (state.phase === 'finished') {
     const twoCols = ranking.length > 8
@@ -166,8 +185,11 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
               <PartyCanvas strokes={state.strokes} readOnly className="w-full" />
             </div>
           )}
-          <div className="flex min-w-0 max-w-5xl flex-1 flex-col justify-center self-stretch">
-            <PlayerBoard players={ranking} toneOf={toneOf} iconOf={iconOf} roomy />
+          <div className="flex min-w-0 max-w-5xl flex-1 flex-col justify-center gap-4 self-stretch">
+            <div className="min-h-0 overflow-hidden">
+              <PlayerBoard players={ranking} toneOf={toneOf} iconOf={iconOf} roomy />
+            </div>
+            {feedIn(FEED_ROOMY)}
           </div>
         </div>
       </div>
@@ -220,6 +242,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
             </span>
           ))}
         </div>
+        {talking && <div className="flex w-full max-w-3xl min-h-0 shrink-0 justify-center">{feedIn(FEED_ROOMY)}</div>}
       </div>
     )
   }
@@ -285,6 +308,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
         <div className="min-h-0 flex-1 overflow-hidden">
           <PlayerBoard players={ranking} toneOf={toneOf} iconOf={iconOf} />
         </div>
+        {feedIn(FEED_BESIDE_CANVAS)}
       </aside>
     </div>
   )

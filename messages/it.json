@@ -3732,6 +3732,90 @@
           "drawing": "disegna",
           "found": "ha indovinato",
           "away": "offline"
+        },
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "go": "Matite pronte, {name}! Non vediamo l’ora 🎨",
+          "go_2": "{name}, facci un capolavoro!",
+          "go_3": "Dai {name}, facci vedere il tuo tocco magico ✏️",
+          "skip": "{name}, disegno come un bimbo piccolo: passo!",
+          "skip_2": "{speaker, select, f {Scusa} m {Scusa} other {Perdonami}}, {name}, i miei disegni fanno paura. Passo!",
+          "skip_3": "Passo, {name}. Pure i miei omini stilizzati vengono storti 😅",
+          "puzzled": "Ehm… cos’è quello, {name}? 🤔",
+          "puzzled_2": "{name}, giro la testa da tutte le parti… niente 🙃",
+          "puzzled_3": "Bello scarabocchio, {name}. Ma di cosa? 😅",
+          "admire": "Oh, che bel tratto, {name}!",
+          "admire_2": "{name}, sta prendendo forma, me lo sento ✨",
+          "admire_3": "Che sicurezza nel tratto, {name} 👏",
+          "erase": "Si cancella tutto e si ricomincia, {name}? 😅",
+          "erase_2": "{name}, si torna al punto di partenza? Coraggio!",
+          "erase_3": "Foglio bianco, {name}… che suspense 😬",
+          "first": "Già?! Ben visto, {name} ⚡",
+          "first_2": "Come hai fatto così in fretta, {name}?!",
+          "first_3": "{name} indovina più veloce della sua ombra 🤠",
+          "found": "Bravo, {name}! 👏",
+          "found_2": "{name} ha indovinato! Io, ancora niente…",
+          "found_3": "Ben visto, {name}. Io cerco ancora 🤔",
+          "bravo": "Ben disegnato, {name}! 🎨",
+          "bravo_2": "{name}, roba da mostra d’arte! 🖼️",
+          "bravo_3": "Bel lavoro, {name}. Pure io avrei potuto… no, anzi 😅",
+          "stumped": "Ah, era QUELLO?! Scusa, {name} 🙈",
+          "stumped_2": "{name}, giuro che ci stavo provando con tutte le forze 😅",
+          "stumped_3": "Nessuno? Diciamo che è arte astratta, {name} 🖌️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "go": "Prenditi il tuo tempo, {name}. Osserviamo con calma.",
+            "go_2": "{name}, un tratto alla volta e andrà tutto bene.",
+            "found": "Ben visto, {name}. Indovinato con metodo.",
+            "found_2": "{name}, bello. Io ci sto ancora pensando."
+          },
+          "farceur": {
+            "go": "{name}, se viene brutto, diremo che è voluto 😜",
+            "go_2": "Tocca a te, {name}. Niente omini stilizzati, eh! 😏",
+            "found": "{name} ha indovinato! Trucco o sensitivo? 🔮",
+            "found_2": "Indovinato?! {name}, hai un talento nascosto 🕵️"
+          },
+          "suiveur": {
+            "go": "Ti incoraggiano tutti, quindi anch’io, {name}!",
+            "go_2": "{name}, incrociamo tutti le dita per te. Anch’io 🤞",
+            "found": "Bravo {name}! Applaudono tutti, quindi applaudo 👏",
+            "found_2": "{name} ha indovinato? Allora sono {speaker, select, f {felicissima} m {felicissimo} other {al settimo cielo}}!"
+          },
+          "agressif": {
+            "go": "{name}, disegna in fretta, non abbiamo tutta la notte!",
+            "go_2": "Dai {name}, niente scarabocchi, io giudico 😈",
+            "found": "Era ora, {name}!",
+            "found_2": "{name} ha indovinato. Va be’. Avanti!"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…e vai!"
+        },
+        "botTicAlt": {
+          "gaston": "Piano, piano!"
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
         }
       },
       "tutorial": {

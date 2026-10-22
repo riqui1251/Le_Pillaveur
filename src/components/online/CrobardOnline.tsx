@@ -32,6 +32,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { CrobardSpeechFeed } from './crobard/CrobardSpeechFeed'
 
 /**
  * CROBARD en ligne (serveur-autoritaire). `word`/`wordChoices` ne sont
@@ -579,6 +580,14 @@ export function CrobardOnline() {
               )
             })}
           </ul>
+        )}
+
+        {/* Réactions des bots, sous la toile et les joueurs (ou le bilan) :
+            dans le flux, jamais par-dessus le dessin ni sous la barre. À la
+            même place d'une phase à l'autre, monté dès qu'un bot est assis,
+            même vide : la région aria-live existe avant la première bulle. */}
+        {view.players.some((p) => p.isBot) && (
+          <CrobardSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
         )}
       </div>
 

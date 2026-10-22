@@ -3732,6 +3732,90 @@
           "drawing": "dibuja",
           "found": "ha acertado",
           "away": "sin conexión"
+        },
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "go": "¡Lápices listos, {name}! Qué ganas 🎨",
+          "go_2": "{name}, ¡dibújanos una obra maestra!",
+          "go_3": "Venga, {name}, enséñanos ese trazo mágico ✏️",
+          "skip": "{name}, dibujo como un niño pequeño: ¡paso!",
+          "skip_2": "{speaker, select, f {Perdona} m {Perdona} other {Lo siento}}, {name}, mis dibujos asustan. ¡Paso turno!",
+          "skip_3": "Paso, {name}. Hasta mis monigotes salen mal 😅",
+          "puzzled": "Eh… ¿qué es eso, {name}? 🤔",
+          "puzzled_2": "{name}, giro la cabeza para todos lados… nada 🙃",
+          "puzzled_3": "Bonito garabato, {name}. ¿Pero de qué? 😅",
+          "admire": "¡Oh, qué buen trazo, {name}!",
+          "admire_2": "{name}, esto va tomando forma, lo noto ✨",
+          "admire_3": "Qué pulso tan firme, {name} 👏",
+          "erase": "¿Borrón y cuenta nueva, {name}? 😅",
+          "erase_2": "{name}, ¿vuelta a empezar? ¡Ánimo!",
+          "erase_3": "Hoja en blanco, {name}… qué suspense 😬",
+          "first": "¿¡Ya!? Bien visto, {name} ⚡",
+          "first_2": "¿¡Cómo lo has pillado tan rápido, {name}!?",
+          "first_3": "{name} adivina más rápido que su sombra 🤠",
+          "found": "¡Bravo, {name}! 👏",
+          "found_2": "¡{name} lo ha pillado! Yo, todavía nada…",
+          "found_3": "Bien visto, {name}. Yo sigo buscando 🤔",
+          "bravo": "¡Bien dibujado, {name}! 🎨",
+          "bravo_2": "{name}, ¡esto merece una exposición! 🖼️",
+          "bravo_3": "Buen trabajo, {name}. Hasta yo podría… no, mejor no 😅",
+          "stumped": "¿¡Era ESO!? Perdona, {name} 🙈",
+          "stumped_2": "{name}, te juro que lo intentaba con todas mis fuerzas 😅",
+          "stumped_3": "¿Nadie? Digamos que es arte abstracto, {name} 🖌️"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "go": "Tómate tu tiempo, {name}. Miramos con calma.",
+            "go_2": "{name}, trazo a trazo, y todo saldrá bien.",
+            "found": "Bien visto, {name}. Adivinado con limpieza.",
+            "found_2": "{name}, bonito. Yo sigo pensándolo."
+          },
+          "farceur": {
+            "go": "{name}, si queda feo, diremos que es a propósito 😜",
+            "go_2": "Te toca, {name}. Nada de monigotes, ¿eh? 😏",
+            "found": "¡{name} lo ha pillado! ¿Trampa o vidente? 🔮",
+            "found_2": "¿Acertado? {name}, tienes un don oculto 🕵️"
+          },
+          "suiveur": {
+            "go": "¡Todos te animan, así que yo también, {name}!",
+            "go_2": "{name}, todos cruzamos los dedos por ti. Yo también 🤞",
+            "found": "¡Bravo, {name}! Todos aplauden, así que aplaudo 👏",
+            "found_2": "¿{name} lo ha pillado? ¡Pues estoy {speaker, select, f {encantada} m {encantado} other {feliz}}!"
+          },
+          "agressif": {
+            "go": "{name}, dibuja rápido, ¡no tenemos toda la noche!",
+            "go_2": "Venga, {name}, nada de garabatos, que juzgo 😈",
+            "found": "¡Ya era hora, {name}!",
+            "found_2": "{name} lo ha pillado. Vale. ¡Siguiente!"
+          }
+        },
+        "botTicSoft": {
+          "marcel": "…¡y olé!"
+        },
+        "botTicAlt": {
+          "gaston": "¡Un momentito!"
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {

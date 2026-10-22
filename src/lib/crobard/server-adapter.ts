@@ -1,4 +1,5 @@
 import {
+  addCrobardSpeech,
   createCrobardState,
   currentCrobardActorId,
   reduceCrobard,
@@ -15,6 +16,7 @@ import { phaseKey } from '@/lib/online/phase-clock'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { getCrobardWords } from './data'
 import { randomSeed } from '@/lib/petit-buveur/rng'
+import { crobardBotSay, type CrobardSpeechEvent } from './bot-speech'
 
 /**
  * Adaptateur serveur de Crobard : sérialisation, mapping HTTP → actions
@@ -76,6 +78,7 @@ export function parseCrobardState(json: string | null): CrobardState | null {
       remainingWords: raw.remainingWords ?? [],
       strokes: raw.strokes ?? [],
       correctGuessers: raw.correctGuessers ?? [],
+      speech: raw.speech ?? [],
     }
   } catch {
     return null
@@ -97,70 +100,102 @@ export type CrobardRoomActionResult =
   | { ok: true; state: CrobardState }
   | { ok: false; error: string }
 
+/**
+ * `sayRand` tire les paroles des bots (bot-speech.ts) : les tests le fixent,
+ * la route garde Math.random. Il ne touche jamais le RNG du jeu, qui vit
+ * dans l'état : une partie se rejoue à l'identique avec ou sans paroles.
+ */
 export function applyCrobardRoomAction(
   state: CrobardState,
   userId: string,
-  input: CrobardRoomActionInput
+  input: CrobardRoomActionInput,
+  sayRand: () => number = Math.random
 ): CrobardRoomActionResult {
+  if (input.type === 'bot') return applyCrobardBotAction(state, sayRand)
   try {
-    switch (input.type) {
-      case 'choose-word':
-        return {
-          ok: true,
-          state: reduceCrobard(state, {
-            type: 'CHOOSE_WORD',
-            playerId: userId,
-            index: input.index,
-            now: Date.now(),
-          }),
-        }
-      case 'draw-stroke':
-        return {
-          ok: true,
-          state: reduceCrobard(state, { type: 'DRAW_STROKE', playerId: userId, stroke: input.stroke }),
-        }
-      case 'clear':
-        return { ok: true, state: reduceCrobard(state, { type: 'CLEAR', playerId: userId }) }
-      case 'undo-stroke':
-        return { ok: true, state: reduceCrobard(state, { type: 'UNDO_STROKE', playerId: userId }) }
-      case 'guess':
-        return {
-          ok: true,
-          state: reduceCrobard(state, {
-            type: 'GUESS',
-            playerId: userId,
-            text: input.text,
-            now: Date.now(),
-          }),
-        }
-      case 'advance':
-        return {
-          ok: true,
-          state: reduceCrobard(state, {
-            type: 'ADVANCE',
-            claimedKey: input.phaseKey,
-            now: Date.now(),
-          }),
-        }
-      case 'continue':
-        return {
-          ok: true,
-          state: reduceCrobard(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
-        }
-      case 'bot':
-        return applyCrobardBotAction(state)
-      case 'replace-left':
-        return {
-          ok: true,
-          state: reduceCrobard(state, {
-            type: 'REPLACE_LEFT',
-            now: Date.now(),
-            graceMs: input.graceMs,
-          }),
-        }
+    const next = reduceCrobardInput(state, userId, input)
+    return {
+      ok: true,
+      state: withCrobardSpeech(next, crobardSpeechEvent(state, next, userId, input.type), sayRand),
     }
   } catch (e) {
     if (e instanceof CrobardEngineError) return { ok: false, error: e.message }
+    throw e
+  }
+}
+
+function reduceCrobardInput(
+  state: CrobardState,
+  userId: string,
+  input: Exclude<CrobardRoomActionInput, { type: 'bot' }>
+): CrobardState {
+  const now = Date.now()
+  switch (input.type) {
+    case 'choose-word':
+      return reduceCrobard(state, { type: 'CHOOSE_WORD', playerId: userId, index: input.index, now })
+    case 'draw-stroke':
+      return reduceCrobard(state, { type: 'DRAW_STROKE', playerId: userId, stroke: input.stroke })
+    case 'clear':
+      return reduceCrobard(state, { type: 'CLEAR', playerId: userId })
+    case 'undo-stroke':
+      return reduceCrobard(state, { type: 'UNDO_STROKE', playerId: userId })
+    case 'guess':
+      return reduceCrobard(state, { type: 'GUESS', playerId: userId, text: input.text, now })
+    case 'advance':
+      return reduceCrobard(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now })
+    case 'continue':
+      return reduceCrobard(state, { type: 'CONTINUE', playerId: userId, now })
+    case 'replace-left':
+      return reduceCrobard(state, { type: 'REPLACE_LEFT', now, graceMs: input.graceMs })
+  }
+}
+
+// ─── Paroles des bots ────────────────────────────────────────────────────────
+
+/**
+ * Le fait que la table vient de voir, d'après l'état avant et après le coup :
+ * une manche qui s'ouvre (lancement ou « manche suivante », d'un humain ou
+ * d'un bot) ou s'achève (temps écoulé ou tout le monde a trouvé) ; en plein
+ * dessin, un trait posé, un effacement, une bonne réponse — d'un HUMAIN
+ * seulement. Une réponse fausse ne passe pas ici : le moteur la refuse.
+ */
+export function crobardSpeechEvent(
+  before: CrobardState,
+  after: CrobardState,
+  actorId: string | null,
+  inputType: CrobardRoomActionInput['type']
+): CrobardSpeechEvent | null {
+  if (after.phase === 'choosing' && (before.phase !== 'choosing' || before.round !== after.round)) {
+    return { type: 'roundStart' }
+  }
+  if (before.phase === 'drawing' && after.phase === 'roundEnd') return { type: 'roundEnd' }
+  const actor = before.players.find((p) => p.id === actorId)
+  if (!actor || actor.isBot || before.phase !== 'drawing' || after.phase !== 'drawing') return null
+  if (inputType === 'draw-stroke') return { type: 'stroke' }
+  if (inputType === 'clear') return { type: 'erase', strokesBefore: before.strokes.length }
+  if (inputType === 'guess' && after.correctGuessers.length > before.correctGuessers.length) {
+    return { type: 'found', by: actor.id }
+  }
+  return null
+}
+
+/**
+ * L'état après le coup, avec la réaction d'un bot s'il en a une. Le
+ * planificateur ne lit que la vue SPECTATEUR (jamais le mot ni les choix) ;
+ * une parole que le moteur refuserait laisse le coup intact, sans parole.
+ */
+export function withCrobardSpeech(
+  after: CrobardState,
+  event: CrobardSpeechEvent | null,
+  sayRand: () => number
+): CrobardState {
+  if (!event) return after
+  const say = crobardBotSay(toCrobardSpectatorView(after), event, sayRand)
+  if (!say) return after
+  try {
+    return addCrobardSpeech(after, say)
+  } catch (e) {
+    if (e instanceof CrobardEngineError) return after
     throw e
   }
 }
@@ -203,17 +238,22 @@ export function crobardSpectatorViewJson(state: CrobardState): string {
  * bot, la manche s'écourte d'elle-même côté moteur
  * (`CROBARD_BOT_DRAWER_ROUND_MS`) — rien à faire ici. Seul le bilan de
  * manche (`roundEnd`) a besoin d'un bot qui « continue » s'il est le
- * premier joueur actif restant.
+ * premier joueur actif restant ; la manche qu'il ouvre peut porter une
+ * réaction.
  */
-export function applyCrobardBotAction(state: CrobardState): CrobardRoomActionResult {
+export function applyCrobardBotAction(
+  state: CrobardState,
+  sayRand: () => number = Math.random
+): CrobardRoomActionResult {
   try {
     const actorId = currentCrobardActorId(state)
     const actor = state.players.find((p) => p.id === actorId)
     if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
     if (state.phase === 'roundEnd') {
+      const next = reduceCrobard(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() })
       return {
         ok: true,
-        state: reduceCrobard(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
+        state: withCrobardSpeech(next, crobardSpeechEvent(state, next, actor.id, 'bot'), sayRand),
       }
     }
     return { ok: false, error: 'NOT_BOT_TURN' }
