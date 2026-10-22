@@ -505,7 +505,7 @@ export function MenteurOnline() {
             )}
             {reveal.eliminatedId && (
               <p className="text-center text-sm font-bold text-gold">
-                {t('reveal.eliminatedMsg', {
+                {t(isSoft ? 'reveal.eliminatedMsgSoft' : 'reveal.eliminatedMsg', {
                   name: nameOf(reveal.eliminatedId),
                   genre: genreOfId(view.players, reveal.eliminatedId),
                 })}

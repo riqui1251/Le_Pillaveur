@@ -186,7 +186,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
                   {screenshots.map((src, i) => (
                     <div key={i} className="relative h-20 w-20 overflow-hidden rounded-lg border border-white/10">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt={`Capture ${i + 1}`} className="h-full w-full object-cover" />
+                      <img src={src} alt={t('screenshotAlt', { index: i + 1 })} className="h-full w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setScreenshots((prev) => prev.filter((_, idx) => idx !== i))}

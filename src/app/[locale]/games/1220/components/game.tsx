@@ -451,7 +451,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           }))}
         />
 
-        <RollHistory rolls={history.slice(1)} />
+        <RollHistory rolls={history.slice(1)} newestNumber={rollCount - 1} />
       </GameShell>
     </>
   )

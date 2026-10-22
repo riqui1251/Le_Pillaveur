@@ -482,7 +482,9 @@
       "title": "Ajouter des bots",
       "hint": "Ils comptent dans le minimum de {min} joueurs et prennent les places vides.",
       "on": "Activé",
-      "off": "Désactivé"
+      "off": "Désactivé",
+      "remove": "Retirer un bot",
+      "add": "Ajouter un bot"
     },
     "top5Badge": "Top {rank} de ce jeu",
     "back": "Retour",
@@ -2695,6 +2697,7 @@
           "calzaLost": "{name} a tenté Calza et se plante : perd un dé et boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} a tenté Calza et se plante : perd un dé",
           "eliminatedMsg": "💀 {name} n’a plus de dés — cul sec, {genre, select, f {éliminée} m {éliminé} other {hors jeu}} !",
+          "eliminatedMsgSoft": "💀 {name} n’a plus de dés — {genre, select, f {éliminée} m {éliminé} other {hors jeu}} !",
           "continue": "Manche suivante"
         },
         "victoryTitle": "{name} remporte la table !",
@@ -5693,6 +5696,7 @@
     "screenshots": "Captures d'écran (optionnel, max {max})",
     "addScreenshot": "Ajouter",
     "removeScreenshot": "Supprimer la capture",
+    "screenshotAlt": "Capture {index}",
     "contactEmail": "Email de contact (optionnel)",
     "emptyMessage": "Merci de décrire votre retour.",
     "imageError": "Impossible de traiter une ou plusieurs images.",
