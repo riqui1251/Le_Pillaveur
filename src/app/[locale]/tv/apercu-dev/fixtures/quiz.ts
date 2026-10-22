@@ -7,6 +7,7 @@ import {
   QUIZ_COUNTDOWN_MS,
   QUIZ_REVEAL_MIN_MS,
   type QuizQuestion,
+  type QuizSayMove,
   type QuizState,
 } from '@/lib/quiz/engine'
 import {
@@ -67,6 +68,10 @@ function newGame(
         const choice = m === 'right' ? answer : (answer + 1 + (i % 3)) % 4
         state = reduceQuiz(state, { type: 'ANSWER', playerId: players[i].id, choice, now: clock })
       }
+    },
+    /** Paroles de bots, comme l'adaptateur les écrit (fanfaronnade, réaction). */
+    say(...moves: QuizSayMove[]) {
+      state = reduceQuiz(state, { type: 'SAY', moves })
     },
     leave(index: number) {
       clock += 200
@@ -166,11 +171,14 @@ function sixLongNames(): TvPreviewFixture {
   g.start()
   const steps: TvPreviewStep[] = []
   for (let round = 0; round < pool.length; round += 1) {
+    // Barnabé (le bot) fanfaronne à la 1re question, puis s'en réjouit à la révélation.
+    if (round === 0) g.say({ playerId: 'bot-1', kind: 'sure', targetId: 'u2' })
     g.answer(moves(round), 0, 3)
-    steps.push(g.snap(`question ${round + 1}, 3 réponses sur 6`))
+    steps.push(g.snap(`question ${round + 1}, 3 réponses sur 6${round === 0 ? ', un bot fanfaronne' : ''}`))
     g.answer(moves(round), 3)
     g.close()
-    steps.push(g.snap(`révélation ${round + 1}${round === 2 ? ', série 🔥 de Jean-Baptiste' : ''}`))
+    if (round === 0) g.say({ playerId: 'bot-1', kind: 'knewIt', targetId: 'u2' })
+    steps.push(g.snap(`révélation ${round + 1}${round === 0 ? ', le bot réagit' : round === 2 ? ', série 🔥 de Jean-Baptiste' : ''}`))
     g.next()
   }
   steps.push(g.snap('podium, 6 joueurs'))

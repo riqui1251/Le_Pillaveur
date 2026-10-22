@@ -7,7 +7,7 @@ import fr from '../../../../messages/fr.json'
 import en from '../../../../messages/en.json'
 import es from '../../../../messages/es.json'
 import it_ from '../../../../messages/it.json'
-import { botLine, type LineTranslator } from './bot-speech-feed'
+import { DRINK_TIC_KEYS, botLine, type LineTranslator } from './bot-speech-feed'
 
 /**
  * FABRIQUE DE TESTS du catalogue des paroles d'un jeu à débat — importée par
@@ -67,6 +67,14 @@ export function icuTranslator(catalogue: Record<string, string>, locale = 'fr'):
   }
 }
 
+/** Mots de boisson par langue : une phrase de bot n'en contient aucun (ambiance Sans alcool, TV comprise). */
+export const DRINK_WORDS: Record<string, RegExp> = {
+  fr: /gorg[ée]|\bboi[rst]|\bbu\b|\bbuv|verre|cul sec|\bsant[ée](?![a-z])|tchin|trinqu|ap[ée]ro|alcool|\bivres?\b|\bcuite/i,
+  en: /\bdrinks?\b|\bdrank|\bsips?\b|\bshots?\b|cheers|booze|\bpints?\b|\bglass|alcohol|drunk|tipsy/i,
+  es: /\bbeb[eiao]|trago|sorbo|chupito|\bsalud\b|\bcopas?\b|\bvasos?\b|brind|alcohol|borrach/i,
+  it: /\bber[ei]\b|\bbev[eio]|sors[oi]|bicchier|cin cin|\bsalute\b|brind|alcol|ubriac/i,
+}
+
 const baseOf = (key: string) => key.replace(/_\d+$/, '')
 const GENRES = ['f', 'm', 'other'] as const
 const SEEDS = Array.from({ length: 40 }, (_, i) => `p-${i}`)
@@ -82,6 +90,7 @@ export function describeSpeechCatalogue({
   extraArgs = {},
   maxChars = 70,
   maxCharsWithExtraArgs = maxChars,
+  drinkFree = false,
 }: {
   /** Namespace du jeu : `games.<jeu>.game`. */
   node: string
@@ -97,6 +106,11 @@ export function describeSpeechCatalogue({
   maxChars?: number
   /** Longueur max d'une phrase qui lit un argument de `extraArgs` (l'indice cité allonge la bulle). */
   maxCharsWithExtraArgs?: number
+  /**
+   * Jeu joué en ambiance Sans alcool : aucune phrase ne parle de boire, et
+   * les seuls tics qui trinquent sont ceux que le fil tait (DRINK_TIC_KEYS).
+   */
+  drinkFree?: boolean
 }): void {
   const catalogues = SPEECH_LOCALES.map((locale) => [locale, speechCatalogueOf(node, locale)] as const)
   const sayKeys = (game: SpeechCatalogue) =>
@@ -177,6 +191,25 @@ export function describeSpeechCatalogue({
         }
       }
     })
+
+    if (drinkFree) {
+      it('Sans alcool : aucune phrase ne parle de boire, quel que soit le genre ; les tics qui trinquent sont ceux que le fil tait', () => {
+        for (const [locale, game] of catalogues) {
+          const flat = flattenSpeechCatalogue(game)
+          for (const key of sayKeys(game)) {
+            const format = new IntlMessageFormat(flat[key], locale)
+            for (const genre of GENRES) {
+              const line = String(format.format({ ...extraArgs, name: NAME, speaker: genre, target: genre }))
+              expect(line, `${locale}.${key} : ${line}`).not.toMatch(DRINK_WORDS[locale])
+            }
+          }
+          const toasting = Object.entries(game.botTic)
+            .filter(([, text]) => DRINK_WORDS[locale].test(text))
+            .map(([key]) => key)
+          for (const key of toasting) expect(DRINK_TIC_KEYS, `${locale}.botTic.${key}`).toContain(key)
+        }
+      })
+    }
 
     it('20 tics distincts par langue, exactement ceux des personas, sans argument ICU, ≤ 30 caractères', () => {
       const ticKeys = BOT_PERSONAS.map((p) => p.ticKey).sort()

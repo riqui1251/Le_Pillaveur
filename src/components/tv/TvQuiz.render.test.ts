@@ -49,7 +49,10 @@ describe('TvQuiz — écran TV du Grand Pillaveur', () => {
     for (const step of steps) {
       const { html } = render(step)
       expect(html, `${step.fixture} / ${step.label}`).not.toMatch(/\btext-(xs|sm)\b|text-\[\d+px\]/)
-      expect(html, `${step.fixture} / ${step.label}`).not.toMatch(/style="[^"]*\d+px/)
+      // Le décalage d'entrée des bulles du fil (framer-motion, translateY) n'est pas une taille.
+      expect(html, `${step.fixture} / ${step.label}`).not.toMatch(
+        /style="[^"]*(width|height|font-size|padding|border-radius):[^;"]*\dpx/
+      )
     }
   })
 })

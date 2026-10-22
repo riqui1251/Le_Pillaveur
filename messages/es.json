@@ -4611,7 +4611,82 @@
         "missed": "respuesta incorrecta",
         "noAnswer": "sin respuesta",
         "liveRanking": "Clasificación",
-        "skipToPodium": "Ver el podio"
+        "skipToPodium": "Ver el podio",
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "sure": "¡Demasiado fácil, {name}!",
+          "sure_2": "Esta la tengo. Suerte, {name} 😏",
+          "sure_3": "{name}, esta la contesto con los ojos cerrados.",
+          "unsure": "Ni idea… voy a lo loco, {name}.",
+          "unsure_2": "{name}, respondo al azar, no me juzgues 🙈",
+          "unsure_3": "Cruzo los dedos con esta, {name} 🤞",
+          "knewIt": "¡Lo sabía, {name}!",
+          "knewIt_2": "Venga, que era facilita, {name} 😏",
+          "knewIt_3": "{name}, haberme preguntado, ¡yo la tenía!",
+          "lucky": "A lo loco… ¡y acierto! Lo siento, {name} 😇",
+          "lucky_2": "{name}, respondí al azar y acerté. Con estilo, ¿eh?",
+          "lucky_3": "¿Suerte? No, {name}, puro talento 😎",
+          "missed": "Ni idea de eso. ¿Cómo lo sabías, {name}?",
+          "missed_2": "Bien hecho, {name}… yo estaba en la luna.",
+          "missed_3": "{name}, ¿haces trampa o lees enciclopedias? 🤓",
+          "oops": "{speaker, select, f {Tan segura de mí} m {Tan seguro de mí} other {Tanta confianza}}… y fallo. Ni una palabra, {name} 🙈",
+          "oops_2": "¿«Demasiado fácil»? ¿Yo dije eso? Chis, {name}.",
+          "oops_3": "{name}, olvida lo que dije antes 😅",
+          "asleep": "{name}, ¿te has dormido? 😴",
+          "asleep_2": "Oye, {name}, ¡el pulsador es para pulsarlo!",
+          "asleep_3": "¿Sigues ahí, {name}? Se acabó el tiempo ⏰",
+          "tease": "¿{name} en cabeza? Disfrútalo, que dura poco 😏",
+          "tease_2": "¡Todos contra {name}!",
+          "tease_3": "{name}, voy a por tu corona 👑"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "Esta me la sé bien, {name}.",
+            "sure_2": "Por una vez, lo tengo claro, {name}.",
+            "knewIt": "Lo había leído en algún sitio, {name}.",
+            "knewIt_2": "¿Ves, {name}? Repasar tiene premio."
+          },
+          "farceur": {
+            "sure": "Lo vi en mi horóscopo, {name} 🔮",
+            "sure_2": "Fácil: he sobornado al presentador, {name} 😉",
+            "knewIt": "Lo sabía, {name}: lo sé todo menos la hora 😜",
+            "knewIt_2": "{name}, me lo contó un pajarito 🐦"
+          },
+          "suiveur": {
+            "sure": "Me dejo llevar, {name}, parece fácil.",
+            "sure_2": "¡Si para vosotros es fácil, para mí también, {name}!",
+            "knewIt": "¡Menos mal que seguí mi instinto, {name}!",
+            "knewIt_2": "Como todos, ¿no? Ah, tú no, {name} 😬"
+          },
+          "agressif": {
+            "sure": "Demasiado fácil. Agárrate, {name} 😈",
+            "sure_2": "¡Siguiente! Esta es para niños, {name}.",
+            "knewIt": "Obviamente, {name}. ¿A qué estamos jugando?",
+            "knewIt_2": "Haber atendido en clase, {name} 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
+        }
       },
       "tutorial": {
         "steps": [

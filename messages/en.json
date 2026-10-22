@@ -4611,7 +4611,82 @@
         "missed": "wrong answer",
         "noAnswer": "no answer",
         "liveRanking": "Standings",
-        "skipToPodium": "See the podium"
+        "skipToPodium": "See the podium",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "sure": "Too easy, {name}!",
+          "sure_2": "Got this one. Good luck, {name} 😏",
+          "sure_3": "{name}, I could answer that one in my sleep.",
+          "unsure": "No idea… pure guess, {name}.",
+          "unsure_2": "{name}, I’m guessing, don’t judge me 🙈",
+          "unsure_3": "Fingers crossed on this one, {name} 🤞",
+          "knewIt": "Knew it, {name}!",
+          "knewIt_2": "Come on, that one was easy, {name} 😏",
+          "knewIt_3": "{name}, you should’ve asked me, I had it!",
+          "lucky": "Wild guess… and it’s right! Sorry, {name} 😇",
+          "lucky_2": "{name}, total guess and I nailed it. Classy, right?",
+          "lucky_3": "Luck? No, {name}, pure talent 😎",
+          "missed": "Never heard of it. How did you know that, {name}?!",
+          "missed_2": "Nice one, {name}… I was completely lost.",
+          "missed_3": "{name}, are you cheating or reading encyclopedias? 🤓",
+          "oops": "{speaker, select, f {Little Miss Know-It-All} m {Mr Know-It-All} other {The know-it-all}}… got it wrong. Not a word, {name} 🙈",
+          "oops_2": "“Too easy,” did I say that? Shh, {name}.",
+          "oops_3": "{name}, forget what I said earlier 😅",
+          "asleep": "{name}, were you asleep? 😴",
+          "asleep_2": "Hey {name}, the buzzer is for pressing!",
+          "asleep_3": "Still with us, {name}? Time’s up ⏰",
+          "tease": "{name} in the lead? Enjoy it while it lasts 😏",
+          "tease_2": "Everyone against {name}!",
+          "tease_3": "{name}, I’m coming for that crown 👑"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "I know this one well, {name}.",
+            "sure_2": "For once, I’m confident, {name}.",
+            "knewIt": "I’d read about it somewhere, {name}.",
+            "knewIt_2": "See, {name}? Revising pays off."
+          },
+          "farceur": {
+            "sure": "Saw it in my horoscope, {name} 🔮",
+            "sure_2": "Easy: I bribed the host, {name} 😉",
+            "knewIt": "Knew it, {name}: I know everything except the time 😜",
+            "knewIt_2": "{name}, a little bird told me 🐦"
+          },
+          "suiveur": {
+            "sure": "Going with the flow, {name}, it looks easy.",
+            "sure_2": "If it’s easy for you lot, it’s easy for me, {name}!",
+            "knewIt": "Good thing I trusted my gut, {name}!",
+            "knewIt_2": "Like everyone, right? Oh, not you, {name} 😬"
+          },
+          "agressif": {
+            "sure": "Too easy. Hold on tight, {name} 😈",
+            "sure_2": "Next! This one’s for kids, {name}.",
+            "knewIt": "Obviously, {name}. What are we even playing?",
+            "knewIt_2": "Should’ve listened in school, {name} 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

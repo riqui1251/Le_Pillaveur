@@ -1,5 +1,6 @@
 import { createRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * LE GRAND PILLAVEUR (quiz buzzer) — moteur PUR, serveur-autoritaire.
@@ -76,6 +77,43 @@ export type QuizQuestionResult = {
 
 export type QuizPhase = 'countdown' | 'question' | 'reveal' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.quiz.game), écrite
+ * par l'adaptateur dans la MÊME écriture que le coup qui la porte — les
+ * réponses des bots, ou la résolution de la question —, sans tick de plus.
+ * Le kind est le seul message, aucune phrase dans l'état :
+ *   • en répondant (phase question) : sure (« trop facile ») ou unsure
+ *     (« je tente au pif »), tirés AVANT la réponse du bot, sur la seule
+ *     difficulté publique et son caractère — jamais sur la bonne réponse ;
+ *   • à la révélation : knewIt (juste), lucky (juste après un « au pif »),
+ *     missed (raté), oops (raté après un « trop facile »), asleep (un humain
+ *     n'a pas répondu), tease (le meneur humain, chambré).
+ * Toute parole a une cible : chaque phrase du catalogue la nomme.
+ */
+export type QuizSpeechKind = 'sure' | 'unsure' | 'knewIt' | 'lucky' | 'missed' | 'oops' | 'asleep' | 'tease'
+export type QuizSpeech = BotSpeech<QuizSpeechKind>
+export type QuizSayMove = SpeechMove<QuizSpeechKind>
+
+export const QUIZ_SPEECH_KINDS = [
+  'sure',
+  'unsure',
+  'knewIt',
+  'lucky',
+  'missed',
+  'oops',
+  'asleep',
+  'tease',
+] as const satisfies readonly QuizSpeechKind[]
+
+/** Paroles max par bot et par question ; le bavardage du persona borne en dessous. */
+export const QUIZ_SPEECH_CAP = 2
+
+/** On fanfaronne en répondant, on réagit à la révélation : rien d'autre n'est recevable. */
+export const QUIZ_SAY_KINDS_OF_PHASE: Record<'question' | 'reveal', readonly QuizSpeechKind[]> = {
+  question: ['sure', 'unsure'],
+  reveal: ['knewIt', 'lucky', 'missed', 'oops', 'asleep', 'tease'],
+}
+
 export type QuizState = TimedPhaseState & {
   version: number
   phase: QuizPhase
@@ -90,6 +128,12 @@ export type QuizState = TimedPhaseState & {
   lastResult: QuizQuestionResult | null
   rematchVotes: string[]
   rngState: number
+  /**
+   * PUBLIC — paroles des bots, de la question en cours et de la précédente
+   * au plus (`round` = qIdx). Optionnel : un état sérialisé avant leur
+   * arrivée n'en a pas (parseQuizState complète).
+   */
+  speech?: QuizSpeech[]
 }
 
 export type QuizAction =
@@ -99,6 +143,8 @@ export type QuizAction =
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
+  /** Paroles de bots (jamais d'un humain : l'adaptateur HTTP ne la mappe pas). */
+  | { type: 'SAY'; moves: QuizSayMove[] }
 
 export class QuizEngineError extends Error {
   constructor(code: string) {
@@ -160,6 +206,7 @@ export function createQuizState(
     lastResult: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -212,9 +259,12 @@ export function quizRevealElapsedMs(state: QuizState, now: number): number {
 /** Après le reveal : question suivante ou podium final. */
 function advanceFromReveal(state: QuizState, now: number): QuizState {
   const nextIdx = state.qIdx + 1
+  // Le fil ne garde que la question qui s'achève : jamais plus de deux questions.
+  const speech = (state.speech ?? []).filter((sp) => sp.round === state.qIdx)
   if (nextIdx >= state.questions.length) {
     return {
       ...state,
+      speech,
       phase: 'finished',
       phaseSeq: state.phaseSeq + 1,
       phaseEndsAt: null,
@@ -223,6 +273,7 @@ function advanceFromReveal(state: QuizState, now: number): QuizState {
   }
   return {
     ...state,
+    speech,
     qIdx: nextIdx,
     questionStartAt: now,
     answers: {},
@@ -327,6 +378,24 @@ export function reduceQuiz(state: QuizState, action: QuizAction): QuizState {
         ),
         version: state.version + 1,
       }
+    }
+
+    case 'SAY': {
+      if (state.phase !== 'question' && state.phase !== 'reveal') throw new QuizEngineError('NOT_SPEECH_PHASE')
+      if (action.moves.length === 0) return state
+      const allowed = QUIZ_SAY_KINDS_OF_PHASE[state.phase]
+      let speech = state.speech ?? []
+      for (const move of action.moves) {
+        if (!allowed.includes(move.kind)) throw new QuizEngineError('INVALID_KIND')
+        const actor = state.players.find((p) => p.id === move.playerId)
+        if (!actor?.isBot || actor.leftAt) throw new QuizEngineError('NOT_BOT')
+        const target = state.players.find((p) => p.id === move.targetId)
+        if (!target || target.id === actor.id || target.leftAt) throw new QuizEngineError('INVALID_TARGET')
+        const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === state.qIdx)
+        if (mine.length >= QUIZ_SPEECH_CAP) throw new QuizEngineError('ALREADY_SPOKE')
+        speech = [...speech, { playerId: actor.id, kind: move.kind, targetId: target.id, round: state.qIdx }]
+      }
+      return { ...state, speech, version: state.version + 1 }
     }
 
     default: {

@@ -4611,7 +4611,82 @@
         "missed": "mauvaise réponse",
         "noAnswer": "pas de réponse",
         "liveRanking": "Classement",
-        "skipToPodium": "Voir le podium"
+        "skipToPodium": "Voir le podium",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "sure": "Trop facile, {name} !",
+          "sure_2": "Celle-là, je la tiens. Bonne chance, {name} 😏",
+          "sure_3": "{name}, celle-là, je la ferais les yeux fermés.",
+          "unsure": "Aucune idée… je tente au pif, {name}.",
+          "unsure_2": "{name}, je réponds au hasard, ne me juge pas 🙈",
+          "unsure_3": "Alors là… je croise les doigts, {name} 🤞",
+          "knewIt": "Je le savais, {name} !",
+          "knewIt_2": "Pourtant, elle était facile, {name} 😏",
+          "knewIt_3": "{name}, fallait me demander, je l’avais !",
+          "lucky": "Au pif… et ça passe ! Désolé, {name} 😇",
+          "lucky_2": "{name}, j’ai répondu au hasard et j’ai bon. La classe, non ?",
+          "lucky_3": "De la chance ? Non, {name}, du talent 😎",
+          "missed": "Jamais entendu parler. Comment tu savais ça, {name} ?!",
+          "missed_2": "Bravo, {name}… moi, j’étais complètement à l’ouest.",
+          "missed_3": "{name}, tu triches ou tu lis des encyclopédies ? 🤓",
+          "oops": "{speaker, select, f {Si sûre de moi} m {Si sûr de moi} other {Tant d’assurance}}… et raté. Pas un mot, {name} 🙈",
+          "oops_2": "« Trop facile », j’ai dit ça, moi ? Chut, {name}.",
+          "oops_3": "{name}, oublie ce que j’ai dit tout à l’heure 😅",
+          "asleep": "{name}, tu dormais ? 😴",
+          "asleep_2": "Ho, {name}, le buzzer, c’est pour appuyer dessus !",
+          "asleep_3": "Allô, la Terre ? {name}, le chrono est fini ⏰",
+          "tease": "{name} en tête ? Profite, ça va pas durer 😏",
+          "tease_2": "Tout le monde contre {name} !",
+          "tease_3": "{name}, ta couronne, je la vise 👑"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "Celle-là, je la connais bien, {name}.",
+            "sure_2": "Pour une fois, j’en mettrais ma main au feu, {name}.",
+            "knewIt": "Je l’avais lu quelque part, {name}.",
+            "knewIt_2": "Tu vois, {name} ? Réviser, ça paie."
+          },
+          "farceur": {
+            "sure": "Je l’ai vue dans mon horoscope, {name} 🔮",
+            "sure_2": "Facile : j’ai soudoyé le présentateur, {name} 😉",
+            "knewIt": "Je le savais, {name} : je sais tout, sauf l’heure 😜",
+            "knewIt_2": "{name}, mon petit doigt me l’avait dit 🤙"
+          },
+          "suiveur": {
+            "sure": "Je suis le mouvement, {name}, elle a l’air facile.",
+            "sure_2": "Si c’est facile pour vous, c’est facile pour moi, {name} !",
+            "knewIt": "J’ai bien fait de suivre mon instinct, {name} !",
+            "knewIt_2": "Comme tout le monde, non ? Ah, pas toi, {name} 😬"
+          },
+          "agressif": {
+            "sure": "Trop facile. Accroche-toi, {name} 😈",
+            "sure_2": "Suivante ! Celle-là, c’est pour les enfants, {name}.",
+            "knewIt": "Évidemment, {name}. On joue à quoi, là ?",
+            "knewIt_2": "Fallait écouter à l’école, {name} 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
