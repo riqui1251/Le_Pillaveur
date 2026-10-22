@@ -2695,6 +2695,7 @@
           "calzaLost": "{name} tried Calza and missed: loses a die and drinks {sips} sip{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} tried Calza and missed: loses a die",
           "eliminatedMsg": "💀 {name} has no dice left — bottoms up, {genre, select, f {eliminated} m {eliminated} other {eliminated}}!",
+          "eliminatedMsgSoft": "💀 {name} has no dice left — {genre, select, f {eliminated} m {eliminated} other {eliminated}}!",
           "continue": "Next round"
         },
         "victoryTitle": "{name} wins the table!",

@@ -221,6 +221,26 @@ describe('MenteurOnline : ambiance Sans alcool', () => {
     expect(end).toContain('lucide-beer')
   })
 
+  /** Gépéto, sur son dernier dé, est démasqué : il sort de la table. */
+  const lastDie = (): MenteurState =>
+    reduceMenteur(
+      {
+        ...bidding(),
+        players: bidding().players.map((p) => (p.id === 'g' ? { ...p, dice: [4], lostCount: 4 } : p)),
+      },
+      { type: 'DUDO', playerId: 'h', now: 1_000_000 }
+    )
+
+  it('la sortie d’un joueur ne fait boire cul sec qu’en Apéro', () => {
+    expect(lastDie().lastReveal?.eliminatedId).toBe('g')
+    const apero = inMode('normal', lastDie())
+    expect(apero).toContain('Gépéto n’a plus de dés')
+    expect(apero).toContain('cul sec')
+    const soft = inMode('soft', lastDie())
+    expect(soft).toContain('Gépéto n’a plus de dés')
+    expect(soft).not.toContain('cul sec')
+  })
+
   it('Soft : ni chope ni gorgées, ni sous le joueur ni au classement final', () => {
     expect(inMode('soft', sipped())).not.toContain('🍺')
     const end = inMode('soft', finished())

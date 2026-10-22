@@ -2695,6 +2695,7 @@
           "calzaLost": "{name} a tenté Calza et se plante : perd un dé et boit {sips} gorgée{sips, plural, one {} other {s}} 🍺",
           "calzaLostSoft": "{name} a tenté Calza et se plante : perd un dé",
           "eliminatedMsg": "💀 {name} n’a plus de dés — cul sec, {genre, select, f {éliminée} m {éliminé} other {hors jeu}} !",
+          "eliminatedMsgSoft": "💀 {name} n’a plus de dés — {genre, select, f {éliminée} m {éliminé} other {hors jeu}} !",
           "continue": "Manche suivante"
         },
         "victoryTitle": "{name} remporte la table !",

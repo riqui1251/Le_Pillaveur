@@ -235,7 +235,10 @@ export function TvMenteur({ room, state }: { room: TvRoomDto; state: MenteurClie
             ? { lost: false, text: t('reveal.calzaWonCapped', { name: nameOf(reveal.challengerId) }) }
             : { lost: true, text: t(soft ? 'reveal.loserSoft' : 'reveal.loser', { name: nameOf(reveal.loserId), sips: reveal.sips }) }
     const eliminated = reveal.eliminatedId
-      ? t('reveal.eliminatedMsg', { name: nameOf(reveal.eliminatedId), genre: genreOfId(state.players, reveal.eliminatedId) })
+      ? t(soft ? 'reveal.eliminatedMsgSoft' : 'reveal.eliminatedMsg', {
+          name: nameOf(reveal.eliminatedId),
+          genre: genreOfId(state.players, reveal.eliminatedId),
+        })
       : null
     const ladderRows = tvRevealLadderRows({
       diceRows: reveal.allDice.length,

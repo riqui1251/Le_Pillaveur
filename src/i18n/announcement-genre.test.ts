@@ -62,6 +62,7 @@ const ANNOUNCEMENTS: Announcement[] = [
   { ns: ESP, key: 'reveal.outcome.spyCaught', agrees: ['fr', 'es', 'it'] },
   { ns: MEN, key: 'eliminated', agrees: ['fr', 'es', 'it'] },
   { ns: MEN, key: 'reveal.eliminatedMsg', agrees: ['fr', 'es', 'it'] },
+  { ns: MEN, key: 'reveal.eliminatedMsgSoft', agrees: ['fr', 'es', 'it'] },
   // L'italien « segnalala » vise la parole interdite, pas le joueur : rien à accorder.
   { ns: TAB, key: 'opponentHint', agrees: ['fr', 'es'] },
 ]
@@ -165,6 +166,10 @@ describe('annonces accordées au genre du joueur nommé', () => {
     expect(render('fr', out, 'f')).toBe('💀 Bernadette n’a plus de dés — cul sec, éliminée !')
     expect(render('fr', out, 'm')).toBe('💀 Bernadette n’a plus de dés — cul sec, éliminé !')
     expect(render('fr', out, 'other')).toBe('💀 Bernadette n’a plus de dés — cul sec, hors jeu !')
+    const outSoft = find(MEN, 'reveal.eliminatedMsgSoft')
+    expect(render('fr', outSoft, 'f')).toBe('💀 Bernadette n’a plus de dés — éliminée !')
+    expect(render('fr', outSoft, 'm')).toBe('💀 Bernadette n’a plus de dés — éliminé !')
+    expect(render('fr', outSoft, 'other')).toBe('💀 Bernadette n’a plus de dés — hors jeu !')
     const hint = find(TAB, 'opponentHint')
     expect(render('fr', hint, 'f')).toBe('Écoute bien : si Bernadette prononce un mot interdit, dénonce-la !')
     expect(render('fr', hint, 'm')).toBe('Écoute bien : si Bernadette prononce un mot interdit, dénonce-le !')
