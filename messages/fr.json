@@ -5034,7 +5034,85 @@
         "playCard": "Jouer cette carte",
         "pickCard": "Choisis une carte",
         "crownCard": "Couronner cette réponse",
-        "pickAnswer": "Choisis une réponse"
+        "pickAnswer": "Choisis une réponse",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "pitch": "{name}, ma carte va te faire pleurer de rire.",
+          "pitch_2": "Lis bien la mienne, {name}. Tu vas adorer 😏",
+          "pitch_3": "{name}, garde-moi la couronne au chaud 👑",
+          "bribe": "{name}, je te paie un croissant si tu me couronnes 🥐",
+          "bribe_2": "Couronne-moi, {name}, et je fais la vaisselle 🧽",
+          "bribe_3": "{name}, cinq euros et la couronne est à moi ? 💸",
+          "chase": "{name}, ta couronne penche un peu, non ? 👑",
+          "chase_2": "Profite de tes couronnes, {name}. Je viens les chercher.",
+          "chase_3": "Le trône vacille, {name} 😈",
+          "rival": "Ta carte n’a aucune chance contre la mienne, {name}.",
+          "rival_2": "{name}, que la meilleure vanne gagne 😏",
+          "rival_3": "{speaker, select, f {Désolée} m {Désolé} other {Pardon}} d’avance, {name}, la mienne est imbattable.",
+          "crown": "Celle-là m’a {speaker, select, f {achevée} m {achevé} other {fait hurler de rire}}, {name}. Couronne !",
+          "crown_2": "Je n’ai pas hésité une seconde, {name}. Bravo 👑",
+          "crown_3": "{name}, tu as gagné mon cœur et la couronne 😂",
+          "thanks": "Merci, {name}, tu as un goût excellent 😎",
+          "thanks_2": "{name}, je savais que tu avais de l’humour 👑",
+          "thanks_3": "Je te revaudrai ça, {name} 😇",
+          "won": "{speaker, select, f {Désolée} m {Désolé} other {Pardon}}, {name}, la couronne est pour moi 😎",
+          "won_2": "{name}, admire la couronne. Elle me va bien, non ? 👑",
+          "won_3": "Et une couronne de plus ! Tu suis, {name} ?",
+          "bravo": "Bien joué, {name}, elle était terrible, celle-là 😂",
+          "bravo_2": "{name}, je n’aurais pas osé. Respect 🙌",
+          "bravo_3": "Bravo, {name}. Tu as l’humour le plus tordu de la table 😅",
+          "robbed": "{name}, tu n’as aucun goût. La mienne était meilleure.",
+          "robbed_2": "Sérieux, {name} ? Je demande un recomptage 🙄",
+          "robbed_3": "{name}, je retiens ça pour la prochaine fois 😤"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "pitch": "{name}, j’ai choisi ma carte avec soin. Juste ça.",
+            "pitch_2": "Pas de pression, {name}, mais la mienne est pas mal.",
+            "robbed": "Ce n’était pas ma meilleure, {name}. Je comprends.",
+            "robbed_2": "Bon… {name}, tu as sûrement raison 😔"
+          },
+          "farceur": {
+            "pitch": "{name}, la mienne, c’est du grand art. Ou presque 🤡",
+            "pitch_2": "Si tu ne ris pas à la mienne, {name}, je fais le poirier 🙃",
+            "robbed": "{name}, l’humour, ça ne s’apprend pas. Dommage 😜",
+            "robbed_2": "{name} vient de briser ma carrière d’humoriste 🤡"
+          },
+          "suiveur": {
+            "pitch": "{name}, j’ai joué comme les autres, ça doit être bien 😊",
+            "pitch_2": "Tout le monde a l’air content de sa carte, {name}, moi aussi !",
+            "robbed": "Si tu le dis, {name}… mais la mienne était drôle aussi.",
+            "robbed_2": "{name}, la prochaine fois, je joue à ton goût 😅"
+          },
+          "agressif": {
+            "pitch": "{name}, couronne-moi ou assume 😈",
+            "pitch_2": "Ma carte est la meilleure, {name}. Point.",
+            "robbed": "Scandale ! {name}, rends-moi ma couronne 😤",
+            "robbed_2": "{name}, tu vas regretter ce choix."
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [

@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
  * SANS FILTRE — moteur PUR, serveur-autoritaire.
@@ -45,6 +46,54 @@ export type SFPlayer = {
 
 export type SFPhase = 'countdown' | 'submit' | 'judging' | 'reveal' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.sans-filtre.game),
+ * portée par la carte qu'il abat (PLAY_CARD) et née dans la MÊME réduction.
+ * Le kind est le seul message : il ne cite jamais la carte, et rien de ce
+ * qu'il dit ne trahit l'auteur d'une réponse anonyme.
+ *   • pitch (« lis bien la mienne ») et bribe (le pot-de-vin pour rire)
+ *     visent le juge ;
+ *   • chase pique le seul en tête aux couronnes ;
+ *   • rival chambre un autre joueur de la manche (quand le juge est un bot).
+ * crown, thanks, won, bravo et robbed sont les réactions au couronnement :
+ * dérivées de la vue publique (reveal-reactions.ts), jamais écrites ici.
+ */
+export type SFSpeechKind =
+  | 'pitch'
+  | 'bribe'
+  | 'chase'
+  | 'rival'
+  | 'crown'
+  | 'thanks'
+  | 'won'
+  | 'bravo'
+  | 'robbed'
+export type SFSpeech = BotSpeech<SFSpeechKind>
+
+export const SF_SPEECH_KINDS = [
+  'pitch',
+  'bribe',
+  'chase',
+  'rival',
+  'crown',
+  'thanks',
+  'won',
+  'bravo',
+  'robbed',
+] as const satisfies readonly SFSpeechKind[]
+
+/** Paroles max par bot et par manche, réactions comprises ; le bavardage du persona borne en dessous. */
+export const SF_SPEECH_CAP = 2
+
+/** Les kinds qu'une carte abattue peut porter ; les réactions au couronnement n'y sont jamais. */
+export const SF_SAY_KINDS: readonly SFSpeechKind[] = ['pitch', 'bribe', 'chase', 'rival']
+
+/** La parole jointe à une carte : son kind et le joueur qu'elle nomme. */
+export type SFSay = { kind: SFSpeechKind; targetId: string }
+
+/** Codes d'un `say` refusé : la carte, elle, reste jouable sans parole. */
+export const SF_SAY_ERRORS: readonly string[] = ['INVALID_KIND', 'INVALID_TARGET', 'ALREADY_SPOKE']
+
 export type SFState = TimedPhaseState & {
   version: number
   phase: SFPhase
@@ -67,10 +116,16 @@ export type SFState = TimedPhaseState & {
   rematchVotes: string[]
   /** SECRET serveur. */
   rngState: number
+  /**
+   * PUBLIC — paroles des bots de la manche en cours (`round`), vidées à la
+   * manche suivante. Optionnel : un état sérialisé avant leur arrivée n'en a
+   * pas (parseSFState complète).
+   */
+  speech?: SFSpeech[]
 }
 
 export type SFAction =
-  | { type: 'PLAY_CARD'; playerId: string; card: number; now: number }
+  | { type: 'PLAY_CARD'; playerId: string; card: number; now: number; say?: SFSay }
   | { type: 'JUDGE_PICK'; playerId: string; card: number; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
@@ -124,6 +179,41 @@ function roundPlayers(state: SFState): SFPlayer[] {
   return sfActive(state).filter((p) => p.id !== state.judgeId)
 }
 
+/** Le seul en tête aux couronnes (au moins une), parmi les joueurs encore là. */
+export function sfSoleCrownLeader<P extends { leftAt: number | null; crowns: number }>(players: readonly P[]): P | null {
+  const seated = players.filter((p) => !p.leftAt)
+  const top = Math.max(0, ...seated.map((p) => p.crowns))
+  const leaders = seated.filter((p) => p.crowns === top)
+  return top > 0 && leaders.length === 1 ? leaders[0] : null
+}
+
+/**
+ * Le fil après une carte qui porte `say`, ou tel quel sans parole. Seul un
+ * bot parle (l'adaptateur HTTP ne lit jamais `say`), vers un autre joueur
+ * encore là que le kind désigne : pitch et bribe le juge, chase le seul en
+ * tête aux couronnes (devant l'auteur), rival un autre joueur de la manche.
+ * Un kind de réaction, une cible refusée ou un plafond atteint refusent la
+ * carte — l'adaptateur la rejoue alors sans parole.
+ */
+function withSay(state: SFState, actor: SFPlayer, say: SFSay | undefined): SFSpeech[] {
+  const speech = state.speech ?? []
+  if (!say) return speech
+  if (!actor.isBot || !SF_SAY_KINDS.includes(say.kind)) throw new SFEngineError('INVALID_KIND')
+  const target = state.players.find((p) => p.id === say.targetId)
+  if (!target || target.id === actor.id || target.leftAt) throw new SFEngineError('INVALID_TARGET')
+  const isJudge = target.id === state.judgeId
+  const aimed =
+    say.kind === 'chase'
+      ? sfSoleCrownLeader(state.players)?.id === target.id && target.crowns > actor.crowns
+      : say.kind === 'rival'
+        ? !isJudge
+        : isJudge
+  if (!aimed) throw new SFEngineError('INVALID_TARGET')
+  const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === state.round)
+  if (mine.length >= SF_SPEECH_CAP) throw new SFEngineError('ALREADY_SPOKE')
+  return [...speech, { playerId: actor.id, kind: say.kind, targetId: target.id, round: state.round }]
+}
+
 // ─── Création ────────────────────────────────────────────────────────────────
 
 export function createSFState(
@@ -173,6 +263,7 @@ export function createSFState(
     winnerId: null,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -191,6 +282,7 @@ function startRound(state: SFState, now: number): SFState {
     judgeId,
     submissions: [],
     crowned: null,
+    speech: [],
     ...enterPhase(state.phaseSeq, 'submit', SF_SUBMIT_MS, now),
     phase: 'submit',
     version: state.version + 1,
@@ -253,11 +345,12 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       }
       if (!actor.hand.includes(action.card)) throw new SFEngineError('CARD_NOT_IN_HAND')
 
+      const speech = withSay(state, actor, action.say)
       const submissions = [...state.submissions, { playerId: actor.id, card: action.card }]
       const players = state.players.map((p) =>
         p.id === actor.id ? { ...p, hand: p.hand.filter((c) => c !== action.card) } : p
       )
-      const next = { ...state, players, submissions, version: state.version + 1 }
+      const next = { ...state, players, submissions, speech, version: state.version + 1 }
       const waiting = roundPlayers(next).filter(
         (p) => !submissions.some((s) => s.playerId === p.id)
       )
@@ -309,6 +402,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
           winnerId: top > 0 && leaders.length === 1 ? leaders[0].id : null,
+          speech: [],
           version: state.version + 1,
         }
       }

@@ -139,6 +139,29 @@ export function build(): TvPreviewFixture[] {
   const tieTable = table(2, 2, { seed: 'tv-sf-egalite', rounds: 2 })
   const tie = playRounds(advance(tieTable.state), 2, ['u2', 'bot-1'])
 
+  // Les bots parlent : Gépéto joint un pot-de-vin à sa carte, Marie-Charlotte
+  // (u2) est couronnée, les bots réagissent (réactions dérivées de la vue).
+  const talkTable = table(2, 2, { seed: 'tv-sf-paroles', rounds: 3 })
+  const talkSubmit = advance(talkTable.state)
+  const firstCard = (s: SFState, id: string) => s.players.find((p) => p.id === id)?.hand[0] as number
+  const talkBribe = reduceSF(talkSubmit, {
+    type: 'PLAY_CARD',
+    playerId: 'bot-2',
+    card: firstCard(talkSubmit, 'bot-2'),
+    now: Date.now(),
+    say: { kind: 'bribe', targetId: talkSubmit.judgeId as string },
+  })
+  const talkJudging = ['u2', 'bot-1'].reduce(
+    (s, id) => reduceSF(s, { type: 'PLAY_CARD', playerId: id, card: firstCard(s, id), now: Date.now() }),
+    talkBribe
+  )
+  const talkCrowned = reduceSF(talkJudging, {
+    type: 'JUDGE_PICK',
+    playerId: talkJudging.judgeId as string,
+    card: talkJudging.submissions.find((s) => s.playerId === 'u2')?.card as number,
+    now: Date.now(),
+  })
+
   return [
     {
       id: 'compte-a-rebours',
@@ -211,6 +234,15 @@ export function build(): TvPreviewFixture[] {
       id: 'fin-4-egalite',
       label: 'Fin de partie, 4 joueurs, égalité',
       steps: [step('égalité', tieTable, tie)],
+    },
+    {
+      id: 'paroles',
+      label: 'Les bots parlent : 4 joueurs (2 + Barnabé et Gépéto), promesse au juge puis réactions',
+      steps: [
+        step('Gépéto promet un croissant au juge', talkTable, talkBribe),
+        step('jugement', talkTable, talkJudging),
+        step('couronnement, réactions des bots', talkTable, talkCrowned),
+      ],
     },
   ]
 }

@@ -5034,7 +5034,85 @@
         "playCard": "Play this card",
         "pickCard": "Pick a card",
         "crownCard": "Crown this answer",
-        "pickAnswer": "Pick an answer"
+        "pickAnswer": "Pick an answer",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "pitch": "{name}, my card’s gonna make you cry laughing.",
+          "pitch_2": "Read mine carefully, {name}. You’ll love it 😏",
+          "pitch_3": "{name}, keep that crown warm for me 👑",
+          "bribe": "{name}, I’ll buy you a croissant if you crown me 🥐",
+          "bribe_2": "Crown me, {name}, and I’ll do the dishes 🧽",
+          "bribe_3": "{name}, five bucks and the crown is mine? 💸",
+          "chase": "{name}, your crown’s looking a bit wobbly 👑",
+          "chase_2": "Enjoy your crowns, {name}. I’m coming for them.",
+          "chase_3": "The throne is shaking, {name} 😈",
+          "rival": "Your card stands no chance against mine, {name}.",
+          "rival_2": "{name}, may the best joke win 😏",
+          "rival_3": "{speaker, select, f {Sorry} m {Sorry} other {Sorry}} in advance, {name}, mine is unbeatable.",
+          "crown": "That one {speaker, select, f {finished me off} m {finished me off} other {cracked me up}}, {name}. Crown!",
+          "crown_2": "Didn’t hesitate for a second, {name}. Bravo 👑",
+          "crown_3": "{name}, you won my heart and the crown 😂",
+          "thanks": "Thanks, {name}, you’ve got excellent taste 😎",
+          "thanks_2": "{name}, I knew you had a sense of humour 👑",
+          "thanks_3": "I owe you one, {name} 😇",
+          "won": "{speaker, select, f {Sorry} m {Sorry} other {Sorry}}, {name}, the crown is mine 😎",
+          "won_2": "{name}, admire the crown. Suits me, right? 👑",
+          "won_3": "Another crown! Keeping up, {name}?",
+          "bravo": "Nice one, {name}, that was savage 😂",
+          "bravo_2": "{name}, I wouldn’t have dared. Respect 🙌",
+          "bravo_3": "Bravo, {name}. Most twisted humour at the table 😅",
+          "robbed": "{name}, you have zero taste. Mine was better.",
+          "robbed_2": "Seriously, {name}? I demand a recount 🙄",
+          "robbed_3": "{name}, I’ll remember this next time 😤"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "pitch": "{name}, I picked my card carefully. That’s all.",
+            "pitch_2": "No pressure, {name}, but mine’s not bad.",
+            "robbed": "Not my best one, {name}. I get it.",
+            "robbed_2": "Well… {name}, you’re probably right 😔"
+          },
+          "farceur": {
+            "pitch": "{name}, mine is high art. Almost 🤡",
+            "pitch_2": "If you don’t laugh at mine, {name}, I’ll do a handstand 🙃",
+            "robbed": "{name}, you can’t teach humour. Shame 😜",
+            "robbed_2": "{name} just ended my comedy career 🤡"
+          },
+          "suiveur": {
+            "pitch": "{name}, I played like everyone else, must be good 😊",
+            "pitch_2": "Everyone seems happy with their card, {name}, me too!",
+            "robbed": "If you say so, {name}… but mine was funny too.",
+            "robbed_2": "{name}, next time I’ll play to your taste 😅"
+          },
+          "agressif": {
+            "pitch": "{name}, crown me or live with it 😈",
+            "pitch_2": "My card’s the best, {name}. Period.",
+            "robbed": "Outrageous! {name}, give me back my crown 😤",
+            "robbed_2": "{name}, you’ll regret that choice."
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

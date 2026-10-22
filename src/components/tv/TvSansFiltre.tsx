@@ -12,7 +12,10 @@ import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { rematchCounter } from '@/components/online/end-screen'
 import { MedalDot } from '@/components/online/MedalDot'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import { TvBigCountdown, TvTimeBar } from './tv-shared'
+import { TV_FEED_SIZE, speechFeedItems } from '@/components/online/bot-speech/bot-speech-feed'
+import { SansFiltreSpeechFeed } from '@/components/online/sans-filtre/SansFiltreSpeechFeed'
+import { sfRevealReactions } from '@/lib/sans-filtre/reveal-reactions'
+import { TV_FEED_CLIP, TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
  * SANS FILTRE sur grand écran : la carte noire en géant, la progression des
@@ -153,6 +156,9 @@ export function TvSansFiltre({ room, state }: { room: TvRoomDto; state: SFClient
   const crownBoard = showTable ? [] : [...state.players].filter((p) => p.crowns > 0).sort((a, b) => b.crowns - a.crowns)
   const phaseLabel =
     state.phase === 'submit' ? t('phaseSubmit') : state.phase === 'judging' ? t('phaseJudging') : t('phaseReveal')
+  // Mêmes bulles que le fil (paroles de la manche + réactions au couronnement).
+  const withFeed =
+    speechFeedItems([...(state.speech ?? []), ...sfRevealReactions(state)], state.round, null, TV_FEED_SIZE).length > 0
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-3">
@@ -303,6 +309,14 @@ export function TvSansFiltre({ room, state }: { room: TvRoomDto; state: SFClient
               )}
             </div>
           )}
+
+          {/* Les paroles des bots au pied de la colonne de jeu, les dernières
+              seulement (boîte bornée, rognée en haut) : la table de droite
+              garde sa place. Sans bulle, la boîte s'efface mais le fil reste
+              monté (région live née avant la 1re parole). */}
+          <div className={withFeed ? cn(TV_FEED_CLIP, 'max-h-[7rem] items-center') : 'hidden'}>
+            <SansFiltreSpeechFeed view={state} iconOf={iconOf} variant="tv" />
+          </div>
         </section>
 
         {showTable && (

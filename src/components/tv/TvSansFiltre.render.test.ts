@@ -90,6 +90,20 @@ describe('TvSansFiltre — écran TV de Sans Filtre', () => {
     }
   })
 
+  it('les paroles des bots au pied de la colonne de jeu, effacées tant qu’aucune bulle n’est dite', () => {
+    const talk = steps.filter((s) => s.fixture === 'paroles').map(render)
+    expect(talk.map((r) => r.view.phase)).toEqual(['submit', 'judging', 'reveal'])
+    for (const r of talk) {
+      expect(r.html).toContain('max-h-[7rem]')
+      expect(r.html).toMatch(/Gépéto<\/span> /)
+    }
+    // Au couronnement, au moins une réaction s'ajoute à la promesse de Gépéto.
+    expect((talk[2].html.match(/rounded-tl-sm/g) ?? []).length).toBeGreaterThan(1)
+    const silent = render(steps.find((s) => s.fixture === 'abattage-16')!)
+    expect(silent.html).not.toContain('max-h-[7rem]')
+    expect(silent.html).toContain('aria-live="polite"')
+  })
+
   it("n'emploie aucune taille de texte trop petite pour la TV", () => {
     for (const step of steps) {
       const { html } = render(step)

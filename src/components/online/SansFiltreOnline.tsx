@@ -24,6 +24,7 @@ import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './Game
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { XpGainBanner } from './XpGainBanner'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { SansFiltreSpeechFeed } from './sans-filtre/SansFiltreSpeechFeed'
 
 /**
  * SANS FILTRE en ligne (serveur-autoritaire). Vue déjà filtrée : chacun ne
@@ -480,6 +481,13 @@ export function SansFiltreOnline() {
           </div>
         </section>
       )}
+
+      {/* Paroles des bots : SOUS la main et les réponses à couronner, jamais
+          au-dessus — une bulle qui arrive ne déplace pas la carte sous le
+          doigt. Au couronnement, elles se lisent juste sous la carte
+          couronnée. Toujours monté : sa région live doit exister avant la
+          première bulle. */}
+      <SansFiltreSpeechFeed view={view} iconOf={iconOf} meId={user.id} variant="phone" />
 
       {/* Table : juge, « a joué », couronnes — chaque état a son signe. */}
       <ul aria-label={t('tableLabel')} className="flex flex-wrap justify-center gap-2">

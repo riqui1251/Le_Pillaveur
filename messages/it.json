@@ -5034,7 +5034,85 @@
         "playCard": "Gioca questa carta",
         "pickCard": "Scegli una carta",
         "crownCard": "Incorona questa risposta",
-        "pickAnswer": "Scegli una risposta"
+        "pickAnswer": "Scegli una risposta",
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "pitch": "{name}, la mia carta ti farà piangere dal ridere.",
+          "pitch_2": "Leggi bene la mia, {name}. Ti piacerà 😏",
+          "pitch_3": "{name}, tienimi la corona in caldo 👑",
+          "bribe": "{name}, ti offro un cornetto se mi incoroni 🥐",
+          "bribe_2": "Incoronami, {name}, e lavo io i piatti 🧽",
+          "bribe_3": "{name}, cinque euro e la corona è mia? 💸",
+          "chase": "{name}, la tua corona traballa un po’, no? 👑",
+          "chase_2": "Goditi le tue corone, {name}. Vengo a prenderle.",
+          "chase_3": "Il trono vacilla, {name} 😈",
+          "rival": "La tua carta non ha speranze contro la mia, {name}.",
+          "rival_2": "{name}, vinca la battuta migliore 😏",
+          "rival_3": "{speaker, select, f {Scusa} m {Scusa} other {Scusa}} in anticipo, {name}, la mia è imbattibile.",
+          "crown": "Questa mi ha {speaker, select, f {stesa} m {steso} other {fatto morire dal ridere}}, {name}. Corona!",
+          "crown_2": "Non ho esitato un secondo, {name}. Bravo 👑",
+          "crown_3": "{name}, hai vinto il mio cuore e la corona 😂",
+          "thanks": "Grazie, {name}, hai un gusto eccellente 😎",
+          "thanks_2": "{name}, sapevo che avevi senso dell’umorismo 👑",
+          "thanks_3": "Te ne devo una, {name} 😇",
+          "won": "{speaker, select, f {Scusa} m {Scusa} other {Scusa}}, {name}, la corona è mia 😎",
+          "won_2": "{name}, ammira la corona. Mi sta bene, vero? 👑",
+          "won_3": "Un’altra corona! Mi segui, {name}?",
+          "bravo": "Ben giocata, {name}, quella era micidiale 😂",
+          "bravo_2": "{name}, io non avrei osato. Rispetto 🙌",
+          "bravo_3": "Bravo, {name}. L’umorismo più contorto del tavolo 😅",
+          "robbed": "{name}, non hai nessun gusto. La mia era meglio.",
+          "robbed_2": "Sul serio, {name}? Chiedo il riconteggio 🙄",
+          "robbed_3": "{name}, me la lego al dito 😤"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "pitch": "{name}, ho scelto la mia carta con cura. Tutto qui.",
+            "pitch_2": "Nessuna pressione, {name}, ma la mia non è male.",
+            "robbed": "Non era la mia migliore, {name}. Capisco.",
+            "robbed_2": "Va be’… {name}, avrai ragione tu 😔"
+          },
+          "farceur": {
+            "pitch": "{name}, la mia è arte pura. Quasi 🤡",
+            "pitch_2": "Se non ridi con la mia, {name}, faccio la verticale 🙃",
+            "robbed": "{name}, l’umorismo non si impara. Peccato 😜",
+            "robbed_2": "{name} ha appena stroncato la mia carriera da comico 🤡"
+          },
+          "suiveur": {
+            "pitch": "{name}, ho giocato come gli altri, dev’essere buona 😊",
+            "pitch_2": "Sembrano tutti contenti della loro carta, {name}, anch’io!",
+            "robbed": "Se lo dici tu, {name}… ma anche la mia faceva ridere.",
+            "robbed_2": "{name}, la prossima volta gioco secondo i tuoi gusti 😅"
+          },
+          "agressif": {
+            "pitch": "{name}, incoronami o ne paghi le conseguenze 😈",
+            "pitch_2": "La mia carta è la migliore, {name}. Punto.",
+            "robbed": "Scandalo! {name}, ridammi la mia corona 😤",
+            "robbed_2": "{name}, te ne pentirai."
+          }
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
+        }
       },
       "tutorial": {
         "steps": [
