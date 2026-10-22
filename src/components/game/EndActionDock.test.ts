@@ -1,7 +1,7 @@
-import { createElement } from 'react'
+import { createElement, type FunctionComponent } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { EndActionDock } from './EndActionDock'
+import { EndActionDock, type EndActionDockProps } from './EndActionDock'
 
 /**
  * Gouttière droite du dock de fin (`game-bottom-bar`, 3 rem sous 720 px) :
@@ -15,10 +15,13 @@ vi.mock('@/components/voice/voice-dock-store', () => ({
   useVoiceDockAnchored: () => voice.anchored,
 }))
 
+// Les enfants passent en troisième argument de createElement, pas dans les props.
+const Dock = EndActionDock as FunctionComponent<Omit<EndActionDockProps, 'children'>>
+
 /** Les classes du calque fixe du dock. */
 function dockClasses(state: { available: boolean; anchored: boolean }, props: { voiceGutter?: boolean } = {}) {
   Object.assign(voice, state)
-  const html = renderToStaticMarkup(createElement(EndActionDock, props, createElement('button', null, 'Rejouer')))
+  const html = renderToStaticMarkup(createElement(Dock, props, createElement('button', null, 'Rejouer')))
   const match = html.match(/<div class="(fixed inset-x-0 bottom-0[^"]*)"/)
   if (!match) throw new Error('dock fixe introuvable')
   return match[1].split(' ')
