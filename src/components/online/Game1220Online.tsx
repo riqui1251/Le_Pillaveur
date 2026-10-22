@@ -406,7 +406,10 @@ export function Game1220Online() {
         />
 
         {/* Pendant que les dés roulent, le lancer affiché est encore le précédent. */}
-        <RollHistory rolls={view.history.slice(rolling ? 2 : 1)} />
+        <RollHistory
+          rolls={view.history.slice(rolling ? 2 : 1)}
+          newestNumber={(view.rollCount ?? view.history.length) - (rolling ? 2 : 1)}
+        />
 
         {/* La seule fin de ce jeu, pour toute la table : hors de la barre du
             pouce (elle était collée à « Lancer les dés ») et confirmée. */}
