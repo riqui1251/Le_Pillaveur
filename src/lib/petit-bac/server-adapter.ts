@@ -6,8 +6,10 @@ import {
   toPbcSpectatorView,
   PbcEngineError,
   PBC_DEFAULT_ROUNDS,
+  type PbcSayMove,
   type PbcState,
 } from './engine'
+import { pbcRevealSay, pbcStopSay } from './bot-speech'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { maskContactDetails } from '@/lib/chat-moderation'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -51,6 +53,7 @@ export function parsePbcState(json: string | null): PbcState | null {
       contests: raw.contests ?? {},
       rejected: raw.rejected ?? [],
       rematchVotes: raw.rematchVotes ?? [],
+      speech: Array.isArray(raw.speech) ? raw.speech : [],
     }
   } catch {
     return null
@@ -82,11 +85,22 @@ export type PbcRoomActionInput =
 
 export type PbcRoomActionResult = { ok: true; state: PbcState } | { ok: false; error: string }
 
+/**
+ * `sayRand` tire les paroles des bots (les tests lui donnent un flux à
+ * part) : elles naissent dans la même écriture que le STOP ou la
+ * révélation qu'elles commentent, sans tick de plus.
+ */
 export function applyPbcRoomAction(
   state: PbcState,
   userId: string,
-  input: PbcRoomActionInput
+  input: PbcRoomActionInput,
+  sayRand: () => number = Math.random
 ): PbcRoomActionResult {
+  const result = reducePbcRoomAction(state, userId, input)
+  return result.ok ? { ok: true, state: withPbcSay(state, result.state, sayRand) } : result
+}
+
+function reducePbcRoomAction(state: PbcState, userId: string, input: PbcRoomActionInput): PbcRoomActionResult {
   try {
     switch (input.type) {
       case 'stop':
@@ -144,10 +158,44 @@ export function applyPbcRoomAction(
   }
 }
 
-export function markPbcPlayerLeft(state: PbcState, playerId: string, at: number): PbcState | null {
+/** Une parole refusée par le moteur ne coûte jamais la transition qu'elle commente. */
+function trySay(state: PbcState, moves: PbcSayMove[]): PbcState {
+  if (moves.length === 0) return state
+  try {
+    return reducePbc(state, { type: 'SAY', moves })
+  } catch (e) {
+    if (e instanceof PbcEngineError) return state
+    throw e
+  }
+}
+
+/**
+ * Les paroles qu'une transition appelle, sur la vue PUBLIQUE de l'état
+ * d'arrivée : le STOP d'un humain vient de geler la table (les copies sont
+ * encore secrètes), puis — parfois dans la même écriture — la grille vient
+ * d'être révélée.
+ */
+export function withPbcSay(prev: PbcState, next: PbcState, sayRand: () => number): PbcState {
+  let out = next
+  if (prev.phase === 'write' && (next.phase === 'flush' || next.phase === 'reveal') && next.stopperId) {
+    out = trySay(out, pbcStopSay(toPbcSpectatorView(out), sayRand))
+  }
+  if (prev.phase !== 'reveal' && next.phase === 'reveal') {
+    out = trySay(out, pbcRevealSay(toPbcSpectatorView(out), sayRand))
+  }
+  return out
+}
+
+export function markPbcPlayerLeft(
+  state: PbcState,
+  playerId: string,
+  at: number,
+  sayRand: () => number = Math.random
+): PbcState | null {
   const player = state.players.find((p) => p.id === playerId)
   if (!player || player.isBot || player.leftAt || state.phase === 'finished') return null
-  return reducePbc(state, { type: 'LEAVE', playerId, at })
+  // Le dernier attendu du dépouillement s'en va : la grille se révèle, et se commente.
+  return withPbcSay(state, reducePbc(state, { type: 'LEAVE', playerId, at }), sayRand)
 }
 
 export function rejoinPbcPlayer(state: PbcState, playerId: string): PbcState | null {

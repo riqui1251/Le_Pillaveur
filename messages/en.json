@@ -3729,6 +3729,61 @@
           "done": "has submitted",
           "pending": "hasn't submitted yet",
           "left": "left the game"
+        },
+        "feedAria": "Table chatter",
+        "botSay": {
+          "laugh": "What on earth happened?! {name}, look at this 😂",
+          "laugh_2": "{name}, I’m crying. Who drew that?! 😂",
+          "laugh_3": "We started THERE and ended up HERE?! Help, {name} 😂",
+          "mine": "That was MY sentence?! {name}, you had a hand in this 😂",
+          "mine_2": "{name}, give me back my sentence, it’s unrecognisable 😭",
+          "mine_3": "My poor sentence… What did you all do to it, {name}?!",
+          "intact": "Intact from start to finish! Hats off, {name} 🎯",
+          "intact_2": "{name}, same sentence at both ends: unheard of!",
+          "intact_3": "Perfect transmission! We’re too good, {name} 🤝",
+          "encore": "Another round, {name}? My ribs hurt 😂",
+          "encore_2": "{name}, shall we go again? That was brilliant!",
+          "encore_3": "I want a rematch, {name}! One more?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Well… I didn’t expect that, {name} 😅",
+            "laugh_2": "That’s… interesting, {name}. Very interesting 🧐"
+          },
+          "farceur": {
+            "laugh": "I’m framing it and selling it, {name} 🖼️😂",
+            "laugh_2": "{name}, that’s modern art, that is 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "If everyone’s laughing, I’m laughing too, {name} 😂",
+            "laugh_2": "{name}, I don’t get it, but it’s hilarious 😂"
+          },
+          "agressif": {
+            "laugh": "Bunch of amateurs! {name}, did you see that carnage? 😂",
+            "laugh_2": "It’s a scandal, {name}! I love it 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {
@@ -4611,7 +4666,82 @@
         "missed": "wrong answer",
         "noAnswer": "no answer",
         "liveRanking": "Standings",
-        "skipToPodium": "See the podium"
+        "skipToPodium": "See the podium",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "sure": "Too easy, {name}!",
+          "sure_2": "Got this one. Good luck, {name} 😏",
+          "sure_3": "{name}, I could answer that one in my sleep.",
+          "unsure": "No idea… pure guess, {name}.",
+          "unsure_2": "{name}, I’m guessing, don’t judge me 🙈",
+          "unsure_3": "Fingers crossed on this one, {name} 🤞",
+          "knewIt": "Knew it, {name}!",
+          "knewIt_2": "Come on, that one was easy, {name} 😏",
+          "knewIt_3": "{name}, you should’ve asked me, I had it!",
+          "lucky": "Wild guess… and it’s right! Sorry, {name} 😇",
+          "lucky_2": "{name}, total guess and I nailed it. Classy, right?",
+          "lucky_3": "Luck? No, {name}, pure talent 😎",
+          "missed": "Never heard of it. How did you know that, {name}?!",
+          "missed_2": "Nice one, {name}… I was completely lost.",
+          "missed_3": "{name}, are you cheating or reading encyclopedias? 🤓",
+          "oops": "{speaker, select, f {Little Miss Know-It-All} m {Mr Know-It-All} other {The know-it-all}}… got it wrong. Not a word, {name} 🙈",
+          "oops_2": "“Too easy,” did I say that? Shh, {name}.",
+          "oops_3": "{name}, forget what I said earlier 😅",
+          "asleep": "{name}, were you asleep? 😴",
+          "asleep_2": "Hey {name}, the buzzer is for pressing!",
+          "asleep_3": "Still with us, {name}? Time’s up ⏰",
+          "tease": "{name} in the lead? Enjoy it while it lasts 😏",
+          "tease_2": "Everyone against {name}!",
+          "tease_3": "{name}, I’m coming for that crown 👑"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "I know this one well, {name}.",
+            "sure_2": "For once, I’m confident, {name}.",
+            "knewIt": "I’d read about it somewhere, {name}.",
+            "knewIt_2": "See, {name}? Revising pays off."
+          },
+          "farceur": {
+            "sure": "Saw it in my horoscope, {name} 🔮",
+            "sure_2": "Easy: I bribed the host, {name} 😉",
+            "knewIt": "Knew it, {name}: I know everything except the time 😜",
+            "knewIt_2": "{name}, a little bird told me 🐦"
+          },
+          "suiveur": {
+            "sure": "Going with the flow, {name}, it looks easy.",
+            "sure_2": "If it’s easy for you lot, it’s easy for me, {name}!",
+            "knewIt": "Good thing I trusted my gut, {name}!",
+            "knewIt_2": "Like everyone, right? Oh, not you, {name} 😬"
+          },
+          "agressif": {
+            "sure": "Too easy. Hold on tight, {name} 😈",
+            "sure_2": "Next! This one’s for kids, {name}.",
+            "knewIt": "Obviously, {name}. What are we even playing?",
+            "knewIt_2": "Should’ve listened in school, {name} 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [
@@ -5254,7 +5384,70 @@
         "pointsSr": "{count, plural, one {# point} other {# points}}",
         "handedIn": "paper handed in",
         "playerLeft": "left the table",
-        "contestTargetSr": "{name}’s answer “{answer}”"
+        "contestTargetSr": "{name}’s answer “{answer}”",
+        "feedAria": "Table chatter",
+        "botSay": {
+          "stop": "Already?! You’re a machine, {name}!",
+          "stop_2": "Hey! I wasn’t done, {name} 😤",
+          "stop_3": "{name}, couldn’t you wait two more seconds?",
+          "contest": "“{answer}”? Is that even a thing, {name}? 🤨",
+          "contest_2": "{name}, “{answer}”… you made that up, admit it.",
+          "contest_3": "Hmm. “{answer},” {name}. Shall we vote?",
+          "twin": "“{answer}” twice… {name}, did you copy? 👀",
+          "twin_2": "{name}, “{answer}”? Someone had the exact same idea 👀",
+          "twin_3": "“{answer},” two of you! {name}, was this planned?",
+          "tease": "{name} is sweeping the board… suspicious 🤨",
+          "tease_2": "Can somebody stop {name}?",
+          "tease_3": "{name}, got a dictionary hidden under the table?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "stop": "Already? I needed one more minute, {name}.",
+            "stop_2": "Easy, {name}… some of us are still thinking.",
+            "contest": "Not to nitpick, but “{answer},” {name}… really?",
+            "contest_2": "I have my doubts about “{answer},” {name}."
+          },
+          "farceur": {
+            "stop": "STOP? I was writing a masterpiece, {name}!",
+            "stop_2": "{name} yelled STOP, I yelled for my mum 😱",
+            "contest": "“{answer}”? Lovely bit of imagination, {name} 😜",
+            "contest_2": "{name}, which dictionary has “{answer}” in it? Yours? 📖"
+          },
+          "suiveur": {
+            "stop": "If {name} says STOP, it’s STOP.",
+            "stop_2": "Fine, {name}… pens down, everyone!",
+            "contest": "If the others contest “{answer},” so do I, {name}.",
+            "contest_2": "“{answer}”… I’ll see what the table says, {name}."
+          },
+          "agressif": {
+            "stop": "STOP?! You’ll pay for that, {name} 😤",
+            "stop_2": "{name}, that STOP smells like panic.",
+            "contest": "“{answer}”? Bold move, {name} 😈",
+            "contest_2": "{name}, “{answer}”? Not in a million years 🙅"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
+        }
       },
       "tutorial": {
         "steps": [

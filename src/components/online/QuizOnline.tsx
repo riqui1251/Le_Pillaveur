@@ -27,6 +27,7 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { MedalDot } from './MedalDot'
+import { QuizSpeechFeed } from './quiz/QuizSpeechFeed'
 
 /**
  * LE GRAND PILLAVEUR en ligne — le téléphone devient un BUZZER : 4 gros
@@ -234,6 +235,7 @@ export function QuizOnline() {
   const present = view.players.filter((p) => !p.leftAt)
   const answeredCount = present.filter((p) => p.hasAnswered).length
   const isLastQuestion = view.qIdx + 1 >= view.questionCount
+  const hasSpeech = (view.speech ?? []).some((sp) => sp.round === view.qIdx)
 
   const answer = async (idx: number) => {
     if (locked) return
@@ -328,6 +330,21 @@ export function QuizOnline() {
           isReveal ? 'min-h-[4rem]' : 'min-h-0'
         )}
       >
+        {/* Paroles des bots en tête de la zone qui défile : ni la question ni
+            les buzzers ne bougent quand un bot fanfaronne. Monté vide dès la
+            question (région live prête avant la première bulle). */}
+        <div className={hasSpeech ? 'mb-2' : undefined}>
+          <QuizSpeechFeed
+            speech={view.speech}
+            qIdx={view.qIdx}
+            players={view.players}
+            iconOf={iconOf}
+            meId={user.id}
+            variant="phone"
+            soft={isSoft}
+          />
+        </div>
+
         {/* Qui a buzzé */}
         {isQuestion && (
           <div>

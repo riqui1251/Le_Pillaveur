@@ -11,6 +11,7 @@ import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { MedalDot } from '@/components/online/MedalDot'
 import { rematchCounter, type RematchCounter } from '@/components/online/end-screen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
+import { QuizSpeechFeed } from '@/components/online/quiz/QuizSpeechFeed'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
 
 /**
@@ -106,6 +107,7 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
   const present = state.players.filter((p) => !p.leftAt)
   const answeredCount = present.filter((p) => p.hasAnswered).length
   const textSize = question ? choiceSize(question.choices) : 'text-4xl'
+  const hasSpeech = (state.speech ?? []).some((sp) => sp.round === state.qIdx)
   const tier = rowTier(ranking.length)
 
   return (
@@ -190,6 +192,20 @@ export function TvQuiz({ room, state }: { room: TvRoomDto; state: QuizClientView
 
         {state.phase === 'question' && (
           <p className="shrink-0 text-center text-2xl font-bold text-white/80">{t('answerOnPhone')}</p>
+        )}
+        {/* Deux bulles au plus par question (une en buzzant, une à la
+            révélation) : la grille des choix cède ces quelques rem. */}
+        {hasSpeech && (
+          <div className="flex shrink-0 justify-center">
+            <QuizSpeechFeed
+              speech={state.speech}
+              qIdx={state.qIdx}
+              players={state.players}
+              iconOf={iconOf}
+              variant="tv"
+              soft={soft}
+            />
+          </div>
         )}
       </section>
 

@@ -3729,6 +3729,61 @@
           "done": "a rendu son maillon",
           "pending": "n'a pas encore rendu",
           "left": "a quitté la partie"
+        },
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "laugh": "Mais qu’est-ce qui s’est passé ?! {name}, regarde-moi ça 😂",
+          "laugh_2": "{name}, je pleure. Qui a dessiné ça ?! 😂",
+          "laugh_3": "On est partis de là pour arriver LÀ ?! Au secours, {name} 😂",
+          "mine": "C’était MA phrase, ça ?! {name}, t’y es pour quelque chose 😂",
+          "mine_2": "{name}, rends-moi ma phrase, elle est méconnaissable 😭",
+          "mine_3": "Ma pauvre phrase… Qu’est-ce que vous lui avez fait, {name} ?!",
+          "intact": "Intacte de bout en bout ! Chapeau, {name} 🎯",
+          "intact_2": "{name}, même phrase au départ et à l’arrivée : du jamais vu !",
+          "intact_3": "Transmission parfaite ! On est trop forts, {name} 🤝",
+          "encore": "Encore une partie, {name} ? J’ai mal aux côtes 😂",
+          "encore_2": "{name}, on remet ça ? C’était trop bon !",
+          "encore_3": "Je veux une revanche, {name} ! Une dernière ?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Eh bien… je ne m’attendais pas à ça, {name} 😅",
+            "laugh_2": "C’est… intéressant, {name}. Très intéressant 🧐"
+          },
+          "farceur": {
+            "laugh": "Je l’encadre et je le vends, {name} 🖼️😂",
+            "laugh_2": "{name}, c’est de l’art moderne, ça 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "Si tout le monde rit, je ris aussi, {name} 😂",
+            "laugh_2": "{name}, je comprends rien, mais c’est trop drôle 😂"
+          },
+          "agressif": {
+            "laugh": "Bande d’amateurs ! {name}, t’as vu le carnage ? 😂",
+            "laugh_2": "C’est un scandale, {name} ! J’adore 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
         }
       },
       "tutorial": {
@@ -4611,7 +4666,82 @@
         "missed": "mauvaise réponse",
         "noAnswer": "pas de réponse",
         "liveRanking": "Classement",
-        "skipToPodium": "Voir le podium"
+        "skipToPodium": "Voir le podium",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "sure": "Trop facile, {name} !",
+          "sure_2": "Celle-là, je la tiens. Bonne chance, {name} 😏",
+          "sure_3": "{name}, celle-là, je la ferais les yeux fermés.",
+          "unsure": "Aucune idée… je tente au pif, {name}.",
+          "unsure_2": "{name}, je réponds au hasard, ne me juge pas 🙈",
+          "unsure_3": "Alors là… je croise les doigts, {name} 🤞",
+          "knewIt": "Je le savais, {name} !",
+          "knewIt_2": "Pourtant, elle était facile, {name} 😏",
+          "knewIt_3": "{name}, fallait me demander, je l’avais !",
+          "lucky": "Au pif… et ça passe ! Désolé, {name} 😇",
+          "lucky_2": "{name}, j’ai répondu au hasard et j’ai bon. La classe, non ?",
+          "lucky_3": "De la chance ? Non, {name}, du talent 😎",
+          "missed": "Jamais entendu parler. Comment tu savais ça, {name} ?!",
+          "missed_2": "Bravo, {name}… moi, j’étais complètement à l’ouest.",
+          "missed_3": "{name}, tu triches ou tu lis des encyclopédies ? 🤓",
+          "oops": "{speaker, select, f {Si sûre de moi} m {Si sûr de moi} other {Tant d’assurance}}… et raté. Pas un mot, {name} 🙈",
+          "oops_2": "« Trop facile », j’ai dit ça, moi ? Chut, {name}.",
+          "oops_3": "{name}, oublie ce que j’ai dit tout à l’heure 😅",
+          "asleep": "{name}, tu dormais ? 😴",
+          "asleep_2": "Ho, {name}, le buzzer, c’est pour appuyer dessus !",
+          "asleep_3": "Allô, la Terre ? {name}, le chrono est fini ⏰",
+          "tease": "{name} en tête ? Profite, ça va pas durer 😏",
+          "tease_2": "Tout le monde contre {name} !",
+          "tease_3": "{name}, ta couronne, je la vise 👑"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "sure": "Celle-là, je la connais bien, {name}.",
+            "sure_2": "Pour une fois, j’en mettrais ma main au feu, {name}.",
+            "knewIt": "Je l’avais lu quelque part, {name}.",
+            "knewIt_2": "Tu vois, {name} ? Réviser, ça paie."
+          },
+          "farceur": {
+            "sure": "Je l’ai vue dans mon horoscope, {name} 🔮",
+            "sure_2": "Facile : j’ai soudoyé le présentateur, {name} 😉",
+            "knewIt": "Je le savais, {name} : je sais tout, sauf l’heure 😜",
+            "knewIt_2": "{name}, mon petit doigt me l’avait dit 🤙"
+          },
+          "suiveur": {
+            "sure": "Je suis le mouvement, {name}, elle a l’air facile.",
+            "sure_2": "Si c’est facile pour vous, c’est facile pour moi, {name} !",
+            "knewIt": "J’ai bien fait de suivre mon instinct, {name} !",
+            "knewIt_2": "Comme tout le monde, non ? Ah, pas toi, {name} 😬"
+          },
+          "agressif": {
+            "sure": "Trop facile. Accroche-toi, {name} 😈",
+            "sure_2": "Suivante ! Celle-là, c’est pour les enfants, {name}.",
+            "knewIt": "Évidemment, {name}. On joue à quoi, là ?",
+            "knewIt_2": "Fallait écouter à l’école, {name} 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
@@ -5254,7 +5384,70 @@
         "pointsSr": "{count, plural, one {# point} other {# points}}",
         "handedIn": "copie rendue",
         "playerLeft": "a quitté la table",
-        "contestTargetSr": "la réponse « {answer} » de {name}"
+        "contestTargetSr": "la réponse « {answer} » de {name}",
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "stop": "Déjà ?! T’es une machine, {name} !",
+          "stop_2": "Hé ! J’avais pas fini, {name} 😤",
+          "stop_3": "{name}, tu pouvais pas attendre deux secondes ?",
+          "contest": "« {answer} » ? Ça existe vraiment, ça, {name} ? 🤨",
+          "contest_2": "{name}, « {answer} »… tu l’as inventé, avoue.",
+          "contest_3": "Hum. « {answer} », {name}. On vote, là ?",
+          "twin": "« {answer} » en double… {name}, t’as copié ? 👀",
+          "twin_2": "{name}, « {answer} » ? Quelqu’un a eu la même idée 👀",
+          "twin_3": "« {answer} », deux fois ! {name}, c’était prévu ?",
+          "tease": "{name} rafle tout… c’est louche 🤨",
+          "tease_2": "Quelqu’un peut arrêter {name} ?",
+          "tease_3": "{name}, t’as un dictionnaire caché sous la table ?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "stop": "Déjà ? Il me fallait une minute de plus, {name}.",
+            "stop_2": "Doucement, {name}… certains réfléchissent encore.",
+            "contest": "Sans vouloir chipoter, « {answer} », {name}… vraiment ?",
+            "contest_2": "J’ai un doute sur « {answer} », {name}."
+          },
+          "farceur": {
+            "stop": "STOP ? J’allais écrire un chef-d’œuvre, {name} !",
+            "stop_2": "{name} a crié STOP, moi j’ai crié maman 😱",
+            "contest": "« {answer} » ? Joli effort d’imagination, {name} 😜",
+            "contest_2": "{name}, « {answer} », c’est dans quel dictionnaire ? Le tien ? 📖"
+          },
+          "suiveur": {
+            "stop": "Si {name} dit STOP, c’est STOP.",
+            "stop_2": "Bon, d’accord, {name}… tout le monde pose son stylo !",
+            "contest": "Si les autres contestent « {answer} », moi aussi, {name}.",
+            "contest_2": "« {answer} »… j’attends de voir ce que dit la table, {name}."
+          },
+          "agressif": {
+            "stop": "STOP ?! Tu vas me le payer, {name} 😤",
+            "stop_2": "{name}, ce STOP sent la panique.",
+            "contest": "« {answer} » ? Faut oser, {name} 😈",
+            "contest_2": "{name}, « {answer} » ? Même pas en rêve 🙅"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
+        }
       },
       "tutorial": {
         "steps": [
