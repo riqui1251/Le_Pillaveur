@@ -3729,6 +3729,61 @@
           "done": "ya ha enviado",
           "pending": "aún no ha enviado",
           "left": "ha salido de la partida"
+        },
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "laugh": "¿¡Pero qué ha pasado aquí!? {name}, mira esto 😂",
+          "laugh_2": "{name}, estoy llorando. ¿¡Quién ha dibujado eso!? 😂",
+          "laugh_3": "¿¡Empezamos ahí y acabamos AQUÍ!? Socorro, {name} 😂",
+          "mine": "¿¡Esa era MI frase!? {name}, tú has tenido algo que ver 😂",
+          "mine_2": "{name}, devuélveme mi frase, está irreconocible 😭",
+          "mine_3": "Mi pobre frase… ¿¡Qué le habéis hecho, {name}!?",
+          "intact": "¡Intacta de principio a fin! Chapó, {name} 🎯",
+          "intact_2": "{name}, la misma frase al principio y al final: ¡nunca visto!",
+          "intact_3": "¡Transmisión perfecta! Somos unos cracks, {name} 🤝",
+          "encore": "¿Otra partida, {name}? Me duelen las costillas 😂",
+          "encore_2": "{name}, ¿repetimos? ¡Ha sido genial!",
+          "encore_3": "¡Quiero la revancha, {name}! ¿Una más?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Vaya… no me esperaba eso, {name} 😅",
+            "laugh_2": "Es… interesante, {name}. Muy interesante 🧐"
+          },
+          "farceur": {
+            "laugh": "Lo enmarco y lo vendo, {name} 🖼️😂",
+            "laugh_2": "{name}, esto es arte moderno 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "Si todos se ríen, me río, {name} 😂",
+            "laugh_2": "{name}, no entiendo nada, pero es buenísimo 😂"
+          },
+          "agressif": {
+            "laugh": "¡Panda de aficionados! {name}, ¿has visto qué desastre? 😂",
+            "laugh_2": "¡Es un escándalo, {name}! Me encanta 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {

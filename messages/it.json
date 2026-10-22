@@ -3729,6 +3729,61 @@
           "done": "ha già inviato",
           "pending": "non ha ancora inviato",
           "left": "ha lasciato la partita"
+        },
+        "feedAria": "Chiacchiere al tavolo",
+        "botSay": {
+          "laugh": "Ma cos’è successo?! {name}, guarda qua 😂",
+          "laugh_2": "{name}, sto piangendo. Chi ha disegnato questo?! 😂",
+          "laugh_3": "Siamo partiti da LÌ e arrivati QUI?! Aiuto, {name} 😂",
+          "mine": "Era la MIA frase, quella?! {name}, c’entri qualcosa 😂",
+          "mine_2": "{name}, ridammi la mia frase, è irriconoscibile 😭",
+          "mine_3": "La mia povera frase… Che le avete fatto, {name}?!",
+          "intact": "Intatta dall’inizio alla fine! Chapeau, {name} 🎯",
+          "intact_2": "{name}, stessa frase all’inizio e alla fine: mai visto!",
+          "intact_3": "Trasmissione perfetta! Siamo troppo forti, {name} 🤝",
+          "encore": "Un’altra partita, {name}? Mi fanno male le costole 😂",
+          "encore_2": "{name}, rifacciamo? È stato bellissimo!",
+          "encore_3": "Voglio la rivincita, {name}! Un’altra?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Beh… non me l’aspettavo, {name} 😅",
+            "laugh_2": "È… interessante, {name}. Molto interessante 🧐"
+          },
+          "farceur": {
+            "laugh": "Lo incornicio e lo vendo, {name} 🖼️😂",
+            "laugh_2": "{name}, questa è arte moderna 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "Se ridono tutti, rido pure io, {name} 😂",
+            "laugh_2": "{name}, non ci capisco niente, ma è fortissimo 😂"
+          },
+          "agressif": {
+            "laugh": "Branco di dilettanti! {name}, hai visto che disastro? 😂",
+            "laugh_2": "È uno scandalo, {name}! Lo adoro 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Se posso permettermi,",
+          "gepeto": "…giuro!",
+          "raoul": "Senza offesa,",
+          "suzette": "Anch’io,",
+          "marcel": "…cin cin!",
+          "gaston": "Piano, piano!",
+          "bernadette": "…tesoro.",
+          "norbert": "Statisticamente,",
+          "ginette": "Ma insomma!",
+          "roger": "…come si suol dire.",
+          "paulette": "…scherzo. O forse no.",
+          "dede": "Punto tutto!",
+          "huguette": "Ai miei tempi,",
+          "keke": "…fidati, bro.",
+          "mauricette": "Mamma mia,",
+          "firmin": "…dico così per dire.",
+          "josiane": "Detto tra noi,",
+          "lucien": "…tranquillo.",
+          "germaine": "…e sbrigatevi!",
+          "bricole": "…dovrebbe reggere."
         }
       },
       "tutorial": {

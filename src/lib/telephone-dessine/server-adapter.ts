@@ -11,6 +11,7 @@ import {
   TELEPHONE_REVEAL_MS,
   type TelephoneState,
 } from './engine'
+import { telephoneBotSay } from './bot-speech'
 import type { Stroke } from '@/lib/crobard/engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -53,6 +54,7 @@ export function parseTelephoneState(json: string | null): TelephoneState | null 
       ...raw,
       rematchVotes: raw.rematchVotes ?? [],
       submittedIds: raw.submittedIds ?? [],
+      speech: Array.isArray(raw.speech) ? raw.speech : [],
       revealOrder,
       // Révélation lancée avant le dévoilement maillon par maillon : la table
       // voyait déjà la chaîne entière, elle la garde entière.
@@ -88,7 +90,22 @@ export type TelephoneRoomActionResult =
   | { ok: true; state: TelephoneState }
   | { ok: false; error: string }
 
+/**
+ * `sayRand` tire les paroles des bots (les tests lui donnent un flux à
+ * part) : la réaction à la chute d'une chaîne naît dans l'écriture du cran
+ * qui la dévoile — celui du meneur, humain ou bot, ou de l'horloge.
+ */
 export function applyTelephoneRoomAction(
+  state: TelephoneState,
+  userId: string,
+  input: TelephoneRoomActionInput,
+  sayRand: () => number = Math.random
+): TelephoneRoomActionResult {
+  const result = reduceTelephoneRoomAction(state, userId, input)
+  return result.ok ? { ok: true, state: withTelephoneSay(state, result.state, sayRand) } : result
+}
+
+function reduceTelephoneRoomAction(
   state: TelephoneState,
   userId: string,
   input: TelephoneRoomActionInput
@@ -165,6 +182,30 @@ export function applyTelephoneRoomAction(
     }
   } catch (e) {
     if (e instanceof TelephoneEngineError) return { ok: false, error: e.message }
+    throw e
+  }
+}
+
+/** La chaîne affichée est entière (son dernier maillon dévoilé). */
+function chainShown(state: TelephoneState): boolean {
+  return state.phase === 'reveal' && state.revealLinkIdx >= telephoneRevealLastLinkIdx(state, state.revealIdx)
+}
+
+/**
+ * Ce cran vient de dévoiler la chute de la chaîne à l'écran : la table
+ * réagit, sur la vue PUBLIQUE. Revenir à une chaîne déjà vue (PREVIOUS)
+ * ne relance rien. Une parole refusée ne coûte jamais le cran.
+ */
+export function withTelephoneSay(prev: TelephoneState, next: TelephoneState, sayRand: () => number): TelephoneState {
+  const justShown =
+    chainShown(next) && prev.phase === 'reveal' && prev.revealIdx === next.revealIdx && !chainShown(prev)
+  if (!justShown) return next
+  const moves = telephoneBotSay(toTelephoneSpectatorView(next), sayRand)
+  if (moves.length === 0) return next
+  try {
+    return reduceTelephone(next, { type: 'SAY', moves })
+  } catch (e) {
+    if (e instanceof TelephoneEngineError) return next
     throw e
   }
 }

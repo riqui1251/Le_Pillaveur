@@ -3729,6 +3729,61 @@
           "done": "has submitted",
           "pending": "hasn't submitted yet",
           "left": "left the game"
+        },
+        "feedAria": "Table chatter",
+        "botSay": {
+          "laugh": "What on earth happened?! {name}, look at this 😂",
+          "laugh_2": "{name}, I’m crying. Who drew that?! 😂",
+          "laugh_3": "We started THERE and ended up HERE?! Help, {name} 😂",
+          "mine": "That was MY sentence?! {name}, you had a hand in this 😂",
+          "mine_2": "{name}, give me back my sentence, it’s unrecognisable 😭",
+          "mine_3": "My poor sentence… What did you all do to it, {name}?!",
+          "intact": "Intact from start to finish! Hats off, {name} 🎯",
+          "intact_2": "{name}, same sentence at both ends: unheard of!",
+          "intact_3": "Perfect transmission! We’re too good, {name} 🤝",
+          "encore": "Another round, {name}? My ribs hurt 😂",
+          "encore_2": "{name}, shall we go again? That was brilliant!",
+          "encore_3": "I want a rematch, {name}! One more?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Well… I didn’t expect that, {name} 😅",
+            "laugh_2": "That’s… interesting, {name}. Very interesting 🧐"
+          },
+          "farceur": {
+            "laugh": "I’m framing it and selling it, {name} 🖼️😂",
+            "laugh_2": "{name}, that’s modern art, that is 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "If everyone’s laughing, I’m laughing too, {name} 😂",
+            "laugh_2": "{name}, I don’t get it, but it’s hilarious 😂"
+          },
+          "agressif": {
+            "laugh": "Bunch of amateurs! {name}, did you see that carnage? 😂",
+            "laugh_2": "It’s a scandal, {name}! I love it 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "With all due respect,",
+          "gepeto": "…true story!",
+          "raoul": "No offence,",
+          "suzette": "Same here,",
+          "marcel": "…cheers!",
+          "gaston": "Hold your horses!",
+          "bernadette": "…dearie.",
+          "norbert": "Statistically,",
+          "ginette": "Excuse me?!",
+          "roger": "…as they say.",
+          "paulette": "…just kidding. Or not.",
+          "dede": "All in!",
+          "huguette": "Back in my day,",
+          "keke": "…no cap.",
+          "mauricette": "Oh dear, oh dear,",
+          "firmin": "…just saying.",
+          "josiane": "Between us,",
+          "lucien": "…no stress.",
+          "germaine": "…chop-chop!",
+          "bricole": "…that should hold."
         }
       },
       "tutorial": {

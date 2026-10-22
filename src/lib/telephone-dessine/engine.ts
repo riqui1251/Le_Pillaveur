@@ -1,6 +1,7 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { sanitizeStrokes, type Stroke } from '@/lib/crobard/engine'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * TÉLÉPHONE DESSINÉ (cadavre exquis phrase/dessin) — moteur PUR,
@@ -64,6 +65,26 @@ export type TelephonePlayer = {
 
 export type TelephonePhase = 'countdown' | 'contributing' | 'reveal' | 'finished'
 
+/**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.telephone-dessine.game)
+ * — ici, un déserteur converti —, écrite par l'adaptateur dans la MÊME
+ * écriture que le cran qui dévoile la chute d'une chaîne, et jamais avant :
+ * le contenu d'une chaîne reste secret jusqu'à sa révélation entière.
+ *   • laugh : on s'esclaffe devant la chaîne d'un autre ;
+ *   • mine : c'était SA chaîne (« rendez-moi ma phrase ! ») ;
+ *   • intact : la phrase d'arrivée est celle de départ ;
+ *   • encore : la dernière chaîne vient de tomber, on en redemande.
+ * `round` vaut `telephoneSpeechRound` : une « manche » de paroles par
+ * chaîne révélée. Aucune phrase dans l'état, toute parole a une cible.
+ */
+export type TelephoneSpeechKind = 'laugh' | 'mine' | 'intact' | 'encore'
+export type TelephoneSpeech = BotSpeech<TelephoneSpeechKind>
+export type TelephoneSayMove = SpeechMove<TelephoneSpeechKind>
+
+export const TELEPHONE_SPEECH_KINDS = ['laugh', 'mine', 'intact', 'encore'] as const satisfies readonly TelephoneSpeechKind[]
+/** Paroles max par bot et par chaîne révélée ; le bavardage borne en dessous. */
+export const TELEPHONE_SPEECH_CAP = 2
+
 export type TelephoneState = TimedPhaseState & {
   version: number
   phase: TelephonePhase
@@ -87,6 +108,13 @@ export type TelephoneState = TimedPhaseState & {
   rematchVotes: string[]
   /** SECRET serveur — sert UNIQUEMENT à l'ordre de reveal, aucun tirage de contenu. */
   rngState: number
+  /**
+   * PUBLIC — paroles des bots, nées à la révélation seulement (une chaîne
+   * entière à l'écran) : quelques-unes par partie, gardées jusqu'à la fin
+   * pour qu'une chaîne revue garde sa bulle. Optionnel : un état sérialisé
+   * avant leur arrivée n'en a pas (parseTelephoneState complète).
+   */
+  speech?: TelephoneSpeech[]
 }
 
 export type TelephoneAction =
@@ -104,6 +132,8 @@ export type TelephoneAction =
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
+  /** Paroles de bots (jamais d'un humain : l'adaptateur HTTP ne la mappe pas). */
+  | { type: 'SAY'; moves: TelephoneSayMove[] }
 
 export class TelephoneEngineError extends Error {
   constructor(code: string) {
@@ -145,6 +175,35 @@ export function telephoneBotRevealDelayMs(
   return state.revealLinkIdx >= telephoneRevealLastLinkIdx(state, state.revealIdx)
     ? TELEPHONE_BOT_REVEAL_CHAIN_MS
     : TELEPHONE_BOT_REVEAL_LINK_MS
+}
+
+/**
+ * « Manche » des paroles : une par chaîne révélée, après les manches de
+ * contribution (où personne ne parle) — le fil ne montre que la chaîne à
+ * l'écran.
+ */
+export function telephoneSpeechRound(
+  state: Pick<TelephoneState, 'phase' | 'round' | 'totalRounds' | 'revealIdx'>
+): number {
+  return state.phase === 'reveal' || state.phase === 'finished' ? state.totalRounds + state.revealIdx : state.round
+}
+
+/** Une phrase ramenée à l'essentiel : casse, accents, ponctuation et espaces ignorés. */
+function telephoneNormalize(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
+/** La phrase d'arrivée est celle de départ (première et dernière phrases non vides, au mot près). */
+export function telephoneChainIntact(links: readonly TelephoneContribution[]): boolean {
+  const texts = links.filter((l): l is { type: 'text'; text: string } => l.type === 'text')
+  if (texts.length < 2 || links[links.length - 1]?.type !== 'text') return false
+  const first = telephoneNormalize(texts[0].text)
+  return first !== '' && first === telephoneNormalize(texts[texts.length - 1].text)
 }
 
 /** Chaîne assignée au joueur d'index `playerIdx` à la manche `round` (rotation fixe). */
@@ -189,6 +248,7 @@ export function createTelephoneState(
     revealLinkIdx: 0,
     rematchVotes: [],
     rngState: rng.getState(),
+    speech: [],
   }
 }
 
@@ -455,6 +515,41 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
         ),
         version: state.version + 1,
       }
+    }
+
+    case 'SAY': {
+      // Seule une chaîne ENTIÈRE à l'écran se commente : rien de ce qui reste
+      // secret (maillons à venir, chaînes en cours) ne peut nourrir une parole.
+      if (state.phase !== 'reveal') throw new TelephoneEngineError('NOT_SPEECH_PHASE')
+      if (state.revealLinkIdx < telephoneRevealLastLinkIdx(state, state.revealIdx)) {
+        throw new TelephoneEngineError('CHAIN_NOT_REVEALED')
+      }
+      if (action.moves.length === 0) return state
+      const ownerId = state.revealOrder[state.revealIdx]
+      const round = telephoneSpeechRound(state)
+      let speech = state.speech ?? []
+      for (const move of action.moves) {
+        if (!(TELEPHONE_SPEECH_KINDS as readonly string[]).includes(move.kind)) {
+          throw new TelephoneEngineError('INVALID_KIND')
+        }
+        const actor = state.players.find((p) => p.id === move.playerId)
+        if (!actor?.isBot || actor.leftAt) throw new TelephoneEngineError('NOT_BOT')
+        const target = state.players.find((p) => p.id === move.targetId)
+        if (!target || target.id === actor.id || target.leftAt) throw new TelephoneEngineError('INVALID_TARGET')
+        const kindFits =
+          move.kind === 'mine'
+            ? actor.id === ownerId
+            : move.kind === 'laugh'
+              ? actor.id !== ownerId
+              : move.kind === 'intact'
+                ? telephoneChainIntact(state.chains[ownerId] ?? [])
+                : state.revealIdx === state.revealOrder.length - 1
+        if (!kindFits) throw new TelephoneEngineError('INVALID_KIND')
+        const mine = speech.filter((sp) => sp.playerId === actor.id && sp.round === round)
+        if (mine.length >= TELEPHONE_SPEECH_CAP) throw new TelephoneEngineError('ALREADY_SPOKE')
+        speech = [...speech, { playerId: actor.id, kind: move.kind, targetId: target.id, round }]
+      }
+      return { ...state, speech, version: state.version + 1 }
     }
 
     case 'REPLACE_LEFT': {

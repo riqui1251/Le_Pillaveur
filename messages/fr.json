@@ -3729,6 +3729,61 @@
           "done": "a rendu son maillon",
           "pending": "n'a pas encore rendu",
           "left": "a quitté la partie"
+        },
+        "feedAria": "Fil de la table",
+        "botSay": {
+          "laugh": "Mais qu’est-ce qui s’est passé ?! {name}, regarde-moi ça 😂",
+          "laugh_2": "{name}, je pleure. Qui a dessiné ça ?! 😂",
+          "laugh_3": "On est partis de là pour arriver LÀ ?! Au secours, {name} 😂",
+          "mine": "C’était MA phrase, ça ?! {name}, t’y es pour quelque chose 😂",
+          "mine_2": "{name}, rends-moi ma phrase, elle est méconnaissable 😭",
+          "mine_3": "Ma pauvre phrase… Qu’est-ce que vous lui avez fait, {name} ?!",
+          "intact": "Intacte de bout en bout ! Chapeau, {name} 🎯",
+          "intact_2": "{name}, même phrase au départ et à l’arrivée : du jamais vu !",
+          "intact_3": "Transmission parfaite ! On est trop forts, {name} 🤝",
+          "encore": "Encore une partie, {name} ? J’ai mal aux côtes 😂",
+          "encore_2": "{name}, on remet ça ? C’était trop bon !",
+          "encore_3": "Je veux une revanche, {name} ! Une dernière ?"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "laugh": "Eh bien… je ne m’attendais pas à ça, {name} 😅",
+            "laugh_2": "C’est… intéressant, {name}. Très intéressant 🧐"
+          },
+          "farceur": {
+            "laugh": "Je l’encadre et je le vends, {name} 🖼️😂",
+            "laugh_2": "{name}, c’est de l’art moderne, ça 🎨😂"
+          },
+          "suiveur": {
+            "laugh": "Si tout le monde rit, je ris aussi, {name} 😂",
+            "laugh_2": "{name}, je comprends rien, mais c’est trop drôle 😂"
+          },
+          "agressif": {
+            "laugh": "Bande d’amateurs ! {name}, t’as vu le carnage ? 😂",
+            "laugh_2": "C’est un scandale, {name} ! J’adore 😈"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si je puis me permettre,",
+          "gepeto": "…véridique !",
+          "raoul": "Sans vouloir te vexer,",
+          "suzette": "Moi pareil,",
+          "marcel": "…tchin !",
+          "gaston": "Minute, papillon !",
+          "bernadette": "…mon petit.",
+          "norbert": "Statistiquement,",
+          "ginette": "Non mais oh !",
+          "roger": "…comme dirait l’autre.",
+          "paulette": "…je plaisante. Ou pas.",
+          "dede": "Banco !",
+          "huguette": "De mon temps,",
+          "keke": "…c’est carré.",
+          "mauricette": "Oh là là là là,",
+          "firmin": "…je dis ça, je dis rien.",
+          "josiane": "Entre nous,",
+          "lucien": "…tranquille.",
+          "germaine": "…et que ça saute !",
+          "bricole": "…ça devrait tenir."
         }
       },
       "tutorial": {
