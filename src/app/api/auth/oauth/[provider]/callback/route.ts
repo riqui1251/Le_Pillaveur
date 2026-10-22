@@ -366,6 +366,11 @@ async function deleteAccount(
 
   const linked = await prisma.oAuthAccount.findUnique({ where: linkKey(provider, profile), select: { userId: true } })
   if (!linked || linked.userId !== user.id) return fail('oauth_not_linked')
+  // Un compte à mot de passe se supprime avec son mot de passe
+  // (delete-account) : sinon une session volée, avec la session du
+  // fournisseur ouverte dans le même navigateur, suffisait à l'effacer.
+  const owner = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } })
+  if (!owner || owner.passwordHash) return fail('wrong_password')
 
   await deleteUserAccount(user.id)
 

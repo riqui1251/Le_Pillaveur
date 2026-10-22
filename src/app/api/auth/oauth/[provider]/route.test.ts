@@ -6,13 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * session du compte concerné, et la suppression une identité déjà liée.
  */
 
-const { linkDb, currentUserMock, credentialsMock } = vi.hoisted(() => ({
+const { linkDb, userDb, currentUserMock, credentialsMock } = vi.hoisted(() => ({
   linkDb: { findFirst: vi.fn() },
+  userDb: { findUnique: vi.fn() },
   currentUserMock: vi.fn(),
   credentialsMock: vi.fn(),
 }))
 
-vi.mock('@/lib/prisma', () => ({ prisma: { oAuthAccount: linkDb } }))
+vi.mock('@/lib/prisma', () => ({ prisma: { oAuthAccount: linkDb, user: userDb } }))
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined }) }))
 vi.mock('@/lib/auth-server', () => ({ getCurrentUser: currentUserMock }))
 vi.mock('@/lib/oauth-server', async (importOriginal) => ({
@@ -44,6 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   credentialsMock.mockReturnValue({ clientId: 'id-app', clientSecret: 'secret-app' })
   currentUserMock.mockResolvedValue(null)
+  userDb.findUnique.mockResolvedValue({ passwordHash: '' })
 })
 
 describe('POST /api/auth/oauth/[provider]', () => {
@@ -99,6 +101,16 @@ describe('POST /api/auth/oauth/[provider]', () => {
     expect(res.status).toBe(200)
     expect(new URL((await res.json()).url).searchParams.get('prompt')).toBe('consent')
     expect(decodeOAuthState(stateCookie(res))).toMatchObject({ intent: 'delete', userId: 'compte-1' })
+  })
+
+  it('suppression d’un compte à mot de passe : refusée, le mot de passe reste la preuve', async () => {
+    currentUserMock.mockResolvedValue({ id: 'compte-1', role: 'user', isGuest: false })
+    linkDb.findFirst.mockResolvedValue({ id: 'lien' })
+    userDb.findUnique.mockResolvedValue({ passwordHash: 'hash' })
+    const res = await aller({ intent: 'delete' })
+    expect(res.status).toBe(403)
+    expect((await res.json()).code).toBe('wrong_password')
+    expect(stateCookie(res)).toBeUndefined()
   })
 
   it('pérennisation réservée aux invités', async () => {

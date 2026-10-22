@@ -63,6 +63,9 @@ export const POST = withApiRoute(
           select: { id: true },
         })
         if (!linked) return apiError('oauth_not_linked', 403)
+        // Même règle que delete-account : un mot de passe, s'il existe, est la preuve exigée.
+        const owner = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } })
+        if (!owner || owner.passwordHash) return apiError('wrong_password', 403)
       }
       userId = user.id
     }

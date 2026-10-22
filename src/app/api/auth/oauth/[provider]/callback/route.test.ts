@@ -393,6 +393,15 @@ describe('suppression confirmée par le fournisseur', () => {
     expect(deleteUserMock).not.toHaveBeenCalled()
   })
 
+  it('compte à mot de passe : rien n’est supprimé sans le mot de passe', async () => {
+    database([{ ...kevin, passwordHash: 'hash' }], [{ providerAccountId: 'discord-42', userId: 'compte-kevin' }])
+    currentUserMock.mockResolvedValue(session)
+    aller({ intent: 'delete', userId: 'compte-kevin' })
+    const { params } = await retour()
+    expect(params.get('deleteError')).toBe('wrong_password')
+    expect(deleteUserMock).not.toHaveBeenCalled()
+  })
+
   it('compte fondateur : protégé', async () => {
     database([kevin], [{ providerAccountId: 'discord-42', userId: 'compte-kevin' }])
     currentUserMock.mockResolvedValue({ ...session, role: 'fondateur' })
