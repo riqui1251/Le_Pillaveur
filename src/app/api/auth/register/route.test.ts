@@ -111,3 +111,23 @@ describe('POST /api/auth/register — ambiance à la création', () => {
     expect(userDb.update).not.toHaveBeenCalled()
   })
 })
+
+describe('POST /api/auth/register — plafond par réseau', () => {
+  const fromSameNetwork = (email: string) =>
+    POST(
+      new Request('http://test/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.50' },
+        body: JSON.stringify({ email, password: 'motdepasse-solide', displayName: 'Kevin', locale: 'fr' }),
+      })
+    )
+
+  it('des comptes en série depuis une seule IP, une adresse neuve à chaque fois : coupés au 21e', async () => {
+    for (let i = 0; i < 20; i++) {
+      expect((await fromSameNetwork(`serie${i}@exemple.fr`)).status).toBe(200)
+    }
+    const blocked = await fromSameNetwork('serie20@exemple.fr')
+    expect(blocked.status).toBe(429)
+    expect(userDb.create).toHaveBeenCalledTimes(20)
+  })
+})
