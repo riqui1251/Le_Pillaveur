@@ -12,6 +12,7 @@ import {
 } from './types'
 import { rngFromState, hashSeed, type RngState, type SeededRng } from './rng'
 import { generateCase } from './case-generator'
+import type { BotSpeech, SpeechMove } from '@/lib/online/bot-speech'
 
 /**
  * Moteur Petit Buveur — pur, déterministe, serveur-autoritaire.
@@ -181,6 +182,46 @@ export interface LogEntry {
 }
 
 /**
+ * Parole PUBLIQUE d'un bot (`botSay.<kind>` sous games.petit-buveur.game),
+ * écrite par l'adaptateur dans la MÊME écriture que le coup qu'elle commente
+ * (bot-speech.ts). Le kind est le seul message, aucune phrase dans l'état :
+ *   • ouch — sa propre case le fait boire ou reculer ;
+ *   • aim — sa case touche un humain (gorgées, recul, sort) ;
+ *   • payback — la case d'un humain le touche ;
+ *   • sentBack — la case d'un humain le renvoie en arrière ;
+ *   • overtake — il double un humain ;
+ *   • closeToWin — il entre à un lancer de l'arrivée ;
+ *   • duelLost — il perd un duel contre un humain ;
+ *   • flipLost — il perd le pile ou face qu'un humain lui a envoyé.
+ * Toute parole vise un humain présent : chaque phrase du catalogue le nomme.
+ */
+export type PbSpeechKind =
+  | 'ouch'
+  | 'aim'
+  | 'payback'
+  | 'sentBack'
+  | 'overtake'
+  | 'closeToWin'
+  | 'duelLost'
+  | 'flipLost'
+export type PbSpeech = BotSpeech<PbSpeechKind>
+export type PbSayMove = SpeechMove<PbSpeechKind>
+
+export const PB_SPEECH_KINDS = [
+  'ouch',
+  'aim',
+  'payback',
+  'sentBack',
+  'overtake',
+  'closeToWin',
+  'duelLost',
+  'flipLost',
+] as const satisfies readonly PbSpeechKind[]
+
+/** Paroles max par bot et par tour de table ; le bavardage du persona borne en dessous. */
+export const PB_SPEECH_CAP = 2
+
+/**
  * Case en attente. Sans `stage`, l'acteur résout la case (cible et/ou choix).
  * `stage: 'verdict'` : l'acteur arbitre le défi de `targetId` (`succeeded`).
  * `stage: 'side'` : `targetId` choisit pile ou face (`side`), avant `deadlineAt`.
@@ -245,6 +286,12 @@ export interface EngineState {
   /** Id du joueur gagnant, ou null. */
   winner: string | null
   log: LogEntry[]
+  /**
+   * PUBLIC — paroles des bots du tour de table en cours (`round` =
+   * turnCount). Absent tant qu'aucun bot n'a parlé : un état d'avant les
+   * paroles se joue tel quel, et un état sans parole reste celui d'avant.
+   */
+  speech?: PbSpeech[]
 }
 
 /** Choix joueur pour résoudre une case interactive (cible, côté de pièce, option…). */
@@ -262,6 +309,8 @@ export type InteractionChoice = {
 export type EngineAction =
   | { type: 'ROLL'; playerId: string }
   | { type: 'RESOLVE_INTERACTION'; playerId: string; choice?: InteractionChoice }
+  /** Paroles de bots (jamais d'un humain : l'adaptateur HTTP ne la mappe pas). */
+  | { type: 'SAY'; moves: PbSayMove[] }
 
 export type EnginePlayerInit = { id: string; name: string }
 
@@ -874,7 +923,32 @@ export function reduce(state: EngineState, action: EngineAction): EngineState {
   }
   if (action.type === 'ROLL') return reduceRoll(state, action.playerId)
   if (action.type === 'RESOLVE_INTERACTION') return reduceResolve(state, action.playerId, action.choice)
+  if (action.type === 'SAY') return reduceSay(state, action.moves)
   throw new EngineError('UNKNOWN_ACTION')
+}
+
+/**
+ * Paroles de bots : un bot présent, vers un humain présent, au plus
+ * PB_SPEECH_CAP par tour de table. Une parole n'est pas un coup : ni version,
+ * ni RNG, ni joueur ne bougent, seul `speech` change — la partie est la même
+ * avec ou sans elle. Le fil ne garde que le tour de table en cours.
+ */
+function reduceSay(state: EngineState, moves: PbSayMove[]): EngineState {
+  if (moves.length === 0) return state
+  const round = state.turnCount
+  let speech = (state.speech ?? []).filter((sp) => sp.round === round)
+  for (const move of moves) {
+    if (!(PB_SPEECH_KINDS as readonly string[]).includes(move.kind)) throw new EngineError('INVALID_KIND')
+    const actor = state.players.find((p) => p.id === move.playerId)
+    if (!actor?.isBot || actor.leftAt) throw new EngineError('NOT_BOT')
+    const target = state.players.find((p) => p.id === move.targetId)
+    if (!target || target.id === actor.id || target.isBot || target.leftAt) throw new EngineError(INVALID_TARGET)
+    if (speech.filter((sp) => sp.playerId === actor.id).length >= PB_SPEECH_CAP) {
+      throw new EngineError('ALREADY_SPOKE')
+    }
+    speech = [...speech, { playerId: actor.id, kind: move.kind, targetId: target.id, round }]
+  }
+  return { ...state, speech }
 }
 
 function reduceRoll(state: EngineState, playerId: string): EngineState {
@@ -1278,7 +1352,7 @@ function pickRandomTarget(state: EngineState, rng: SeededRng, allowSelf: boolean
  * délai dépassé, joueur parti). Retourne l'état au RNG avancé et l'action à
  * lui appliquer.
  */
-export function autoAction(state: EngineState): { state: EngineState; action: EngineAction } {
+export function autoAction(state: EngineState): { state: EngineState; action: Exclude<EngineAction, { type: 'SAY' }> } {
   const deciderId = currentDeciderId(state)
   if (!deciderId) throw new EngineError('GAME_FINISHED')
   const p = state.pending

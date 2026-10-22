@@ -4714,6 +4714,81 @@
         "rollDiceFor": "{name}, tira el dado",
         "verdict": {
           "drinks": "{count, plural, one {bebe # sorbo} other {bebe # sorbos}}"
+        },
+        "feedAria": "Charla de la mesa",
+        "botSay": {
+          "ouch": "¡Uy! No te rías, {name}…",
+          "ouch_2": "{name}, este tablero está trucado, te lo digo yo 😤",
+          "ouch_3": "Esta casilla me tiene manía, {name} 😩",
+          "aim": "¡Un regalito para ti, {name}! Con cariño 😘",
+          "aim_2": "Perdón, {name}… bueno, no tanto 😇",
+          "aim_3": "{name}, nada personal. Bueno, un poco 😏",
+          "payback": "{name}, me acordaré de esto…",
+          "payback_2": "Gracias por el regalo, {name}. Te lo devolveré 😏",
+          "payback_3": "Ah, ¿así estamos, {name}? Muy bien… 😤",
+          "sentBack": "¡Eh! ¡Devuélveme mi casilla, {name}!",
+          "sentBack_2": "{name}, acababa de llegar 😩",
+          "sentBack_3": "Marcha atrás… muchas gracias, {name} 🙄",
+          "overtake": "¡Te adelanto, {name}! Adiós 👋",
+          "overtake_2": "¡Paso, {name}, que voy! 🏎️",
+          "overtake_3": "{name}, vas a ver mi espalda un buen rato 😎",
+          "closeToWin": "Una tirada más, {name}, y está hecho 🏁",
+          "closeToWin_2": "{name}, ya veo la meta 🏆",
+          "closeToWin_3": "¡La meta a la vista! Agárrate, {name} 😏",
+          "duelLost": "¡Revancha, {name}! Ese duelo estaba trucado 😤",
+          "duelLost_2": "{name}, fue suerte, nada más.",
+          "duelLost_3": "Bien jugado, {name}… pero volveré ⚔️",
+          "flipLost": "¡Esta moneda está trucada, {name}!",
+          "flipLost_2": "{name}, la próxima vez lanzo yo la moneda 🪙",
+          "flipLost_3": "Cara, cruz… perdí. ¿Te hace gracia, {name}? 🙄"
+        },
+        "botSayTrait": {
+          "prudent": {
+            "ouch": "Esta casilla me daba mala espina, {name}…",
+            "ouch_2": "{name}, debí quedarme en la salida.",
+            "aim": "Mis disculpas, {name}, son las reglas.",
+            "aim_2": "{name}, no te lo tomes a mal, te lo ruego."
+          },
+          "farceur": {
+            "ouch": "¡Ni me dolió! Bueno, un poco. Chis, {name} 🤫",
+            "ouch_2": "{name}, lo hice a propósito. Sí, sí 😜",
+            "aim": "¡Sorpresa, {name}! 🎁",
+            "aim_2": "{name}, elegí al azar. Lo juro 😇"
+          },
+          "suiveur": {
+            "ouch": "¿Por qué siempre a mí, {name}? 😩",
+            "ouch_2": "{name}, hazme caso: evita esta casilla 😅",
+            "aim": "Le tenía que tocar a alguien, {name}…",
+            "aim_2": "{name}, cualquiera habría hecho lo mismo, ¿no? 🤭"
+          },
+          "agressif": {
+            "ouch": "Este tablero me las pagará, {name} 😤",
+            "ouch_2": "{name}, el primero que se ría será mi próximo objetivo 😈",
+            "aim": "Para ti, {name}. Y esto es solo el principio 😈",
+            "aim_2": "{name}, estabas en mi punto de mira 🎯"
+          }
+        },
+        "botTic": {
+          "barnabe": "Si me permiten,",
+          "gepeto": "…¡palabrita!",
+          "raoul": "Sin ánimo de ofender,",
+          "suzette": "Yo igual,",
+          "marcel": "…¡salud!",
+          "gaston": "¡Un momentito!",
+          "bernadette": "…cariño.",
+          "norbert": "Estadísticamente,",
+          "ginette": "¡Pero bueno!",
+          "roger": "…como dicen por ahí.",
+          "paulette": "…es broma. O no.",
+          "dede": "¡Me la juego!",
+          "huguette": "En mis tiempos,",
+          "keke": "…fijo.",
+          "mauricette": "Ay, ay, ay,",
+          "firmin": "…lo digo por decir.",
+          "josiane": "Entre nosotros,",
+          "lucien": "…tranqui.",
+          "germaine": "…¡y rapidito!",
+          "bricole": "…eso debería aguantar."
         }
       },
       "tutorial": {

@@ -1,5 +1,5 @@
 import { getGameAdapter } from '@/lib/online/game-adapters'
-import { buildPetitBuveurEngineState, markPlayerLeft } from '@/lib/petit-buveur/server-adapter'
+import { buildPetitBuveurEngineState, markPlayerLeft, withPetitBuveurSay } from '@/lib/petit-buveur/server-adapter'
 import { autoAction, currentDeciderId, type EngineState } from '@/lib/petit-buveur/engine'
 import { onlineRoom, previewMembers, type PreviewMember, type TvPreviewFixture, type TvPreviewStep } from '../fixture-kit'
 
@@ -12,6 +12,8 @@ import { onlineRoom, previewMembers, type PreviewMember, type TvPreviewFixture, 
 
 const GAME = 'petit-buveur'
 const LONG_DEADLINE_MS = 10 * 60_000
+/** Dé de parole toujours favorable : le premier bot que le coup touche parle. */
+const ALWAYS_TALK = () => 0
 
 function adapter() {
   const a = getGameAdapter(GAME)
@@ -49,7 +51,19 @@ function next(s: EngineState, reroll = false): EngineState {
   const body = action.type === 'ROLL' ? { action: 'roll' } : { action: 'resolve', choice: choice as Record<string, unknown> }
   const res = adapter().applyAction(state, action.playerId, body)
   if (!res.ok) throw new Error(`coup refusé : ${res.error}`)
-  return longDeadline(res.state as EngineState)
+  return longDeadline(withoutSpeech(res.state as EngineState))
+}
+
+/**
+ * Les paroles de bots que l'adaptateur tire au hasard (Math.random) sont
+ * retirées : une fixture se rejoue à l'identique. La fixture « paroles » les
+ * écrit avec un dé fixe (withPetitBuveurSay).
+ */
+function withoutSpeech(s: EngineState): EngineState {
+  if (!s.speech) return s
+  const { speech: _speech, ...rest } = s
+  void _speech
+  return rest
 }
 
 /** Joue jusqu'à la première situation qui vérifie `pred` ; rend l'historique (dernier = trouvé). */
@@ -263,6 +277,15 @@ export function build(): TvPreviewFixture[] {
     id: 'sequence-bot-7',
     label: 'Séquence : lancer d’un bot (4 joueurs + 3 bots)',
     steps: [step('avant', withBots, botRoll[botRoll.length - 2]), step('lancer du bot', withBots, botRoll[botRoll.length - 1])],
+  })
+
+  // Un bot commente le coup qui vient de se jouer : la dernière bulle au pied du classement, qui lui cède sa hauteur.
+  const talks = (s: EngineState, h: EngineState[]) => withPetitBuveurSay(h[h.length - 2], s, ALWAYS_TALK) !== s
+  const talk = playUntil(withBots, (s, h) => showsCard(s) && talks(s, h), { botsCount: 3 })
+  fixtures.push({
+    id: 'paroles-bot-7',
+    label: 'Un bot commente le coup (4 joueurs + 3 bots)',
+    steps: [step('bulle', withBots, withPetitBuveurSay(talk[talk.length - 2], talk[talk.length - 1], ALWAYS_TALK))],
   })
 
   return fixtures
