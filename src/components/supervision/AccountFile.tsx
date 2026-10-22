@@ -53,7 +53,7 @@ import {
 } from '@/components/supervision/SupervisionLayout'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { useAuth } from '@/hooks/useAuth'
-import { isGuestProbablyLost, isGuestPurgeOverdue } from '@/lib/account-kind'
+import { isGuestProbablyLost, isGuestPurgeOverdue, type LoginMethod } from '@/lib/account-kind'
 import { ANALYTICS_CONSENT_V2_SINCE } from '@/lib/auth-cookies'
 import type {
   AccountActivity,
@@ -114,6 +114,7 @@ type AccountDetail = {
     /** Null aussi quand le rôle du lecteur ne permet pas de la voir. */
     lastLoginAt: string | null
     createdAt: string
+    loginMethods: LoginMethod[]
     ban: {
       banned: boolean
       banType: string | null
@@ -432,6 +433,11 @@ function IdentitySection({
         <Fact label={t('lastAuth')} hint={t('lastAuthHint')} tone={user.lastLoginAt ? 'default' : 'muted'}>
           {user.lastLoginAt ? dateTime(user.lastLoginAt) : tSup('activity.neverLoggedIn')}
         </Fact>
+        {user.loginMethods.length > 0 && (
+          <Fact label={t('loginMethods')} hint={t('loginMethodsHint')}>
+            {user.loginMethods.map((method) => t(`loginMethod.${method}`)).join(' · ')}
+          </Fact>
+        )}
         {/* Le JOUR d'échéance seulement (servi ainsi) : l'heure redonnerait celle d'une visite. */}
         <Fact
           label={guestLost ? tSup('history.sessionInDb') : tSup('history.activeConnection')}

@@ -698,6 +698,11 @@
       "email_taken": "Impossible avec ces informations. Si tu as déjà un compte, connecte-toi dessus.",
       "registration_refused": "Inscription impossible avec ces informations. Si tu as déjà un compte, connecte-toi ou utilise « Mot de passe oublié ».",
       "invalid_reset_token": "Lien invalide ou expiré.",
+      "oauth_unavailable": "Cette connexion est momentanément indisponible. Utilise une autre méthode.",
+      "oauth_failed": "La connexion n’a pas abouti. Réessaie.",
+      "oauth_email_required": "Ce compte ne partage pas d’adresse e-mail : autorise l’accès à ton e-mail ou utilise une autre méthode.",
+      "oauth_email_unverified": "Confirme d’abord ton adresse e-mail auprès de ce service, puis réessaie.",
+      "oauth_not_linked": "Ce service n’est pas lié à ton compte.",
       "age_gate_required": "Confirme que tu as 18 ans ou plus.",
       "user_required": "Choisis un joueur.",
       "cannot_block_self": "Tu ne peux pas te bloquer toi-même.",
@@ -848,6 +853,11 @@
       "network": "Connexion impossible. Vérifie ta connexion internet et réessaie.",
       "generic": "Une erreur est survenue. Réessaie."
     },
+    "oauth": {
+      "continueWith": "Continuer avec {provider}",
+      "confirmWith": "Confirmer avec {provider}",
+      "redirecting": "Redirection…"
+    },
     "orDivider": "ou",
     "googleNative": {
       "button": "Continuer avec Google",
@@ -981,7 +991,8 @@
       "founderProtected": "Le compte fondateur ne peut pas être supprimé depuis l'interface.",
       "genericError": "Impossible de supprimer le compte pour le moment. Réessaie plus tard.",
       "googleConfirmHint": "Ce compte se connecte avec Google : confirme la suppression avec ton compte Google.",
-      "googleRequired": "Confirmation Google nécessaire : utilise le bouton Google avec le compte lié à cette adresse."
+      "googleRequired": "Confirmation Google nécessaire : utilise le bouton Google avec le compte lié à cette adresse.",
+      "externalConfirmHint": "Ce compte n’a pas de mot de passe : confirme la suppression avec le service qui te sert à te connecter."
     },
     "guestUpgrade": {
       "title": "Compte invité — pense à le sauvegarder !",
@@ -5662,7 +5673,7 @@
       "deleteAccount": "Supprimer le compte",
       "guestNoRole": "Compte invité : aucun rôle d'équipe possible",
       "matchCount": "{total} compte{plural} trouvé{plural}",
-      "kindSummary": "{total, plural, one {# compte} other {# comptes}} : {password} mot de passe · {google} Google · {guests, plural, one {# invité} other {# invités}}{orphans, plural, =0 {} one { (dont # orphelin)} other { (dont # orphelins)}}",
+      "kindSummary": "{total, plural, one {# compte} other {# comptes}} : {password} mot de passe · {google} réseau social · {guests, plural, one {# invité} other {# invités}}{orphans, plural, =0 {} one { (dont # orphelin)} other { (dont # orphelins)}}",
       "countsNote": "Invités compris. Depuis la mise à jour du suivi de présence (le {date}), la dernière activité suit une page réellement utilisée : onglet visible et interaction dans les 30 dernières minutes (avant, un onglet resté ouvert suffisait). Elle ne prouve pas que la personne joue.",
       "byRoleLine": "Par rôle : {players, plural, one {# joueur} other {# joueurs}} · {moderators, plural, one {# modérateur} other {# modérateurs}} · {admins, plural, one {# admin} other {# admins}} · {superadmins, plural, one {# super admin} other {# super admins}} · {founders, plural, one {# fondateur} other {# fondateurs}}"
     },
@@ -5691,7 +5702,7 @@
     },
     "accountKind": {
       "password": "Mot de passe",
-      "google": "Google",
+      "google": "Réseau social",
       "guest": "Invité",
       "guestOrphan": "Invité orphelin",
       "legacy": "Ancien compte",
@@ -6127,7 +6138,16 @@
       "lastActivity": "Dernière activité",
       "lastActivityHint": "Dernier passage avec une session valide, tous appareils confondus. Depuis la mise à jour du suivi de présence (le {date}), seule une page réellement utilisée (onglet visible et interaction dans les 30 dernières minutes) ou une authentification la fait avancer ; avant, un onglet resté ouvert suffisait.",
       "lastAuth": "Dernière authentification",
-      "lastAuthHint": "Identifiants, Google ou création d'invité : pas chaque visite.",
+      "lastAuthHint": "Identifiants, Google, Discord, Facebook, Apple ou création d'invité : pas chaque visite.",
+      "loginMethods": "Connexion",
+      "loginMethodsHint": "Discord, Facebook et Apple : services liés au compte. Google ne laisse aucune trace : il n'apparaît que pour un compte sans autre moyen, mais reste possible sur tout compte qui porte une adresse.",
+      "loginMethod": {
+        "password": "Mot de passe",
+        "google": "Google",
+        "discord": "Discord",
+        "facebook": "Facebook",
+        "apple": "Apple"
+      },
       "never": "Jamais",
       "autoDelete": "Suppression automatique",
       "autoDeletePending": "Imminente (prochaine purge)",

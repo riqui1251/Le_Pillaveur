@@ -21,7 +21,7 @@ import {
   describeAccount,
   kindOfAccount,
 } from '@/lib/account-kind-server'
-import { accountDeleteLogDetail } from '@/lib/account-kind'
+import { accountDeleteLogDetail, loginMethods } from '@/lib/account-kind'
 import { adminErrorResponse, requireRole } from '../../_guard'
 
 export async function GET(
@@ -55,6 +55,7 @@ export async function GET(
         bannedUntil: true,
         banComment: true,
         bannedAt: true,
+        oauthAccounts: { select: { provider: true } },
         _count: {
           select: {
             // Sessions VALIDES seulement : les lignes échues attendent le
@@ -111,6 +112,12 @@ export async function GET(
         displayName: user.displayName,
         accountCode: user.accountCode,
         ...describeAccount(user),
+        loginMethods: loginMethods({
+          isGuest: user.isGuest,
+          email: user.email,
+          hasPassword: user.passwordHash !== '',
+          providers: user.oauthAccounts.map((account) => account.provider),
+        }),
         role: user.role,
         playMode: user.playMode,
         lastCountry: user.lastCountry,

@@ -11,6 +11,7 @@
 
 import { normalizeRole, USER_ROLES, type UserRole } from '@/lib/roles'
 import { parisDayString } from '@/lib/paris-time'
+import { OAUTH_PROVIDERS, type OAuthProvider } from '@/lib/oauth'
 
 export type AccountKind = 'password' | 'google' | 'guest' | 'guest_orphan' | 'legacy'
 
@@ -27,6 +28,10 @@ const ACCOUNT_KINDS: readonly AccountKind[] = ['password', 'google', 'guest', 'g
  * passe » alors que la liste, les totaux et la fiche l'excluent.
  * Legacy : ni email, ni invité (0 en production).
  *
+ * 'google' (valeur gardée : elle est écrite dans le journal du staff) désigne
+ * tout compte sans mot de passe ouvert par un service tiers : Google, Discord,
+ * Facebook ou Apple — libellé « Réseau social ».
+ *
  * Invité ORPHELIN : plus aucune session valide en base. Son cookie était sa
  * seule clé : le compte est irrécupérable, et la purge l'emporte sous 7 jours
  * (retention-sweep.ts).
@@ -40,6 +45,27 @@ export function accountKind(a: {
   if (a.isGuest) return a.hasValidSession ? 'guest' : 'guest_orphan'
   if (a.email == null) return 'legacy'
   return a.hasPassword ? 'password' : 'google'
+}
+
+export type LoginMethod = 'password' | 'google' | OAuthProvider
+
+/**
+ * Moyens de connexion d'un compte, pour la fiche de la supervision. Discord,
+ * Facebook et Apple sont reconnus par leur lien (OAuthAccount). Google, lui,
+ * se lie par l'adresse seule et ne laisse aucune trace en base : il n'est
+ * affiché que pour un compte qui n'a aucun autre moyen, seul cas certain —
+ * la connexion Google reste possible sur tout compte qui porte une adresse.
+ */
+export function loginMethods(a: {
+  isGuest: boolean
+  email: string | null
+  hasPassword: boolean
+  providers: readonly string[]
+}): LoginMethod[] {
+  if (a.isGuest || a.email == null) return []
+  const methods: LoginMethod[] = a.hasPassword ? ['password'] : []
+  methods.push(...OAUTH_PROVIDERS.filter((provider) => a.providers.includes(provider)))
+  return methods.length > 0 ? methods : ['google']
 }
 
 /**

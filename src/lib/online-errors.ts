@@ -112,6 +112,13 @@ export const ONLINE_ERROR_CODES = [
   'email_taken',
   'registration_refused',
   'invalid_reset_token',
+  // Connexion Discord / Facebook (/api/auth/oauth), rendus à /compte par
+  // l'URL de retour : la route ne peut que rediriger.
+  'oauth_unavailable',
+  'oauth_failed',
+  'oauth_email_required',
+  'oauth_email_unverified',
+  'oauth_not_linked',
   // Porte d'âge : déjà renvoyé tel quel par /api/auth/guest, JoinGate et
   // TryBotsGate le reconnaissent — déclaré ici pour qu'il soit traduit aussi.
   'age_gate_required',
@@ -255,6 +262,11 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   registration_refused:
     'Inscription impossible avec ces informations. Si vous avez déjà un compte, connectez-vous ou utilisez « Mot de passe oublié »',
   invalid_reset_token: 'Lien invalide ou expiré',
+  oauth_unavailable: 'Cette connexion est momentanément indisponible',
+  oauth_failed: 'La connexion a échoué, réessayez',
+  oauth_email_required: 'Votre compte ne partage pas d’adresse e-mail',
+  oauth_email_unverified: 'Confirmez d’abord votre adresse e-mail auprès de ce service',
+  oauth_not_linked: 'Ce compte n’est pas lié à ce service',
   age_gate_required: 'Déclaration 18+ requise',
 
   user_required: 'Joueur requis',

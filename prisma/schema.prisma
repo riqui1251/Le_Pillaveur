@@ -80,7 +80,8 @@ model User {
   banEvents            AccountBanEvent[]    @relation("BanTarget")
   bansIssued           AccountBanEvent[]    @relation("BanActor")
   passwordResetTokens  PasswordResetToken[]
-  feedback             UserFeedback[]
+  oauthAccounts        OAuthAccount[]
+  feedback            UserFeedback[]
   nameModerationAttempts NameModerationAttempt[]
   nameModerationWarnedAt DateTime?
   nameModerationWarningDismissedAt DateTime?
@@ -495,6 +496,21 @@ model PasswordResetToken {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
+  @@index([userId])
+}
+
+// Identité externe (Discord, Facebook) liée à un compte, reconnue par
+// l'identifiant stable du fournisseur. Google, plus ancien, reste lié par
+// l'e-mail seul (/api/auth/google).
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
   @@index([userId])
 }
 

@@ -698,6 +698,11 @@
       "email_taken": "No es posible con estos datos. Si ya tienes una cuenta, inicia sesión en ella.",
       "registration_refused": "No es posible registrarse con estos datos. Si ya tienes una cuenta, inicia sesión o usa «Contraseña olvidada».",
       "invalid_reset_token": "Enlace no válido o caducado.",
+      "oauth_unavailable": "Este método de acceso no está disponible por ahora. Usa otro.",
+      "oauth_failed": "No se pudo iniciar sesión. Inténtalo de nuevo.",
+      "oauth_email_required": "Esta cuenta no comparte ninguna dirección de correo: permite el acceso a tu correo o usa otro método.",
+      "oauth_email_unverified": "Primero confirma tu dirección de correo en ese servicio y vuelve a intentarlo.",
+      "oauth_not_linked": "Este servicio no está vinculado a tu cuenta.",
       "age_gate_required": "Confirma que tienes 18 años o más.",
       "user_required": "Elige un jugador.",
       "cannot_block_self": "No puedes bloquearte a ti mismo.",
@@ -848,6 +853,11 @@
       "network": "No se pudo conectar. Comprueba tu conexión a internet e inténtalo de nuevo.",
       "generic": "Se produjo un error. Inténtalo de nuevo."
     },
+    "oauth": {
+      "continueWith": "Continuar con {provider}",
+      "confirmWith": "Confirmar con {provider}",
+      "redirecting": "Redirigiendo…"
+    },
     "orDivider": "o",
     "googleNative": {
       "button": "Continuar con Google",
@@ -981,7 +991,8 @@
       "founderProtected": "La cuenta del fundador no puede eliminarse desde la interfaz.",
       "genericError": "No se puede eliminar la cuenta en este momento. Inténtalo más tarde.",
       "googleConfirmHint": "Esta cuenta inicia sesión con Google: confirma la eliminación con tu cuenta de Google.",
-      "googleRequired": "Se necesita confirmación de Google: usa el botón de Google con la cuenta vinculada a esta dirección."
+      "googleRequired": "Se necesita confirmación de Google: usa el botón de Google con la cuenta vinculada a esta dirección.",
+      "externalConfirmHint": "Esta cuenta no tiene contraseña: confirma la eliminación con el servicio que usas para iniciar sesión."
     },
     "guestUpgrade": {
       "title": "Cuenta de invitado — ¡recuerda guardarla!",
@@ -5662,7 +5673,7 @@
       "deleteAccount": "Eliminar cuenta",
       "guestNoRole": "Cuenta de invitado: sin rol de equipo posible",
       "matchCount": "{total} cuenta{plural} encontrada{plural}",
-      "kindSummary": "{total, plural, one {# cuenta} other {# cuentas}}: {password} con contraseña · {google} Google · {guests, plural, one {# invitado} other {# invitados}}{orphans, plural, =0 {} one { (# huérfano incluido)} other { (# huérfanos incluidos)}}",
+      "kindSummary": "{total, plural, one {# cuenta} other {# cuentas}}: {password} con contraseña · {google} red social · {guests, plural, one {# invitado} other {# invitados}}{orphans, plural, =0 {} one { (# huérfano incluido)} other { (# huérfanos incluidos)}}",
       "countsNote": "Invitados incluidos. Desde la actualización del seguimiento de presencia ({date}), la última actividad sigue una página realmente en uso: pestaña visible e interacción en los últimos 30 minutos (antes bastaba con una pestaña abierta). No prueba que la persona esté jugando.",
       "byRoleLine": "Por rol: {players, plural, one {# jugador} other {# jugadores}} · {moderators, plural, one {# moderador} other {# moderadores}} · {admins, plural, one {# admin} other {# admins}} · {superadmins, plural, one {# super admin} other {# super admins}} · {founders, plural, one {# fundador} other {# fundadores}}"
     },
@@ -5691,7 +5702,7 @@
     },
     "accountKind": {
       "password": "Contraseña",
-      "google": "Google",
+      "google": "Red social",
       "guest": "Invitado",
       "guestOrphan": "Invitado huérfano",
       "legacy": "Cuenta antigua",
@@ -6127,7 +6138,16 @@
       "lastActivity": "Última actividad",
       "lastActivityHint": "Última visita con una sesión válida, en todos los dispositivos. Desde la actualización del seguimiento de presencia ({date}), solo una página realmente en uso (pestaña visible e interacción en los últimos 30 minutos) o una autenticación la hace avanzar; antes bastaba con una pestaña abierta.",
       "lastAuth": "Última autenticación",
-      "lastAuthHint": "Credenciales, Google o creación de invitado: no cada visita.",
+      "lastAuthHint": "Credenciales, Google, Discord, Facebook, Apple o creación de invitado: no en cada visita.",
+      "loginMethods": "Inicio de sesión",
+      "loginMethodsHint": "Discord, Facebook y Apple: servicios vinculados a la cuenta. Google no deja rastro: solo aparece en una cuenta sin otro método, pero sigue siendo posible en cualquier cuenta con dirección.",
+      "loginMethod": {
+        "password": "Contraseña",
+        "google": "Google",
+        "discord": "Discord",
+        "facebook": "Facebook",
+        "apple": "Apple"
+      },
       "never": "Nunca",
       "autoDelete": "Eliminación automática",
       "autoDeletePending": "Inminente (próxima purga)",

@@ -698,6 +698,11 @@
       "email_taken": "Impossibile con questi dati. Se hai già un account, accedi con quello.",
       "registration_refused": "Registrazione impossibile con questi dati. Se hai già un account, accedi o usa «Password dimenticata».",
       "invalid_reset_token": "Link non valido o scaduto.",
+      "oauth_unavailable": "Questo accesso non è disponibile al momento. Usa un altro metodo.",
+      "oauth_failed": "Accesso non riuscito. Riprova.",
+      "oauth_email_required": "Questo account non condivide un indirizzo email: consenti l’accesso alla tua email o usa un altro metodo.",
+      "oauth_email_unverified": "Conferma prima il tuo indirizzo email presso questo servizio, poi riprova.",
+      "oauth_not_linked": "Questo servizio non è collegato al tuo account.",
       "age_gate_required": "Conferma di avere 18 anni o più.",
       "user_required": "Scegli un giocatore.",
       "cannot_block_self": "Non puoi bloccare te stesso.",
@@ -848,6 +853,11 @@
       "network": "Impossibile connettersi. Controlla la tua connessione internet e riprova.",
       "generic": "Si è verificato un errore. Riprova."
     },
+    "oauth": {
+      "continueWith": "Continua con {provider}",
+      "confirmWith": "Conferma con {provider}",
+      "redirecting": "Reindirizzamento…"
+    },
     "orDivider": "oppure",
     "googleNative": {
       "button": "Continua con Google",
@@ -981,7 +991,8 @@
       "founderProtected": "L'account del fondatore non può essere eliminato dall'interfaccia.",
       "genericError": "Impossibile eliminare l'account al momento. Riprova più tardi.",
       "googleConfirmHint": "Questo account accede con Google: conferma l'eliminazione con il tuo account Google.",
-      "googleRequired": "Serve la conferma di Google: usa il pulsante Google con l'account collegato a questo indirizzo."
+      "googleRequired": "Serve la conferma di Google: usa il pulsante Google con l'account collegato a questo indirizzo.",
+      "externalConfirmHint": "Questo account non ha una password: conferma l’eliminazione con il servizio che usi per accedere."
     },
     "guestUpgrade": {
       "title": "Account ospite — ricordati di salvarlo!",
@@ -5662,7 +5673,7 @@
       "deleteAccount": "Elimina account",
       "guestNoRole": "Account ospite: nessun ruolo dello staff possibile",
       "matchCount": "Account trovati: {total}",
-      "kindSummary": "{total, plural, one {# account} other {# account}}: {password} con password · {google} Google · {guests, plural, one {# ospite} other {# ospiti}}{orphans, plural, =0 {} one { (di cui # orfano)} other { (di cui # orfani)}}",
+      "kindSummary": "{total, plural, one {# account} other {# account}}: {password} con password · {google} accesso social · {guests, plural, one {# ospite} other {# ospiti}}{orphans, plural, =0 {} one { (di cui # orfano)} other { (di cui # orfani)}}",
       "countsNote": "Ospiti inclusi. Dall'aggiornamento del monitoraggio della presenza ({date}), l'ultima attività segue una pagina realmente in uso: scheda visibile e un'interazione negli ultimi 30 minuti (prima bastava una scheda rimasta aperta). Non prova che la persona stia giocando.",
       "byRoleLine": "Per ruolo: {players, plural, one {# giocatore} other {# giocatori}} · {moderators, plural, one {# moderatore} other {# moderatori}} · {admins, plural, one {# admin} other {# admin}} · {superadmins, plural, one {# super admin} other {# super admin}} · {founders, plural, one {# fondatore} other {# fondatori}}"
     },
@@ -5691,7 +5702,7 @@
     },
     "accountKind": {
       "password": "Password",
-      "google": "Google",
+      "google": "Accesso social",
       "guest": "Ospite",
       "guestOrphan": "Ospite orfano",
       "legacy": "Vecchio account",
@@ -6127,7 +6138,16 @@
       "lastActivity": "Ultima attività",
       "lastActivityHint": "Ultimo passaggio con una sessione valida, su tutti i dispositivi. Dall'aggiornamento del monitoraggio della presenza ({date}), solo una pagina realmente in uso (scheda visibile e un'interazione negli ultimi 30 minuti) o un'autenticazione la fa avanzare; prima bastava una scheda rimasta aperta.",
       "lastAuth": "Ultima autenticazione",
-      "lastAuthHint": "Credenziali, Google o creazione ospite: non ogni visita.",
+      "lastAuthHint": "Credenziali, Google, Discord, Facebook, Apple o creazione dell'ospite: non a ogni visita.",
+      "loginMethods": "Accesso",
+      "loginMethodsHint": "Discord, Facebook e Apple: servizi collegati all'account. Google non lascia traccia: compare solo per un account senza altri metodi, ma resta possibile su qualsiasi account con un indirizzo.",
+      "loginMethod": {
+        "password": "Password",
+        "google": "Google",
+        "discord": "Discord",
+        "facebook": "Facebook",
+        "apple": "Apple"
+      },
       "never": "Mai",
       "autoDelete": "Eliminazione automatica",
       "autoDeletePending": "Imminente (prossima pulizia)",

@@ -11,6 +11,8 @@ import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
 import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
+import { takeOAuthErrorFromUrl } from '@/lib/oauth'
 
 /**
  * Pérennisation d'un compte INVITÉ depuis la page Compte : le joueur garde
@@ -34,6 +36,20 @@ export function GuestUpgradeCard() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+
+  // Retour de Discord / Facebook : réussite (?guestSaved=1, le compte n'est
+  // déjà plus invité) ou refus (code dans l'URL).
+  useEffect(() => {
+    const code = takeOAuthErrorFromUrl('upgrade')
+    if (code) setError(tApiErrors(code))
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('guestSaved') === '1') {
+      setSaved(true)
+      url.searchParams.delete('guestSaved')
+      window.history.replaceState(window.history.state, '', url.toString())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lu une fois, au montage
+  }, [])
 
   const upgrade = async (body: Record<string, unknown>) => {
     setBusy(true)
@@ -96,6 +112,8 @@ export function GuestUpgradeCard() {
         size: 'large',
         text: 'continue_with',
         shape: 'pill',
+        // Même largeur que les boutons Discord / Facebook juste dessous.
+        width: 300,
         locale,
       })
     }
@@ -157,7 +175,7 @@ export function GuestUpgradeCard() {
       {/* Le chemin le plus COURT d'abord : un seul geste, aucun mot de passe
           à inventer sur un téléphone en soirée. Le formulaire email reste
           juste en dessous pour qui n'a pas de compte Google. */}
-      <div className="mt-3">
+      <div className="mt-3 space-y-2">
         {nativeGoogle ? (
           <NativeGoogleButton
             disabled={busy}
@@ -166,6 +184,7 @@ export function GuestUpgradeCard() {
         ) : (
           <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
         )}
+        <OAuthButtons intent="upgrade" disabled={busy} onError={setError} />
       </div>
 
       <div className="my-3 flex items-center gap-3" aria-hidden>

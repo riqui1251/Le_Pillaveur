@@ -23,6 +23,8 @@ import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
 import { FriendsManager } from '@/components/friends/FriendsManager'
 import { GuestUpgradeCard } from '@/components/auth/GuestUpgradeCard'
 import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
+import { isOAuthProvider, takeOAuthErrorFromUrl, type OAuthProvider } from '@/lib/oauth'
 import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
 import { isNativeGoogleAvailable } from '@/lib/native-google-login'
 import { copyText } from '@/lib/native-share'
@@ -225,6 +227,22 @@ export function AccountInfo() {
   // passe : c'est la route elle-même qui répond (sonde GET), déclenchée à
   // l'ouverture de la zone de danger.
   const [deleteMethod, setDeleteMethod] = useState<'password' | 'google' | 'session' | null>(null)
+  // Services (Discord, Facebook) liés au compte, qui peuvent eux aussi
+  // confirmer la suppression d'un compte sans mot de passe.
+  const [deleteProviders, setDeleteProviders] = useState<OAuthProvider[]>([])
+
+  // Refus renvoyé par le retour Discord / Facebook d'une suppression.
+  useEffect(() => {
+    const code = takeOAuthErrorFromUrl('delete')
+    if (!code) return
+    setShowDangerZone(true)
+    setDeleteError(
+      code === 'founder_protected'
+        ? t('deleteAccount.founderProtected')
+        : apiErrorMessage(code, tApiErrors, t('deleteAccount.genericError'))
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lu une fois, au montage
+  }, [])
 
   useEffect(() => {
     if (!showDangerZone || !userId || deleteMethod) return
@@ -236,6 +254,7 @@ export function AccountInfo() {
         // Repli prudent sur le mot de passe : c'est le cas le plus courant,
         // et le serveur reste seul juge de la preuve exigée.
         setDeleteMethod(data?.method === 'google' || data?.method === 'session' ? data.method : 'password')
+        setDeleteProviders(Array.isArray(data?.providers) ? data.providers.filter(isOAuthProvider) : [])
       })
       .catch(() => {
         if (!cancelled) setDeleteMethod('password')
@@ -315,6 +334,8 @@ export function AccountInfo() {
         size: 'large',
         text: 'continue_with',
         shape: 'pill',
+        // Même largeur que les boutons Discord / Facebook juste dessous.
+        width: 300,
         locale,
       })
     }
@@ -1070,7 +1091,11 @@ export function AccountInfo() {
             /* Compte Google armé : la confirmation EST la connexion Google
                (le jeton obtenu est posté à la place du mot de passe). */
             <div className="space-y-2">
-              <p className="text-sm text-red-100/70">{t('deleteAccount.googleConfirmHint')}</p>
+              <p className="text-sm text-red-100/70">
+                {deleteProviders.length > 0
+                  ? t('deleteAccount.externalConfirmHint')
+                  : t('deleteAccount.googleConfirmHint')}
+              </p>
               {nativeGoogle ? (
                 <NativeGoogleButton
                   disabled={deletingAccount}
@@ -1078,6 +1103,14 @@ export function AccountInfo() {
                 />
               ) : (
                 <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+              )}
+              {deleteProviders.length > 0 && (
+                <OAuthButtons
+                  intent="delete"
+                  providers={deleteProviders}
+                  disabled={deletingAccount}
+                  onError={setDeleteError}
+                />
               )}
               <button
                 type="button"

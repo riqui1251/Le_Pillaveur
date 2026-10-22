@@ -17,6 +17,9 @@ import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-mo
 import { apiErrorMessage } from '@/lib/api-response'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
+import { impliesOnlineMode, safeAuthRedirect } from '@/lib/auth-redirect'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
+import { takeOAuthErrorFromUrl } from '@/lib/oauth'
 import {
   Dialog,
   DialogContent,
@@ -25,34 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-
-/**
- * Le paramètre ?redirect= est le SEUL indice de ce qui a fait venir le
- * visiteur : la bascule « en ligne » de la vitrine y met /jeux, la porte de
- * code de table /jeux?join=XXXXXX, l'essai contre des bots /games/<jeu>, et le
- * middleware y recopie la page protégée qu'on a tenté d'ouvrir.
- *
- * Un compte fraîchement créé naît en mode LOCAL côté serveur : sans ça, le
- * visiteur venu pour jouer EN LIGNE s'inscrivait puis atterrissait sur la
- * sélection de joueurs locaux, et devait deviner une bascule pour retrouver ce
- * qui l'avait fait venir. On pose donc le mode en ligne dès l'inscription
- * quand la destination est celle du jeu en ligne.
- *
- * Le cas local reste intact : /joueurs (la valeur par défaut, et la
- * destination du joueur qu'on renvoie vers sa table de salon) ne déclenche
- * rien, et la bascule reste disponible dans les deux sens.
- */
-function impliesOnlineMode(redirect: string): boolean {
-  const [path, query = ''] = redirect.split('?')
-  if (query.includes('join=')) return true
-  return path === '/jeux' || path.startsWith('/jeux/') || path.startsWith('/games/')
-}
-
-function safeRedirect(path: string | null): string {
-  if (!path || !path.startsWith('/') || path.startsWith('//')) return '/joueurs'
-  if (path.startsWith('/compte')) return '/joueurs'
-  return path
-}
 
 export function AuthForm() {
   const t = useTranslations('auth')
@@ -64,7 +39,7 @@ export function AuthForm() {
   const tNav = useTranslations('nav.legal')
   const { login, register, refresh, setPlayMode } = useAuth()
   const searchParams = useSearchParams()
-  const redirectTo = safeRedirect(searchParams?.get('redirect') ?? null)
+  const redirectTo = safeAuthRedirect(searchParams?.get('redirect') ?? null)
 
   // Navigation DOCUMENT (pas SPA) après établissement de session : le cache
   // de préchargement du routeur peut contenir la redirection « pas de
@@ -123,6 +98,14 @@ export function AuthForm() {
   const [forgotMessage, setForgotMessage] = useState<string | null>(null)
   const [forgotError, setForgotError] = useState<string | null>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+
+  // Refus renvoyé par le retour Discord / Facebook (la route ne peut que
+  // rediriger ici, le code dans l'URL).
+  useEffect(() => {
+    const code = takeOAuthErrorFromUrl('login')
+    if (code) setError(tApiErrors(code))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lu une fois, au montage
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -337,6 +320,12 @@ export function AuthForm() {
         ) : (
           <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
         )}
+        <OAuthButtons
+          intent="login"
+          redirect={redirectTo}
+          disabled={loading}
+          onError={setError}
+        />
         <div className="flex items-center gap-3" aria-hidden>
           <span className="h-px flex-1 bg-white/10" />
           <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>

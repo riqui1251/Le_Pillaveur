@@ -18,7 +18,7 @@ import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limi
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
-import { getDisplayNameValidationError, isDisplayNameTaken, DISPLAY_NAME_MAX_LENGTH } from '@/lib/display-name'
+import { pickAvailableDisplayName } from '@/lib/social-display-name-server'
 import { ensureServerModerationTermsLoaded } from '@/lib/name-moderation/extra-terms-server'
 import { linkVisitorNameModerationAttempts } from '@/lib/name-moderation-attempts-server'
 import { readConsentedVisitorId } from '@/lib/auth-cookies'
@@ -26,33 +26,6 @@ import { parseRequestedAmbianceMode } from '@/lib/ambiance-mode'
 
 const GOOGLE_LIMIT = 15
 const GOOGLE_WINDOW_MS = 15 * 60 * 1000
-
-/**
- * Fabrique un pseudo disponible à partir du prénom Google : on tente le nom
- * tel quel, puis avec un suffixe numérique, avant un repli neutre. Le pseudo
- * reste modifiable ensuite depuis la page Compte.
- */
-async function pickAvailableDisplayName(preferred: string): Promise<string> {
-  const base = preferred.trim().slice(0, DISPLAY_NAME_MAX_LENGTH).trim()
-  const candidates: string[] = []
-  if (base) {
-    candidates.push(base)
-    for (let i = 0; i < 3; i++) {
-      const suffix = String(Math.floor(10 + Math.random() * 90))
-      candidates.push(`${base.slice(0, DISPLAY_NAME_MAX_LENGTH - suffix.length)}${suffix}`)
-    }
-  }
-  for (let i = 0; i < 5; i++) {
-    candidates.push(`Joueur${Math.floor(1000 + Math.random() * 9000)}`)
-  }
-  for (const candidate of candidates) {
-    if (getDisplayNameValidationError(candidate)) continue
-    if (await isDisplayNameTaken(candidate)) continue
-    return candidate
-  }
-  // Dernier recours : un identifiant quasi unique (validation garantie).
-  return `Joueur${Date.now() % 100000}`
-}
 
 export const POST = withApiRoute('auth/google POST', async (request: Request) => {
   try {

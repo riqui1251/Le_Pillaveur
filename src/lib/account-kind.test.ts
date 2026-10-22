@@ -14,6 +14,7 @@ import type { Prisma } from '@prisma/client'
 import {
   accountDeleteLogDetail,
   accountKind,
+  loginMethods,
   ACCOUNT_DELETE_ANONYMIZED_DETAIL,
   GUEST_SESSION_DAYS_CLIENT,
   GUEST_STALE_DAYS,
@@ -443,5 +444,27 @@ describe('recherche de comptes : garde IP et échappement LIKE', () => {
     expect(escapeLikePattern('1_2%3')).toBe('1!_2!%3')
     expect(escapeLikePattern('a!b')).toBe('a!!b')
     expect(escapeLikePattern('192.168.1.1')).toBe('192.168.1.1')
+  })
+})
+
+describe('loginMethods — fiche de la supervision', () => {
+  const account = { isGuest: false, email: 'kevin@exemple.fr', hasPassword: false, providers: [] as string[] }
+
+  it('compte sans mot de passe ni service lié : ne peut venir que de Google', () => {
+    expect(loginMethods(account)).toEqual(['google'])
+  })
+
+  it('services liés, dans un ordre stable ; Google n’est plus affirmé', () => {
+    expect(loginMethods({ ...account, providers: ['apple', 'discord'] })).toEqual(['discord', 'apple'])
+  })
+
+  it('mot de passe en premier, puis les services liés', () => {
+    expect(loginMethods({ ...account, hasPassword: true, providers: ['facebook'] })).toEqual(['password', 'facebook'])
+    expect(loginMethods({ ...account, hasPassword: true })).toEqual(['password'])
+  })
+
+  it('invité ou compte sans adresse : aucun moyen durable', () => {
+    expect(loginMethods({ ...account, isGuest: true, email: null })).toEqual([])
+    expect(loginMethods({ ...account, email: null })).toEqual([])
   })
 })

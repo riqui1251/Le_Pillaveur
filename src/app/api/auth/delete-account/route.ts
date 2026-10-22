@@ -5,6 +5,7 @@ import { verifyGoogleIdToken } from '@/lib/google-auth-server'
 import { deleteUserAccount } from '@/lib/user-activity-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
+import { enabledOAuthProviders } from '@/lib/oauth-server'
 
 const DELETE_LIMIT = 5
 const DELETE_WINDOW_MS = 60 * 60 * 1000
@@ -45,10 +46,19 @@ export const GET = withApiRoute('auth/delete-account GET', async () => {
   if (!user) return apiError('auth_required', 401)
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { passwordHash: true, email: true, isGuest: true },
+    select: { passwordHash: true, email: true, isGuest: true, oauthAccounts: { select: { provider: true } } },
   })
   if (!dbUser) return apiError('auth_required', 401)
-  return NextResponse.json({ method: confirmationMethod(dbUser) })
+  const method = confirmationMethod(dbUser)
+  // Compte sans mot de passe lié à Discord / Facebook : ce service confirme
+  // aussi la suppression (retour OAuth, intention `delete`), à côté de
+  // Google — sans quoi un compte créé par Discord ne pouvait pas s'effacer.
+  const enabled = enabledOAuthProviders()
+  const providers =
+    method === 'google'
+      ? enabled.filter((provider) => dbUser.oauthAccounts.some((account) => account.provider === provider))
+      : []
+  return NextResponse.json({ method, providers })
 })
 
 export const POST = withApiRoute('auth/delete-account POST', async (request: Request) => {
