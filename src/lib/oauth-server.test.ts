@@ -7,6 +7,7 @@ import {
   fetchOAuthProfile,
   oauthAuthorizeUrl,
   oauthCredentials,
+  sameOAuthState,
   type OAuthState,
 } from './oauth-server'
 
@@ -80,6 +81,14 @@ describe('état de l’aller-retour', () => {
     expect(decodeOAuthState(encodeOAuthState({ ...state, state: 'court' }))).toBeNull()
     expect(decodeOAuthState(encodeOAuthState({ ...state, provider: 'twitter' as never }))).toBeNull()
     expect(decodeOAuthState(encodeOAuthState({ ...state, locale: 'de' as never }))).toBeNull()
+  })
+
+  it('state comparé à l’identique, absent ou de longueur différente refusé', () => {
+    expect(sameOAuthState(state.state, state.state)).toBe(true)
+    expect(sameOAuthState(state.state, `${state.state.slice(0, -1)}y`)).toBe(false)
+    expect(sameOAuthState(state.state, state.state.slice(0, 10))).toBe(false)
+    expect(sameOAuthState(state.state, '')).toBe(false)
+    expect(sameOAuthState(state.state, null)).toBe(false)
   })
 
   it('ne rend jamais une destination hors du site', () => {
