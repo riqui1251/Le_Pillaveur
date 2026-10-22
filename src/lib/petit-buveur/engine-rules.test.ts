@@ -428,6 +428,22 @@ describe('#26 Défi / Question : le joueur au tour arbitre', () => {
     })
   }
 
+  it('cible protégée par un autre : bloqué d’office, sans arbitrage (comme en local)', () => {
+    for (const type of ['defi', 'question'] as const) {
+      const s = withPending(base([3, 4, 5]), { type, effect: 2, defiIndex: 0 })
+      protect(s, 'b')
+      const done = resolve(s, 'a', { targetId: 'b' })
+      expect(done.pending).toBeNull()
+      expect(done.phase).toBe('playing')
+      expect(player(done, 'b').drinks).toBe(0)
+      expect(done.lastOutcome).toMatchObject({ caseType: type, targetId: 'b', notes: [{ kind: 'protected', playerId: 'b' }] })
+      expect(done.lastOutcome?.succeeded).toBeUndefined()
+      // Sa propre protection ne le dispense pas de son propre défi.
+      protect(s, 'a')
+      expect(resolve(s, 'a', { targetId: 'a' }).pending?.stage).toBe('verdict')
+    }
+  })
+
   it('un bot arbitre tranche au hasard', () => {
     const verdicts = new Set<boolean | undefined>()
     for (let seed = 0; seed < 40; seed += 1) {

@@ -25,7 +25,8 @@ import { generateCase } from './case-generator'
  *    dernière case ; à égalité, l'acteur, puis l'ordre de jeu après lui ;
  *  - la protection bloque les effets négatifs imposés par la case d'un AUTRE
  *    joueur (gorgées, reculs, échanges, liens, statuts), jamais les positifs ;
- *  - Défi / Question : le joueur au tour arbitre (réussi / raté) ;
+ *  - Défi / Question : le joueur au tour arbitre (réussi / raté), sauf cible
+ *    protégée par un autre : bloqué d'office, comme en local ;
  *  - Pile ou face : la CIBLE choisit son côté (étape `side`) ;
  *  - Chance : « Relancer » (nouveau lancer complet) ou « +2 cases » ;
  *  - Répétition / Rewind rejouent la dernière case effective ; Double case
@@ -897,6 +898,13 @@ function reduceResolve(
     if (effective.type === 'defi' || effective.type === 'question') {
       if (choice.succeeded !== undefined && typeof choice.succeeded !== 'boolean') {
         throw new EngineError(INVALID_CHOICE)
+      }
+      // Cible protégée : le défi d'un autre ne la touche pas, rien à arbitrer (comme en local).
+      if (shielded(target, actorOf(w))) {
+        const fx = newFx(w)
+        note(fx, { kind: 'protected', playerId: target.id })
+        recordOutcome(w, snapshot(w.players), label, { ...effectiveExtra, targetId: target.id, notes: fx.notes }, null)
+        return commit(w, playerId, message)
       }
       const staged: EnginePending = { ...p, stage: 'verdict', targetId: target.id, needsTarget: false }
       if (typeof choice.succeeded === 'boolean') applyVerdict(w, staged, effective, choice.succeeded)

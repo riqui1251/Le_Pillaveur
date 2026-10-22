@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 import { PLAYER_ICONS } from '@/lib/players'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { DiceOverlay, type DiceOverlayState } from '@/components/petit-buveur/DiceOverlay'
 import { TurnOverlay } from '@/components/petit-buveur/TurnOverlay'
@@ -184,6 +184,22 @@ export function PetitBuveurOnline() {
       ? { body: { action: 'bot' }, delayMs: botTickDelayMs(decider.name) }
       : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
+  })
+
+  // Échéance du choix pile ou face de la cible (côté tiré au hasard) : tick
+  // « advance » arbitré par rang, comme les phases chronométrées des autres
+  // jeux. Le minuteur de service du serveur n'est plus le seul à le tirer.
+  const sidePending = view?.pending?.stage === 'side' ? view.pending : null
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase !== 'finished'),
+    advance:
+      sidePending && typeof sidePending.deadlineAt === 'number'
+        ? { phaseKey: `side:${sidePending.targetId ?? ''}`, dueAt: sidePending.deadlineAt }
+        : null,
   })
 
   // Tick AFK : si le décideur (humain, présent, pas moi) ne joue rien
