@@ -30,8 +30,8 @@ import type { SFState } from '@/lib/sans-filtre/engine'
 import type { MCState } from '@/lib/mots-codes/engine'
 import type { PbcState } from '@/lib/petit-bac/engine'
 import type { PreState } from '@/lib/president/engine'
-import type { PurpleState } from '@/lib/purple/engine'
-import type { Game1220State } from '@/lib/1220/engine'
+import { purpleCountsForResults, type PurpleState } from '@/lib/purple/engine'
+import { game1220CountsForResults, type Game1220State } from '@/lib/1220/engine'
 import type { TelephoneState } from '@/lib/telephone-dessine/engine'
 
 /**
@@ -297,6 +297,8 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
       // Le « score » du Purple est un compte de GORGÉES : rien à classer,
       // participation seulement (voir PARTICIPATION_ONLY_GAMES).
       const s = state as PurpleState
+      // Arrêtée aussitôt lancée : aucune progression, même en solo.
+      if (!purpleCountsForResults(s)) return []
       return s.players.map((p) => ({
         playerId: p.id,
         isBot: p.isBot,
@@ -306,6 +308,7 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
     case '1220': {
       // Idem : des gorgées distribuées, aucun vainqueur.
       const s = state as Game1220State
+      if (!game1220CountsForResults(s)) return []
       return s.players.map((p) => ({
         playerId: p.id,
         isBot: p.isBot,

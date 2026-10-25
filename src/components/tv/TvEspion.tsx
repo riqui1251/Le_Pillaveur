@@ -25,6 +25,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { genreOfId } from '@/components/online/bot-speech/bot-speech-feed'
 import { EspionTableTalk, espionExchangeKeys } from '@/components/online/espion/EspionTableTalk'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
+import { serverNow } from '@/hooks/server-clock'
 
 type IconOf = (p: { id: string; name: string; isBot: boolean }) => string
 
@@ -148,7 +149,7 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
   const t = useTranslations('games.espion.game')
   const activePlayers = state.players.filter((p) => !p.leftAt)
   const hasBot = activePlayers.some((p) => p.isBot)
-  const pending = hasBot ? pendingEspionQuestion(state, Date.now()) : null
+  const pending = hasBot ? pendingEspionQuestion(state, serverNow()) : null
   // La question sans réponse quitte l'écran à son échéance de 25 s, sans attendre une nouvelle version.
   useDeadline(pending ? pending.askedAt + ESPION_QUESTION_TIMEOUT_MS : null)
   const reveal = state.lastReveal

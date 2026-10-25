@@ -130,3 +130,31 @@ describe('POST /api/chat/messages — fantôme du Loup-Garou', () => {
     expect(chatCreate).not.toHaveBeenCalled()
   })
 })
+
+describe('POST /api/chat/messages — message vide', () => {
+  it.each([
+    ['inversion bidi', '‮'],
+    ['remplissage Hangul', 'ㅤㅤ'],
+    ['espaces de largeur nulle', '​​​'],
+  ])('fait d’invisibles seulement (%s) : 400 invalid_message, rien d’écrit', async (_, body) => {
+    actAs(wolves[1].id)
+    const res = await send({ scope: 'wolves', body })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'invalid_message', code: 'invalid_message' })
+    expect(chatCreate).not.toHaveBeenCalled()
+  })
+
+  it('message vide ou corps illisible : un code, jamais une phrase', async () => {
+    actAs(wolves[1].id)
+    expect(await (await send({ scope: 'wolves', body: '   ' })).json()).toMatchObject({ error: 'invalid_message' })
+    const garbled = await POST(
+      new Request('http://test/api/chat/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{pas du json',
+      })
+    )
+    expect(garbled.status).toBe(400)
+    expect(await garbled.json()).toMatchObject({ error: 'invalid_json' })
+  })
+})

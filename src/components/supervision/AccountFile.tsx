@@ -66,6 +66,7 @@ import type {
 import type { AccountDescription } from '@/lib/account-kind-server'
 import { countryFlag, countryLabel } from '@/lib/country-display'
 import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
+import { parseFeatureBanEventAction } from '@/lib/feature-ban-events'
 import { GAMES } from '@/lib/games'
 import { ACTIVE_WINDOW_MS, BEAT_INTERVAL_MS, HONEST_PRESENCE_SINCE, INTERACTION_WINDOW_MS } from '@/lib/heartbeat'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString, toWeekKey, weekKeyMonday } from '@/lib/paris-time'
@@ -1524,7 +1525,13 @@ function NetworksSection({ activity }: { activity: AccountActivity }) {
 /** Libellé d'une action de l'historique de modération (même table que la page). */
 function useModerationActionLabel() {
   const t = useTranslations('supervision.actions')
+  const tFeature = useTranslations('supervision.featureBans')
   return (action: string, comment: string | null): string => {
+    const featureEvent = parseFeatureBanEventAction(action)
+    if (featureEvent) {
+      const feature = tFeature(featureEvent.feature)
+      return featureEvent.kind === 'ban' ? t('featureBan', { feature }) : t('featureUnban', { feature })
+    }
     switch (action) {
       case 'ban_permanent':
         return t('banPermanent')

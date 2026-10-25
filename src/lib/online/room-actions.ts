@@ -29,9 +29,11 @@ export type RoomActionResult = { status: number; body: Record<string, unknown> }
 
 /**
  * Acteur passé aux moteurs pour un tick de SERVICE (acteur `null`). Aucun
- * compte ne peut porter cet identifiant, et les moteurs ne s'en servent pas :
- * `bot` fait jouer le bot au tour, `advance` n'écoute que l'horloge serveur —
- * exactement ce qu'ils font déjà du tick d'un client arbitre.
+ * compte ne peut porter cet identifiant : `bot` fait jouer le bot au tour,
+ * `advance` n'écoute que l'horloge serveur — exactement ce qu'ils font déjà
+ * du tick d'un client arbitre. Seul le Loup-Garou le reconnaît
+ * (LG_SERVICE_ACTOR_ID, égalité vérifiée par night-tick.test.ts) pour
+ * réserver au minuteur les coups de bot de nuit : ne pas le renommer seul.
  */
 export const SERVICE_ACTOR_ID = '__service__'
 
@@ -93,9 +95,18 @@ export type LoadedActionRoom = { roomId: string; room: ActionRoom; adapter: Game
  * Valide une demande de remplacement AFK avec l'horloge SERVEUR :
  * le joueur au tour n'a rien joué depuis le délai de grâce
  * (`updatedAt` de la salle = dernière écriture d'état).
+ *
+ * Le tour est relu dans l'état (`stateActorId`), pas seulement dans la
+ * colonne : celle d'une salle écrite par une version précédente du serveur
+ * désigne encore un joueur en pleine révélation ou au bilan d'une manche,
+ * phases désormais sans acteur — il y aurait été expulsé sans avoir la main.
  */
-function afkCandidate(room: ActionRoom, requesterId: string): { userId: string } | { error: string } {
-  if (!room.currentTurnUserId) return { error: 'NO_ACTIVE_PLAYER' }
+function afkCandidate(
+  room: ActionRoom,
+  stateActorId: string | null,
+  requesterId: string
+): { userId: string } | { error: string } {
+  if (!room.currentTurnUserId || stateActorId !== room.currentTurnUserId) return { error: 'NO_ACTIVE_PLAYER' }
   if (room.currentTurnUserId === requesterId) return { error: 'CANNOT_AFK_SELF' }
   const elapsed = Date.now() - room.updatedAt.getTime()
   if (elapsed < ONLINE_REPLACE_GRACE_MS) return { error: 'NOT_AFK_YET' }
@@ -197,7 +208,7 @@ async function applyActionOnce(
   let kickedUserId: string | null = null
 
   if (body.action === 'replace-afk') {
-    const candidate = afkCandidate(room, actorId)
+    const candidate = afkCandidate(room, adapter.currentActorId(state), actorId)
     if ('error' in candidate) {
       const code = resolveOnlineErrorCode(candidate.error) ?? 'action_failed'
       return { status: 409, body: onlineErrorBody(code) }

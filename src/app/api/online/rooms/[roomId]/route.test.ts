@@ -117,12 +117,13 @@ describe('GET /rooms/[roomId] — filet serveur du briefing', () => {
 describe('DELETE /rooms/[roomId] — hors de la table', () => {
   it('un non-membre ne déclenche ni écriture ni diffusion', async () => {
     roomMock.findUnique.mockResolvedValue(playingRoom())
-    memberMock.deleteMany.mockResolvedValue({ count: 0 })
+    adapterMock.mockReturnValue(fakeAdapter)
 
     const res = await leave('stranger')
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ ok: true })
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
     expect(memberMock.count).not.toHaveBeenCalled()
     expect(roomMock.update).not.toHaveBeenCalled()
     expect(roomMock.updateMany).not.toHaveBeenCalled()
@@ -165,6 +166,7 @@ const writtenState = (call: number) =>
 
 describe('DELETE /rooms/[roomId] — départ pendant une partie', () => {
   beforeEach(() => {
+    memberMock.findUnique.mockResolvedValue({ userId: 'carol' })
     memberMock.deleteMany.mockResolvedValue({ count: 1 })
     memberMock.count.mockResolvedValue(2)
     adapterMock.mockReturnValue(fakeAdapter)
@@ -205,17 +207,30 @@ describe('DELETE /rooms/[roomId] — départ pendant une partie', () => {
     expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'changed', stateVersion: 7 })
   })
 
-  it('conflits répétés : abandon borné, rien n’est écrit sans condition', async () => {
+  it('le siège n’est libéré qu’APRÈS le départ écrit dans la partie', async () => {
+    roomMock.findUnique.mockResolvedValue(playingRoom())
+    roomMock.updateMany.mockResolvedValue({ count: 1 })
+
+    await leave('carol')
+
+    expect(roomMock.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
+      memberMock.deleteMany.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('conflits répétés : le siège est GARDÉ (pas de joueur fantôme), 409 pour réessayer', async () => {
     roomMock.findUnique.mockResolvedValue(playingRoom())
     roomMock.updateMany.mockResolvedValue({ count: 0 })
 
     const res = await leave('carol')
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ error: 'version_conflict' })
     expect(roomMock.updateMany).toHaveBeenCalledTimes(3)
     expect(roomMock.update).not.toHaveBeenCalled()
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
     expect(tickerMock).not.toHaveBeenCalled()
-    expect(bus.publishRoomChanged).toHaveBeenCalledWith('room-1', { type: 'lobby' })
+    expect(bus.publishRoomChanged).not.toHaveBeenCalled()
   })
 
   it('salle disparue pendant le conflit : rien de plus', async () => {
@@ -239,6 +254,7 @@ describe('DELETE /rooms/[roomId] — Petit Buveur', () => {
     )
     pbAdapter = actual.getGameAdapter('petit-buveur')!
     adapterMock.mockReturnValue(pbAdapter)
+    memberMock.findUnique.mockResolvedValue({ userId: 'A' })
     memberMock.deleteMany.mockResolvedValue({ count: 1 })
     memberMock.count.mockResolvedValue(2)
     roomMock.updateMany.mockResolvedValue({ count: 1 })

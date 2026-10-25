@@ -11,6 +11,7 @@ import { usePagePresence } from '@/hooks/usePagePresence'
 import type { ChatUnread } from '@/hooks/useChatUnread'
 import { ReportDialog, type ReportTarget } from '@/components/chat/ReportDialog'
 import { chatCursorQuery, mergeMessages } from '@/lib/chat-delta'
+import { chatSendError } from '@/lib/chat-send-error'
 import { cn } from '@/lib/utils'
 
 /** Cadence conservée : une relève en delta ne coûte presque rien au repos. */
@@ -45,6 +46,7 @@ function ChatConversation({
   onReport: (report: ReportTarget) => void
 }) {
   const t = useTranslations('chat')
+  const tErrors = useTranslations('onlineLobby.errors')
   const visible = usePagePresence()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [noRoom, setNoRoom] = useState(false)
@@ -131,9 +133,12 @@ function ChatConversation({
         await fetchMessages()
         return
       }
-      // 429 = anti-flood du serveur ; le reste (403 ban, 400, 5xx) partage un
-      // message générique, le brouillon est conservé pour un nouvel essai.
-      setSendError(res.status === 429 ? t('tooFast') : t('sendFailed'))
+      // Le brouillon est conservé pour un nouvel essai (voir chatSendError).
+      const data = (await res.json().catch(() => null)) as { error?: unknown } | null
+      const kind = chatSendError(res.status, data?.error)
+      setSendError(
+        kind === 'tooFast' ? t('tooFast') : kind === 'readOnly' ? tErrors('chat_read_only') : t('sendFailed')
+      )
     } catch {
       setSendError(t('sendFailed'))
     } finally {

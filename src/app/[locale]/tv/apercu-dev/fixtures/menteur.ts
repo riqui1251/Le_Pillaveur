@@ -3,6 +3,8 @@ import {
   createMenteurState,
   menteurAlivePlayers,
   currentMenteurActorId,
+  menteurBotSeatId,
+  menteurSeatPlayedByBot,
   reduceMenteur,
   toMenteurClientView,
   type MenteurInitialPlayer,
@@ -39,10 +41,12 @@ function newTable(players: MenteurInitialPlayer[], seed: number, rules: MenteurR
 function step(table: Table): void {
   table.now += 5_000
   const { state } = table
-  const actorId = currentMenteurActorId(state)
+  // Le siège qui joue, révélation comprise (currentMenteurActorId y vaut null :
+  // n'importe qui referme les gobelets).
+  const actorId = menteurBotSeatId(state)
   const actor = state.players.find((p) => p.id === actorId)
   if (!actor) throw new Error('Menteur : aucun acteur')
-  if (actor.isBot) {
+  if (menteurSeatPlayedByBot(actor)) {
     const res = applyMenteurBotAction(state, table.rand, table.now, table.rand)
     if (!res.ok) throw new Error(`Menteur : coup de bot refusé (${res.error})`)
     table.state = res.state

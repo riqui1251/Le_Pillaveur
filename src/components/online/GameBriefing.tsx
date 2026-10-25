@@ -15,6 +15,7 @@ import { markGameTutorialSeen, type TutorialStep } from './GameTutorialModal'
 import { OnlinePlayerIcon } from './OnlinePlayerTag'
 import { PhaseCountdown } from './PhaseCountdown'
 import { cn } from '@/lib/utils'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * Briefing tuto synchronisé (salon en statut 'briefing') : chaque joueur lit
@@ -42,7 +43,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
   const [sending, setSending] = useState(false)
 
   const acks = room.briefing?.acks ?? []
-  const startedAt = room.briefing?.startedAt ?? Date.now()
+  const startedAt = room.briefing?.startedAt ?? serverNow()
   const hasAcked = Boolean(user && acks.includes(user.id))
   const deadline = startedAt + BRIEFING_TIMEOUT_MS
 
@@ -86,7 +87,7 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
           body: JSON.stringify({ timeout: true }),
         }).catch(() => {})
         schedule(true)
-      }, briefingTickDelay(deadline, Date.now(), Math.random(), retry))
+      }, briefingTickDelay(deadline, serverNow(), Math.random(), retry))
     }
     schedule(false)
     return () => clearTimeout(timer)

@@ -188,10 +188,7 @@ export const POST = withApiRoute('chat messages POST', async (request: Request) 
 
   const parsed = await readJsonBodyLimited<Record<string, unknown>>(request, MAX_CHAT_BODY_BYTES)
   if (!parsed.ok) {
-    return NextResponse.json(
-      { error: 'Message invalide' },
-      { status: parsed.reason === 'too_large' ? 413 : 400 }
-    )
+    return parsed.reason === 'too_large' ? apiError('payload_too_large', 413) : apiError('invalid_json', 400)
   }
   const payload = parsed.body
   const scope = typeof payload.scope === 'string' ? payload.scope : null
@@ -199,7 +196,7 @@ export const POST = withApiRoute('chat messages POST', async (request: Request) 
   const body = typeof payload.body === 'string' ? payload.body.trim() : ''
 
   if (!body || body.length > MAX_BODY_LENGTH) {
-    return NextResponse.json({ error: 'Message invalide' }, { status: 400 })
+    return apiError('invalid_message', 400)
   }
 
   // Ban de chat écrit (modérateur) : lecture autorisée, envoi bloqué.
@@ -219,6 +216,9 @@ export const POST = withApiRoute('chat messages POST', async (request: Request) 
   // message est délivré censuré (termes de modération DB inclus).
   await ensureServerModerationTermsLoaded()
   const { text: cleanBody } = censorChatMessage(body)
+  // Fait d'invisibles seulement (U+200B, U+202E, remplissage Hangul) : le
+  // `trim` plus haut les laisse passer, la censure les retire — il ne reste rien.
+  if (!cleanBody.trim()) return apiError('invalid_message', 400)
 
   const created = await prisma.chatMessage.create({
     data: { channel: resolved.channel, senderId: user.id, body: cleanBody },

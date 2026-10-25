@@ -168,6 +168,9 @@ export const ONLINE_ERROR_CODES = [
   'guess_limit_reached',
   // Tabou : TROUVÉ / TABOU sur un mot arrivé à l'instant (un verdict par mot).
   'word_too_recent',
+
+  // Chat : message vide (une fois retirés les caractères invisibles) ou trop long.
+  'invalid_message',
 ] as const
 
 export type OnlineErrorCode = (typeof ONLINE_ERROR_CODES)[number]
@@ -325,6 +328,7 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   guess_too_fast: 'Une proposition par seconde : doucement',
   guess_limit_reached: 'Plus d’essais pour cette manche',
   word_too_recent: 'Trop tôt : ce mot vient d’arriver',
+  invalid_message: 'Message vide ou trop long',
 }
 
 /**

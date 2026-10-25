@@ -4,7 +4,7 @@ import { useId, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { ChevronDown, Crown, Globe, Lock, Users } from 'lucide-react'
-import { GAMES } from '@/lib/games'
+import { useLocalizedGames } from '@/lib/games-i18n'
 import type { LiveGameItem } from '@/lib/online-room'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
@@ -33,6 +33,7 @@ export function LiveDot() {
  */
 export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total: number }) {
   const t = useTranslations('onlineLobby')
+  const catalog = useLocalizedGames()
 
   const byGame = useMemo(() => {
     const map = new Map<string, LiveGameItem[]>()
@@ -64,7 +65,7 @@ export function LiveGamesPanel({ games, total }: { games: LiveGameItem[]; total:
       {byGame.length > 0 && (
         <ul className="grid gap-2 sm:grid-cols-2">
           {byGame.map(([gameId, items]) => {
-            const game = GAMES.find((g) => g.id === gameId)
+            const game = catalog.find((g) => g.id === gameId)
             const playerCount = items.reduce((sum, item) => sum + item.playerCount, 0)
             // Au moins une table fermée dans ce groupe : le cadenas dit
             // pourquoi ses joueurs ne sont pas nommés.
@@ -129,6 +130,7 @@ export function OpenLobbiesList() {
   const { joinRoom, loading: joining, error } = useOnlineRoom()
   const [open, setOpen] = useState(false)
   const detailId = useId()
+  const catalog = useLocalizedGames()
 
   const byGame = useMemo(() => {
     const map = new Map<string, typeof lobbies>()
@@ -143,7 +145,7 @@ export function OpenLobbiesList() {
   const handleJoin = async (roomId: string, gameId: string) => {
     const room = await joinRoom({ roomId })
     if (room) {
-      const game = GAMES.find((g) => g.id === gameId)
+      const game = catalog.find((g) => g.id === gameId)
       if (game) router.push(game.path)
     }
   }
@@ -224,7 +226,7 @@ export function OpenLobbiesList() {
               </div>
 
               {Array.from(byGame.entries()).map(([gameId, gameLobbies]) => {
-                const game = GAMES.find((g) => g.id === gameId)
+                const game = catalog.find((g) => g.id === gameId)
                 return (
                   <div key={gameId} className="rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
                     <div className="mb-3 flex items-center gap-2">

@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { Mail, X } from 'lucide-react'
 import { useFriendInvites } from '@/hooks/useFriendInvites'
-import { GAMES } from '@/lib/games'
+import { useLocalizedGames } from '@/lib/games-i18n'
 import { Button } from '@/components/ui/button'
 
 interface FriendInviteBannerProps {
@@ -15,13 +15,14 @@ interface FriendInviteBannerProps {
 export function FriendInviteBanner({ onJoin, joining }: FriendInviteBannerProps) {
   const t = useTranslations('onlineLobby.invites')
   const { invites, declineInvite } = useFriendInvites()
+  const games = useLocalizedGames()
 
   if (invites.length === 0) return null
 
   return (
     <div className="mb-4 space-y-2">
       {invites.map((invite) => {
-        const game = GAMES.find((g) => g.id === invite.gameId)
+        const game = games.find((g) => g.id === invite.gameId)
         return (
           <div
             key={invite.id}

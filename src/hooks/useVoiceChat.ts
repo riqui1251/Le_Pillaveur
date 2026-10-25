@@ -422,7 +422,9 @@ export function useVoiceChat(
       })
       const [stream, credsRes] = await Promise.all([
         media,
-        fetch('/api/rtc/credentials', { credentials: 'include' }),
+        // La salle est vérifiée côté serveur : pas d'identifiants TURN pour une
+        // table dont on n'est pas membre.
+        fetch(`/api/rtc/credentials?roomId=${encodeURIComponent(roomId)}`, { credentials: 'include' }),
       ]).catch((e: unknown) => {
         // Identifiants en échec : le micro, accordé entre-temps, ne doit pas
         // rester pris sans personne pour le couper.

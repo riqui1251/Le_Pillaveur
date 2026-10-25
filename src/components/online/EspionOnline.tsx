@@ -52,6 +52,7 @@ import { EspionNotebook } from './espion/EspionNotebook'
 import { LocationGuessGrid } from './espion/LocationGuessGrid'
 import { EspionRoleCard } from './espion/EspionRoleCard'
 import { espionTurn } from './espion/espion-turn'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * QUI EST L'ESPION ? en ligne (serveur-autoritaire). `location` est null
@@ -159,7 +160,7 @@ export function EspionOnline() {
   // vient du calendrier public des bots (bot-tick.ts), le même que celui du
   // filet serveur : la prochaine échéance d'un bot (réponse, question,
   // décision sur une accusation, dernier appel) ou le reveal qu'il mène.
-  const botDelayMs = view ? espionBotTickDelayMs(view, Date.now(), Math.random) : null
+  const botDelayMs = view ? espionBotTickDelayMs(view, serverNow(), Math.random) : null
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
@@ -171,7 +172,7 @@ export function EspionOnline() {
   })
 
   // Une question restée sans réponse n'attend plus au bout de 25 s : un rendu à l'échéance retire la carte.
-  const pending = view ? pendingEspionQuestion(view, Date.now()) : null
+  const pending = view ? pendingEspionQuestion(view, serverNow()) : null
   useDeadline(pending ? pending.askedAt + ESPION_QUESTION_TIMEOUT_MS : null)
   // Le moteur refuse « Manche suivante » avant le temps de lecture
   // (READING_TIME) : le bouton reste grisé, décompte affiché, jusque-là.
@@ -341,7 +342,7 @@ export function EspionOnline() {
 
   // ── Discussion en cours ───────────────────────────────────────────────────
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
-  const now = Date.now()
+  const now = serverNow()
   const hasBot = activePlayers.some((p) => p.isBot)
   const acc = view.activeAccusation
   const iSupported = acc?.supporters.includes(user.id) ?? false

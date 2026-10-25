@@ -729,7 +729,8 @@
       "invalid_duration": "Durata non valida: un numero intero di giorni.",
       "guess_too_fast": "Una proposta al secondo: piano!",
       "guess_limit_reached": "Nessun tentativo rimasto in questa manche.",
-      "word_too_recent": "Troppo presto: questa parola è appena arrivata."
+      "word_too_recent": "Troppo presto: questa parola è appena arrivata.",
+      "invalid_message": "Messaggio vuoto o troppo lungo."
     },
     "showcase": {
       "players": "Da {min} a {max} giocatori",
@@ -5958,6 +5959,7 @@
       "journalBanReason": "{actor} ha bannato {target} — «{detail}»",
       "journalUnban": "{actor} ha sbannato {target}",
       "journalFeatureBan": "{actor} ha disattivato il {feature} di {target}",
+      "journalFeatureUnban": "{actor} ha riattivato il {feature} di {target}",
       "journalGrant": "{actor} ha regalato un cosmetico a {target}",
       "journalTerm": "Termine moderato aggiunto: «{detail}»",
       "journalTermByActor": "{actor} ha aggiunto il termine «{detail}»",
@@ -6307,7 +6309,9 @@
       "roleChange": "Cambio di grado",
       "metricsExclusion": "Statistiche: account di test",
       "metricsExclusionOn": "Statistiche: segnato come account di test",
-      "metricsExclusionOff": "Statistiche: reinserito (non è più un account di test)"
+      "metricsExclusionOff": "Statistiche: reinserito (non è più un account di test)",
+      "featureBan": "Esclusione dal {feature}",
+      "featureUnban": "Riautorizzazione del {feature}"
     },
     "dialogs": {
       "deleteTitle": "Eliminare definitivamente questo account?",

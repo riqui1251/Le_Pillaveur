@@ -191,8 +191,10 @@ describe('applyRoomAction — joueur (contrat de la route inchangé)', () => {
     expect(result).toEqual({ status: 200, body: { error: 'GUESS_WRONG' } })
   })
 
+  const U2_TURN = JSON.stringify({ ...PLAYING, turn: 'u2', players: [...PLAYING.players, { id: 'u2' }] })
+
   it('remplacement AFK : l’inactif est expulsé avec sa raison, pour son prochain 403', async () => {
-    setRoom({ currentTurnUserId: 'u2', updatedAt: new Date(Date.now() - 4 * 60_000) })
+    setRoom({ currentTurnUserId: 'u2', gameStateJson: U2_TURN, updatedAt: new Date(Date.now() - 4 * 60_000) })
     const result = await applyRoomAction('r1', 'u1', { action: 'replace-afk' })
     expect(result.status).toBe(200)
     expect(applyActionMock).not.toHaveBeenCalled()
@@ -200,9 +202,22 @@ describe('applyRoomAction — joueur (contrat de la route inchangé)', () => {
   })
 
   it('remplacement AFK trop tôt : 409 not_afk_yet, rien d’écrit', async () => {
-    setRoom({ currentTurnUserId: 'u2', updatedAt: new Date() })
+    setRoom({ currentTurnUserId: 'u2', gameStateJson: U2_TURN, updatedAt: new Date() })
     const result = await applyRoomAction('r1', 'u1', { action: 'replace-afk' })
     expect(result).toMatchObject({ status: 409, body: { error: 'not_afk_yet' } })
+    expect(updateManyMock).not.toHaveBeenCalled()
+    expect(kickMemberMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    // Salle écrite avant le déploiement, en pleine révélation : la colonne
+    // désigne encore le meneur, l'état n'a plus d'acteur.
+    ['sans acteur dans l’état', JSON.stringify({ ...PLAYING, turn: null })],
+    ['tour passé à un autre', U2_TURN],
+  ])('remplacement AFK : colonne périmée (%s) → 409 no_active_player, personne d’expulsé', async (_, state) => {
+    setRoom({ currentTurnUserId: 'u3', gameStateJson: state, updatedAt: new Date(Date.now() - 4 * 60_000) })
+    const result = await applyRoomAction('r1', 'u1', { action: 'replace-afk' })
+    expect(result).toMatchObject({ status: 409, body: { error: 'no_active_player' } })
     expect(updateManyMock).not.toHaveBeenCalled()
     expect(kickMemberMock).not.toHaveBeenCalled()
   })

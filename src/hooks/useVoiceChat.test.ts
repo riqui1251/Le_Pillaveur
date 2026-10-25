@@ -54,7 +54,7 @@ beforeEach(() => {
   mic = deferred()
   creds = deferred()
   fetchMock = vi.fn((url: string) =>
-    url === '/api/rtc/credentials' ? creds.promise : Promise.resolve(new Response('{}'))
+    url.startsWith('/api/rtc/credentials') ? creds.promise : Promise.resolve(new Response('{}'))
   )
   vi.stubGlobal('fetch', fetchMock)
   vi.stubGlobal('EventSource', FakeEventSource)
@@ -153,6 +153,8 @@ describe('useVoiceChat — tentative abandonnée pendant la demande de micro', (
     expect(FakeEventSource.instances.map((es) => es.url)).toEqual(['/api/online/rooms/room1/stream'])
     expect(rtcPosts()).toHaveLength(1)
     expect(hook.result().joined).toBe(true)
+    // Identifiants TURN demandés POUR cette salle : la route en vérifie l'appartenance.
+    expect(fetchMock).toHaveBeenCalledWith('/api/rtc/credentials?roomId=room1', { credentials: 'include' })
 
     // Démontage normal : micro rendu, flux fermé.
     hook.unmount()

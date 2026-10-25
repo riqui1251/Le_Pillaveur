@@ -8,6 +8,8 @@ import {
   recordMatchResults,
   type MatchOutcome,
 } from './match-results'
+import { createPurpleState, PURPLE_MIN_BETS_FOR_RESULTS } from '@/lib/purple/engine'
+import { createGame1220State, GAME_1220_MIN_ROLLS_FOR_RESULTS } from '@/lib/1220/engine'
 
 /**
  * Règles du classement en ligne : qui est enregistré, qui gagne, qui perd.
@@ -157,6 +159,40 @@ describe('matchOutcomesFor (extraction par jeu)', () => {
 
   it('jeu inconnu → null (rien enregistré)', () => {
     expect(matchOutcomesFor('plinko', {})).toBeNull()
+  })
+
+  it('purple « Terminer » sitôt lancé : aucune issue, donc ni XP ni série, même en solo', () => {
+    const players = [
+      { id: 'u1', name: 'A', isBot: false },
+      { id: 'bot-1', name: 'Bot', isBot: true },
+    ]
+    const ended = { ...createPurpleState(players, 'seed'), phase: 'finished' as const }
+
+    expect(matchOutcomesFor('purple', ended)).toEqual([])
+    expect(matchOutcomesFor('purple', { ...ended, betsCount: PURPLE_MIN_BETS_FOR_RESULTS })).toEqual([
+      { playerId: 'u1', isBot: false, won: false },
+      { playerId: 'bot-1', isBot: true, won: false },
+    ])
+  })
+
+  it('1220 « Terminer » sitôt les paris réglés : aucune issue, partie comptée après assez de lancers', () => {
+    const players = [
+      { id: 'u1', name: 'A', isBot: false },
+      { id: 'u2', name: 'B', isBot: false },
+    ]
+    const ended = { ...createGame1220State(players, 'seed'), phase: 'finished' as const }
+    const roll = { d12: 1, d20: 1, results: [] }
+
+    expect(matchOutcomesFor('1220', ended)).toEqual([])
+    expect(
+      matchOutcomesFor('1220', { ...ended, history: Array(GAME_1220_MIN_ROLLS_FOR_RESULTS - 1).fill(roll) })
+    ).toEqual([])
+    expect(
+      matchOutcomesFor('1220', { ...ended, history: Array(GAME_1220_MIN_ROLLS_FOR_RESULTS).fill(roll) })
+    ).toEqual([
+      { playerId: 'u1', isBot: false, won: false },
+      { playerId: 'u2', isBot: false, won: false },
+    ])
   })
 
   it('sans-filtre : ex æquo en tête = égalité (winnerId null), comme l’écran de fin', () => {
@@ -383,6 +419,19 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     ], winner: 'bot-1' }
     await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
     expect(userUpdates).toHaveLength(0)
+  })
+
+  it('purple arrêté aussitôt contre des bots : aucune XP d’entraînement', async () => {
+    const { client, created, xpUpdates, userUpdates } = fakeClient({ u1: {} })
+    const state = {
+      ...createPurpleState([{ id: 'u1', name: 'A' }, { id: 'bot-1', name: 'Bot', isBot: true }], 'seed'),
+      phase: 'finished' as const,
+    }
+
+    expect(await recordMatchResults(client, { roomId: 'r1', gameId: 'purple', state })).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toEqual([])
+    expect(userUpdates).toEqual([])
   })
 
   it('dilemmes (sans gagnant) : XP de participation pour tous, zéro ligne de classement', async () => {

@@ -729,7 +729,8 @@
       "invalid_duration": "Invalid duration: use a whole number of days.",
       "guess_too_fast": "One guess per second: slow down!",
       "guess_limit_reached": "No guesses left this round.",
-      "word_too_recent": "Too soon: this word just came up."
+      "word_too_recent": "Too soon: this word just came up.",
+      "invalid_message": "Empty or too long message."
     },
     "showcase": {
       "players": "{min} to {max} players",
@@ -5958,6 +5959,7 @@
       "journalBanReason": "{actor} banned {target} — “{detail}”",
       "journalUnban": "{actor} unbanned {target}",
       "journalFeatureBan": "{actor} disabled {feature} for {target}",
+      "journalFeatureUnban": "{actor} re-enabled {feature} for {target}",
       "journalGrant": "{actor} granted a cosmetic to {target}",
       "journalTerm": "Moderated term added: “{detail}”",
       "journalTermByActor": "{actor} added the term “{detail}”",
@@ -6307,7 +6309,9 @@
       "roleChange": "Role change",
       "metricsExclusion": "Statistics: test account",
       "metricsExclusionOn": "Statistics: flagged as a test account",
-      "metricsExclusionOff": "Statistics: put back (no longer a test account)"
+      "metricsExclusionOff": "Statistics: put back (no longer a test account)",
+      "featureBan": "Ban from {feature}",
+      "featureUnban": "Re-allowed {feature}"
     },
     "dialogs": {
       "deleteTitle": "Permanently delete this account?",

@@ -38,6 +38,7 @@ import {
   PBC_NO_KEYBOARD,
   type PbcKeyboardInset,
 } from '@/lib/petit-bac/write-ui'
+import { pbcEndStanding } from '@/lib/petit-bac/end-screen'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
@@ -277,10 +278,8 @@ export function PetitBacOnline() {
 
   // ── Fin de partie ────────────────────────────────────────────────────────
   if (finished) {
-    const podium = [...view.players].sort((a, b) => b.total - a.total)
-    const best = podium[0]?.total ?? 0
-    // Même règle que le serveur : victoire = meilleur score (ex æquo inclus).
-    const won = best > 0 && (view.players.find((p) => p.id === user.id)?.total ?? 0) === best
+    // Même règle que le serveur : les partis hors podium, victoire = meilleur score des restés.
+    const { podium, best, won } = pbcEndStanding(view.players, user.id)
     return (
       <OnlineEndScreen
         won={won}

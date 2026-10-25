@@ -114,6 +114,7 @@ import { methodGroups, resolveMessage, type MethodGroup, type MethodParams } fro
 import { parisDayToDate } from '@/lib/supervision/paris-day'
 import { RETENTION_RUN_STALE_MS, retentionRunStatus } from '@/lib/supervision/retention-run'
 import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
+import { apiErrorMessage } from '@/lib/api-response'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -590,6 +591,7 @@ type JournalEntry = {
     | 'ban'
     | 'unban'
     | 'feature-ban'
+    | 'feature-unban'
     | 'cosmetic-grant'
     | 'moderation-term'
     | 'role-change'
@@ -848,6 +850,12 @@ function journalText(t: ReturnType<typeof useTranslations<'supervision'>>, e: Jo
       return t('room.journalUnban', { actor, target })
     case 'feature-ban':
       return t('room.journalFeatureBan', {
+        actor,
+        target,
+        feature: e.detail === 'voice' ? t('featureBans.voice') : t('featureBans.chat'),
+      })
+    case 'feature-unban':
+      return t('room.journalFeatureUnban', {
         actor,
         target,
         feature: e.detail === 'voice' ? t('featureBans.voice') : t('featureBans.chat'),
@@ -3390,6 +3398,7 @@ export default function SupervisionPage() {
 function SupervisionDashboard() {
   const t = useTranslations('supervision')
   const tErrors = useTranslations('errors')
+  const tApiErrors = useTranslations('onlineLobby.errors')
   const locale = useLocale()
   const format = useFormatter()
   const durationUnits = useDurationUnits()
@@ -4269,7 +4278,7 @@ function SupervisionDashboard() {
         throw new Error(
           data.code === 'guest_cannot_be_staff'
             ? t('apiErrors.guestCannotBeStaff')
-            : (data.error ?? t('apiErrors.modifyDenied'))
+            : apiErrorMessage(data.error, tApiErrors, t('apiErrors.modifyDenied'))
         )
       }
       // Fusion plutôt que remplacement : la réponse ne porte ni l'historique
@@ -4299,7 +4308,7 @@ function SupervisionDashboard() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('apiErrors.banDenied'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, t('apiErrors.banDenied')))
       setBanDialog(null)
       setBanComment('')
       setBanDays('7')
@@ -4321,7 +4330,7 @@ function SupervisionDashboard() {
         credentials: 'include',
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('apiErrors.deleteDenied'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, t('apiErrors.deleteDenied')))
       setDeleteDialog(null)
       await loadAll()
     } catch (e) {
@@ -4341,7 +4350,7 @@ function SupervisionDashboard() {
         credentials: 'include',
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('apiErrors.closeTableDenied'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, t('apiErrors.closeTableDenied')))
       setCloseTableDialog(null)
       // Seules les tables en direct changent : inutile de tout recharger.
       await loadLive()
@@ -4364,7 +4373,7 @@ function SupervisionDashboard() {
         body: JSON.stringify({ userId: unbanDialog.userId, comment: unbanComment }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('apiErrors.unbanDenied'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, t('apiErrors.unbanDenied')))
       setUnbanDialog(null)
       setUnbanComment('')
       await loadAll()
@@ -4386,7 +4395,7 @@ function SupervisionDashboard() {
         body: JSON.stringify({ voiceEnabled: enabled }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, tErrors('generic')))
       setVoiceEnabled(data.voiceEnabled)
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
@@ -4413,7 +4422,7 @@ function SupervisionDashboard() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, tErrors('generic')))
       setFeatureBanDialog(null)
       setFeatureBanComment('')
       setFeatureBanDays('7')
@@ -4437,7 +4446,7 @@ function SupervisionDashboard() {
         body: JSON.stringify({ userId, feature, action: 'unban' }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? tErrors('generic'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, tErrors('generic')))
       await loadAll()
     } catch (e) {
       setError(e instanceof Error ? e.message : tErrors('generic'))
@@ -4476,7 +4485,7 @@ function SupervisionDashboard() {
         body: JSON.stringify({ status }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? t('apiErrors.modifyDenied'))
+      if (!res.ok) throw new Error(apiErrorMessage(data.error, tApiErrors, t('apiErrors.modifyDenied')))
       setFeedbackItems((prev) =>
         prev.map((f) =>
           f.id === id

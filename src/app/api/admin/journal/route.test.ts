@@ -16,16 +16,28 @@ const { userMock, prismaMock, tables } = vi.hoisted(() => {
     featureBan: [] as Row[],
     moderationTerm: [] as Row[],
   }
-  type Args = { where?: { action?: { notIn?: string[] } }; take?: number }
+  type Args = {
+    where?: { action?: { notIn?: string[]; startsWith?: string }; createdAt?: { lt?: Date } }
+    take?: number
+  }
   const visible = (rows: Row[], args?: Args) =>
-    rows.filter((r) => !args?.where?.action?.notIn?.includes(r.action as string))
+    rows.filter((r) => {
+      const action = args?.where?.action
+      if (action?.notIn?.includes(r.action as string)) return false
+      if (action?.startsWith !== undefined && !String(r.action).startsWith(action.startsWith)) return false
+      const lt = args?.where?.createdAt?.lt
+      return !lt || r.createdAt < lt
+    })
+  const newestFirst = (a: Row, b: Row) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1)
   const model = (name: keyof typeof tables) => ({
     findMany: vi.fn(async (args?: Args) =>
       visible(tables[name], args)
         .slice()
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))
+        .sort(newestFirst)
         .slice(0, args?.take ?? Infinity)
     ),
+    // Seul usage : la plus ANCIENNE ligne qui passe le filtre.
+    findFirst: vi.fn(async (args?: Args) => visible(tables[name], args).slice().sort(newestFirst).at(-1) ?? null),
     count: vi.fn(async (args?: Args) => visible(tables[name], args).length),
   })
   return {
@@ -232,5 +244,36 @@ describe('GET /api/admin/journal — pagination', () => {
         createdAt: at(1).toISOString(),
       },
     ])
+  })
+})
+
+describe('GET /api/admin/journal — bans de vocal/chat', () => {
+  it('pose et levée lues dans l’historique : jamais « a banni », la fonctionnalité en détail', async () => {
+    tables.accountBanEvent = [
+      { ...ban('e1', 20, 'feature-ban:voice'), comment: 'insultes au micro' },
+      { ...ban('e2', 25, 'feature-unban:voice'), comment: 'excuses' },
+      ban('e3', 30, 'feature-ban:chat'),
+    ]
+    // La ligne vivante du ban de chat, écrite dans la même transaction que e3.
+    tables.featureBan = [{ ...featureBan('f-chat', 30), feature: 'chat' }]
+
+    const body = await (await get()).json()
+
+    expect(body.total).toBe(3)
+    expect(body.entries.map((e: { id: string; kind: string; detail: string }) => [e.id, e.kind, e.detail])).toEqual([
+      ['ban-e3', 'feature-ban', 'chat'],
+      ['ban-e2', 'feature-unban', 'voice'],
+      ['ban-e1', 'feature-ban', 'voice'],
+    ])
+  })
+
+  it('un ban posé avant l’historique reste au journal par sa ligne vivante, compté une fois', async () => {
+    tables.featureBan = [featureBan('f-old', 1), { ...featureBan('f-new', 40), feature: 'chat' }]
+    tables.accountBanEvent = [ban('e-new', 40, 'feature-ban:chat')]
+
+    const body = await (await get()).json()
+
+    expect(body.total).toBe(2)
+    expect(body.entries.map((e: { id: string }) => e.id)).toEqual(['ban-e-new', 'feature-f-old'])
   })
 })

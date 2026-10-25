@@ -80,6 +80,18 @@ export const GAME_1220_MAX_PLAYERS = 16
 /** Durée max de la mise en place — même délai de grâce que l'anti-AFK commun. */
 export const GAME_1220_SETUP_MS = 3 * 60 * 1000
 const HISTORY_LIMIT = 15
+/**
+ * Lancers joués avant qu'une partie compte pour la progression (XP, série,
+ * succès) : sans fin fixée, « Terminer » sitôt les paris réglés les créditait
+ * en quelques secondes, comme au Purple. Compté sur l'historique, qui en garde
+ * HISTORY_LIMIT : le seuil doit rester en dessous.
+ */
+export const GAME_1220_MIN_ROLLS_FOR_RESULTS = 5
+
+/** La partie a-t-elle été assez jouée pour compter (voir GAME_1220_MIN_ROLLS_FOR_RESULTS) ? */
+export function game1220CountsForResults(state: Pick<Game1220State, 'history'>): boolean {
+  return state.history.length >= GAME_1220_MIN_ROLLS_FOR_RESULTS
+}
 
 export function createGame1220State(
   players: { id: string; name: string; isBot?: boolean }[],
