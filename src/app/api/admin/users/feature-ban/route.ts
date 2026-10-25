@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { apiError, withApiRoute } from '@/lib/api-route'
 import { canBanFeatureTarget, canBanUsers, canOverrideSanction, normalizeRole } from '@/lib/roles'
-import { adminErrorResponse, requireRole } from '../../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
 import {
   applyFeatureBan,
   findActiveFeatureBan,
@@ -23,7 +23,9 @@ import { prisma } from '@/lib/prisma'
 export const POST = withApiRoute('admin/users/feature-ban POST', async (request: Request) => {
   try {
     const actor = await requireRole(canBanUsers)
-    const body = await request.json().catch(() => ({}))
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const feature = typeof body.feature === 'string' ? body.feature : ''
     const action = body.action === 'unban' ? 'unban' : 'ban'

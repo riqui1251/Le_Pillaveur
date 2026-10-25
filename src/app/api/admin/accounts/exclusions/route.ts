@@ -6,7 +6,7 @@ import { accountKindSelect, kindOfAccount } from '@/lib/account-kind-server'
 import { invalidateActiveAccountsStats } from '@/lib/active-accounts-server'
 import { getExcludedUserIds, setUserExcluded } from '@/lib/metrics-exclusions'
 import { invalidateGrowthStats, logStaffAction } from '@/lib/supervision-overview-server'
-import { adminErrorResponse, requireRole } from '../../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
 
 /**
  * Comptes de TEST exclus des statistiques d'usage (tableau des comptes
@@ -51,7 +51,9 @@ export async function GET() {
 export const POST = withApiRoute('admin/accounts/exclusions POST', async (request: Request) => {
   try {
     const actor = await requireRole(canManageUsers)
-    const body = await request.json().catch(() => ({}))
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId.trim() : ''
 
     if (!userId || typeof body.excluded !== 'boolean') {

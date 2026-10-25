@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withApiRoute } from '@/lib/api-route'
 import { canManageUsers } from '@/lib/roles'
-import { adminErrorResponse, requireRole } from '../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../_guard'
 import { prisma } from '@/lib/prisma'
 import { isAppLocale } from '@/lib/locale-utils'
 import { PROFANITY_BY_LOCALE } from '@/lib/name-moderation/terms'
@@ -40,7 +40,9 @@ export const POST = withApiRoute('admin/moderation-terms POST', async (request: 
   try {
     const actor = await requireRole(canManageUsers)
 
-    const body = await request.json()
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const term = typeof body.term === 'string' ? body.term.trim() : ''
     const locale =
       typeof body.locale === 'string' && isAppLocale(body.locale) ? body.locale : null
@@ -76,7 +78,9 @@ export const DELETE = withApiRoute('admin/moderation-terms DELETE', async (reque
   try {
     await requireRole(canManageUsers)
 
-    const body = await request.json()
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const id = typeof body.id === 'string' ? body.id : ''
     if (!id) {
       return NextResponse.json({ error: 'id requis' }, { status: 400 })

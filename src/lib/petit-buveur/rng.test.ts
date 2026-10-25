@@ -155,6 +155,16 @@ describe('RNG seedé (ChaCha20)', () => {
     expect(() => rngFromState('z'.repeat(80))).toThrow()
   })
 
+  it('un état absent (ancienne ligne) rejoue mulberry32 depuis 0, comme avant', () => {
+    const fromZero = rngFromState(0)
+    const expected = Array.from({ length: 5 }, () => fromZero.next())
+    for (const missing of [undefined, null]) {
+      const rng = rngFromState(missing as unknown as number)
+      expect(Array.from({ length: 5 }, () => rng.next())).toEqual(expected)
+      expect(typeof rng.getState()).toBe('number')
+    }
+  })
+
   it('randomSeed : 256 bits en hexadécimal, jamais deux fois la même, acceptée par createRng', () => {
     const a = randomSeed()
     const b = randomSeed()

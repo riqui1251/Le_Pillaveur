@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server'
 import { apiError, withApiRoute } from '@/lib/api-route'
 import { canOverrideAccountBan, removeBan } from '@/lib/ban-server'
 import { canBanUsers, canTemporaryBanTarget, normalizeRole } from '@/lib/roles'
-import { adminErrorResponse, requireRole } from '../../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
 import { prisma } from '@/lib/prisma'
 
 export const POST = withApiRoute('admin/users/unban POST', async (request: Request) => {
   try {
     const actor = await requireRole(canBanUsers)
 
-    const body = await request.json()
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const comment = typeof body.comment === 'string' ? body.comment.trim() : ''
 

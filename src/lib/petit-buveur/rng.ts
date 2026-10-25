@@ -332,9 +332,13 @@ export function createRng(seed: string | number): SeededRng {
 
 /** Reprend un RNG depuis un état persistant (string ChaCha20, ou number mulberry32 d'une ancienne partie). */
 export function rngFromState(state: RngState): SeededRng {
-  if (typeof state === 'number') return legacyMulberry32Rng(state)
-  const { keyHex, index } = decodeState(state)
-  return chachaRng(keyHex, index)
+  if (typeof state === 'string') {
+    const { keyHex, index } = decodeState(state)
+    return chachaRng(keyHex, index)
+  }
+  // Un état absent d'une ligne ancienne valait 0 pour mulberry32 (`>>> 0`) :
+  // même repli, plutôt qu'une exception qui figerait la partie en cours.
+  return legacyMulberry32Rng(typeof state === 'number' ? state : 0)
 }
 
 /** Génère une graine de partie aléatoire de 256 bits (utilisée à la création d'une salle). */
