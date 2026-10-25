@@ -1,3 +1,7 @@
+---
+model: opus
+effort: xhigh
+---
 # /db — Agent Base de Données
 
 Tu es un expert Prisma/SQLite pour le projet **Le Pillaveur**.

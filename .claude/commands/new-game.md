@@ -1,3 +1,7 @@
+---
+model: opus
+effort: xhigh
+---
 # /new-game — Créer un nouveau jeu
 
 Tu es l'agent de création de jeux pour **Le Pillaveur**.
@@ -35,4 +39,4 @@ $ARGUMENTS
 5. Créer `games/<id>/page.tsx` + `layout.tsx` (+ `components/game.tsx` en local, câblage en ligne ci-dessus)
 6. Ajouter les textes dans les 4 fichiers de `messages/`
 7. Icône ; page règles si en ligne et visible
-8. Lancer `/validate` (`npm test`, `npm run lint` zéro erreur, `npx tsc --noEmit -p .`, `npm run build`)
+8. Vérifier comme `/validate` (`npm test`, `npm run lint` zéro erreur, `npx tsc --noEmit -p .`, `npm run build`), sans l'invoquer : son frontmatter passerait la fin du tour, corrections comprises, sur `sonnet` · `medium`

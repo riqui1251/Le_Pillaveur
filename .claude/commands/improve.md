@@ -1,3 +1,7 @@
+---
+model: opus
+effort: high
+---
 # /improve — Orchestrateur d'amélioration
 
 Tu es l'orchestrateur principal du projet **Le Pillaveur** (jeux de soirée sur téléphone, en local ou en ligne, à boire ou « Sans alcool » ; Next.js 15 + TypeScript + SQLite/Prisma). Le `README.md` fait foi pour les commandes, les migrations et le déploiement.
@@ -19,30 +23,30 @@ Classe la demande dans une ou plusieurs catégories :
 - **test** : ajout ou correction de tests
 
 ### Étape 2 — Plan
-Affiche un plan en bullet points avant d'agir. Exemple (fictif) :
+Affiche un plan en bullet points avant d'agir, avec le modèle et l'effort de chaque agent (`.claude/commands/model-routing.md`). Exemple (fictif) :
 ```
 Plan :
-• [DB] Ajouter le modèle GameFavorite (userId, gameId) + migration SQL écrite à la main
-• [DEV] Créer la route /api/me/favorites
-• [DEV] Afficher les favoris dans le hub /[locale]/jeux, textes en fr/en/es/it
-• [TEST] Tester la logique pure et la route (route.test.ts)
-• [VALID] npm test, npm run lint, npx tsc --noEmit -p ., npm run build
+• [DB · opus · xhigh] Ajouter le modèle GameFavorite (userId, gameId) + migration SQL écrite à la main
+• [DEV · opus · high] Créer la route /api/me/favorites
+• [DEV · opus · high] Afficher les favoris dans le hub /[locale]/jeux, textes en fr/en/es/it
+• [TEST · sonnet · high] Tester la logique pure et la route (route.test.ts)
+• [VALID · sonnet · medium] npm test, npm run lint, npx tsc --noEmit -p ., npm run build
 ```
 
 ### Étape 3 — Délégation aux agents spécialisés
 
-Lance les agents dans le bon ordre (séquentiellement si dépendances, en parallèle sinon). Un nouveau jeu complet se délègue à `/new-game`, pas à l'agent Dev.
+Lance les agents dans le bon ordre (séquentiellement si dépendances, en parallèle sinon), avec l'outil Agent en passant `model` et `effort` : valeurs ci-dessous, ajustées selon `.claude/commands/model-routing.md`. Jamais par l'outil Skill : le `model` du frontmatter d'une commande vaudrait jusqu'à la fin du tour, orchestrateur compris. Un nouveau jeu complet se délègue à un agent `opus` · `xhigh` qui suit `.claude/commands/new-game.md`, pas à l'agent Dev. Recherche dans le code : agent `Explore`, `haiku` · `low`.
 
-**Agent DB** (si schéma change) :
+**Agent DB** (si schéma change) — `opus` · `xhigh` :
 > Contexte projet : Next.js 15, Prisma 6 + SQLite, schéma `prisma/schema.prisma`, migrations dans `prisma/migrations/`. Tâche : [TÂCHE DB PRÉCISE]. Respecter les conventions des modèles existants (ids `String @id @default(cuid())`, champs camelCase, horodatage `DateTime @default(now())` (`createdAt` ou nommé d'après l'événement : `joinedAt`, `playedAt`…), `updatedAt DateTime @updatedAt` seulement sur une ligne réécrite après coup (`User`, `OnlineRoom`…), `onDelete` explicite sur les relations ; `bannedAt` marque un bannissement, pas une suppression douce : un compte se supprime physiquement via `deleteUserAccount`). Jamais `prisma migrate dev` : écrire `prisma/migrations/<AAAAMMJJHHMMSS>_<nom>/migration.sql` à la main, modifier le schéma en cohérence, puis `npx prisma db execute --file prisma/migrations/<dossier>/migration.sql`, `npx prisma migrate resolve --applied <dossier>`, `npx prisma generate`. Avant d'appliquer : `npx prisma migrate status` ne doit montrer en attente que la nouvelle migration, sinon ne rien appliquer et remonter (base locale en retard). Dans un worktree, pas de `prisma generate` sans accord (client partagé). `.claude/commands/db.md` fait foi pour le détail. La base locale est `prisma/prisma/dev.db` (avec le `.env` du dépôt principal, `file:./prisma/dev.db` se résout depuis `prisma/`) ; `prisma/dev.db` et `prisma/dev.db-journal` sont de vieux fichiers suivis par git malgré le `.gitignore` : ne jamais les committer.
 
-**Agent Dev** :
+**Agent Dev** — `opus` · `high` (`xhigh` sur l'en-ligne, l'auth ou la sécurité ; `sonnet` · `medium` pour une retouche d'un fichier) :
 > Contexte projet : Le Pillaveur, Next.js 15 App Router, React 18, TypeScript strict, Tailwind CSS, Radix UI, next-intl (`messages/fr.json` référence, `en`/`es`/`it` clé pour clé). API routes dans `src/app/api/`. Pages dans `src/app/[locale]/`. Composants dans `src/components/`, hooks dans `src/hooks/`. Jeux : moteur pur `src/lib/<jeu>/engine.ts`, écrans `src/app/[locale]/games/<jeu>/`, registre `src/lib/games.ts` (`src/app/[locale]/jeux/` n'est que le hub des jeux). Nouvelle route API : l'envelopper dans `withApiRoute` et refuser par `apiError(code, status)` (`src/lib/api-route.ts`), code déclaré dans `src/lib/online-errors.ts` et traduit sous `onlineLobby.errors` — jamais de phrase française dans la réponse. Tâche : [TÂCHE DEV PRÉCISE]. Respecter le style existant, pas de commentaires inutiles, pas de features non demandées.
 
-**Agent Test** :
+**Agent Test** — `sonnet` · `high` :
 > Contexte projet : Le Pillaveur, Vitest en environnement `node` (pas de DOM), fichiers `*.test.ts` colocalisés à côté du code (seul motif ramassé : `src/**/*.test.ts`). Tâche : [TÂCHE TEST PRÉCISE]. Écrire des tests unitaires pour la logique métier (ex. `src/lib/<jeu>/engine.test.ts`) et, pour les API routes critiques, un `route.test.ts` à côté du `route.ts` (Prisma mocké par `vi.mock('@/lib/prisma')`). Lancer `npm test` pour valider.
 
-**Agent Validation** :
+**Agent Validation** — `sonnet` · `medium` :
 > Vérifier que les changements fonctionnent : 1) `npm test` passe (parité des 4 langues comprise), 2) `npm run lint` sans erreur, 3) `npx tsc --noEmit -p .` sans nouvelle erreur, 4) `npm run build` passe, 5) la feature est accessible dans l'app (`npm run dev`). Dans un worktree : 3) se compare à `origin/main` (centaines d'erreurs préexistantes), 4) et 5) seulement avec accord de l'utilisateur (ils lancent `prisma generate` sur les `node_modules` partagés), sinon le dire. Rapporter les erreurs précisément.
 
 ### Étape 4 — Rapport final

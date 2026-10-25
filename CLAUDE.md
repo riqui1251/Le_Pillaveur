@@ -13,6 +13,7 @@ Règles de routage :
 - Demande touchant le **schéma de données, Prisma, migrations, modèles** → invoque **`/db`**.
 - Demande d'**écrire ou lancer des tests** → invoque **`/test-feature`**.
 - Demande de **vérifier que c'est prêt à déployer** (build, tests, cohérence) → invoque **`/validate`**.
+- Question sur le **modèle ou l'effort** à donner à une tâche ou à un agent → invoque **`/model-routing`**.
 
 En cas de doute entre plusieurs skills, ou si la demande mélange plusieurs domaines → privilégie **`/improve`**.
 Si la demande est une simple question/explication sans action de code → réponds directement, sans skill.
@@ -75,6 +76,9 @@ Avant d'appliquer : `npx prisma migrate status` ne doit montrer en attente que l
 | `/test-feature [quoi tester]` | Écrit et lance des tests Vitest |
 | `/validate` | Vérifie build + tests + cohérence avant déploiement |
 | `/new-game [nom + règles]` | Crée un nouveau jeu complet |
+| `/model-routing [tâche]` | Choisit le modèle et l'effort d'une tâche ; tableau suivi par `/improve` pour lancer chaque agent |
+
+Chaque commande fixe son modèle et son effort dans son frontmatter (`model`, `effort`, alignés sur `/model-routing`) : ils valent jusqu'au message suivant de l'utilisateur.
 
 ### Workflow recommandé
 ```
