@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Check, Dices, Flag, Hourglass } from 'lucide-react'
+import { Check, Dices, Flag, Hourglass, SlidersHorizontal } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameOnlineLobby } from './GameOnlineLobby'
@@ -15,6 +15,7 @@ import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { cn } from '@/lib/utils'
 import type { Choices1220 } from '@/lib/game-1220'
 import { GAME_1220_SETUP_MS } from '@/lib/1220/engine'
+import { sanitizeChoices1220 } from '@/lib/1220/choices'
 import type { Game1220SyncedState, Serialized1220History } from '@/lib/online-game-state'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
@@ -31,8 +32,9 @@ import { RollHistory, VerdictPanel, VerdictRow } from '@/app/[locale]/games/1220
 
 /** 1220 en ligne : jeu simultané (pas de tour). Chaque joueur règle ses
  * paris en phase setup, puis n'importe qui déclenche un lancer partagé
- * évalué contre les paris de tout le monde. Aucune info cachée. Dés, paris
- * et verdict sont ceux du jeu local (src/app/[locale]/games/1220/components). */
+ * évalué contre les paris de tout le monde ; chacun peut modifier les siens
+ * entre deux lancers, comme en local. Aucune info cachée. Dés, paris et
+ * verdict sont ceux du jeu local (src/app/[locale]/games/1220/components). */
 
 /**
  * L'horloge de phase du moteur voyage avec la vue. Champs OPTIONNELS :
@@ -63,6 +65,7 @@ export function Game1220Online() {
   const { user } = useAuth()
   const { room, voteRematch, leaveRoom } = useOnlineRoom()
   const t = useTranslations('games.1220')
+  const tc = useTranslations('common')
   const { busy, actionError, sendAction: postAction } = useGameAction(room?.id)
   const [confirmDialog, confirm] = useConfirmAction()
   const reduceMotion = useReducedMotion()
@@ -92,6 +95,9 @@ export function Game1220Online() {
   const shownRoll = shown.roll
   const [rolling, setRolling] = useState(false)
   const [betsOpen, setBetsOpen] = useState(true)
+  // Paris en cours de modification (phase play), envoyés d'un bloc à la
+  // validation : un conflit boire/donner passager n'arrive pas au serveur.
+  const [betsEdit, setBetsEdit] = useState<Choices1220 | null>(null)
 
   // Avant la peinture : avec un effet ordinaire, l'image où le nouveau lancer
   // est arrivé mais où les dés ne roulent pas encore s'affichait (historique
@@ -100,6 +106,7 @@ export function Game1220Online() {
     if (!inPlay) {
       seenSigRef.current = null
       setRolling(false)
+      setBetsEdit(null)
       return
     }
     const showLatest = () => setShown((s) => ({ roll: lastRollRef.current, seq: s.seq + 1 }))
@@ -246,7 +253,7 @@ export function Game1220Online() {
   // ── Phase setup : chacun règle ses paris ─────────────────────────────────
   if (view.phase === 'setup') {
     const serverDraft = view.draft[user.id]
-    const myDraft = serverDraft ? { ...serverDraft, ...optimistic } : null
+    const myDraft = serverDraft ? { ...sanitizeChoices1220(serverDraft), ...optimistic } : null
     const iAmReady = view.setupReady.includes(user.id)
     const clash = Boolean(myDraft && myDraft.drinkNumber === myDraft.giveNumber)
     const draftPending = Object.keys(optimistic).length > 0
@@ -339,6 +346,16 @@ export function Game1220Online() {
 
   const shownTotal = shownRoll ? shownRoll.d12 + shownRoll.d20 : null
 
+  // Un joueur revenu après le verrouillage n'a pas encore de paris : il part
+  // des choix par défaut.
+  const canEditBets = view.players.some((p) => p.id === user.id && !p.leftAt)
+  const editClash = Boolean(betsEdit && betsEdit.drinkNumber === betsEdit.giveNumber)
+  const saveBets = async () => {
+    if (!betsEdit || editClash) return
+    const res = await sendUnlocked({ action: 'set-bets', choices: betsEdit })
+    if (res?.ok) setBetsEdit(null)
+  }
+
   return (
     <>
       {confirmDialog}
@@ -377,6 +394,33 @@ export function Game1220Online() {
           </div>
         )}
 
+        {betsEdit ? (
+          <section className="space-y-4 rounded-2xl border border-gold/20 bg-felt-deep/70 p-4">
+            <h2 className="font-display text-base font-bold text-gold">{t('online.myBets')}</h2>
+            <BetsEditor
+              value={betsEdit}
+              onChange={(patch) => setBetsEdit((b) => (b ? { ...b, ...patch } : b))}
+              disabled={busy}
+            />
+            <Button variant="quiet" size="game" className="w-full" disabled={busy} onClick={() => setBetsEdit(null)}>
+              {tc('cancel')}
+            </Button>
+          </section>
+        ) : (
+          canEditBets && (
+            <Button
+              variant="quiet"
+              size="game"
+              className="w-full"
+              disabled={busy}
+              onClick={() => setBetsEdit(sanitizeChoices1220(view.configs?.find((c) => c.playerId === user.id)))}
+            >
+              <SlidersHorizontal aria-hidden className="mr-2 h-4 w-4" />
+              {t('reconfigure')}
+            </Button>
+          )
+        )}
+
         <TableBets
           open={betsOpen}
           onOpenChange={setBetsOpen}
@@ -405,16 +449,29 @@ export function Game1220Online() {
       </div>
 
       <OnlineActionBar status={errorStatus ?? (rolling ? t('rolling') : null)} maxWidthClass="max-w-lg">
-        <Button
-          variant="primary"
-          size="gameLg"
-          className="w-full"
-          disabled={busy || rolling}
-          onClick={() => void sendLocked({ action: 'roll' })}
-        >
-          <Dices aria-hidden className="mr-2 h-5 w-5" />
-          {t('rollDice')}
-        </Button>
+        {betsEdit ? (
+          <Button
+            variant="primary"
+            size="gameLg"
+            className="w-full"
+            disabled={busy || editClash}
+            onClick={() => void saveBets()}
+          >
+            <Check aria-hidden className="mr-2 h-5 w-5" />
+            {t('resumeWithBets')}
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="gameLg"
+            className="w-full"
+            disabled={busy || rolling}
+            onClick={() => void sendLocked({ action: 'roll' })}
+          >
+            <Dices aria-hidden className="mr-2 h-5 w-5" />
+            {t('rollDice')}
+          </Button>
+        )}
       </OnlineActionBar>
     </>
   )

@@ -795,7 +795,7 @@ export function parseBluffSyncedState(json: string | null | undefined): BluffSyn
 /** État minimal côté parsing générique (l'état complet vit dans lib/espion). */
 export type EspionSyncedState = {
   version: number
-  phase: 'countdown' | 'discussion' | 'reveal' | 'finished'
+  phase: 'countdown' | 'discussion' | 'lastChance' | 'reveal' | 'finished'
   winnerTeam: 'spy' | 'crew' | null
   rematchVotes?: string[]
 }

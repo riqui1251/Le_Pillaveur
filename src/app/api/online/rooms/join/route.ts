@@ -225,12 +225,13 @@ export const POST = withApiRoute('online/rooms/join POST', async (request: Reque
     update: { lastSeenAt: new Date(), isReady: false },
   })
 
-  if (room.visibility === 'invite') {
-    await prisma.onlineRoomInvite.updateMany({
-      where: { roomId: room.id, invitedUserId: user.id, status: 'pending' },
-      data: { status: 'accepted', respondedAt: new Date() },
-    })
-  }
+  // Invitation consommée en s'asseyant, quelle que soit la visibilité : restée
+  // « en attente » à une table privée, elle rouvrait la table à l'exclu une
+  // fois celle-ci passée sur invitation.
+  await prisma.onlineRoomInvite.updateMany({
+    where: { roomId: room.id, invitedUserId: user.id, status: 'pending' },
+    data: { status: 'accepted', respondedAt: new Date() },
+  })
 
   // De retour à cette table : la raison d'un départ forcé précédent ne vaut
   // plus (online/departures.ts).

@@ -10,6 +10,7 @@ import {
   espionRoundSpeech,
   pendingEspionQuestion,
   ESPION_ACCUSATION_WINDOW_MS,
+  ESPION_LAST_CHANCE_MS,
   ESPION_QUESTION_TIMEOUT_MS,
   type EspionClientView,
   type EspionPlayerView,
@@ -24,6 +25,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { genreOfId } from '@/components/online/bot-speech/bot-speech-feed'
 import { EspionTableTalk, espionExchangeKeys } from '@/components/online/espion/EspionTableTalk'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
+import { serverNow } from '@/hooks/server-clock'
 
 type IconOf = (p: { id: string; name: string; isBot: boolean }) => string
 
@@ -147,7 +149,7 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
   const t = useTranslations('games.espion.game')
   const activePlayers = state.players.filter((p) => !p.leftAt)
   const hasBot = activePlayers.some((p) => p.isBot)
-  const pending = hasBot ? pendingEspionQuestion(state, Date.now()) : null
+  const pending = hasBot ? pendingEspionQuestion(state, serverNow()) : null
   // La question sans réponse quitte l'écran à son échéance de 25 s, sans attendre une nouvelle version.
   useDeadline(pending ? pending.askedAt + ESPION_QUESTION_TIMEOUT_MS : null)
   const reveal = state.lastReveal
@@ -219,6 +221,38 @@ export function TvEspion({ room, state }: { room: TvRoomDto; state: EspionClient
           </p>
         )}
         <p className="text-4xl font-bold text-white/90">{t('reveal.location', { location: reveal.location })}</p>
+        <p className="text-3xl font-black text-cyan-200">{score}</p>
+      </div>
+    )
+  }
+
+  // ── Dernière chance de l'espion démasqué ─────────────────────────────────
+  // Le lieu reste caché : la vue spectateur ne le porte pas avant la révélation.
+  if (state.phase === 'lastChance' && state.activeAccusation) {
+    const caughtId = state.activeAccusation.targetId
+    const caught = state.players.find((p) => p.id === caughtId)
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-7 p-8 text-center">
+        <Siren aria-hidden className="h-24 w-24 text-red-300" />
+        <p className="max-w-full font-display text-6xl font-black leading-tight text-gold">
+          {t('lastChance.title', { name: nameOf(caughtId) })}
+        </p>
+        {caught && (
+          <p className="flex max-w-full items-center gap-4 rounded-full border-2 border-gold/50 bg-black/25 px-8 py-3 text-5xl font-black text-white">
+            <span aria-hidden className="shrink-0 leading-none">
+              <PlayerAvatarGlyph value={iconOf(caught)} />
+            </span>
+            <span className="min-w-0 truncate">{caught.name}</span>
+          </p>
+        )}
+        <p className="text-4xl font-bold text-white/90">{t('lastChance.othersHint', { name: nameOf(caughtId) })}</p>
+        <div className="flex w-full max-w-3xl items-center">
+          <PhaseCountdown endsAt={state.activeAccusation.endsAt} tickMs={400}>
+            {({ leftMs }) => (
+              <TvTimeBar timeLeftMs={leftMs} totalMs={ESPION_LAST_CHANCE_MS} dangerMs={5_000} colorClass="bg-gold" dangerClass="bg-red-400" />
+            )}
+          </PhaseCountdown>
+        </div>
         <p className="text-3xl font-black text-cyan-200">{score}</p>
       </div>
     )

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { checkRateLimit, rateLimitResponse, userRateLimitKey } from '@/lib/rate-limit'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ inviteId: string }> }
 
@@ -17,7 +18,7 @@ const DECLINE_LIMIT = 20
 const DECLINE_WINDOW_MS = 60_000
 
 /** L'ami invité ignore l'invitation sans rejoindre la salle. */
-export async function POST(_request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/invites/[inviteId]/decline POST', async (_request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -47,4 +48,4 @@ export async function POST(_request: Request, { params }: Params) {
   })
 
   return NextResponse.json({ ok: true })
-}
+})

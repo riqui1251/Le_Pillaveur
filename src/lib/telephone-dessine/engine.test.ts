@@ -19,6 +19,7 @@ import {
 } from './engine'
 import { parseTelephoneState, serializeTelephoneState } from './server-adapter'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { CANVAS_MAX_STROKES, type Stroke } from '@/lib/crobard/engine'
 
 const T0 = 1_000_000
 
@@ -168,6 +169,67 @@ describe('manche de dessin (DRAW_STROKE / CLEAR / SUBMIT)', () => {
     // Clamps : coordonnées ramenées dans [0,1], épaisseur bornée.
     expect(link.strokes[1].points).toEqual([1, 0, 0.5, 0.5])
     expect(link.strokes[1].width).toBeLessThanOrEqual(24)
+  })
+})
+
+describe('traits venus du client : assainis et plafonnés', () => {
+  function atDrawRound() {
+    let s = make(3)
+    for (const id of ['p0', 'p1', 'p2']) s = reduceTelephone(s, { type: 'WRITE', playerId: id, text: id, now: T0 })
+    return s
+  }
+  const HUGE = 'x'.repeat(400_000)
+  const raw = (extra: Record<string, unknown>) => ({ points: [0, 0, 1, 1], ...extra }) as unknown as Stroke
+
+  it('DRAW_STROKE garde un trait propre : couleur bornée, champs inconnus jetés', () => {
+    let s = atDrawRound()
+    s = reduceTelephone(s, { type: 'DRAW_STROKE', playerId: 'p0', stroke: raw({ evil: 1 }) })
+    s = reduceTelephone(s, { type: 'DRAW_STROKE', playerId: 'p0', stroke: raw({ color: HUGE, width: 3 }) })
+    const pending = s.pendingSubmissions.p0
+    expect(pending?.type).toBe('draw')
+    const strokes = pending?.type === 'draw' ? pending.strokes : []
+    expect(strokes[0]).toEqual({ points: [0, 0, 1, 1], color: '#020617', width: 6 })
+    expect(strokes[1].color.length).toBeLessThanOrEqual(24)
+    expect(serializeTelephoneState(s).length).toBeLessThan(10_000)
+  })
+
+  it('DRAW_STROKE refuse un trait inexploitable et au-delà du plafond de traits', () => {
+    let s = atDrawRound()
+    expect(() =>
+      reduceTelephone(s, { type: 'DRAW_STROKE', playerId: 'p0', stroke: raw({ points: [0.5] }) })
+    ).toThrow('INVALID_STROKE')
+    s = {
+      ...s,
+      pendingSubmissions: {
+        p0: { type: 'draw', strokes: Array.from({ length: CANVAS_MAX_STROKES }, () => ({ points: [0, 0, 1, 1], color: '#000', width: 3 })) },
+      },
+    }
+    expect(() => reduceTelephone(s, { type: 'DRAW_STROKE', playerId: 'p0', stroke: raw({}) })).toThrow(
+      'TOO_MANY_STROKES'
+    )
+  })
+
+  it('SUBMIT sans `strokes` assainit l’accumulé avant de le passer au joueur suivant', () => {
+    const base = atDrawRound()
+    // Accumulé brut, empilé avant l'assainissement de DRAW_STROKE (état déjà en base).
+    let s: TelephoneState = {
+      ...base,
+      pendingSubmissions: {
+        p0: { type: 'draw', strokes: [raw({ evil: 1 }), raw({ color: HUGE })] },
+      },
+    }
+    for (const id of ['p0', 'p1', 'p2']) s = reduceTelephone(s, { type: 'SUBMIT', playerId: id, now: T0 })
+    expect(s.round).toBe(2)
+    const json = JSON.stringify(toTelephoneClientView(s, 'p1'))
+    expect(toTelephoneClientView(s, 'p1').received).toEqual({
+      type: 'draw',
+      strokes: [
+        { points: [0, 0, 1, 1], color: '#020617', width: 6 },
+        { points: [0, 0, 1, 1], color: 'x'.repeat(24), width: 6 },
+      ],
+    })
+    expect(json).not.toContain('evil')
+    expect(json.length).toBeLessThan(10_000)
   })
 })
 
@@ -413,6 +475,37 @@ describe('LEAVE / REJOIN / REPLACE_LEFT', () => {
     s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'b', now: T0 })
     s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'c', now: T0 })
     expect(s.round).toBe(1) // résolu sans attendre p3
+  })
+
+  it('un joueur parti APRÈS avoir rendu son maillon ne fait pas clore la manche avant les actifs', () => {
+    let s = make(3)
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'Zéro', now: T0 })
+    s = reduceTelephone(s, { type: 'LEAVE', playerId: 'p0', at: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'Un', now: T0 })
+    expect(s.round).toBe(0)
+    // Compteur sur le même total que la clôture : seuls les actifs.
+    expect(toTelephoneClientView(s, 'p2')).toMatchObject({ submittedCount: 1, totalToSubmit: 2 })
+    expect(toTelephoneSpectatorView(s)).toMatchObject({ submittedCount: 1, totalToSubmit: 2 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p2', text: 'Deux', now: T0 })
+    expect(s.round).toBe(1)
+    expect(s.chains.p2).toEqual([{ type: 'text', text: 'Deux' }])
+    expect(s.chains.p0).toEqual([{ type: 'text', text: 'Zéro' }])
+  })
+
+  it('le départ du dernier retardataire clôt la manche sans attendre l’échéance', () => {
+    let s = make(3)
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p0', text: 'a', now: T0 })
+    s = reduceTelephone(s, { type: 'WRITE', playerId: 'p1', text: 'b', now: T0 })
+    s = reduceTelephone(s, { type: 'LEAVE', playerId: 'p2', at: T0 + 5_000 })
+    expect(s.round).toBe(1)
+    expect(s.chains.p2).toEqual([{ type: 'text', text: '' }])
+    expect(s.phaseEndsAt).toBe(T0 + 5_000 + TELEPHONE_DRAW_MS)
+  })
+
+  it('la table entière partie ne résout rien (personne à attendre, personne à servir)', () => {
+    let s = make(3)
+    for (const id of ['p0', 'p1', 'p2']) s = reduceTelephone(s, { type: 'LEAVE', playerId: id, at: T0 })
+    expect(s.round).toBe(0)
   })
 
   it('REJOIN restaure un joueur parti ; REPLACE_LEFT le convertit en bot après le délai', () => {

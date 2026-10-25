@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import {
   TABOU_BOT_DESCRIBER_ROUND_MS,
   TABOU_ROUND_MS,
+  tabouRoundEndLeaderId,
   type TabouClientView,
   type TabouPlayerView,
   type TabouTeam,
@@ -142,11 +143,11 @@ export function TabouOnline() {
   })
 
   // Ticks « arbitre » (bots en attente au bilan + remplacement), avec secours
-  // par rang (cf. useBotReferee).
-  const roundEndActor =
-    view?.phase === 'roundEnd'
-      ? view.players.find((p) => p.id === room?.currentTurnUserId)
-      : undefined
+  // par rang (cf. useBotReferee). Le meneur du bilan n'est pas
+  // `currentTurnUserId` (null au bilan, pour qu'aucun joueur n'y soit
+  // expulsable pour inactivité) : même calcul que le serveur.
+  const roundEndLeaderId = view ? tabouRoundEndLeaderId(view) : null
+  const roundEndActor = view?.players.find((p) => p.id === roundEndLeaderId)
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
@@ -312,6 +313,8 @@ export function TabouOnline() {
 
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const hasBar = describing || roundEnd
+  // Un bot ne décrit rien : pendant sa manche écourtée, rien à trouver ni à griller.
+  const judgeable = describing && !describer?.isBot
 
   const busyIcon = (Icon: LucideIcon) =>
     busy ? (
@@ -451,18 +454,33 @@ export function TabouOnline() {
       {hasBar && (
         <OnlineActionBar status={barStatus} maxWidthClass="max-w-lg">
           {describing && view.isDescriber ? (
-            <Button
-              variant="quiet"
-              size="gameLg"
-              className="w-full"
-              disabled={busy}
-              aria-busy={busy}
-              onClick={() => void sendAction({ action: 'pass' })}
-            >
-              {busyIcon(SkipForward)}
-              {t('passButton')}
-            </Button>
-          ) : describing && isTeammate ? (
+            // L'orateur confirme lui aussi : une équipe réduite à lui et un
+            // bot marquait sinon zéro pendant ses manches.
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="quiet"
+                size="gameLg"
+                className="w-full"
+                disabled={busy}
+                aria-busy={busy}
+                onClick={() => void sendAction({ action: 'pass' })}
+              >
+                {busyIcon(SkipForward)}
+                {t('passButton')}
+              </Button>
+              <Button
+                variant="primary"
+                size="gameLg"
+                className="w-full"
+                disabled={busy}
+                aria-busy={busy}
+                onClick={() => void sendAction({ action: 'found' })}
+              >
+                {busyIcon(Check)}
+                <span className="min-w-0 truncate">{t('foundButton')}</span>
+              </Button>
+            </div>
+          ) : judgeable && isTeammate ? (
             <Button
               variant="primary"
               size="gameLg"
@@ -474,7 +492,7 @@ export function TabouOnline() {
               {busyIcon(Check)}
               {t('foundButton')}
             </Button>
-          ) : describing && isOpponent ? (
+          ) : judgeable && isOpponent ? (
             <Button
               variant="danger"
               size="gameLg"

@@ -12,13 +12,17 @@ import {
   toLGSpectatorView,
   LGEngineError,
   LG_DEBATE_DEFAULT_MS,
+  LG_EARLY_FINISH_JITTER_MS,
+  LG_EARLY_FINISH_MS,
   LG_MIN_PLAYERS,
   LG_MAX_PLAYERS,
+  LG_NIGHT_PHASES,
   type LGDebateSpeech,
   type LGState,
 } from './engine'
 import { lgBotDebateMove } from './bot-debate'
 import { botDisplayName, botTraitsFor, pickBotPersonas } from '@/lib/online/bot-personas'
+import { phaseKey } from '@/lib/online/phase-clock'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 
 /**
@@ -26,11 +30,66 @@ import { randomSeed } from '@/lib/petit-buveur/rng'
  * moteur, bots, vues anti-triche. Consommé par le registre
  * `src/lib/online/game-adapters.ts`.
  *
- * ⚠️ Les BOTS agissent via le tick générique `bot` : le client arbitre ne
- * connaît PAS les rôles, il envoie le tick « au cas où » pendant les phases —
- * le serveur (qui sait tout) fait agir les bots concernés, ou répond
- * NOT_BOT_TURN sans rien changer.
+ * ⚠️ Les BOTS agissent via le tick générique `bot`. LE JOUR, le client
+ * arbitre ne connaît pas les bots concernés : il envoie le tick « au cas où »,
+ * le serveur fait agir les bots, ou répond NOT_BOT_TURN sans rien changer.
+ * LA NUIT, seul le minuteur de service fait jouer un bot, à l'instant secret
+ * `botActAt` : le tick d'un client y reçoit toujours NOT_BOT_TURN — un 200
+ * ou un refus selon qu'un bot tient le rôle de la phase désignait la Voyante,
+ * la Sorcière ou le loup d'une table.
  */
+
+/**
+ * Identifiant sous lequel le minuteur de service joue ses ticks : miroir de
+ * SERVICE_ACTOR_ID (src/lib/online/room-actions.ts, module serveur que
+ * celui-ci — importé par le chat — ne charge pas ; l'égalité est testée).
+ * Aucun compte ne le porte.
+ */
+export const LG_SERVICE_ACTOR_ID = '__service__'
+
+/**
+ * Fenêtre où un bot de nuit agit, depuis l'entrée de la phase : pas avant
+ * LG_NIGHT_BOT_MIN_MS, et au plus tard LG_NIGHT_BOT_TAIL_MS avant
+ * l'échéance (le minuteur tire avec 1,5 s de retard).
+ */
+export const LG_NIGHT_BOT_MIN_MS = 2_500
+export const LG_NIGHT_BOT_TAIL_MS = 5_000
+
+/** Tirage uniforme [0, 1) cryptographique : le tempo de la nuit est un secret. */
+function secureRandom(): number {
+  const buf = new Uint32Array(1)
+  globalThis.crypto.getRandomValues(buf)
+  return buf[0] / 2 ** 32
+}
+
+/**
+ * Tempo SECRET de la nuit, tiré à l'entrée de chaque phase de nuit (et pour
+ * une partie d'avant ce tirage, à sa première écriture en pleine nuit) :
+ * `botActAt`, instant où le bot qui tient le rôle agit, uniforme dans la
+ * phase, et `earlyFinishMs`, délai de l'échéance resserrée après l'action.
+ * Hors de la nuit, effacés.
+ */
+export function withNightTempo(
+  prev: LGState,
+  next: LGState,
+  now: number,
+  rand: () => number = secureRandom
+): LGState {
+  if (!LG_NIGHT_PHASES.has(next.phase)) {
+    return next.botActAt == null && next.earlyFinishMs == null
+      ? next
+      : { ...next, botActAt: null, earlyFinishMs: null }
+  }
+  if (phaseKey(next) === phaseKey(prev) && next.botActAt != null) return next
+  const remaining = Math.max(0, (next.phaseEndsAt ?? now) - now)
+  const start = Math.min(LG_NIGHT_BOT_MIN_MS, remaining)
+  const span = Math.max(0, remaining - LG_NIGHT_BOT_MIN_MS - LG_NIGHT_BOT_TAIL_MS)
+  return {
+    ...next,
+    botActAt: Math.round(now + start + rand() * span),
+    earlyFinishMs: LG_EARLY_FINISH_MS + Math.round(rand() * LG_EARLY_FINISH_JITTER_MS),
+  }
+}
 
 export interface LGRoomMember {
   userId: string
@@ -91,6 +150,9 @@ export function parseLGState(json: string | null): LGState | null {
       ravenTargetId: raw.ravenTargetId ?? null,
       elderLifeUsed: raw.elderLifeUsed ?? false,
       elderAttackedRound: raw.elderAttackedRound ?? null,
+      // Parties sérialisées avant le tempo secret de la nuit.
+      botActAt: raw.botActAt ?? null,
+      earlyFinishMs: raw.earlyFinishMs ?? null,
     }
   } catch {
     return null
@@ -119,6 +181,15 @@ export type LGRoomActionInput =
 export type LGRoomActionResult = { ok: true; state: LGState } | { ok: false; error: string }
 
 export function applyLGRoomAction(
+  state: LGState,
+  userId: string,
+  input: LGRoomActionInput
+): LGRoomActionResult {
+  const result = reduceLGRoomAction(state, userId, input)
+  return result.ok ? { ok: true, state: withNightTempo(state, result.state, Date.now()) } : result
+}
+
+function reduceLGRoomAction(
   state: LGState,
   userId: string,
   input: LGRoomActionInput
@@ -222,6 +293,10 @@ export function applyLGRoomAction(
           state: reduceLG(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now: Date.now() }),
         }
       case 'bot':
+        // Même réponse la nuit, qu'un bot tienne le rôle de la phase ou non.
+        if (LG_NIGHT_PHASES.has(state.phase) && userId !== LG_SERVICE_ACTOR_ID) {
+          return { ok: false, error: 'NOT_BOT_TURN' }
+        }
         return applyLGBotAction(state)
       case 'replace-left':
         return {
@@ -450,6 +525,22 @@ export function applyLGBotAction(
     if (e instanceof LGEngineError) return { ok: false, error: e.message }
     throw e
   }
+}
+
+/**
+ * Délai du tick `bot` du minuteur de service depuis `now`, ou null. La nuit :
+ * jusqu'à `botActAt`, et seulement si un bot tient le rôle de la phase sans
+ * avoir encore joué (le serveur sait tout, rien n'en sort) ; une partie d'avant
+ * ce tirage retombe sur le tempo du jour. Le jour : le tick « au cas où » dès
+ * qu'un bot est à table, 2,5 à 5,5 s après l'état (borne de `rand`).
+ */
+export function lgServiceBotDelayMs(state: LGState, now: number, rand: () => number): number | null {
+  const dayDelay = 2500 + rand() * 3000
+  if (LG_NIGHT_PHASES.has(state.phase)) {
+    if (!applyLGBotAction(state, () => 0, now).ok) return null
+    return state.botActAt == null ? dayDelay : Math.max(0, state.botActAt - now)
+  }
+  return state.players.some((p) => p.isBot) ? dayDelay : null
 }
 
 export { currentLGActorId }

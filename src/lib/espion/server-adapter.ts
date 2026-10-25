@@ -1,6 +1,6 @@
 import {
   createEspionState,
-  currentEspionActorId,
+  espionRevealLeaderId,
   reduceEspion,
   toEspionClientView,
   toEspionSpectatorView,
@@ -84,6 +84,8 @@ export function parseEspionState(json: string | null): EspionState | null {
       remainingLocations: raw.remainingLocations ?? [],
       // Parties lancées avant le fil de questions : fil vide, aucun refus.
       speech: Array.isArray(raw.speech) ? raw.speech : [],
+      // Révélation d'avant le plancher de lecture : jamais bloquée.
+      revealAt: raw.revealAt ?? null,
       activeAccusation: raw.activeAccusation
         ? { ...raw.activeAccusation, declined: raw.activeAccusation.declined ?? [] }
         : null,
@@ -222,10 +224,14 @@ export function markEspionPlayerLeft(
   return reduceEspion(state, { type: 'LEAVE', playerId, at })
 }
 
-export function rejoinEspionPlayer(state: EspionState, playerId: string): EspionState | null {
+export function rejoinEspionPlayer(
+  state: EspionState,
+  playerId: string,
+  now: number = Date.now()
+): EspionState | null {
   const player = state.players.find((p) => p.id === playerId)
   if (!player || player.isBot || !player.leftAt) return null
-  return reduceEspion(state, { type: 'REJOIN', playerId })
+  return reduceEspion(state, { type: 'REJOIN', playerId, now })
 }
 
 export function convertEspionPlayerToBot(state: EspionState, playerId: string): EspionState | null {
@@ -273,7 +279,7 @@ export function applyEspionBotAction(
       return { ok: true, state: actions.reduce(reduceEspion, state) }
     }
 
-    const actorId = currentEspionActorId(state)
+    const actorId = espionRevealLeaderId(state)
     const actor = state.players.find((p) => p.id === actorId)
     if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
     if (state.phase === 'reveal') {

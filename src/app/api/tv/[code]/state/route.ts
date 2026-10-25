@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from 'crypto'
 import { NextResponse } from 'next/server'
 import { buildTvRoomDto } from '@/lib/online-room'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { apiError, withApiRoute } from '@/lib/api-route'
+import { checkRateLimit, networkRateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { lookupTvCode } from '@/app/api/tv/code-lookup'
 import { toTvDisplayPayload } from './tv-payload'
 
 /**
@@ -13,13 +15,15 @@ import { toTvDisplayPayload } from './tv-payload'
 export const dynamic = 'force-dynamic'
 
 /**
- * Budget par IP, TOUS CODES CONFONDUS — c'est ce qui compte : compter par
- * code laisserait un balayage de codes à six caractères (jusqu'ici gratuit)
- * repartir de zéro à chaque essai. Une télé légitime tient très en dessous :
- * un sondage par minute quand le flux SSE fonctionne, plus un
- * rafraîchissement par changement de la table (groupés côté client). 240
- * appels par minute laissent donc de la marge à un bar qui allume plusieurs
- * écrans derrière la même IP, même sur une partie très remuante.
+ * Budget par RÉSEAU (IPv4 entière, IPv6 /64), TOUS CODES CONFONDUS : compter
+ * par code laisserait un balayage repartir de zéro à chaque essai, et par
+ * adresse exacte un script qui change d'adresse dans son /64 n'était jamais
+ * freiné. Les codes inconnus ont en plus leur propre budget, bien plus serré
+ * (code-lookup.ts). Une télé légitime tient très en dessous : un sondage par
+ * minute quand le flux SSE fonctionne, plus un rafraîchissement par
+ * changement de la table (groupés côté client). 240 appels par minute
+ * laissent donc de la marge à un bar qui allume plusieurs écrans derrière la
+ * même box, même sur une partie très remuante.
  */
 const RATE_LIMIT = 240
 const RATE_WINDOW_MS = 60_000
@@ -38,22 +42,26 @@ function tvAlias(code: string, realId: string): string {
 
 type Params = { params: Promise<{ code: string }> }
 
-export async function GET(request: Request, { params }: Params) {
+export const GET = withApiRoute('tv/[code]/state GET', async (request: Request, { params }: Params) => {
   const { code } = await params
   const normalized = code.trim().toUpperCase()
   if (!/^[A-Z0-9]{6}$/.test(normalized)) {
-    return NextResponse.json({ error: 'invalid-code' }, { status: 400 })
+    return apiError('room_not_found', 400)
   }
 
-  const limit = checkRateLimit(rateLimitKey(request, 'tv-state'), RATE_LIMIT, RATE_WINDOW_MS)
+  const limit = checkRateLimit(networkRateLimitKey(request, 'tv-state'), RATE_LIMIT, RATE_WINDOW_MS)
   if (!limit.ok) {
     return rateLimitResponse(limit.retryAfterSec)
   }
 
-  const room = await buildTvRoomDto(normalized)
+  const lookup = await lookupTvCode(request, normalized, () => buildTvRoomDto(normalized))
+  if (!lookup.ok) {
+    return rateLimitResponse(lookup.retryAfterSec)
+  }
+  const room = lookup.value
   if (!room) {
-    return NextResponse.json({ error: 'not-found' }, { status: 404 })
+    return apiError('room_not_found', 404)
   }
 
   return NextResponse.json({ room: toTvDisplayPayload(room, (id) => tvAlias(normalized, id)) })
-}
+})

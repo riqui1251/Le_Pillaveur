@@ -1,6 +1,7 @@
 import { createHmac, generateKeyPairSync, verify } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  acceptsUnverifiedEmailForNewAccount,
   decodeOAuthState,
   enabledOAuthProviders,
   encodeOAuthState,
@@ -238,7 +239,7 @@ describe('fetchOAuthProfile — Apple', () => {
 })
 
 describe('fetchOAuthProfile — Facebook', () => {
-  it('signe la lecture du profil (appsecret_proof) ; une adresse transmise est confirmée', async () => {
+  it('signe la lecture du profil (appsecret_proof) ; une adresse transmise n’est jamais tenue pour prouvée', async () => {
     const calls = network([
       ['https://graph.facebook.com/v25.0/oauth/access_token', { access_token: 'jeton-fb' }],
       ['https://graph.facebook.com/v25.0/me', { id: '99', first_name: 'Léa', name: 'Léa M.', email: 'lea@exemple.fr' }],
@@ -246,7 +247,9 @@ describe('fetchOAuthProfile — Facebook', () => {
 
     const profile = await fetchOAuthProfile('facebook', 'code-fb', creds)
 
-    expect(profile).toEqual({ id: '99', email: 'lea@exemple.fr', emailVerified: true, name: 'Léa' })
+    // Facebook ne dit pas si l'adresse est confirmée : elle ne doit jamais
+    // ouvrir un compte existant qui la porte.
+    expect(profile).toEqual({ id: '99', email: 'lea@exemple.fr', emailVerified: false, name: 'Léa' })
     const me = new URL(calls[1].url)
     expect(me.searchParams.get('appsecret_proof')).toBe(
       createHmac('sha256', 'secret-app').update('jeton-fb').digest('hex')
@@ -261,5 +264,11 @@ describe('fetchOAuthProfile — Facebook', () => {
     ])
     const profile = await fetchOAuthProfile('facebook', 'code', creds)
     expect(profile).toMatchObject({ email: null, emailVerified: false, name: 'Léa M.' })
+  })
+
+  it('seul Facebook peut ouvrir un compte neuf avec une adresse non prouvée', () => {
+    expect(acceptsUnverifiedEmailForNewAccount('facebook')).toBe(true)
+    expect(acceptsUnverifiedEmailForNewAccount('discord')).toBe(false)
+    expect(acceptsUnverifiedEmailForNewAccount('apple')).toBe(false)
   })
 })

@@ -1,15 +1,27 @@
-import { describe, expect, it } from 'vitest'
-import { applyDilBotAction, buildDilState, dilBotChoice } from './server-adapter'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  applyDilBotAction,
+  applyDilRoomAction,
+  buildDilState,
+  dilBotChoice,
+  dilClientViewJson,
+  markDilPlayerLeft,
+  parseDilState,
+  serializeDilState,
+} from './server-adapter'
 import {
   createDilState,
   dilCurrentCard,
   reduceDil,
   DIL_COUNTDOWN_MS,
+  DIL_REVEAL_BOT_TICK_MS,
+  DIL_REVEAL_MIN_MS,
   type DilCard,
   type DilState,
 } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { BOT_PERSONAS, botDisplayName } from '@/lib/online/bot-personas'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 
 const T0 = 1_000_000
 const NEVER: DilCard = { kind: 'never', text: 'dormi au travail' }
@@ -181,5 +193,91 @@ describe('dilBotChoice / heuristiques par persona', () => {
     }
     // P(humain) = 0.75 : seuil large pour éviter tout flake.
     expect(humanHits / runs).toBeGreaterThan(0.6)
+  })
+})
+
+describe('reveal : temps de lecture et meneur', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  /** Reveal ouvert à `at` (horloge serveur simulée). */
+  function revealAt(players: { id: string; name: string; isBot?: boolean }[], at: number): DilState {
+    vi.useFakeTimers()
+    vi.setSystemTime(at)
+    let s = makeVote(players, NEVER)
+    for (const p of players) s = reduceDil(s, { type: 'VOTE', playerId: p.id, choice: 'A', now: at })
+    expect(s.phase).toBe('reveal')
+    return s
+  }
+
+  const TABLE = [
+    { id: 'h1', name: 'Alice' },
+    { id: 'h2', name: 'Bob' },
+    { id: 'h3', name: 'Chloé' },
+  ]
+
+  it('« carte suivante » à l’instant du reveal → READING_TIME, accepté après le plancher', () => {
+    const s = revealAt(TABLE, T0)
+    expect(applyDilRoomAction(s, 'h2', { type: 'continue' })).toEqual({ ok: false, error: 'READING_TIME' })
+    vi.setSystemTime(T0 + DIL_REVEAL_MIN_MS - 1)
+    expect(applyDilRoomAction(s, 'h2', { type: 'continue' })).toEqual({ ok: false, error: 'READING_TIME' })
+    vi.setSystemTime(T0 + DIL_REVEAL_MIN_MS)
+    const next = applyDilRoomAction(s, 'h2', { type: 'continue' })
+    expect(next.ok && next.state.phase).toBe('finished')
+  })
+
+  it('le bot meneur attend le plancher lui aussi quand un humain est assis', () => {
+    const s = revealAt(
+      [
+        { id: 'b1', name: 'Marcel 🍺', isBot: true },
+        { id: 'h1', name: 'Alice' },
+        { id: 'h2', name: 'Bob' },
+      ],
+      T0
+    )
+    expect(applyDilBotAction(s)).toEqual({ ok: false, error: 'READING_TIME' })
+    vi.setSystemTime(T0 + DIL_REVEAL_BOT_TICK_MS)
+    expect(expectOk(applyDilBotAction(s)).phase).toBe('finished')
+  })
+
+  it('personne n’est « au tour » au reveal : replace-afk n’a pas de cible, le tick bot suit le meneur', () => {
+    const adapter = getGameAdapter('dilemmes')!
+    const humanLead = revealAt(TABLE, T0)
+    expect(adapter.currentActorId(humanLead)).toBeNull()
+    expect(adapter.serviceTick!(humanLead, T0)).toBeNull()
+
+    const botLead = revealAt(
+      [
+        { id: 'b1', name: 'Marcel 🍺', isBot: true },
+        { id: 'h1', name: 'Alice' },
+        { id: 'h2', name: 'Bob' },
+      ],
+      T0
+    )
+    expect(adapter.currentActorId(botLead)).toBeNull()
+    const tick = adapter.serviceTick!(botLead, T0, { rand: () => 0 })
+    expect(tick?.body).toEqual({ action: 'bot' })
+    expect(tick!.dueAt).toBeGreaterThanOrEqual(T0 + DIL_REVEAL_BOT_TICK_MS)
+  })
+
+  it('la vue publie continueAt ; un état d’avant l’horodatage se relit sans blocage', () => {
+    const s = revealAt(TABLE, T0)
+    expect(JSON.parse(dilClientViewJson(s, 'h1')).continueAt).toBe(T0 + DIL_REVEAL_MIN_MS)
+    const legacy = JSON.parse(serializeDilState(s)) as Record<string, unknown>
+    delete legacy.revealAt
+    const parsed = parseDilState(JSON.stringify(legacy))!
+    expect(parsed.revealAt).toBeNull()
+    const next = applyDilRoomAction(parsed, 'h2', { type: 'continue' })
+    expect(next.ok).toBe(true)
+  })
+
+  it('le départ du dernier votant attendu (markDilPlayerLeft) ouvre le reveal', () => {
+    let s = makeVote(TABLE, NEVER)
+    s = reduceDil(s, { type: 'VOTE', playerId: 'h1', choice: 'A', now: T0 })
+    s = reduceDil(s, { type: 'VOTE', playerId: 'h2', choice: 'B', now: T0 })
+    const left = markDilPlayerLeft(s, 'h3', T0 + 1_000)!
+    expect(left.phase).toBe('reveal')
+    expect(left.lastReveal).toHaveLength(2)
   })
 })

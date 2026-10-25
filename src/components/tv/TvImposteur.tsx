@@ -22,6 +22,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { BotSpeechFeed } from '@/components/online/bot-speech/BotSpeechFeed'
 import { genreOf, genreOfId, type LineTranslator } from '@/components/online/bot-speech/bot-speech-feed'
 import { TvBigCountdown, TvTimeBar } from './tv-shared'
+import { serverNow } from '@/hooks/server-clock'
 
 /** Au-delà, la liste des indices passe sur deux colonnes pour tenir en hauteur (16 joueurs max). */
 const ONE_COLUMN_MAX = 8
@@ -48,7 +49,7 @@ function useAfkWarning(room: TvRoomDto, state: ImposteurClientView): Afk | null 
   useEffect(() => {
     setEndsAt(null)
     if (!watchable) return
-    const startedAt = Date.now()
+    const startedAt = serverNow()
     const timer = setTimeout(() => setEndsAt(startedAt + ONLINE_REPLACE_GRACE_MS), AFK_WARN_AFTER_MS)
     return () => clearTimeout(timer)
   }, [room.stateVersion, watchable])

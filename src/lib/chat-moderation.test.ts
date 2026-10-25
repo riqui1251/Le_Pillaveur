@@ -206,3 +206,50 @@ describe('maskContactDetails — coordonnées personnelles', () => {
     expect(result.censored).toBe(true)
   })
 })
+
+describe('censorChatMessage — homoglyphes, formes de compatibilité et invisibles', () => {
+  const disguised = [
+    'cоnnаrd',
+    'ｃｏｎｎａｒｄ',
+    '𝐜𝐨𝐧𝐧𝐚𝐫𝐝',
+    'ᴄᴏɴɴᴀʀᴅ',
+    'pуte',
+    'con⁣nard',
+    'con᠎nard',
+    'conㅤnard',
+  ]
+
+  for (const message of disguised) {
+    it(`masque ${JSON.stringify(message)}`, () => {
+      const result = censorChatMessage(message)
+      expect(result.flags.profanity).toBe(true)
+      expect(result.text).toMatch(/^\*+$/)
+    })
+  }
+
+  it('masque une insulte en lettres mathématiques éclatée sur deux mots', () => {
+    const result = censorChatMessage('va 𝐜𝐨𝐧 𝐧𝐚𝐫𝐝')
+    expect(result.flags.profanity).toBe(true)
+    expect(result.text).not.toContain('𝐧𝐚𝐫𝐝')
+  })
+
+  it("retire du message l'inversion bidi qui affichait « connard » à l'envers", () => {
+    const result = censorChatMessage('‮drannoc')
+    expect(result.text).toBe('drannoc')
+    expect(censorChatMessage('a⁦b⁩c‏d؜e').text).toBe('abcde')
+  })
+
+  it('retire les invisibles du message enregistré, pas seulement de l’analyse', () => {
+    expect(censorChatMessage('sa⁣lutㅤ toi').text).toBe('salut toi')
+  })
+
+  it('garde la jointure des émojis composés', () => {
+    expect(censorChatMessage('bien joué 👩‍💻 !').text).toBe('bien joué 👩‍💻 !')
+  })
+
+  it('laisse intacts les messages en cyrillique ou en grec', () => {
+    for (const message of ['Привет, как дела ?', 'Γεια σου φίλε']) {
+      expect(censorChatMessage(message).text).toBe(message)
+    }
+  })
+})

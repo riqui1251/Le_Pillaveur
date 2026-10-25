@@ -38,9 +38,13 @@ class Table {
   constructor(
     private members: PreviewMember[],
     players: { id: string; name: string; isBot?: boolean }[],
-    seed: number
+    seed: number,
+    roles: Record<string, LGRole>
   ) {
-    this.state = createLGState(players, seed, LG_DEBATE_DEFAULT_MS, this.now)
+    const dealt = createLGState(players, seed, LG_DEBATE_DEFAULT_MS, this.now)
+    // Rôles distribués à la main : chaque scène vise un rôle précis, et la
+    // donne d'une graine change avec le générateur.
+    this.state = { ...dealt, players: dealt.players.map((p) => ({ ...p, role: roles[p.id] })) }
   }
 
   act(action: LGAction): this {
@@ -118,11 +122,26 @@ class Table {
 }
 
 /**
- * 12 joueurs (maximum du moteur), dont deux bots et deux noms longs.
- * Graine 19 : u1 villageois, u2 chasseur, u3 loup, u4 corbeau, u5 villageois
+ * 12 joueurs (maximum du moteur), dont deux bots et deux noms longs :
+ * u1 villageois, u2 chasseur, u3 loup, u4 corbeau, u5 villageois
  * (Jean-Baptiste), u6 voyante, u7 et u8 loups, u9 sorcière (Marie-Charlotte),
  * u10 salvateur, bots 11-12 villageois.
  */
+const ROLES_12: Record<string, LGRole> = {
+  u1: 'villageois',
+  u2: 'chasseur',
+  u3: 'loup',
+  u4: 'corbeau',
+  u5: 'villageois',
+  u6: 'voyante',
+  u7: 'loup',
+  u8: 'loup',
+  u9: 'sorciere',
+  u10: 'salvateur',
+  'bot-1': 'villageois',
+  'bot-2': 'villageois',
+}
+
 function bigGame(): TvPreviewStep[] {
   const members = previewMembers(10)
   const players = [
@@ -130,7 +149,7 @@ function bigGame(): TvPreviewStep[] {
     { id: 'bot-1', name: botDisplayName(BOT_PERSONAS[0]), isBot: true },
     { id: 'bot-2', name: botDisplayName(BOT_PERSONAS[3]), isBot: true },
   ]
-  const g = new Table(members, players, 19)
+  const g = new Table(members, players, 19, ROLES_12)
   const now = () => g.now
   g.snap('rôles distribués')
   g.advance().snap('nuit 1 : Salvateur')
@@ -236,7 +255,7 @@ function bigGame(): TvPreviewStep[] {
 }
 
 /**
- * 5 joueurs, graine 4 : u1 voyante, u2-u3 villageois, u4 loup, u5 ancien
+ * 5 joueurs : u1 voyante, u2-u3 villageois, u4 loup, u5 ancien
  * (Jean-Baptiste) — la morsure sur l'Ancien donne une aube sans mort.
  */
 function smallGame(): TvPreviewStep[] {
@@ -244,7 +263,8 @@ function smallGame(): TvPreviewStep[] {
   const g = new Table(
     members,
     members.map((m) => ({ id: m.userId, name: m.displayName })),
-    4
+    4,
+    { u1: 'voyante', u2: 'villageois', u3: 'villageois', u4: 'loup', u5: 'ancien' }
   )
   const now = () => g.now
   g.snap('rôles distribués')
@@ -276,7 +296,7 @@ function smallGame(): TvPreviewStep[] {
 }
 
 /**
- * 12 joueurs, même graine que `bigGame` mais les loups gagnent : Voyante
+ * 12 joueurs, mêmes rôles que `bigGame` mais les loups gagnent : Voyante
  * dévorée, Chasseur marqué par le Corbeau puis lynché (tir juste après le
  * lynchage), débat de la manche 2 avec bandeaux, marque et fil plein, revote
  * à 5 ex-aequo (dont Jean-Baptiste et Marie-Charlotte), victoire des loups.
@@ -288,7 +308,7 @@ function wolvesGame(): TvPreviewStep[] {
     { id: 'bot-1', name: botDisplayName(BOT_PERSONAS[1]), isBot: true },
     { id: 'bot-2', name: botDisplayName(BOT_PERSONAS[5]), isBot: true },
   ]
-  const g = new Table(members, players, 19)
+  const g = new Table(members, players, 19, ROLES_12)
   const now = () => g.now
   const rand = lcg(11)
   g.advance().night({ guard: 'u1', seer: 'u3', raven: 'u2', wolf: 'u6' })

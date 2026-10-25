@@ -1,3 +1,5 @@
+import { foldConfusablesLower } from './confusables'
+
 /** Substitutions leet / chiffres courantes (FR/EN/ES/IT). */
 const LEET_MAP: Record<string, string> = {
   '@': 'a',
@@ -69,9 +71,9 @@ export function collapseRepeatedChars(text: string): string {
   return text.replace(/(.)\1{2,}/g, '$1$1')
 }
 
-/** Normalise pour détection : leet, accents, séparateurs → espaces. */
+/** Normalise pour détection : homoglyphes et invisibles, leet, accents, séparateurs → espaces. */
 export function normalizeForModeration(name: string): string {
-  const base = foldDiacritics(applyLeetSubstitutions(name.toLowerCase()))
+  const base = foldDiacritics(applyLeetSubstitutions(foldConfusablesLower(name)))
   return base
     .replace(SEPARATOR_RE, ' ')
     .replace(/\d/g, (digit) => LEET_MAP[digit] ?? digit)
@@ -97,7 +99,7 @@ export function squashRepeats(text: string): string {
 }
 
 export type ModerationWord = {
-  /** Mot tel que tapé (minuscules, NFC) : les accents y sont intacts. */
+  /** Mot tel que tapé (minuscules, homoglyphes et invisibles repliés) : les accents y sont intacts. */
   raw: string
   /** Même mot normalisé (leet, accents retirés) — identique au token de tokenizeForModeration. */
   norm: string
@@ -126,7 +128,7 @@ export function splitModerationWords(text: string): ModerationWord[] {
     raw = ''
   }
 
-  for (const char of text.normalize('NFC').toLowerCase()) {
+  for (const char of foldConfusablesLower(text)) {
     if (LEET_MAP[char] === undefined && SEPARATOR_CHAR_RE.test(char)) flush()
     else raw += char
   }

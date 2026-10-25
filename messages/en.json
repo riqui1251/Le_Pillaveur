@@ -278,6 +278,12 @@
         "inviteConfirm": "Create and invite ({count})",
         "createAlone": "Create an empty table",
         "cancel": "Cancel"
+      },
+      "inviteLeave": {
+        "title": "Leave your current game?",
+        "description": "Joining this table makes you leave your {game} game. A bot will take your seat if you don't come back in time.",
+        "confirm": "Join the new table",
+        "cancel": "Stay in my game"
       }
     },
     "playMode": {
@@ -715,7 +721,16 @@
       "request_not_found": "Request not found.",
       "request_already_handled": "This request has already been handled.",
       "request_already_declined": "Request already declined.",
-      "fake_taken": "That answer's already taken — make up something else."
+      "fake_taken": "That answer's already taken — make up something else.",
+      "cross_site_request": "Request refused: it did not come from this site.",
+      "oauth_email_in_use": "An account already uses this email address: sign in another way.",
+      "chat_read_only": "Dead players don't talk: the chat is read-only until the game ends.",
+      "sanction_outranked": "Your rank doesn't allow you to lift or change this sanction.",
+      "invalid_duration": "Invalid duration: use a whole number of days.",
+      "guess_too_fast": "One guess per second: slow down!",
+      "guess_limit_reached": "No guesses left this round.",
+      "word_too_recent": "Too soon: this word just came up.",
+      "invalid_message": "Empty or too long message."
     },
     "showcase": {
       "players": "{min} to {max} players",
@@ -2553,6 +2568,7 @@
       "game": {
         "placementTitle": "Place your ships",
         "placementHint": "Pick a ship, then tap its starting cell: if it runs past the edge, it slides back inside. Tap a placed ship to pick it up.",
+        "placementDeadlineHint": "When time runs out, latecomers' ships are placed at random.",
         "shipLabel": "{size} cells",
         "horizontal": "Horizontal",
         "vertical": "Vertical",
@@ -3159,6 +3175,8 @@
           "location": "The location was: {location}",
           "seeResult": "See the result",
           "continue": "Next round",
+          "continueIn": "Next round in {seconds}s",
+          "seeResultIn": "Result in {seconds}s",
           "outcome": {
             "spyCaught": "{name} was the spy — {genre, select, f {caught} m {caught} other {caught}}!",
             "accusationFailed": "Wrong target… the spy gets away!",
@@ -3166,6 +3184,11 @@
             "spyGuessedWrong": "Wrong guess from the spy!",
             "timeout": "Time's up — {name} gets away with it!"
           }
+        },
+        "lastChance": {
+          "title": "The mask falls: {name} is the spy!",
+          "spyHint": "Last chance: guess the location to win the round anyway.",
+          "othersHint": "Last chance: {name} is trying to guess the location…"
         },
         "victory": {
           "crewWin": "The crew unmasked the spy!",
@@ -3642,7 +3665,9 @@
           "drawing": "drawing",
           "found": "found it",
           "away": "offline"
-        }
+        },
+        "guessesLeft": "{count, plural, one {# guess} other {# guesses}} left this round",
+        "noGuessesLeft": "No guesses left this round: watch the drawing, you'll get the next one!"
       },
       "tutorial": {
         "steps": [
@@ -4937,6 +4962,8 @@
         "reveal": {
           "continue": "Next round",
           "seeResult": "See the podium",
+          "continueIn": "Next round in {seconds}s",
+          "seeResultIn": "Podium in {seconds}s",
           "everyone": "One tap moves the whole table on."
         },
         "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
@@ -5124,6 +5151,8 @@
         "minorityDrinks": "The minority drinks 🍺",
         "nextCard": "Next card",
         "seeEnd": "Finish",
+        "nextCardIn": "Next card in {seconds}s",
+        "seeEndIn": "Finish in {seconds}s",
         "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
         "finished": {
           "title": "Dilemmas over!",
@@ -5930,6 +5959,7 @@
       "journalBanReason": "{actor} banned {target} — “{detail}”",
       "journalUnban": "{actor} unbanned {target}",
       "journalFeatureBan": "{actor} disabled {feature} for {target}",
+      "journalFeatureUnban": "{actor} re-enabled {feature} for {target}",
       "journalGrant": "{actor} granted a cosmetic to {target}",
       "journalTerm": "Moderated term added: “{detail}”",
       "journalTermByActor": "{actor} added the term “{detail}”",
@@ -6279,7 +6309,9 @@
       "roleChange": "Role change",
       "metricsExclusion": "Statistics: test account",
       "metricsExclusionOn": "Statistics: flagged as a test account",
-      "metricsExclusionOff": "Statistics: put back (no longer a test account)"
+      "metricsExclusionOff": "Statistics: put back (no longer a test account)",
+      "featureBan": "Ban from {feature}",
+      "featureUnban": "Re-allowed {feature}"
     },
     "dialogs": {
       "deleteTitle": "Permanently delete this account?",

@@ -54,7 +54,13 @@ export function parsePurpleState(json: string | null): PurpleState | null {
   try {
     const raw = JSON.parse(json) as PurpleState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, rematchVotes: raw.rematchVotes ?? [] }
+    return {
+      ...raw,
+      rematchVotes: raw.rematchVotes ?? [],
+      // Partie lancée avant le compteur : chaque pari tire au moins une
+      // carte, le nombre de cartes ne la prive donc jamais de ses résultats.
+      betsCount: raw.betsCount ?? raw.totalCardsDrawn ?? 0,
+    }
   } catch {
     return null
   }
@@ -79,7 +85,10 @@ const VALID_BETS = new Set<PurpleBet>(['rouge', 'double-rouge', 'noir', 'double-
 function applyPurpleBotAction(state: PurpleState): PurpleRoomActionResult {
   const actorId = state.players[state.currentPlayer]?.id
   const actor = state.players.find((p) => p.id === actorId)
-  if (!actor?.isBot) return { ok: true, state }
+  // Refus sans écriture, comme les autres jeux : un succès sur l'état inchangé
+  // réécrivait la salle (version, diffusion, 409 chez les autres) et gardait
+  // frais l'horodatage qui déclenche le remplacement AFK.
+  if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
   try {
     if (state.pendingReveal) {
       return { ok: true, state: reducePurple(state, { type: 'CLOSE_REVEAL', playerId: actorId! }) }

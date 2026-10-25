@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { ANALYTICS_CONSENT_COOKIE } from '@/lib/auth-cookies'
 import { todayParis } from '@/lib/analytics-server'
 import { checkRateLimit, rateLimitKey } from '@/lib/rate-limit'
+import { withApiRoute } from '@/lib/api-route'
 
 /**
  * Compteur d'OUVERTURES d'écran TV — le strict minimum pour savoir si le mode
@@ -28,7 +29,7 @@ export const runtime = 'nodejs'
 const RATE_LIMIT = 10
 const RATE_WINDOW_MS = 60_000
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('tv/opened POST', async (request: Request) => {
   try {
     const limit = checkRateLimit(rateLimitKey(request, 'tv-opened'), RATE_LIMIT, RATE_WINDOW_MS)
     // On ne renvoie pas 429 : un compteur d'ambiance n'a pas à faire
@@ -57,4 +58,4 @@ export async function POST(request: Request) {
     // Jamais bloquant : la télé doit s'afficher même si la mesure échoue.
     return NextResponse.json({ ok: true })
   }
-}
+})

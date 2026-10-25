@@ -1,8 +1,42 @@
 #!/bin/bash
-# Promeut un compte existant au role « fondateur ». Sur a rejouer : l'UPDATE
-# est idempotent (memes valeurs a chaque passage).
+# Promeut au role « fondateur » le compte dont l'e-mail est EXACTEMENT celui
+# donne (compare sans casse). Aucune adresse par defaut : le script ne devine
+# jamais le compte. Refuse si plusieurs comptes repondent a l'adresse, et ne
+# fait rien si un AUTRE fondateur existe deja, sauf --force. Sur a rejouer sur
+# le meme compte : l'UPDATE est idempotent. Ne renomme plus rien (un UPDATE
+# brut du pseudo contournait le controle d'unicite du site).
+# Usage : prod-bootstrap-fondateur.sh <email> [--force]
 set -euo pipefail
-EMAIL="${1:-riqui1251@gmail.com}"
+
+EMAIL=""
+FORCE=0
+for arg in "$@"; do
+  case "$arg" in
+    --force) FORCE=1 ;;
+    -*)
+      echo "Option inconnue : $arg" >&2
+      exit 2
+      ;;
+    *)
+      if [ -n "$EMAIL" ]; then
+        echo "Une seule adresse e-mail attendue" >&2
+        exit 2
+      fi
+      EMAIL="$arg"
+      ;;
+  esac
+done
+if [ -z "$EMAIL" ]; then
+  echo "Usage : $0 <email> [--force]" >&2
+  exit 2
+fi
+# L'adresse est recopiee telle quelle dans le SQL : rien d'autre qu'une
+# adresse ordinaire (ni apostrophe, ni espace, ni joker).
+EMAIL_RE='^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+if ! [[ "$EMAIL" =~ $EMAIL_RE ]]; then
+  echo "Adresse e-mail invalide : $EMAIL" >&2
+  exit 2
+fi
 EMAIL_LC="$(echo "$EMAIL" | tr '[:upper:]' '[:lower:]')"
 DB_VOLUME="${DB_VOLUME:-le-pillaveur-db}"
 # UID/GID du conteneur applicatif (Dockerfile : nextjs 1001). La base est en
@@ -30,12 +64,24 @@ docker run --rm -e DB_UID="$DB_UID" -v "$DB_VOLUME:/data" "$SQLITE_IMAGE" sh -c 
   set -e
   # sqlite3 tourne sous DB_UID (su-exec) : ce script ECRIT, les fichiers
   # -wal/-shm qu il cree doivent rester la propriete de l application.
-  id=\$(su-exec \"\$DB_UID:\$DB_UID\" sqlite3 /data/prod.db \"SELECT id FROM User WHERE lower(email) = lower('$EMAIL_LC') AND passwordHash != '' LIMIT 1;\")
-  if [ -z \"\$id\" ]; then
-    echo \"Compte introuvable pour $EMAIL_LC — cree-le d'abord sur /compte\"
+  q() { su-exec \"\$DB_UID:\$DB_UID\" sqlite3 /data/prod.db \"\$1\"; }
+  ids=\$(q \"SELECT id FROM User WHERE lower(email) = '$EMAIL_LC';\")
+  count=\$(printf '%s\n' \"\$ids\" | grep -c . || true)
+  if [ \"\$count\" -eq 0 ]; then
+    echo \"Compte introuvable pour $EMAIL_LC — cree-le d abord sur /compte\"
     exit 1
   fi
-  su-exec \"\$DB_UID:\$DB_UID\" sqlite3 /data/prod.db \"UPDATE User SET role='fondateur', displayName='Riqui', name='Riqui', updatedAt=CURRENT_TIMESTAMP WHERE id='\$id';\"
-  su-exec \"\$DB_UID:\$DB_UID\" sqlite3 /data/prod.db \"SELECT email, displayName, role FROM User WHERE id='\$id';\"
+  if [ \"\$count\" -gt 1 ]; then
+    echo \"Plusieurs comptes (\$count) pour $EMAIL_LC : rien n est fait\"
+    exit 1
+  fi
+  id=\$ids
+  others=\$(q \"SELECT count(*) FROM User WHERE role = 'fondateur' AND id != '\$id';\")
+  if [ \"\$others\" -gt 0 ] && [ \"$FORCE\" != 1 ]; then
+    echo 'Un fondateur existe deja : rien n est fait (--force pour en nommer un autre).'
+    exit 1
+  fi
+  q \"UPDATE User SET role = 'fondateur', updatedAt = CURRENT_TIMESTAMP WHERE id = '\$id';\"
+  q \"SELECT email, displayName, role FROM User WHERE id = '\$id';\"
   echo 'Fondateur configure.'
 "

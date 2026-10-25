@@ -3,11 +3,14 @@ import {
   createDilState,
   currentDilActorId,
   dilActive,
+  dilReadingTimeOk,
+  dilRevealLeaderId,
   reduceDil,
   toDilClientView,
   toDilSpectatorView,
   DilEngineError,
   DIL_COUNTDOWN_MS,
+  DIL_REVEAL_MIN_MS,
   DIL_VOTE_MS,
   type DilCard,
   type DilState,
@@ -29,8 +32,14 @@ function fourPlayers(botLast = false) {
   }))
 }
 
+/** Graine choisie pour que le mélange rende les cartes dans l'ordre de CARDS, que les tests supposent. */
+const SEED = 'seed-1'
+
 function make(botLast = false, rounds = 3): DilState {
-  const raw = createDilState(fourPlayers(botLast), CARDS, 'seed', T0 - DIL_COUNTDOWN_MS, rounds)
+  const raw = createDilState(fourPlayers(botLast), CARDS, SEED, T0 - DIL_COUNTDOWN_MS, rounds)
+  if (raw.cards.some((card, i) => card !== CARDS[i])) {
+    throw new Error('SEED à changer : les cartes ne sortent plus dans l’ordre de CARDS')
+  }
   return reduceDil(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
 }
 
@@ -70,7 +79,7 @@ describe('VOTE', () => {
     const all = voteAll(s)
     expect(all.phase).toBe('reveal')
     expect(all.lastReveal).toHaveLength(4)
-    expect(currentDilActorId(all)).toBe('p0')
+    expect(all.revealAt).toBe(T0)
   })
 
   it('carte « qui de la table » : vote pour un joueur actif, jamais soi-même', () => {
@@ -123,5 +132,71 @@ describe('vues', () => {
     const done = voteAll(s)
     const reveal = toDilSpectatorView(done)
     expect(reveal.lastReveal).toHaveLength(4)
+  })
+})
+
+describe('reveal : personne au tour, un meneur pour les bots', () => {
+  it('currentDilActorId reste null au reveal : aucun joueur n’y est expulsable pour inactivité', () => {
+    const reveal = voteAll(make())
+    expect(reveal.phase).toBe('reveal')
+    expect(currentDilActorId(reveal)).toBeNull()
+    expect(dilRevealLeaderId(reveal)).toBe('p0')
+    const left = reduceDil(reveal, { type: 'LEAVE', playerId: 'p0', at: T0 + 1_000 })
+    expect(currentDilActorId(left)).toBeNull()
+    expect(dilRevealLeaderId(left)).toBe('p1')
+  })
+})
+
+describe('LEAVE : le départ du dernier attendu révèle tout de suite', () => {
+  it('trois votes posés, le quatrième part → reveal sans attendre le chrono', () => {
+    let s = make()
+    for (const id of ['p0', 'p1', 'p2']) {
+      s = reduceDil(s, { type: 'VOTE', playerId: id, choice: 'A', now: T0 + 1_000 })
+    }
+    expect(s.phase).toBe('vote')
+    const after = reduceDil(s, { type: 'LEAVE', playerId: 'p3', at: T0 + 2_000 })
+    expect(after.phase).toBe('reveal')
+    expect(after.lastReveal?.map((r) => r.voterId)).toEqual(['p0', 'p1', 'p2'])
+    expect(after.revealAt).toBe(T0 + 2_000)
+  })
+
+  it('un départ qui laisse des votes en attente ne clôt rien', () => {
+    let s = make()
+    s = reduceDil(s, { type: 'VOTE', playerId: 'p0', choice: 'A', now: T0 + 1_000 })
+    const after = reduceDil(s, { type: 'LEAVE', playerId: 'p3', at: T0 + 2_000 })
+    expect(after.phase).toBe('vote')
+    expect(after.players.find((p) => p.id === 'p3')?.leftAt).toBe(T0 + 2_000)
+  })
+})
+
+describe('reveal : temps de lecture minimal', () => {
+  it('« carte suivante » refusé avant DIL_REVEAL_MIN_MS, accepté ensuite ; continueAt publié', () => {
+    const reveal = voteAll(make())
+    expect(dilReadingTimeOk(reveal, 'p1', T0)).toBe(false)
+    expect(dilReadingTimeOk(reveal, 'p1', T0 + DIL_REVEAL_MIN_MS - 1)).toBe(false)
+    expect(dilReadingTimeOk(reveal, 'p1', T0 + DIL_REVEAL_MIN_MS)).toBe(true)
+    expect(toDilClientView(reveal, 'p1').continueAt).toBe(T0 + DIL_REVEAL_MIN_MS)
+    expect(toDilSpectatorView(reveal).continueAt).toBe(T0 + DIL_REVEAL_MIN_MS)
+
+    const next = reduceDil(reveal, { type: 'CONTINUE', playerId: 'p1', now: T0 + DIL_REVEAL_MIN_MS })
+    expect(next.phase).toBe('vote')
+    expect(next.revealAt).toBeNull()
+    expect(toDilClientView(next, 'p1').continueAt).toBeNull()
+  })
+
+  it('un bot meneur lit aussi tant qu’un humain est assis, pas à une table de bots', () => {
+    const reveal = voteAll(make(true))
+    expect(dilReadingTimeOk(reveal, 'p3', T0)).toBe(false)
+    const botsOnly: DilState = {
+      ...reveal,
+      players: reveal.players.map((p) => (p.isBot ? p : { ...p, leftAt: T0 })),
+    }
+    expect(dilReadingTimeOk(botsOnly, 'p3', T0)).toBe(true)
+  })
+
+  it('un état sérialisé avant l’horodatage (revealAt absent) n’est jamais bloqué', () => {
+    const legacy: DilState = { ...voteAll(make()), revealAt: null }
+    expect(dilReadingTimeOk(legacy, 'p1', T0)).toBe(true)
+    expect(toDilClientView(legacy, 'p1').continueAt).toBeNull()
   })
 })

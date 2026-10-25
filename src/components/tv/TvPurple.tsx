@@ -12,6 +12,7 @@ import { rematchCounter } from '@/components/online/end-screen'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { TvAvatar } from './tv-shared'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * Purple sur grand écran. La vue spectateur porte le paquet entier (ordre
@@ -113,7 +114,7 @@ export function TvPurple({ room, state }: { room: TvRoomDto; state: PurpleSynced
   useEffect(() => {
     setAfkEndsAt(null)
     if (!afkWatchable) return
-    const turnStartedAt = Date.now()
+    const turnStartedAt = serverNow()
     const timer = setTimeout(() => setAfkEndsAt(turnStartedAt + ONLINE_REPLACE_GRACE_MS), AFK_WARN_AFTER_MS)
     return () => clearTimeout(timer)
   }, [room.stateVersion, afkWatchable])

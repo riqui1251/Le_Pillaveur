@@ -5,18 +5,30 @@ import { buildRoomDto, touchMemberPresence } from '@/lib/online-room'
 import { processRematchVote } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
+import { apiError, withApiRoute } from '@/lib/api-route'
+import { checkRateLimit, userRateLimitKey } from '@/lib/rate-limit'
 
 type Params = { params: Promise<{ roomId: string }> }
+
+/**
+ * Votes par minute et par compte : un vote se clique une fois par partie, mais
+ * chaque appel relit la salle et prévient toute la table (publishRoomChanged).
+ */
+const REMATCH_RATE_LIMIT = 30
+const REMATCH_RATE_WINDOW_MS = 60_000
 
 /**
  * Vote « Rejouer » — relance automatique quand tous les membres PRÉSENTS ont
  * voté (REMATCH_PRESENCE_MS) ; les absents sont retirés de la table.
  */
-export async function POST(_request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/rematch POST', async (_request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
+
+  const rate = checkRateLimit(userRateLimitKey('room-rematch', user.id), REMATCH_RATE_LIMIT, REMATCH_RATE_WINDOW_MS)
+  if (!rate.ok) return apiError('rate_limited', 429, { retryAfterSec: rate.retryAfterSec })
 
   const { roomId } = await params
   // `lastSeenAt` de chaque membre fait le quorum (scalaire de la ligne, donc
@@ -58,4 +70,4 @@ export async function POST(_request: Request, { params }: Params) {
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })
-}
+})

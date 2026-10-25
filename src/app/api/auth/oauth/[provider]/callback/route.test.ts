@@ -7,25 +7,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * qui protège les comptes : l'état de l'aller est exigé, une adresse non
  * confirmée ne retrouve ni ne crée aucun compte, l'identité du fournisseur
  * prime sur l'adresse, et seule une identité LIÉE au compte connecté en
- * confirme la suppression.
+ * confirme la suppression. Un compte pré-inscrit avec l'adresse (jamais
+ * confirmée) est réclamé par le titulaire que le fournisseur prouve ; une
+ * adresse Facebook (non prouvée) n'ouvre jamais un compte existant.
  */
 
-const { userDb, linkDb, cookieJar, profileMock, currentUserMock, deleteUserMock, createSessionMock } = vi.hoisted(
-  () => ({
-    userDb: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
-    linkDb: { findUnique: vi.fn(), upsert: vi.fn() },
-    cookieJar: new Map<string, string>(),
-    profileMock: vi.fn(),
-    currentUserMock: vi.fn(),
-    deleteUserMock: vi.fn(async () => {}),
-    createSessionMock: vi.fn(async () => 'jeton-session'),
-  })
-)
+const {
+  userDb,
+  linkDb,
+  sessionDb,
+  cookieJar,
+  profileMock,
+  credentialsMock,
+  currentUserMock,
+  deleteUserMock,
+  createSessionMock,
+} = vi.hoisted(() => ({
+  userDb: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+  linkDb: { findUnique: vi.fn(), upsert: vi.fn(), count: vi.fn(), deleteMany: vi.fn() },
+  sessionDb: { deleteMany: vi.fn() },
+  cookieJar: new Map<string, string>(),
+  profileMock: vi.fn(),
+  credentialsMock: vi.fn((): { clientId: string; clientSecret: string } | null => ({
+    clientId: 'id-app',
+    clientSecret: 'secret-app',
+  })),
+  currentUserMock: vi.fn(),
+  deleteUserMock: vi.fn(async () => {}),
+  createSessionMock: vi.fn(async () => 'jeton-session'),
+}))
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     user: userDb,
     oAuthAccount: linkDb,
+    session: sessionDb,
     $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
   },
 }))
@@ -35,7 +51,8 @@ vi.mock('next/headers', () => ({
     get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name) } : undefined),
   }),
 }))
-vi.mock('@/lib/auth-server', () => ({
+vi.mock('@/lib/auth-server', async (importOriginal) => ({
+  claimUnprovenAccount: (await importOriginal<typeof import('@/lib/auth-server')>()).claimUnprovenAccount,
   createSession: createSessionMock,
   clearLocalPlayCookieOptions: () => ({ name: 'lp_local_play', value: '', path: '/', maxAge: 0 }),
   clearSessionCookieOptions: () => ({ name: 'lp_session', value: '', path: '/', maxAge: 0 }),
@@ -60,7 +77,7 @@ vi.mock('@/lib/auth-cookies', () => ({ readConsentedVisitorId: () => null }))
 vi.mock('@/lib/user-activity-server', () => ({ deleteUserAccount: deleteUserMock }))
 vi.mock('@/lib/oauth-server', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/oauth-server')>()),
-  oauthCredentials: () => ({ clientId: 'id-app', clientSecret: 'secret-app' }),
+  oauthCredentials: credentialsMock,
   fetchOAuthProfile: profileMock,
 }))
 
@@ -130,11 +147,18 @@ function database(users: Array<Record<string, unknown>>, links: Array<{ provider
     }
   )
   linkDb.upsert.mockResolvedValue({})
+  linkDb.count.mockImplementation(
+    async ({ where }: { where: { userId: string } }) => links.filter((l) => l.userId === where.userId).length
+  )
+  linkDb.deleteMany.mockResolvedValue({ count: 0 })
+  sessionDb.deleteMany.mockResolvedValue({ count: 0 })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   cookieJar.clear()
+  credentialsMock.mockReset()
+  credentialsMock.mockReturnValue({ clientId: 'id-app', clientSecret: 'secret-app' })
   profileMock.mockResolvedValue(discordProfile)
   currentUserMock.mockResolvedValue(null)
   database([kevin], [])
@@ -205,6 +229,44 @@ describe('connexion', () => {
     expect(userDb.create).not.toHaveBeenCalled()
     expect(linkDb.upsert.mock.calls[0][0].create.userId).toBe('compte-kevin')
     expect(createSessionMock).toHaveBeenCalledWith('compte-kevin')
+    // Adresse déjà confirmée : rien n'est réclamé.
+    expect(sessionDb.deleteMany).not.toHaveBeenCalled()
+    expect(linkDb.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('compte pré-inscrit par mot de passe avec l’adresse, jamais confirmée : réclamé avant d’être lié', async () => {
+    database(
+      [{ ...kevin, id: 'compte-piege', emailVerified: null, passwordHash: '$2a$10$hash-choisi-par-attaquant' }],
+      []
+    )
+    aller()
+
+    const { path } = await retour()
+
+    expect(path).toBe('/fr/jeux')
+    expect(userDb.update).toHaveBeenCalledWith({ where: { id: 'compte-piege' }, data: { passwordHash: '' } })
+    expect(sessionDb.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-piege' } })
+    // Réclamé AVANT le lien (qu'il déferait) et avant la nouvelle session.
+    expect(linkDb.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(linkDb.upsert.mock.invocationCallOrder[0])
+    expect(sessionDb.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      createSessionMock.mock.invocationCallOrder[0]
+    )
+    expect(linkDb.upsert.mock.calls[0][0].create.userId).toBe('compte-piege')
+    expect(createSessionMock).toHaveBeenCalledWith('compte-piege')
+  })
+
+  it('compte ouvert par Facebook (adresse non prouvée), puis Discord prouve l’adresse : l’identité Facebook est déliée', async () => {
+    database(
+      [{ ...kevin, id: 'compte-fb', emailVerified: null, passwordHash: '' }],
+      [{ providerAccountId: 'fb-intrus', userId: 'compte-fb' }]
+    )
+    aller()
+
+    await retour()
+
+    expect(linkDb.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-fb' } })
+    expect(sessionDb.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-fb' } })
+    expect(createSessionMock).toHaveBeenCalledWith('compte-fb')
   })
 
   it('identité déjà liée : le compte est retrouvé même si l’adresse a changé chez Discord', async () => {
@@ -248,6 +310,79 @@ describe('connexion', () => {
     aller()
     const { params } = await retour()
     expect(params.get('authError')).toBe('oauth_failed')
+  })
+})
+
+describe('Facebook : adresse fournie sans preuve de confirmation', () => {
+  const facebookProfile = { id: 'fb-7', email: 'kevin@exemple.fr', emailVerified: false, name: 'Kevin' }
+  const facebookBack = () => retour({ code: 'code-fb', state: STATE }, 'facebook')
+
+  beforeEach(() => {
+    profileMock.mockResolvedValue(facebookProfile)
+  })
+
+  it('adresse déjà portée par un compte : refus, rien n’est lié, réclamé ni ouvert', async () => {
+    aller({ provider: 'facebook' })
+
+    const { params } = await facebookBack()
+
+    expect(params.get('authError')).toBe('oauth_email_in_use')
+    expect(linkDb.upsert).not.toHaveBeenCalled()
+    expect(userDb.update).not.toHaveBeenCalled()
+    expect(sessionDb.deleteMany).not.toHaveBeenCalled()
+    expect(createSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('même refus pour un compte pré-inscrit jamais confirmé : Facebook ne prouve rien, il ne réclame rien', async () => {
+    database([{ ...kevin, emailVerified: null, passwordHash: '$2a$10$hash' }], [])
+    aller({ provider: 'facebook' })
+
+    const { params } = await facebookBack()
+
+    expect(params.get('authError')).toBe('oauth_email_in_use')
+    expect(sessionDb.deleteMany).not.toHaveBeenCalled()
+    expect(createSessionMock).not.toHaveBeenCalled()
+  })
+
+  it('adresse libre : compte créé et lié, sans être marqué vérifié', async () => {
+    database([], [])
+    aller({ provider: 'facebook' })
+
+    const { path } = await facebookBack()
+
+    expect(path).toBe('/fr/jeux')
+    const data = userDb.create.mock.calls[0][0].data
+    expect(data.email).toBe('kevin@exemple.fr')
+    expect(data).not.toHaveProperty('emailVerified')
+    expect(linkDb.upsert.mock.calls[0][0].create).toEqual({
+      userId: 'compte-neuf',
+      provider: 'facebook',
+      providerAccountId: 'fb-7',
+    })
+    expect(createSessionMock).toHaveBeenCalledWith('compte-neuf')
+  })
+
+  it('identité Facebook déjà liée : reconnexion, sans marquer l’adresse vérifiée', async () => {
+    database([{ ...kevin, emailVerified: null }], [{ providerAccountId: 'fb-7', userId: 'compte-kevin' }])
+    aller({ provider: 'facebook' })
+
+    await facebookBack()
+
+    expect(createSessionMock).toHaveBeenCalledWith('compte-kevin')
+    expect(userDb.update.mock.calls[0][0].data).not.toHaveProperty('emailVerified')
+  })
+
+  it('pérennisation d’un invité avec une adresse libre : acceptée, sans être marquée vérifiée', async () => {
+    database([], [])
+    currentUserMock.mockResolvedValue({ id: 'invite-1', isGuest: true, role: 'user' })
+    aller({ provider: 'facebook', intent: 'upgrade', userId: 'invite-1' })
+
+    const { params } = await facebookBack()
+
+    expect(params.get('guestSaved')).toBe('1')
+    const update = userDb.update.mock.calls[0][0]
+    expect(update.data).toMatchObject({ email: 'kevin@exemple.fr', isGuest: false })
+    expect(update.data).not.toHaveProperty('emailVerified')
   })
 })
 
@@ -327,6 +462,51 @@ describe('Apple — retour en POST (form_post)', () => {
   it('les autres fournisseurs reviennent en GET : POST refusé', async () => {
     const res = await postBack('discord', { code: 'c', state: STATE })
     expect(res.status).toBe(404)
+  })
+
+  it('Apple non configuré : 404, corps jamais lu', async () => {
+    credentialsMock.mockReturnValueOnce(null)
+    const request = new Request('http://test/api/auth/oauth/apple/callback', {
+      method: 'POST',
+      body: new URLSearchParams({ code: 'c', state: STATE }),
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    })
+    const res = await POST(request, { params: Promise.resolve({ provider: 'apple' }) })
+    expect(res.status).toBe(404)
+    expect(request.bodyUsed).toBe(false)
+  })
+
+  it('corps annoncé au-delà de 16 Ko : 413 sans le lire', async () => {
+    const request = new Request('http://test/api/auth/oauth/apple/callback', {
+      method: 'POST',
+      body: 'user=' + 'A'.repeat(64),
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'content-length': String(40 * 1024 * 1024) },
+    })
+    const res = await POST(request, { params: Promise.resolve({ provider: 'apple' }) })
+    expect(res.status).toBe(413)
+    expect((await res.json()).error).toBe('payload_too_large')
+    expect(request.bodyUsed).toBe(false)
+  })
+
+  it('corps en flux sans Content-Length : coupé dès 16 Ko, 413', async () => {
+    let pulled = 0
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1
+        if (pulled > 1000) return controller.close()
+        controller.enqueue(new TextEncoder().encode('A'.repeat(1024)))
+      },
+    })
+    const request = new Request('http://test/api/auth/oauth/apple/callback', {
+      method: 'POST',
+      body: stream,
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      // @ts-expect-error duplex est requis par undici pour un corps en flux
+      duplex: 'half',
+    })
+    const res = await POST(request, { params: Promise.resolve({ provider: 'apple' }) })
+    expect(res.status).toBe(413)
+    expect(pulled).toBeLessThan(40)
   })
 })
 

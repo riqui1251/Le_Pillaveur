@@ -6,8 +6,10 @@ import {
   clearLocalPlayCookieOptions,
   deleteIncomingSession,
   hashPassword,
+  isPasswordHashBusyError,
   isValidEmail,
   isValidPassword,
+  passwordHashBusyResponse,
   sessionCookieOptions,
 } from '@/lib/auth-server'
 import { createUniqueAccountCode } from '@/lib/account-code'
@@ -25,7 +27,7 @@ import { readConsentedVisitorId } from '@/lib/auth-cookies'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import { checkRateLimit, networkRateLimitKey, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { isAppLocale, localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
@@ -33,6 +35,12 @@ import { parseRequestedAmbianceMode } from '@/lib/ambiance-mode'
 
 const REGISTER_LIMIT = 5
 const REGISTER_WINDOW_MS = 60 * 60 * 1000
+// Par RÉSEAU (IPv4, ou /64 IPv6), toutes adresses confondues : le quota par
+// adresse + e-mail se contournait en changeant d'e-mail à chaque compte. 20
+// par heure laissent s'inscrire une tablée entière sur le même Wi-Fi (ou des
+// inconnus derrière le CGNAT d'un opérateur mobile). Compté une fois la saisie
+// bien formée, avant la recherche de l'adresse et le hachage.
+const REGISTER_NETWORK_LIMIT = 20
 
 export const POST = withApiRoute('auth/register POST', async (request: Request) => {
   try {
@@ -49,6 +57,9 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
     const password = typeof body.password === 'string' ? body.password : ''
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : ''
 
+    // Validée avant d'entrer dans une clé de quota : un « e-mail » de 8 Ko
+    // n'occupe plus la mémoire du limiteur.
+    if (!isValidEmail(email)) return apiError('invalid_email', 400)
     const rate = checkRateLimit(rateLimitKey(request, 'register', email), REGISTER_LIMIT, REGISTER_WINDOW_MS)
     if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
@@ -61,7 +72,6 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
     })
     const initialLocale = normalizeAppLocale(bodyLocale ?? cookieLocale)
 
-    if (!isValidEmail(email)) return apiError('invalid_email', 400)
     // Les exigences de mot de passe sont les mêmes pour tous : la phrase qui
     // les rappelle vit désormais côté traductions (invalid_password).
     if (!isValidPassword(password)) return apiError('invalid_password', 400)
@@ -88,6 +98,13 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
         { status: 400 }
       )
     }
+
+    const networkRate = checkRateLimit(
+      networkRateLimitKey(request, 'register-network'),
+      REGISTER_NETWORK_LIMIT,
+      REGISTER_WINDOW_MS
+    )
+    if (!networkRate.ok) return rateLimitResponse(networkRate.retryAfterSec)
 
     // Un email déjà connu bloque l'inscription QUEL QUE SOIT son passwordHash :
     // un compte Google a un hash vide, et le reprendre ici reviendrait à en
@@ -181,6 +198,7 @@ export const POST = withApiRoute('auth/register POST', async (request: Request) 
     response.cookies.set(localeCookieOptions(userLocale))
     return response
   } catch (error) {
+    if (isPasswordHashBusyError(error)) return passwordHashBusyResponse()
     // 503 conservé : la création a pu échouer sur une panne de base, pas sur
     // une saisie du visiteur.
     console.error('[api] auth/register POST', error instanceof Error ? error.name : typeof error)

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { CastFrame } from '@/lib/cast-types'
+import { STREAM_WATCHDOG_MS, streamReopenDelayMs } from '@/hooks/online-room-polling'
+import { noteServerDate } from '@/hooks/server-clock'
 
 /**
  * Abonnement LECTURE SEULE d'un écran TV à une salle, par CODE. Calqué sur le
@@ -54,7 +56,9 @@ export function useTvRoom(code: string) {
 
     const runOnce = async () => {
       try {
+        const sentAt = Date.now()
         const res = await fetch(`/api/tv/${encodeURIComponent(code)}/state`, { cache: 'no-store' })
+        noteServerDate(res, sentAt)
         if (res.status === 404 || res.status === 400) {
           setNotFound(true)
           setRoom(null)
@@ -122,14 +126,64 @@ export function useTvRoom(code: string) {
     }
   }, [fetchState])
 
-  // Temps réel : SSE pousse les changements → on rafraîchit l'état.
+  /**
+   * Temps réel : SSE pousse les changements → on rafraîchit l'état. Le flux
+   * est ROUVERT par nos soins quand le navigateur l'a abandonné (CLOSED : 502
+   * du proxy pendant un redéploiement, 429 du plafond tv-stream) : sinon la
+   * télé restait au sondage de 10 s et, surtout, ne recevait plus aucune
+   * trame `castframe` (billes du Plinko, course du PMU) jusqu'au
+   * rechargement — sur un écran souvent sans clavier. Même recul que
+   * useOnlineRoom (streamReopenDelayMs), remis à zéro au premier événement.
+   */
   useEffect(() => {
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') return
-    const es = new EventSource(`/api/tv/${encodeURIComponent(code)}/stream`)
+    let es: EventSource | null = null
+    let reopenTimer: ReturnType<typeof setTimeout> | null = null
+    let watchdog: ReturnType<typeof setTimeout> | null = null
+    let unmounted = false
+    // Abandons d'affilée sans le moindre événement entre eux (recul exponentiel).
+    let refusals = 0
+    // Flux perdu depuis la dernière ouverture : ce qui a bougé entre-temps n'a
+    // pas été poussé, le `ready` suivant relit l'état.
+    let lost = false
+    // Le chien de garde ne s'arme qu'après un premier battement `ping` reçu :
+    // un serveur qui n'envoie encore qu'un commentaire SSE (invisible ici, le
+    // temps d'un déploiement) ne fait pas prendre pour mort un flux calme.
+    let heartbeats = false
+
+    const reopen = (delay: number) => {
+      if (unmounted) return
+      es?.close()
+      es = null
+      if (reopenTimer) clearTimeout(reopenTimer)
+      reopenTimer = setTimeout(() => {
+        reopenTimer = null
+        if (!unmounted) open()
+      }, delay)
+    }
+    // Flux « zombie » (box qui redémarre, Wi-Fi qui change) : ni `error` ni
+    // événement. Passé deux battements sans rien, on le remplace.
+    const armWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog)
+      watchdog = null
+      if (!heartbeats) return
+      watchdog = setTimeout(() => {
+        watchdog = null
+        streamAliveRef.current = false
+        lost = true
+        reopen(0)
+      }, STREAM_WATCHDOG_MS)
+    }
+    const markAlive = () => {
+      refusals = 0
+      armWatchdog()
+    }
     const onEvent = () => {
+      markAlive()
       scheduleRefresh()
     }
     const onFrame = (e: MessageEvent) => {
+      markAlive()
       try {
         setFrame(JSON.parse(e.data) as CastFrame)
       } catch {
@@ -141,21 +195,49 @@ export function useTvRoom(code: string) {
     // un proxy qui coupe juste après).
     const onReady = () => {
       streamAliveRef.current = true
+      markAlive()
+      if (lost) {
+        lost = false
+        scheduleRefresh()
+      }
+    }
+    const onPing = () => {
+      heartbeats = true
+      streamAliveRef.current = true
+      markAlive()
     }
     const onError = () => {
-      // L'EventSource se reconnecte tout seul ; en attendant, le sondage
-      // reprend sa cadence serrée.
+      // L'EventSource se reconnecte tout seul (CONNECTING) ; en attendant, le
+      // sondage reprend sa cadence serrée. CLOSED : il a abandonné, à nous de
+      // rouvrir.
       streamAliveRef.current = false
+      lost = true
+      if (watchdog) clearTimeout(watchdog)
+      watchdog = null
+      if (es?.readyState === EventSource.CLOSED) {
+        refusals += 1
+        reopen(streamReopenDelayMs(refusals))
+      }
     }
-    es.addEventListener('ready', onReady)
-    es.addEventListener('changed', onEvent)
-    es.addEventListener('lobby', onEvent)
-    es.addEventListener('finished', onEvent)
-    es.addEventListener('castframe', onFrame as EventListener)
-    es.addEventListener('error', onError)
+    function open() {
+      const stream = new EventSource(`/api/tv/${encodeURIComponent(code)}/stream`)
+      stream.addEventListener('ready', onReady)
+      stream.addEventListener('ping', onPing)
+      stream.addEventListener('changed', onEvent)
+      stream.addEventListener('lobby', onEvent)
+      stream.addEventListener('finished', onEvent)
+      stream.addEventListener('castframe', onFrame as EventListener)
+      stream.addEventListener('error', onError)
+      es = stream
+    }
+    open()
+
     return () => {
+      unmounted = true
+      if (reopenTimer) clearTimeout(reopenTimer)
+      if (watchdog) clearTimeout(watchdog)
       streamAliveRef.current = false
-      es.close()
+      es?.close()
     }
   }, [code, scheduleRefresh])
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { countLocalPlayers, getBanState } from '@/lib/ban-server'
 import { prisma } from '@/lib/prisma'
 import {
@@ -149,10 +150,10 @@ export async function GET(
   }
 }
 
-export async function DELETE(
+export const DELETE = withApiRoute('admin/users/[userId] DELETE', async (
   _request: Request,
   { params }: { params: Promise<{ userId: string }> }
-) {
+) => {
   try {
     const actor = await requireRole(canDeleteAccount)
 
@@ -205,4 +206,4 @@ export async function DELETE(
   } catch (error) {
     return adminErrorResponse(error, 'user delete')
   }
-}
+})

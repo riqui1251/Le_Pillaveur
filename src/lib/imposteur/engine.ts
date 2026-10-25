@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 
@@ -197,7 +197,7 @@ export type ImposteurState = TimedPhaseState & {
    */
   speech?: ImposteurSpeech[]
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
 }
 
 export type ImposteurAction =
@@ -241,15 +241,49 @@ export function maxImposteurCount(playerCount: number): number {
 }
 
 /**
- * Normalisation permissive (minuscules + sans accents) pour la validation —
- * et pour comparer deux indices entre eux (« Été » = « ete »).
+ * Caractères qui ne s'affichent pas (espace de largeur nulle, contrôles bidi,
+ * sélecteurs de variante, remplissages hangul…) : « pisc\u200bine » s'affiche
+ * « piscine » mais ne contenait plus le mot pour la comparaison.
+ */
+const INVISIBLE_RE = /[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu
+
+/**
+ * Lettres cyrilliques et grecques qui se lisent comme des lettres latines :
+ * « pіscine » (і cyrillique) passait pour un autre mot que « piscine ».
+ */
+const LATIN_LOOKALIKES: Record<string, string> = {
+  а: 'a', в: 'b', г: 'r', е: 'e', і: 'i', ј: 'j', к: 'k', м: 'm', н: 'h', о: 'o', п: 'n', р: 'p',
+  с: 'c', т: 't', у: 'y', х: 'x', ь: 'b', ѕ: 's', һ: 'h', ԁ: 'd', ԛ: 'q', ԝ: 'w', ӏ: 'l',
+  А: 'a', В: 'b', Е: 'e', І: 'i', Ј: 'j', К: 'k', М: 'm', Н: 'h', О: 'o', Р: 'p', С: 'c', Т: 't',
+  У: 'y', Х: 'x', Ѕ: 's', Һ: 'h', Ԁ: 'd', Ԛ: 'q', Ԝ: 'w', Ӏ: 'l',
+  α: 'a', β: 'b', ε: 'e', ζ: 'z', η: 'n', ι: 'i', κ: 'k', μ: 'u', ν: 'v', ο: 'o', ρ: 'p', τ: 't',
+  υ: 'u', χ: 'x', ω: 'w',
+  Α: 'a', Β: 'b', Ε: 'e', Ζ: 'z', Η: 'h', Ι: 'i', Κ: 'k', Μ: 'm', Ν: 'n', Ο: 'o', Ρ: 'p', Τ: 't',
+  Υ: 'y', Χ: 'x',
+  ı: 'i', ɑ: 'a', ɡ: 'g',
+}
+
+/**
+ * Normalisation permissive pour la validation — et pour comparer deux indices
+ * entre eux (« Été » = « ete ») : formes de compatibilité (NFKD : pleine
+ * chasse, lettres mathématiques), accents et invisibles retirés, sosies
+ * cyrilliques et grecs ramenés au latin, minuscules.
  */
 export function normalizeClue(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .trim()
+  let folded = ''
+  for (const ch of text.normalize('NFKD').replace(/\p{M}/gu, '').replace(INVISIBLE_RE, '')) {
+    folded += LATIN_LOOKALIKES[ch] ?? ch
+  }
+  return folded.toLowerCase().trim()
+}
+
+/**
+ * Le texte d'un indice tel qu'il est gardé et affiché : sans caractère de
+ * format (un contrôle bidi retournait l'affichage, « \u202eenicsip » se
+ * lisait « piscine »). Le liant U+200D reste, il compose les émojis.
+ */
+export function cleanImposteurClue(text: string): string {
+  return text.replace(/\p{Cf}/gu, (ch) => (ch === '\u200d' ? ch : '')).trim()
 }
 
 /**
@@ -264,7 +298,7 @@ export function normalizeClue(text: string): string {
  * sert pas pour passer son tour sur-le-champ.
  */
 export function isEmptyClueText(text: string): boolean {
-  return /^[.…]+$/u.test(text.replace(/\s+/gu, ''))
+  return /^[.…]+$/u.test(text.normalize('NFKC').replace(/\s+/gu, '').replace(INVISIBLE_RE, ''))
 }
 
 export function isValidClue(text: string, ownWord: string): boolean {
@@ -498,8 +532,9 @@ export function reduceImposteur(state: ImposteurState, action: ImposteurAction):
       if (actorId !== action.playerId) throw new ImposteurEngineError('NOT_YOUR_TURN')
       const actor = state.players.find((p) => p.id === actorId)
       if (!actor || actor.eliminated) throw new ImposteurEngineError('ELIMINATED')
-      if (!isValidClue(action.text, actor.word)) throw new ImposteurEngineError('INVALID_CLUE')
-      return pushClueAndAdvance(state, action.text, action.now)
+      const text = cleanImposteurClue(action.text)
+      if (!isValidClue(text, actor.word)) throw new ImposteurEngineError('INVALID_CLUE')
+      return pushClueAndAdvance(state, text, action.now)
     }
 
     case 'VOTE': {

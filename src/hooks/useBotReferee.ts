@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * ARBITRAGE DES TICKS DE SERVICE — avec ARBITRE DE SECOURS PAR RANG.
@@ -129,7 +130,7 @@ export function useBotReferee(options: UseBotRefereeOptions): number {
     if (replaceLeft) {
       const check = () => {
         const expired = (latest.current.players ?? []).some(
-          (p) => !p.isBot && p.leftAt && Date.now() - p.leftAt >= latest.current.graceMs
+          (p) => !p.isBot && p.leftAt && serverNow() - p.leftAt >= latest.current.graceMs
         )
         if (expired) send({ action: 'replace-left' })
       }
@@ -220,11 +221,15 @@ export type AdvanceTickTarget = {
   retryMs?: number
 }
 
-/** Délai avant le tick « advance » pour un rang — le rang 0 vise l'échéance. */
+/**
+ * Délai avant le tick « advance » pour un rang — le rang 0 vise l'échéance,
+ * lue à l'heure serveur estimée (serverNow) : un téléphone en avance ne tire
+ * plus avant l'heure.
+ */
 export function advanceTickDelayMs(
   dueAt: number,
   rank: number,
-  now: number = Date.now(),
+  now: number = serverNow(),
   stepMs: number = BOT_REFEREE_BACKUP_STEP_MS
 ): number {
   return (
@@ -347,8 +352,9 @@ export type UseAfkTickOptions = {
  * revalide l'inactivité avec SA propre horloge (`OnlineRoom.updatedAt`) avant
  * d'expulser, donc les demandes concurrentes sont inoffensives.
  *
- * Renvoie l'instant LOCAL de début du tour courant : base d'affichage des
- * comptes à rebours (l'autorité reste l'horloge serveur).
+ * Renvoie l'instant de début du tour courant, noté à l'heure serveur estimée
+ * (serverNow) : base d'affichage des comptes à rebours, que PhaseCountdown
+ * compare à la même horloge (l'autorité reste l'horloge serveur).
  */
 export function useAfkTick(options: UseAfkTickOptions): number {
   const {
@@ -361,9 +367,9 @@ export function useAfkTick(options: UseAfkTickOptions): number {
   } = options
 
   // Remis à zéro à chaque écriture d'état serveur (= nouveau tour).
-  const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
+  const turnStartRef = useRef({ version: stateVersion, at: serverNow() })
   if (turnStartRef.current.version !== stateVersion) {
-    turnStartRef.current = { version: stateVersion, at: Date.now() }
+    turnStartRef.current = { version: stateVersion, at: serverNow() }
   }
 
   useEffect(() => {
@@ -371,7 +377,7 @@ export function useAfkTick(options: UseAfkTickOptions): number {
     if (!userId || !targetId || targetId === userId) return
     const expectedVersion = stateVersion
     const check = () => {
-      if (Date.now() - turnStartRef.current.at < graceMs) return
+      if (serverNow() - turnStartRef.current.at < graceMs) return
       void fetch(`/api/online/rooms/${roomId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

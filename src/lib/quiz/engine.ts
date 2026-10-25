@@ -1,4 +1,4 @@
-import { createRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -89,7 +89,7 @@ export type QuizState = TimedPhaseState & {
   answers: Record<string, QuizAnswer>
   lastResult: QuizQuestionResult | null
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type QuizAction =
@@ -378,8 +378,10 @@ export function toQuizClientView(state: QuizState, viewerId: string): QuizClient
     ...rest,
     phaseKey: phaseKey(state),
     questionCount: questions.length,
+    // Id OPAQUE (rang dans la partie) : l'id de la banque désignait la fiche,
+    // donc la bonne réponse, dans les données publiées du jeu.
     currentQuestion: current
-      ? { id: current.id, cat: current.cat, diff: current.diff, q: current.q, choices: current.choices }
+      ? { id: `q${state.qIdx + 1}`, cat: current.cat, diff: current.diff, q: current.q, choices: current.choices }
       : null,
     myChoice: answers[viewerId]?.choice ?? null,
     continueAt:

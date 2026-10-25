@@ -152,3 +152,32 @@ export function lobbyLaunchStatus<S extends LaunchSeat>({
     launchable: total > 0 && late.length === 0 && missingPlayers === 0 && !tooMany,
   }
 }
+
+/**
+ * « Tu es dans le lobby d'un autre jeu » : vrai tant que la table où l'on est
+ * assis ATTEND un autre jeu que celui de la page — hors bascule de jeu par
+ * l'hôte, que la page suit d'elle-même (`tableMoved`).
+ */
+export function isWrongGameLobby(
+  room: { gameId: string | null; status: string } | null | undefined,
+  gameId: string,
+  tableMoved: boolean
+): boolean {
+  return Boolean(room && room.gameId !== gameId && room.status === 'waiting' && !tableMoved)
+}
+
+/**
+ * Erreur partagée du salon après réévaluation du cas « autre jeu ». Le message
+ * vit dans l'erreur COMMUNE (useOnlineRoom) : posé sans jamais être retiré, il
+ * suivait le joueur jusque dans le bon lobby après « Aller à la table » — et
+ * le poussait à quitter la table où il était bien assis. Il tombe dès que la
+ * condition cesse ; une autre erreur, elle, reste.
+ */
+export function wrongGameError(
+  prev: string | null,
+  wrongGame: boolean,
+  message: string
+): string | null {
+  if (wrongGame) return message
+  return prev === message ? null : prev
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import {
+  claimUnprovenAccount,
   createSession,
   clearLocalPlayCookieOptions,
   deleteIncomingSession,
@@ -103,6 +104,11 @@ export const POST = withApiRoute('auth/google POST', async (request: Request) =>
       } catch (error) {
         console.error('[api] auth/google trace', error instanceof Error ? error.name : typeof error)
       }
+    } else {
+      // Google prouve l'adresse : un compte qui la portait sans l'avoir
+      // jamais confirmée (inscrit par mot de passe, peut-être par un tiers)
+      // est réclamé avant d'y entrer (claimUnprovenAccount).
+      await claimUnprovenAccount(user)
     }
 
     await clearExpiredBanIfNeeded(user.id)

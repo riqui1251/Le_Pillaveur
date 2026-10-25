@@ -18,7 +18,9 @@ export const dynamic = 'force-dynamic'
  *
  * - POST « List-Unsubscribe=One-Click » (?token= dans l'URL) : le bouton
  *   « Se désabonner » de la messagerie elle-même (en-tête
- *   List-Unsubscribe-Post) — aucune page, juste 200 ;
+ *   List-Unsubscribe-Post) — aucune page, juste 200. Il vient du serveur ou
+ *   du webmail de la messagerie, donc d'un autre site : `allowCrossSite`,
+ *   le jeton tient lieu de garde ;
  * - POST d'un formulaire (champs `token`, `lang`) : le bouton de la page
  *   /<lang>/compte/rappel, où mène le lien du corps de l'e-mail — puis
  *   redirection (303) vers la même page, état « c'est noté » ;
@@ -87,4 +89,4 @@ export const POST = withApiRoute('reminder/unsubscribe POST', async (request: Re
   const form = new URLSearchParams(text)
   await unsubscribeReminderByToken(form.get('token') ?? query.token)
   return seeOther(unsubscribeLandingPath(form.get('lang') ?? query.lang))
-})
+}, { allowCrossSite: true })

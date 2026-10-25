@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withApiRoute } from '@/lib/api-route'
 import { getCurrentUser, isValidEmail } from '@/lib/auth-server'
 import {
+  FEEDBACK_SCREENSHOT_DAILY_BYTES_CAP,
   FEEDBACK_TYPES,
   isFeedbackType,
   MAX_FEEDBACK_MESSAGE,
@@ -11,7 +13,7 @@ import {
 import { getClientIpFromRequest } from '@/lib/geo-server'
 import {
   checkRateLimit,
-  rateLimitKey,
+  networkRateLimitKey,
   rateLimitResponse,
   readJsonBodyLimited,
   userRateLimitKey,
@@ -20,7 +22,9 @@ import {
 /**
  * Route ouverte (l'envoi d'un retour ne demande pas de compte) : sans quota,
  * n'importe qui peut y déverser des captures base64 en boucle dans SQLite.
- * 3 retours par heure et par émetteur suffisent à un usage humain.
+ * 3 retours par heure et par émetteur suffisent à un usage humain. Anonyme,
+ * l'émetteur est le RÉSEAU (clé /64 en IPv6) : par adresse exacte, un /64
+ * changeait d'adresse à chaque envoi et n'était jamais compté.
  */
 const FEEDBACK_LIMIT = 3
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000
@@ -40,7 +44,23 @@ const FEEDBACK_UNIDENTIFIED_LIMIT = 20
  */
 const MAX_FEEDBACK_BODY_BYTES = Math.ceil((MAX_TOTAL_SCREENSHOT_BYTES * 4) / 3) + 16 * 1024
 
-export async function POST(request: Request) {
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Octets de captures acceptés dans la fenêtre courante (24 h fixes), en
+ * mémoire comme les autres quotas : un redémarrage la remet à zéro, ce qui
+ * borne encore le disque à un plafond par démarrage.
+ */
+let screenshotBudget = { used: 0, resetAt: 0 }
+
+function admitScreenshotBytes(bytes: number, now = Date.now()): boolean {
+  if (screenshotBudget.resetAt <= now) screenshotBudget = { used: 0, resetAt: now + DAY_MS }
+  if (screenshotBudget.used + bytes > FEEDBACK_SCREENSHOT_DAILY_BYTES_CAP) return false
+  screenshotBudget.used += bytes
+  return true
+}
+
+export const POST = withApiRoute('feedback POST', async (request: Request) => {
   try {
     // Le compte prime sur l'IP : un utilisateur connecté reste suivi même
     // derrière une IP partagée (4G, université), et surtout le quota ne repose
@@ -51,7 +71,7 @@ export async function POST(request: Request) {
     const quota = user
       ? { key: userRateLimitKey('feedback', user.id), limit: FEEDBACK_LIMIT }
       : ip
-        ? { key: rateLimitKey(request, 'feedback'), limit: FEEDBACK_LIMIT }
+        ? { key: networkRateLimitKey(request, 'feedback'), limit: FEEDBACK_LIMIT }
         : { key: 'feedback:unidentified', limit: FEEDBACK_UNIDENTIFIED_LIMIT }
 
     const rate = checkRateLimit(quota.key, quota.limit, FEEDBACK_WINDOW_MS)
@@ -91,12 +111,19 @@ export async function POST(request: Request) {
     if (screenshots === null) {
       return NextResponse.json({ error: 'Captures d\'écran invalides' }, { status: 400 })
     }
+    // Plafond commun atteint : le texte du retour passe quand même, c'est lui
+    // que le staff lit d'abord.
+    const storedScreenshots =
+      screenshots.length > 0 &&
+      admitScreenshotBytes(screenshots.reduce((total, shot) => total + shot.length, 0))
+        ? screenshots
+        : []
 
     const feedback = await prisma.userFeedback.create({
       data: {
         type,
         message,
-        screenshots: screenshots.length > 0 ? JSON.stringify(screenshots) : null,
+        screenshots: storedScreenshots.length > 0 ? JSON.stringify(storedScreenshots) : null,
         pageUrl,
         userAgent,
         userId: user?.id ?? null,
@@ -109,7 +136,7 @@ export async function POST(request: Request) {
     console.error('feedback POST error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
-}
+})
 
 export async function GET() {
   return NextResponse.json({ types: FEEDBACK_TYPES })

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { normalizeRole } from '@/lib/roles'
 import { COSMETICS, cosmeticKey, findCosmetic, type CosmeticKind } from '@/lib/online/cosmetics'
 import { buildProgression } from '@/lib/online/progression-server'
 import { prisma } from '@/lib/prisma'
-import { adminErrorResponse, requireRole } from '../../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
 
 /**
  * Déblocage MANUEL de cosmétiques sur un compte joueur — fondateur uniquement.
@@ -35,11 +36,13 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('admin/users/cosmetics POST', async (request: Request) => {
   try {
     const actor = await requireRole(isFondateur)
 
-    const body = await request.json().catch(() => ({}))
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const kind =
       body.kind === 'frame' ? 'frame' : body.kind === 'effect' ? 'effect' : body.kind === 'icon' ? 'icon' : null
@@ -99,4 +102,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'cosmetics POST')
   }
-}
+})

@@ -1,4 +1,5 @@
 import { containsProfanity, containsProfanityAcrossWords } from '@/lib/name-moderation'
+import { stripInvisibleChars } from '@/lib/name-moderation/confusables'
 
 /**
  * Filtre anti-insultes du chat : les mots injurieux sont masqués (***) mais le
@@ -12,7 +13,9 @@ import { containsProfanity, containsProfanityAcrossWords } from '@/lib/name-mode
  * `tapuuute`). S'y ajoutent deux durcissements propres au chat, dictés par
  * les contournements réellement observés :
  *
- *  1. caractères invisibles (`co<U+200B>nnard`) retirés avant analyse ;
+ *  1. caractères invisibles (`co<U+200B>nnard`, inversion bidi qui affiche
+ *     `<U+202E>drannoc` à l'envers) retirés du message lui-même, pas
+ *     seulement de l'analyse ;
  *  2. insulte éclatée sur plusieurs mots (`con nard`, `e n c u l e`) : on teste
  *     les fenêtres de mots ADJACENTS, mais seulement quand tous les morceaux
  *     sont courts — le propre d'un découpage volontaire. Jamais la phrase
@@ -22,8 +25,12 @@ import { containsProfanity, containsProfanityAcrossWords } from '@/lib/name-mode
 
 const MASK_MAX = 8
 
-/** Espaces et jointures invisibles utilisés pour couper un mot sans que ça se voie. */
-const INVISIBLE_RE = /[\u00ad\u200b-\u200f\u2060\ufeff]/g
+/**
+ * Retirés du message enregistré : contrôles de format (\p{Cf} : bidi,
+ * séparateurs et espaces sans chasse) et remplissages Hangul. Seule la jointure
+ * U+200D reste, elle compose les émojis (👩‍💻) ; l'analyse l'ignore.
+ */
+const STORED_INVISIBLE_RE = /(?!\u200d)[\p{Cf}\u115f\u1160\u3164\uffa0]/gu
 
 /** Longueur max d'un morceau pour être considéré comme un bout d'insulte découpée. */
 const FRAGMENT_MAX = 4
@@ -41,10 +48,6 @@ const SPLIT_TERM_MIN = 5
 
 function mask(word: string): string {
   return '*'.repeat(Math.max(3, Math.min(word.length, MASK_MAX)))
-}
-
-function stripInvisible(text: string): string {
-  return text.replace(INVISIBLE_RE, '')
 }
 
 export type ChatCensorFlags = {
@@ -87,12 +90,13 @@ export function maskContactDetails(text: string): { text: string; masked: boolea
 }
 
 export function censorChatMessage(text: string): ChatCensorResult {
-  const contact = maskContactDetails(text)
+  const contact = maskContactDetails(text.replace(STORED_INVISIBLE_RE, ''))
 
   // Découpe en conservant les séparateurs pour reconstruire fidèlement.
   const parts = contact.text.split(/(\s+)/)
-  // Version analysée de chaque morceau : sans caractères invisibles.
-  const probes = parts.map(stripInvisible)
+  // Version analysée de chaque morceau : sans invisibles, pleine chasse et
+  // lettres mathématiques ramenées à l'ASCII (longueurs comprises).
+  const probes = parts.map((part) => stripInvisibleChars(part.normalize('NFKC')))
   let profanity = false
 
   for (let i = 0; i < parts.length; i += 1) {

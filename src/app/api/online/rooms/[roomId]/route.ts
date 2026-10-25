@@ -9,15 +9,20 @@ import { onlineErrorBody } from '@/lib/online-errors'
 import { takeDeparture } from '@/lib/online/departures'
 import { armRoomTicker } from '@/lib/online/room-ticker'
 import { withApiRoute } from '@/lib/api-route'
+import { isBriefingExpired } from '@/lib/online/briefing'
+import { startBriefedGame } from './briefing-start'
 
 type Params = { params: Promise<{ roomId: string }> }
 
 /**
  * Écritures du départ tentées au plus : chaque échec veut dire qu'un coup est
  * passé entre la lecture et l'écriture. On relit et on recommence ; au-delà,
- * le départ non marqué est rattrapé par le remplacement AFK.
+ * le siège est gardé et le joueur peut réessayer (LEAVE_NOT_MARKED).
  */
 const LEAVE_WRITE_ATTEMPTS = 3
+
+/** Départ non écrit dans la partie : un coup est passé à chaque relecture. */
+const LEAVE_NOT_MARKED = Symbol('leave-not-marked')
 
 type LeavingRoom = {
   gameId: string | null
@@ -31,13 +36,14 @@ type LeavingRoom = {
  * compare-and-swap sur stateVersion comme /action et leaveOtherRooms : un
  * update nu réécrivait l'état LU avant le départ, effaçant un coup joué
  * entre-temps sous le même numéro de version (les clients ignoraient alors
- * l'événement). Renvoie la version écrite, ou null si rien n'a été écrit.
+ * l'événement). Renvoie la version écrite, null s'il n'y avait rien à écrire
+ * (pas de partie en cours, partie finie, salle disparue), ou LEAVE_NOT_MARKED.
  */
 async function markLeftInGame(
   roomId: string,
   userId: string,
   initial: LeavingRoom
-): Promise<number | null> {
+): Promise<number | null | typeof LEAVE_NOT_MARKED> {
   let room = initial
   for (let attempt = 1; ; attempt += 1) {
     const adapter = getGameAdapter(room.gameId)
@@ -62,7 +68,7 @@ async function markLeftInGame(
       },
     })
     if (count > 0) return stateVersion
-    if (attempt >= LEAVE_WRITE_ATTEMPTS) return null
+    if (attempt >= LEAVE_WRITE_ATTEMPTS) return LEAVE_NOT_MARKED
     const fresh = await prisma.onlineRoom.findUnique({
       where: { id: roomId },
       select: { gameId: true, status: true, gameStateJson: true, stateVersion: true },
@@ -98,9 +104,20 @@ export const GET = withApiRoute('online/rooms/[roomId] GET', async (_request: Re
   // présence n'écrit en base qu'au plus toutes les 30 s
   // (PRESENCE_WRITE_INTERVAL_MS), le reste du temps l'UPDATE ne touche rien.
   await touchMemberPresence(roomId, user.id)
-  const dto = await buildRoomDto(roomId, user.id)
+  let dto = await buildRoomDto(roomId, user.id)
   if (!dto) {
     return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
+  }
+
+  // Filet serveur du briefing : échéance passée sans qu'aucun tick de timeout
+  // ne l'ait fait aboutir (horloges en avance, requêtes perdues) — le sondage
+  // lance la partie lui-même. Même code que /briefing-ack, idempotent.
+  if (dto.status === 'briefing' && dto.briefing && isBriefingExpired(dto.briefing, Date.now())) {
+    await startBriefedGame(roomId)
+    dto = await buildRoomDto(roomId, user.id)
+    if (!dto) {
+      return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
+    }
   }
 
   return NextResponse.json({ room: dto })
@@ -119,9 +136,35 @@ export const DELETE = withApiRoute('online/rooms/[roomId] DELETE', async (_reque
     return NextResponse.json({ ok: true })
   }
 
-  await prisma.onlineRoomMember.deleteMany({
+  // Pas membre (ou déjà sorti) : rien à faire, et surtout rien à diffuser.
+  // Sans ce garde, n'importe quel compte muni de l'identifiant d'une table
+  // publique (le guichet le montre) faisait relire la salle à tous ses
+  // joueurs, appel après appel.
+  const member = await prisma.onlineRoomMember.findUnique({
+    where: { roomId_userId: { roomId, userId: user.id } },
+    select: { userId: true },
+  })
+  if (!member) {
+    return NextResponse.json({ ok: true })
+  }
+
+  // Partie en cours (jeux serveur-autoritaires) : le joueur qui quitte est
+  // marqué « parti » dans l'état — il peut revenir (bouton Rejoindre) pendant
+  // 3 min avant d'être remplacé par un bot. Voir src/lib/online/replacement.ts.
+  // AVANT de libérer le siège, comme leaveOtherRooms : un siège retiré sur un
+  // marquage perdu laissait un joueur actif dans le moteur sans `leftAt` ni
+  // siège — ni bannière Rejoindre, ni remplacement par un bot.
+  const stateVersion = await markLeftInGame(roomId, user.id, room)
+  if (stateVersion === LEAVE_NOT_MARKED) {
+    return NextResponse.json(onlineErrorBody('version_conflict'), { status: 409 })
+  }
+
+  const left = await prisma.onlineRoomMember.deleteMany({
     where: { roomId, userId: user.id },
   })
+  if (left.count === 0 && stateVersion === null) {
+    return NextResponse.json({ ok: true })
+  }
 
   const remaining = await prisma.onlineRoomMember.count({ where: { roomId } })
 
@@ -150,10 +193,6 @@ export const DELETE = withApiRoute('online/rooms/[roomId] DELETE', async (_reque
     }
   }
 
-  // Partie en cours (jeux serveur-autoritaires) : le joueur qui quitte est
-  // marqué « parti » dans l'état — il peut revenir (bouton Rejoindre) pendant
-  // 3 min avant d'être remplacé par un bot. Voir src/lib/online/replacement.ts.
-  const stateVersion = await markLeftInGame(roomId, user.id, room)
   if (stateVersion !== null) {
     // Le tour a pu passer à un bot, ou le dernier humain partir : le
     // minuteur de service se recale sur l'état écrit (online/room-ticker.ts)

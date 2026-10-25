@@ -225,3 +225,17 @@ export type PetitBuveurCastStage =
 
 export type CastState = PlinkoCastState | PmuCastState | PetitBuveurCastState
 export type CastFrame = PlinkoCastFrame | PmuCastFrame
+
+/**
+ * Plafond du corps d'une écriture d'état de cast (création et mise à jour) :
+ * l'état est écrit tel quel en base puis relu par chaque sondage public de la
+ * TV. Quelques kilo-octets en pratique ; 256 Ko laissent une marge confortable
+ * à l'état le plus bavard.
+ */
+export const MAX_CAST_BODY_BYTES = 256 * 1024
+
+/**
+ * Plafond d'une trame : quelques positions de billes ou de chevaux, une
+ * centaine d'octets en pratique. 16 Ko tiennent des centaines de billes.
+ */
+export const MAX_CAST_FRAME_BYTES = 16 * 1024

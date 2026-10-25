@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import bcrypt from 'bcryptjs'
 
 // Prisma et next/headers sont remplacés : on teste ici la règle « le cookie
 // porte le jeton brut, la base ne voit que son empreinte », et la session
 // glissante (seuil de renouvellement, durées, cookie aligné sur la base).
-const { sessionMock, userMock, cookieJar } = vi.hoisted(() => ({
+const { sessionMock, userMock, linkMock, transactionMock, cookieJar } = vi.hoisted(() => ({
   sessionMock: {
     create: vi.fn(),
     deleteMany: vi.fn(),
@@ -14,9 +15,13 @@ const { sessionMock, userMock, cookieJar } = vi.hoisted(() => ({
   // clearExpiredBanIfNeeded (ban-server) reçoit le compte chargé avec la
   // session : jamais de findUnique ici, update seulement pour lever un ban échu.
   userMock: { findUnique: vi.fn(), update: vi.fn() },
+  linkMock: { count: vi.fn(), deleteMany: vi.fn() },
+  transactionMock: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
   cookieJar: new Map<string, string>(),
 }))
-vi.mock('@/lib/prisma', () => ({ prisma: { session: sessionMock, user: userMock } }))
+vi.mock('@/lib/prisma', () => ({
+  prisma: { session: sessionMock, user: userMock, oAuthAccount: linkMock, $transaction: transactionMock },
+}))
 vi.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name) } : undefined),
@@ -27,17 +32,24 @@ import {
   GUEST_SESSION_DAYS,
   SESSION_COOKIE,
   SESSION_DAYS,
+  PasswordHashBusyError,
   alignedSessionCookieOptions,
+  claimUnprovenAccount,
   createSession,
   deleteIncomingSession,
   deleteSession,
   getSessionFromToken,
   getUserFromSessionToken,
+  hashPassword,
   hashToken,
+  isPasswordHashBusyError,
+  isValidEmail,
+  passwordHashBusyResponse,
   renewSessionIfStale,
   sessionCookieOptions,
   sessionDaysFor,
   shouldRenewSession,
+  verifyPassword,
   type AuthUser,
   type ValidSession,
 } from '@/lib/auth-server'
@@ -78,11 +90,17 @@ beforeEach(() => {
   userMock.findUnique.mockResolvedValue(null)
   userMock.update.mockReset()
   userMock.update.mockResolvedValue({})
+  linkMock.count.mockReset()
+  linkMock.count.mockResolvedValue(0)
+  linkMock.deleteMany.mockReset()
+  linkMock.deleteMany.mockResolvedValue({ count: 0 })
+  transactionMock.mockClear()
   cookieJar.clear()
 })
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('jetons de session hachés en base', () => {
@@ -346,5 +364,98 @@ describe('connexion par-dessus une session', () => {
     sessionMock.deleteMany.mockRejectedValue(new Error('SQLITE_BUSY'))
     await expect(deleteIncomingSession()).resolves.toBeUndefined()
     spy.mockRestore()
+  })
+})
+
+describe('adresse e-mail', () => {
+  it('254 caractères au plus (RFC 5321), contrôlés avant la regex', () => {
+    const local = 'a'.repeat(64)
+    const atLimit = `${local}@${'b'.repeat(254 - 64 - 1 - 3)}.fr`
+    expect(atLimit).toHaveLength(254)
+    expect(isValidEmail(atLimit)).toBe(true)
+    expect(isValidEmail(`a${atLimit}`)).toBe(false)
+    expect(isValidEmail(`${'a'.repeat(8000)}@exemple.fr`)).toBe(false)
+    expect(isValidEmail('kevin@exemple.fr')).toBe(true)
+  })
+})
+
+describe('calculs bcrypt', () => {
+  it('hash vide (compte inconnu ou sans mot de passe) : refusé APRÈS un vrai calcul, contre un leurre', async () => {
+    const compare = vi.spyOn(bcrypt, 'compare').mockImplementation(async () => true)
+
+    expect(await verifyPassword('Motdepasse1', '')).toBe(false)
+
+    expect(compare).toHaveBeenCalledTimes(1)
+    const [password, decoy] = compare.mock.calls[0] as [string, string]
+    expect(password).toBe('Motdepasse1')
+    // Même coût que hashPassword : même durée qu'un mot de passe faux.
+    expect(bcrypt.getRounds(decoy)).toBe(12)
+  })
+
+  it('trois calculs simultanés au plus : le quatrième est refusé tout de suite', async () => {
+    const pending: Array<() => void> = []
+    vi.spyOn(bcrypt, 'hash').mockImplementation(
+      () => new Promise<string>((resolve) => pending.push(() => resolve('$2b$12$hash')))
+    )
+    vi.spyOn(bcrypt, 'compare').mockImplementation(
+      () => new Promise<boolean>((resolve) => pending.push(() => resolve(false)))
+    )
+
+    const running = [hashPassword('a1'), hashPassword('a2'), verifyPassword('a3', '')]
+    await expect(hashPassword('a4')).rejects.toBeInstanceOf(PasswordHashBusyError)
+    await expect(verifyPassword('a5', '$2b$12$hash')).rejects.toBeInstanceOf(PasswordHashBusyError)
+    expect(pending).toHaveLength(3)
+
+    pending.forEach((release) => release())
+    await Promise.all(running)
+
+    // Les places sont rendues, succès ou échec.
+    pending.length = 0
+    const next = hashPassword('a6')
+    expect(pending).toHaveLength(1)
+    pending[0]()
+    await expect(next).resolves.toBe('$2b$12$hash')
+  })
+
+  it('refus : 503 service_unavailable avec Retry-After', async () => {
+    expect(isPasswordHashBusyError(new PasswordHashBusyError())).toBe(true)
+    expect(isPasswordHashBusyError(new Error('autre'))).toBe(false)
+
+    const response = passwordHashBusyResponse()
+    expect(response.status).toBe(503)
+    expect(response.headers.get('retry-after')).toBe('2')
+    expect(await response.json()).toMatchObject({ error: 'service_unavailable', retryAfterSec: 2 })
+  })
+})
+
+describe('compte réclamé par le titulaire prouvé de l’adresse', () => {
+  it('adresse jamais confirmée + mot de passe : mot de passe effacé, sessions et identités retirées, d’un bloc', async () => {
+    const claimed = await claimUnprovenAccount({ id: 'compte-piege', emailVerified: null, passwordHash: '$2a$10$x' })
+
+    expect(claimed).toBe(true)
+    expect(transactionMock).toHaveBeenCalledTimes(1)
+    expect(userMock.update).toHaveBeenCalledWith({ where: { id: 'compte-piege' }, data: { passwordHash: '' } })
+    expect(sessionMock.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-piege' } })
+    expect(linkMock.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-piege' } })
+  })
+
+  it('sans mot de passe mais avec une identité liée (Facebook, adresse non prouvée) : réclamé aussi', async () => {
+    linkMock.count.mockResolvedValue(1)
+
+    expect(await claimUnprovenAccount({ id: 'compte-fb', emailVerified: null, passwordHash: '' })).toBe(true)
+    expect(linkMock.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-fb' } })
+  })
+
+  it('adresse déjà confirmée : rien n’est touché', async () => {
+    const claimed = await claimUnprovenAccount({ id: 'u', emailVerified: new Date(), passwordHash: '$2a$10$x' })
+
+    expect(claimed).toBe(false)
+    expect(transactionMock).not.toHaveBeenCalled()
+    expect(sessionMock.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('ni mot de passe ni identité liée (compte Google ancien) : rien n’est touché', async () => {
+    expect(await claimUnprovenAccount({ id: 'u', emailVerified: null, passwordHash: '' })).toBe(false)
+    expect(transactionMock).not.toHaveBeenCalled()
   })
 })

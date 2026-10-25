@@ -3,14 +3,19 @@ import { BOT_PERSONAS, botDisplayName, botTickDelayMs } from '@/lib/online/bot-p
 import { getGameAdapter } from '@/lib/online/game-adapters'
 import { createRng } from '@/lib/petit-buveur/rng'
 import {
-  currentMenteurActorId,
-  menteurHumanSeated,
+  reduceMenteur,
+  toMenteurClientView,
   MENTEUR_REVEAL_MIN_MS,
   type MenteurPhase,
   type MenteurState,
 } from './engine'
 import { applyMenteurBotAction, buildMenteurState } from './server-adapter'
-import { menteurBotTickDelayMs, MENTEUR_REVEAL_BOT_TICK_MS, MENTEUR_REVEAL_BOTS_ONLY_TICK_MS } from './bot-tick'
+import {
+  menteurBotTickDelayMs,
+  menteurTableBotTickDelayMs,
+  MENTEUR_REVEAL_BOT_TICK_MS,
+  MENTEUR_REVEAL_BOTS_ONLY_TICK_MS,
+} from './bot-tick'
 
 /**
  * Le tick « bot » du Menteur est calculé par UNE fonction, que le client
@@ -104,19 +109,8 @@ describe('serviceTick et client calculent le même délai', () => {
     },
   })
 
-  /** Ce que passe MenteurOnline : l'acteur courant de la salle, les joueurs de la vue. */
-  const clientDelay = (s: MenteurState, rand: () => number) => {
-    const actor = s.players.find((p) => p.id === currentMenteurActorId(s))
-    return menteurBotTickDelayMs(
-      {
-        phase: s.phase,
-        actorIsBot: Boolean(actor?.isBot),
-        actorName: actor?.name,
-        humanSeated: menteurHumanSeated(s.players),
-      },
-      rand
-    )
-  }
+  /** Ce que passe MenteurOnline : la vue de l'humain, dés des autres cachés. */
+  const clientDelay = (s: MenteurState, rand: () => number) => menteurTableBotTickDelayMs(toMenteurClientView(s, 'h1'), rand)
 
   it('enchère d’un bot et révélation qu’il mène : borne haute du serveur ≥ tout tirage du client', () => {
     for (let seed = 0; seed < 10; seed += 1) {
@@ -159,5 +153,32 @@ describe('serviceTick et client calculent le même délai', () => {
     const humanTurn: MenteurState = { ...table, phase: 'bidding', turnIdx: table.players.findIndex((p) => !p.isBot) }
     expect(clientDelay(humanTurn, () => 0.5)).toBeNull()
     expect(adapter.serviceTick!(humanTurn, T0)).toBeNull()
+  })
+
+  it('humain parti à son tour : le tick bot joue sa main au tempo d’un bot, client comme serveur', () => {
+    const table = buildMenteurState(
+      [
+        { userId: 'h1', user: { displayName: 'Léa' } },
+        { userId: 'h2', user: { displayName: 'Max' } },
+      ],
+      1,
+      'tick-parti'
+    )
+    const turn: MenteurState = { ...table, phase: 'bidding', turnIdx: table.players.findIndex((p) => p.id === 'h2') }
+    const left = reduceMenteur(turn, { type: 'LEAVE', playerId: 'h2', at: T0 })
+    const server = adapter.serviceTick!(left, T0)
+    expect(server?.body).toEqual({ action: 'bot' })
+    expect(server!.dueAt - T0).toBe(botTickDelayMs('Max', () => 1))
+    expect(clientDelay(left, () => 0)).toBe(botTickDelayMs('Max', () => 0))
+    const r = applyMenteurBotAction(left, createRng('tick-parti').next, server!.dueAt)
+    expect(r.ok && r.state.currentBid?.by).toBe('h2')
+  })
+
+  it('révélation : aucun joueur « au tour » pour l’AFK, le bot qui la mène la referme quand même', () => {
+    const table = soloTable(2)
+    const bot = table.players.find((p) => p.isBot)!
+    const reveal = botLedReveal(table, bot.id)
+    expect(adapter.currentActorId(reveal)).toBeNull()
+    expect(adapter.serviceTick!(reveal, T0)?.body).toEqual({ action: 'bot' })
   })
 })

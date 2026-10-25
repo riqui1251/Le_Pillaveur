@@ -43,7 +43,16 @@ l'absolu que viser **le sens de l'humour du juge**.
   l'alcool) — parfait pour jouer en famille.
 - Un joueur qui quitte la partie est remplacé par un bot après 3 minutes ;
   les bots jouent des cartes et, dès que la table compte deux humains, ne
-  sont jamais juges.
+  sont jamais juges. Le jugement démarre dès que tous les joueurs restants
+  ont abattu : un départ ne fait plus attendre la fin du chrono.
+- Si c'est le **juge** qui quitte, le rôle passe aussitôt au joueur suivant
+  de la rotation, de préférence à quelqu'un qui n'a pas encore abattu. S'il
+  avait déjà joué, sa carte lui revient en main (on ne couronne jamais sa
+  propre réponse) ; si le jugement avait commencé, il repart d'un chrono
+  plein pour lire.
+- La carte couronnée reste affichée quelques secondes avant que quiconque
+  puisse lancer la manche suivante : le premier impatient ne l'escamote plus
+  pour toute la table.
 - Le mode TV affiche la carte noire en grand et les réponses pendant la
   lecture du juge — idéal en soirée.
 

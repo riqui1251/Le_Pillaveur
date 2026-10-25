@@ -11,6 +11,7 @@ import {
   readJsonBodyLimited,
   userRateLimitKey,
 } from '@/lib/rate-limit'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -28,7 +29,7 @@ const INVITE_WINDOW_MS = 60_000
 const MAX_INVITE_BODY_BYTES = 8 * 1024
 
 /** L'hôte invite un ami dans une salle privée/invitation (sens pour public : autoriser l'accès sans invite). */
-export async function POST(request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/invite POST', async (request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -102,4 +103,4 @@ export async function POST(request: Request, { params }: Params) {
   publishRoomChanged(room.id, { type: 'lobby' })
 
   return NextResponse.json({ invite: { id: invite.id, invitedUserId: invite.invitedUserId, status: invite.status } })
-}
+})

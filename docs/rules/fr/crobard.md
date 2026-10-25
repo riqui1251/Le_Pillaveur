@@ -10,7 +10,7 @@ Un joueur dessine, les autres devinent au plus vite — le jeu de dessin du Pill
 
 1. **Le mot** s'affiche chez le dessinateur (et chez lui seul).
 2. **Le dessin** se trace en direct, visible par toute la table (et sur la TV si elle est branchée).
-3. **Les propositions** fusent — trouver vite rapporte plus.
+3. **Les propositions** fusent — trouver vite rapporte plus. Une proposition par seconde et 20 par manche au plus, « proche » compris : il s'affiche quand il ne manque qu'une lettre. Majuscules, accents, tirets et ligatures ne comptent pas : « coeur » vaut « Cœur ».
 4. Le dessinateur marque aussi quand son œuvre est devinée. Puis le pinceau passe au joueur suivant : un seul dessinateur par manche.
 
 ## Victoire
@@ -21,7 +21,7 @@ Le meilleur total de points à la fin des manches choisies par l'hôte (6, 8 ou 
 
 - Dessinez le CONCEPT avant les détails : une silhouette reconnaissable en 5 secondes bat un chef-d'œuvre en 60.
 - Les flèches et les découpages en scènes sont vos amis.
-- Devineurs : proposez large et vite, chaque tentative est gratuite.
+- Devineurs : proposez large et vite, mais pas au hasard — vos 20 essais de la manche partent vite.
 
 ## Le mode apéro
 

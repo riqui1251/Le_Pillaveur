@@ -1,7 +1,8 @@
 import {
   createBluffState,
-  currentBluffActorId,
   bluffActive,
+  bluffOwnCandidateId,
+  bluffRevealLeaderId,
   reduceBluff,
   toBluffClientView,
   toBluffSpectatorView,
@@ -229,7 +230,8 @@ export function applyBluffBotAction(state: BluffState): BluffRoomActionResult {
       let next = state
       for (const bot of pendingBots) {
         if (next.phase !== 'vote') break
-        const options = next.candidates.filter((c) => c.authorId !== bot.id)
+        const own = bluffOwnCandidateId(next, bot.id)
+        const options = next.candidates.filter((c) => c.candidateId !== own)
         const target = options[Math.floor(Math.random() * options.length)]
         next = reduceBluff(next, {
           type: 'VOTE',
@@ -241,13 +243,13 @@ export function applyBluffBotAction(state: BluffState): BluffRoomActionResult {
       return { ok: true, state: next }
     }
 
-    const actorId = currentBluffActorId(state)
-    const actor = state.players.find((p) => p.id === actorId)
-    if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
     if (state.phase === 'reveal') {
+      const leaderId = bluffRevealLeaderId(state)
+      const leader = state.players.find((p) => p.id === leaderId)
+      if (!leader?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
       return {
         ok: true,
-        state: reduceBluff(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
+        state: reduceBluff(state, { type: 'CONTINUE', playerId: leader.id, now: Date.now() }),
       }
     }
     return { ok: false, error: 'NOT_BOT_TURN' }

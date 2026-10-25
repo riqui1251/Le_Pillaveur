@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyPbcRoomAction, buildPbcState } from './server-adapter'
+import {
+  applyPbcBotAction,
+  applyPbcRoomAction,
+  buildPbcState,
+  convertPbcPlayerToBot,
+  markPbcPlayerLeft,
+  pbcClientViewJson,
+} from './server-adapter'
 import { PBC_COUNTDOWN_MS, PBC_STOP_MIN_MS, type PbcState } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 
 /**
  * L'adaptateur lit l'horloge (Date.now) : on la fige pour franchir le
@@ -130,5 +138,34 @@ describe('petit-bac — garde-fous du STOP via l’adaptateur', () => {
       })
     )
     expect(reveal.answers.p2).toEqual(['', '', 'Moto', '', ''])
+  })
+})
+
+describe('révélation : départs et meneur', () => {
+  const WORDS = ['Paul', 'Panda', 'Paris', 'Pérou', 'Pompier']
+  const OTHER = ['Pierre', 'Pie', 'Pau', 'Panama', 'Peintre']
+
+  it('quitter pendant la révélation laisse ses cases à l’écran et ne crédite rien', () => {
+    const reveal = stopThenReveal(inWrite('P'), WORDS, OTHER)
+    vi.setSystemTime(STOP_AT + 2_000)
+    const left = markPbcPlayerLeft(reveal, 'p1', Date.now())!
+    const grid = JSON.parse(pbcClientViewJson(left, 'p2')).revealGrid as { playerId: string }[][]
+    expect(grid[0].map((c) => c.playerId)).toEqual(['p1', 'p2'])
+    vi.setSystemTime(STOP_AT + 10_000)
+    const next = expectOk(applyPbcRoomAction(left, 'p2', { type: 'continue' }))
+    expect(next.players.find((p) => p.id === 'p1')?.total).toBe(0)
+    expect(next.players.find((p) => p.id === 'p2')?.total).toBe(10)
+  })
+
+  it('personne au tour au reveal ; un meneur devenu bot enchaîne via le tick', () => {
+    const adapter = getGameAdapter('petit-bac')!
+    const reveal = stopThenReveal(inWrite('P'), WORDS, OTHER)
+    expect(adapter.currentActorId(reveal)).toBeNull()
+    expect(adapter.serviceTick!(reveal, STOP_AT)?.body.action).toBe('advance')
+    const botLead = convertPbcPlayerToBot(reveal, 'p1')!
+    expect(adapter.currentActorId(botLead)).toBeNull()
+    expect(adapter.serviceTick!(botLead, STOP_AT)).toEqual({ body: { action: 'bot' }, dueAt: STOP_AT + 5000 })
+    const next = expectOk(applyPbcBotAction(botLead))
+    expect(next.phase).toBe('finished')
   })
 })

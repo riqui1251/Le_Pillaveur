@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -15,6 +15,20 @@ export const DIL_MAX_PLAYERS = 16
 export const DIL_COUNTDOWN_MS = 5_000
 /** Temps pour voter (fin anticipée quand tout le monde a voté). */
 export const DIL_VOTE_MS = 30_000
+/**
+ * TEMPS DE LECTURE MINIMAL de la révélation : « carte suivante » est ouvert à
+ * tous, et sans plancher le premier impatient escamotait les camps et « qui a
+ * voté quoi » pour toute la table. Un bot meneur attend aussi tant qu'un
+ * humain est assis (dilReadingTimeOk, vérifié par le serveur à chaque
+ * « continuer »).
+ */
+export const DIL_REVEAL_MIN_MS = 5_000
+/**
+ * Tick du bot qui mène le reveal : le plancher + 1 s de marge, pour qu'il ne
+ * reçoive jamais READING_TIME à l'arrondi d'horloge près — le reveal n'a pas
+ * d'échéance, un tick refusé le figerait.
+ */
+export const DIL_REVEAL_BOT_TICK_MS = DIL_REVEAL_MIN_MS + 1_000
 export const DIL_ROUND_OPTIONS = [10, 15, 20] as const
 export const DIL_DEFAULT_ROUNDS = 10
 
@@ -45,8 +59,10 @@ export type DilState = TimedPhaseState & {
   votes: Record<string, string>
   /** Public en `reveal` : votes de la manche close. */
   lastReveal: DilRevealEntry[] | null
+  /** Entrée en reveal (epoch ms serveur), null hors reveal. */
+  revealAt: number | null
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type DilAction =
@@ -116,6 +132,7 @@ export function createDilState(
     round: 0,
     votes: {},
     lastReveal: null,
+    revealAt: null,
     rematchVotes: [],
     rngState: rng.getState(),
   }
@@ -133,6 +150,7 @@ function enterVote(state: DilState, now: number): DilState {
     ...state,
     votes: {},
     lastReveal: null,
+    revealAt: null,
     ...enterPhase(state.phaseSeq, 'vote', DIL_VOTE_MS, now),
     phase: 'vote',
     version: state.version + 1,
@@ -143,6 +161,7 @@ function enterReveal(state: DilState, now: number): DilState {
   return {
     ...state,
     lastReveal: Object.entries(state.votes).map(([voterId, choice]) => ({ voterId, choice })),
+    revealAt: now,
     ...enterPhase(state.phaseSeq, 'reveal', null, now),
     phase: 'reveal',
     version: state.version + 1,
@@ -191,6 +210,7 @@ export function reduceDil(state: DilState, action: DilAction): DilState {
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
+          revealAt: null,
           version: state.version + 1,
         }
       }
@@ -202,13 +222,20 @@ export function reduceDil(state: DilState, action: DilAction): DilState {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new DilEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: DilState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le partant était peut-être le dernier attendu : révélation tout de
+      // suite, comme au dernier vote, sans attendre la fin du chrono.
+      const active = dilActive(next)
+      if (next.phase === 'vote' && active.length > 0 && active.every((p) => next.votes[p.id])) {
+        return enterReveal(next, action.at)
+      }
+      return next
     }
 
     case 'REJOIN': {
@@ -247,10 +274,35 @@ export function reduceDil(state: DilState, action: DilAction): DilState {
 
 // ─── Acteur courant ──────────────────────────────────────────────────────────
 
-/** `vote` est simultanée ; en `reveal`, le premier joueur actif mène le « continuer ». */
+/**
+ * Jamais d'acteur unique → null : `vote` est simultanée, et le « continuer »
+ * du reveal est ouvert à tous. Son meneur (dilRevealLeaderId), s'il est bot,
+ * le lance ; personne n'y est expulsable pour inactivité (replace-afk).
+ */
 export function currentDilActorId(state: DilState): string | null {
-  if (state.phase === 'reveal') return dilActive(state)[0]?.id ?? null
+  void state
   return null
+}
+
+/** Le premier joueur encore en jeu mène le « continuer » du reveal. */
+export function dilRevealLeaderId(state: {
+  players: ReadonlyArray<Pick<DilPlayer, 'id' | 'leftAt'>>
+}): string | null {
+  return state.players.find((p) => !p.leftAt)?.id ?? null
+}
+
+/**
+ * « Carte suivante » de `askerId` recevable à `now` ? Hors reveal, ou pour un
+ * état sérialisé avant l'horodatage (revealAt absent), rien ne l'interdit : le
+ * réducteur tranche. Un bot meneur lit aussi pour la table : sans humain
+ * assis, personne à faire attendre.
+ */
+export function dilReadingTimeOk(state: DilState, askerId: string, now: number): boolean {
+  if (state.phase !== 'reveal' || state.revealAt == null) return true
+  const asker = state.players.find((p) => p.id === askerId)
+  if (!asker) return true
+  const mustRead = !asker.isBot || dilActive(state).some((p) => !p.isBot)
+  return !mustRead || now - state.revealAt >= DIL_REVEAL_MIN_MS
 }
 
 // ─── Vues ────────────────────────────────────────────────────────────────────
@@ -264,6 +316,8 @@ export type DilClientView = Omit<DilState, 'rngState' | 'players' | 'cards' | 'v
   /** Carte courante uniquement (jamais les suivantes). */
   card: DilCard | null
   myVote: string | null
+  /** Reveal : instant (epoch ms serveur) où « carte suivante » est accepté. */
+  continueAt: number | null
 }
 
 /** Vue PAR JOUEUR : votes secrets pendant `vote` (juste hasVoted), publics au reveal. */
@@ -276,6 +330,8 @@ export function toDilClientView(state: DilState, viewerId: string): DilClientVie
     totalRounds: cards.length,
     card: state.phase === 'countdown' || state.phase === 'finished' ? null : dilCurrentCard(state),
     myVote: votes[viewerId] ?? null,
+    continueAt:
+      state.phase === 'reveal' && state.revealAt != null ? state.revealAt + DIL_REVEAL_MIN_MS : null,
     players: players.map((p) => ({ ...p, hasVoted: Boolean(votes[p.id]) })),
   }
 }

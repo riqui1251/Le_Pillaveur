@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -6,10 +6,13 @@ import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/
  *
  * 2 équipes, un décrivant tourne à chaque manche (alternance stricte
  * d'équipe). Pendant une manche chronométrée (60 s), PLUSIEURS mots
- * défilent dans la MÊME phase serveur (pas une transition par mot) : un
- * coéquipier clique FOUND (mot trouvé, +1 point équipe), le décrivant
- * clique PASS (mot passé, 0 point), un adversaire clique TABOO_CALLED (mot
- * tabou grillé, 0 point) — chaque clic tire immédiatement le mot suivant.
+ * défilent dans la MÊME phase serveur (pas une transition par mot) : le
+ * décrivant ou un coéquipier clique FOUND (mot trouvé, +1 point équipe), le
+ * décrivant clique PASS (mot passé, 0 point), un adversaire clique
+ * TABOO_CALLED (mot tabou grillé, 0 point) — chaque clic tire immédiatement
+ * le mot suivant. Par l'API, FOUND et TABOO_CALLED attendent que le mot
+ * soit resté `TABOU_MIN_WORD_MS` à l'écran (cf. `tabouVerdictTooSoon`) : un
+ * seul verdict par mot, pas de rafale.
  * Réutilise le système d'équipes de Toucher-Coulé ('A' | 'B').
  */
 
@@ -25,6 +28,14 @@ export const TABOU_ROUND_MS = 60_000
  * au bout de quelques secondes plutôt que de bloquer la partie 60 s.
  */
 export const TABOU_BOT_DESCRIBER_ROUND_MS = 5_000
+/**
+ * Temps minimal d'un mot à l'écran avant TROUVÉ ou TABOU, à l'API. Sans lui, un
+ * coéquipier qui enchaînait les clics marquait un point par clic, sans qu'un
+ * mot ait été décrit (score cible atteint en quelques secondes), et un
+ * adversaire grillait tous les mots de la même façon. Il sépare aussi deux
+ * verdicts quasi simultanés : le second visait déjà le mot suivant.
+ */
+export const TABOU_MIN_WORD_MS = 2_000
 /** Options de score cible proposées au lobby. */
 export const TABOU_TARGET_SCORE_OPTIONS = [15, 20, 25] as const
 export const TABOU_DEFAULT_TARGET_SCORE = 20
@@ -67,13 +78,15 @@ export type TabouState = TimedPhaseState & {
   roundStats: TabouRoundStats
   /** Le mot en cours au moment où le temps s'écoule — devient public au bilan. */
   lastRoundWord: TabouEntry | null
+  /** Instant serveur où le mot en cours est arrivé (plancher `TABOU_MIN_WORD_MS`). */
+  wordDrawnAt?: number
   scores: { A: number; B: number }
   targetScore: number
   round: number
   winnerTeam: TabouTeam | null
   rematchVotes: string[]
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
 }
 
 export type TabouAction =
@@ -188,16 +201,26 @@ export function createTabouState(
 // ─── Transitions internes ────────────────────────────────────────────────────
 
 /** Tire le mot suivant dans la manche courante, SANS changer de phase. */
-function drawNextWord(state: TabouState): TabouState {
+function drawNextWord(state: TabouState, now: number): TabouState {
   const rng = rngFromState(state.rngState)
   const { word, remaining } = pickWord(rng, state.remainingWords, state.allWords)
   return {
     ...state,
     currentWord: word,
     remainingWords: remaining,
+    wordDrawnAt: now,
     rngState: rng.getState(),
     version: state.version + 1,
   }
+}
+
+/**
+ * TROUVÉ / TABOU arrivé trop tôt sur le mot en cours. Vérifié par l'adaptateur
+ * serveur, à l'horloge serveur, avant le réducteur : les parties scriptées
+ * (tests, aperçus TV) enchaînent les verdicts au même instant.
+ */
+export function tabouVerdictTooSoon(state: Pick<TabouState, 'wordDrawnAt'>, now: number): boolean {
+  return now - (state.wordDrawnAt ?? 0) < TABOU_MIN_WORD_MS
 }
 
 function endRound(state: TabouState, now: number): TabouState {
@@ -219,23 +242,32 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new TabouEngineError('UNKNOWN_PLAYER')
       const describer = state.players.find((p) => p.id === state.describerId)!
-      if (player.id === describer.id) throw new TabouEngineError('DESCRIBER_CANNOT_FOUND')
+      // Le décrivant valide lui aussi (« l'orateur n'a plus qu'à confirmer ») :
+      // une équipe réduite à lui et un bot marquait sinon zéro pendant ses manches.
       if (player.team !== describer.team) throw new TabouEngineError('NOT_TEAMMATE')
+      // Un bot ne décrit rien : sa manche écourtée n'a aucun mot à trouver.
+      if (describer.isBot) throw new TabouEngineError('BOT_DESCRIBER')
       const scores = { ...state.scores, [describer.team]: state.scores[describer.team] + 1 }
-      return drawNextWord({
-        ...state,
-        scores,
-        roundStats: { ...state.roundStats, found: state.roundStats.found + 1 },
-      })
+      return drawNextWord(
+        {
+          ...state,
+          scores,
+          roundStats: { ...state.roundStats, found: state.roundStats.found + 1 },
+        },
+        action.now
+      )
     }
 
     case 'PASS': {
       if (state.phase !== 'describing') throw new TabouEngineError('NOT_DESCRIBING_PHASE')
       if (action.playerId !== state.describerId) throw new TabouEngineError('NOT_DESCRIBER')
-      return drawNextWord({
-        ...state,
-        roundStats: { ...state.roundStats, passed: state.roundStats.passed + 1 },
-      })
+      return drawNextWord(
+        {
+          ...state,
+          roundStats: { ...state.roundStats, passed: state.roundStats.passed + 1 },
+        },
+        action.now
+      )
     }
 
     case 'TABOO_CALLED': {
@@ -244,10 +276,14 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       if (!player || player.leftAt) throw new TabouEngineError('UNKNOWN_PLAYER')
       const describer = state.players.find((p) => p.id === state.describerId)!
       if (player.team === describer.team) throw new TabouEngineError('NOT_OPPONENT')
-      return drawNextWord({
-        ...state,
-        roundStats: { ...state.roundStats, taboo: state.roundStats.taboo + 1 },
-      })
+      if (describer.isBot) throw new TabouEngineError('BOT_DESCRIBER')
+      return drawNextWord(
+        {
+          ...state,
+          roundStats: { ...state.roundStats, taboo: state.roundStats.taboo + 1 },
+        },
+        action.now
+      )
     }
 
     case 'ADVANCE': {
@@ -263,6 +299,7 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
             action.now
           ),
           phase: 'describing',
+          wordDrawnAt: action.now,
           version: state.version + 1,
         }
       }
@@ -297,6 +334,7 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
         describerId,
         currentWord: word,
         remainingWords: remaining,
+        wordDrawnAt: action.now,
         roundStats: { found: 0, passed: 0, taboo: 0 },
         lastRoundWord: null,
         round: state.round + 1,
@@ -363,13 +401,27 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
 
 /**
  * En `describing`, le décrivant est l'acteur mis en avant (notification
- * « à toi de faire deviner »). En `roundEnd`, le premier joueur encore en
- * jeu mène le « continuer ». Sinon (countdown/finished), pas d'acteur unique.
+ * « à toi de faire deviner »). Sinon (countdown, bilan, finished), pas
+ * d'acteur unique : au bilan, n'importe qui lance la manche suivante, et
+ * il n'a pas d'échéance — y désigner un joueur « au tour » laissait un autre
+ * le faire expulser pour inactivité (replace-afk) après 3 min de pause.
  */
 export function currentTabouActorId(state: TabouState): string | null {
   if (state.phase === 'describing') return state.describerId
-  if (state.phase === 'roundEnd') return tabouActive(state)[0]?.id ?? null
   return null
+}
+
+/**
+ * Meneur du bilan : le premier joueur encore en jeu. Seul usage, faire
+ * « continuer » un bot meneur (tick de service, arbitre client) — lit aussi
+ * bien l'état que la vue.
+ */
+export function tabouRoundEndLeaderId(state: {
+  phase: string
+  players: readonly { id: string; leftAt: number | null }[]
+}): string | null {
+  if (state.phase !== 'roundEnd') return null
+  return state.players.find((p) => !p.leftAt)?.id ?? null
 }
 
 // ─── Vues anti-triche ────────────────────────────────────────────────────────

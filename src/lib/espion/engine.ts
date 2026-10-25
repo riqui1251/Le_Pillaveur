@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 import { espionLocationIdOf, normalizeEspionLocationName } from './data'
@@ -13,10 +13,12 @@ import { ESPION_DEFAULT_DISCUSSION_MS } from './discussion'
  * s'y ajoute un fil de questions et réponses par boutons (ASK / ANSWER), que
  * les bots savent lire. À tout moment, un joueur peut accuser un autre :
  * ouvre une fenêtre de soutien PUBLIQUE de 15 s ; majorité atteinte →
- * révélation immédiate ; trop de refus (DECLINE) pour l'atteindre encore →
+ * révélation (après la dernière chance d'un espion humain démasqué) ; un
+ * joueur parti reste accusable ; trop de refus (DECLINE) pour l'atteindre encore →
  * l'accusation s'efface. L'espion peut à tout moment deviner le lieu (un
- * seul essai). Timer principal écoulé sans résolution → l'espion gagne par
- * défaut (règle classique Spyfall).
+ * seul essai) ; démasqué par la majorité, l'espion humain garde une dernière
+ * chance de 20 s pour le deviner (phase `lastChance`). Timer principal écoulé
+ * sans résolution → l'espion gagne par défaut (règle classique Spyfall).
  *
  * Contrairement au vote secret de l'Imposteur, l'accusation reste PUBLIQUE
  * en temps réel — cohérent avec une partie qui se joue à voix haute.
@@ -28,6 +30,14 @@ export const ESPION_MAX_PLAYERS = 16
 export const ESPION_COUNTDOWN_MS = 5_000
 /** Fenêtre de soutien à une accusation. */
 export const ESPION_ACCUSATION_WINDOW_MS = 15_000
+/** Dernière chance de l'espion humain démasqué : le temps de deviner le lieu avant la révélation. */
+export const ESPION_LAST_CHANCE_MS = 20_000
+/**
+ * Plancher de lecture de la révélation : avant lui, « Manche suivante » est
+ * refusé (READING_TIME). Sans lui, le premier impatient effaçait l'espion et
+ * le lieu avant que la table les ait lus.
+ */
+export const ESPION_REVEAL_MIN_MS = 4_000
 export { ESPION_DISCUSSION_MINUTES_OPTIONS, ESPION_DEFAULT_DISCUSSION_MS } from './discussion'
 /** Options de manches à gagner proposées au lobby. */
 export const ESPION_ROUNDS_TO_WIN_OPTIONS = [3, 5, 7] as const
@@ -103,6 +113,11 @@ export type EspionPlayer = {
   leftAt: number | null
   /** SECRET — 'spy' ou 'crew', jamais exposé avant le reveal (même au joueur lui-même : `isSpy` couvre ce besoin côté vue). */
   role: EspionRole
+  /**
+   * Absence déjà cumulée dans la manche (ms), absence en cours non comprise :
+   * un aller-retour ne remet pas la grâce à zéro. Absent = 0.
+   */
+  awayMs?: number
 }
 
 /** Accusation en cours — PUBLIQUE par design (transparence, cohérent avec une partie parlée). */
@@ -112,6 +127,7 @@ export type EspionAccusation = {
   supporters: string[]
   /** Refus (« Je ne suis pas d'accord ») ; absent des parties lancées avant ce bouton. */
   declined?: string[]
+  /** Fin de la fenêtre de soutien ; en dernière chance, fin de la dernière chance. */
   endsAt: number
 }
 
@@ -125,7 +141,7 @@ export type EspionRoundResult = {
   winner: EspionRole
 }
 
-export type EspionPhase = 'countdown' | 'discussion' | 'reveal' | 'finished'
+export type EspionPhase = 'countdown' | 'discussion' | 'lastChance' | 'reveal' | 'finished'
 
 export type EspionState = TimedPhaseState & {
   version: number
@@ -148,12 +164,14 @@ export type EspionState = TimedPhaseState & {
   rematchVotes: string[]
   winnerTeam: EspionRole | null
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
   /**
    * PUBLIC — le fil de la manche courante et de la précédente. Absent des
    * parties lancées avant le fil : elles se reparsent avec un fil vide.
    */
   speech?: EspionSpeech[]
+  /** Entrée en révélation (epoch ms serveur), plancher de lecture ; absent des parties d'avant. */
+  revealAt?: number | null
 }
 
 export type EspionAction =
@@ -171,7 +189,8 @@ export type EspionAction =
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
-  | { type: 'REJOIN'; playerId: string }
+  /** `now` mesure l'absence qui s'achève (cumul de la manche) ; sans lui, rien n'est ajouté. */
+  | { type: 'REJOIN'; playerId: string; now?: number }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
 
 export class EspionEngineError extends Error {
@@ -187,6 +206,17 @@ export type EspionInitialPlayer = { id: string; name: string; isBot?: boolean }
 
 export function espionActive(state: EspionState): EspionPlayer[] {
   return state.players.filter((p) => !p.leftAt)
+}
+
+/** Un humain non parti est assis : la révélation se lit pour lui (plancher de lecture). */
+export function espionHumanSeated(players: readonly Pick<EspionPlayer, 'isBot' | 'leftAt'>[]): boolean {
+  return players.some((p) => !p.isBot && !p.leftAt)
+}
+
+/** Millisecondes depuis l'entrée en révélation ; un état sans horodatage est lisible tout de suite. */
+export function espionRevealElapsedMs(state: Pick<EspionState, 'revealAt'>, now: number): number {
+  if (state.revealAt == null) return Number.POSITIVE_INFINITY
+  return now - state.revealAt
 }
 
 /** Soutiens qui font tomber une accusation : la majorité des joueurs actifs, bots compris. */
@@ -424,18 +454,33 @@ function resolveRound(
     activeAccusation: null,
     ...enterPhase(state.phaseSeq, 'reveal', null, now),
     phase: 'reveal',
+    revealAt: now,
     version: state.version + 1,
   }
 }
 
-/** Résout l'accusation courante si la majorité des joueurs actifs la soutient. */
+/**
+ * Résout l'accusation courante si la majorité des joueurs actifs la soutient.
+ * L'espion humain démasqué, s'il est là, a encore sa dernière chance : 20 s
+ * pour deviner le lieu (l'accusation reste affichée, son échéance devient
+ * celle de la phase). Parti, il ne peut plus deviner ; bot, il a déjà tenté
+ * sa chance à une voix du verdict (espionDesperateGuess) : la manche est jouée.
+ */
 function maybeResolveAccusation(state: EspionState, now: number): EspionState {
-  if (!state.activeAccusation) return state
-  if (state.activeAccusation.supporters.length < espionMajority(espionActive(state).length)) return state
-  const target = state.players.find((p) => p.id === state.activeAccusation!.targetId)
+  const accusation = state.activeAccusation
+  if (!accusation) return state
+  if (accusation.supporters.length < espionMajority(espionActive(state).length)) return state
+  const target = state.players.find((p) => p.id === accusation.targetId)
   if (!target) return state
-  const spyCaught = target.role === 'spy'
-  return resolveRound(state, spyCaught ? 'crew' : 'spy', spyCaught ? 'spy-caught' : 'accusation-failed', now)
+  if (target.role !== 'spy') return resolveRound(state, 'spy', 'accusation-failed', now)
+  if (target.leftAt || target.isBot) return resolveRound(state, 'crew', 'spy-caught', now)
+  return {
+    ...state,
+    activeAccusation: { ...accusation, endsAt: now + ESPION_LAST_CHANCE_MS },
+    ...enterPhase(state.phaseSeq, 'lastChance', ESPION_LAST_CHANCE_MS, now),
+    phase: 'lastChance',
+    version: state.version + 1,
+  }
 }
 
 /**
@@ -466,8 +511,10 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
       if (state.activeAccusation) throw new EspionEngineError('ACCUSATION_IN_PROGRESS')
       const accuser = state.players.find((p) => p.id === action.playerId)
       if (!accuser || accuser.leftAt) throw new EspionEngineError('UNKNOWN_PLAYER')
+      // Un parti reste accusable : l'espion qui sentait venir l'accusation
+      // quittait la table et gagnait la manche au chrono.
       const target = state.players.find((p) => p.id === action.targetId)
-      if (!target || target.leftAt) throw new EspionEngineError('INVALID_TARGET')
+      if (!target) throw new EspionEngineError('INVALID_TARGET')
       if (target.id === accuser.id) throw new EspionEngineError('CANNOT_ACCUSE_SELF')
       const activeAccusation: EspionAccusation = {
         accuserId: accuser.id,
@@ -597,7 +644,9 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
     }
 
     case 'GUESS_LOCATION': {
-      if (state.phase !== 'discussion') throw new EspionEngineError('NOT_DISCUSSION_PHASE')
+      if (state.phase !== 'discussion' && state.phase !== 'lastChance') {
+        throw new EspionEngineError('NOT_DISCUSSION_PHASE')
+      }
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new EspionEngineError('UNKNOWN_PLAYER')
       if (player.role !== 'spy') throw new EspionEngineError('NOT_SPY')
@@ -635,13 +684,20 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
         // Timer principal écoulé sans résolution → l'espion gagne par défaut.
         return resolveRound(state, 'spy', 'timeout', action.now)
       }
+      // Dernière chance écoulée sans devinette : l'espion démasqué perd la manche.
+      if (state.phase === 'lastChance') return resolveRound(state, 'crew', 'spy-caught', action.now)
       throw new EspionEngineError('NOTHING_TO_ADVANCE')
     }
 
     case 'CONTINUE': {
       if (state.phase !== 'reveal') throw new EspionEngineError('NOT_REVEAL')
-      if (!state.players.some((p) => p.id === action.playerId)) {
-        throw new EspionEngineError('UNKNOWN_PLAYER')
+      const asker = state.players.find((p) => p.id === action.playerId)
+      if (!asker) throw new EspionEngineError('UNKNOWN_PLAYER')
+      // Le bot qui mène la révélation lit aussi pour la table : sans humain
+      // assis, personne à faire attendre, une table de bots ne se fige pas.
+      const mustRead = !asker.isBot || espionHumanSeated(state.players)
+      if (mustRead && espionRevealElapsedMs(state, action.now) < ESPION_REVEAL_MIN_MS) {
+        throw new EspionEngineError('READING_TIME')
       }
       if (state.roundWins.spy >= state.roundsToWin || state.roundWins.crew >= state.roundsToWin) {
         return {
@@ -649,6 +705,7 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
+          revealAt: null,
           winnerTeam: state.roundWins.spy > state.roundWins.crew ? 'spy' : 'crew',
           version: state.version + 1,
         }
@@ -660,7 +717,11 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
       const active = espionActive(state)
       const pool = active.length > 0 ? active : state.players
       const spyId = pool[rng.pickIndex(pool.length)].id
-      const players = state.players.map((p) => ({ ...p, role: (p.id === spyId ? 'spy' : 'crew') as EspionRole }))
+      // Nouvelle manche, nouveau compte d'absence (celle d'un parti court toujours via leftAt).
+      const players = state.players.map(({ awayMs: _away, ...p }) => {
+        void _away
+        return { ...p, role: (p.id === spyId ? 'spy' : 'crew') as EspionRole }
+      })
       return {
         ...state,
         players,
@@ -674,6 +735,7 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
         lastReveal: state.lastReveal,
         ...enterPhase(state.phaseSeq, 'discussion', state.discussionMs, action.now),
         phase: 'discussion',
+        revealAt: null,
         rngState: rng.getState(),
         version: state.version + 1,
       }
@@ -684,10 +746,12 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new EspionEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
+      // L'absence déjà cumulée dans la manche avance le départ : un
+      // aller-retour ne relance pas les 3 min de grâce avant le bot.
       return {
         ...state,
         players: state.players.map((p) =>
-          p.id === action.playerId ? { ...p, leftAt: action.at } : p
+          p.id === action.playerId ? { ...p, leftAt: action.at - (p.awayMs ?? 0) } : p
         ),
         version: state.version + 1,
       }
@@ -698,10 +762,13 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
       if (!player || player.isBot || !player.leftAt) {
         throw new EspionEngineError('CANNOT_REJOIN')
       }
+      const leftAt = player.leftAt
+      // leftAt porte déjà l'absence cumulée avant ce départ : le cumul vaut now − leftAt.
+      const awayMs = action.now === undefined ? player.awayMs : Math.max(0, action.now - leftAt)
       return {
         ...state,
         players: state.players.map((p) =>
-          p.id === action.playerId ? { ...p, leftAt: null } : p
+          p.id === action.playerId ? { ...p, leftAt: null, ...(awayMs ? { awayMs } : {}) } : p
         ),
         version: state.version + 1,
       }
@@ -734,14 +801,20 @@ export function reduceEspion(state: EspionState, action: EspionAction): EspionSt
 // ─── Acteur courant (bots / AFK) ─────────────────────────────────────────────
 
 /**
- * `discussion` n'a pas d'acteur unique → null, même quand une question
- * attend sa réponse : l'interrogé ne devient ni le joueur au tour ni un
- * candidat à l'AFK. En `reveal`, le premier joueur encore en jeu mène le
- * « continuer ».
+ * Jamais d'acteur unique → null : la discussion et la dernière chance ont
+ * leur échéance, et même quand une question attend sa réponse, l'interrogé
+ * ne devient ni le joueur au tour ni un candidat à l'AFK. La révélation, que
+ * n'importe qui referme, non plus : le premier présent, s'il est bot, la mène
+ * (espionRevealLeaderId), sans que personne y soit expulsable.
  */
 export function currentEspionActorId(state: EspionState): string | null {
-  if (state.phase === 'reveal') return espionActive(state)[0]?.id ?? null
+  void state
   return null
+}
+
+/** Le premier joueur encore là mène le « continuer » de la révélation. */
+export function espionRevealLeaderId(table: Pick<EspionTableRead, 'players'>): string | null {
+  return table.players.find((p) => !p.leftAt)?.id ?? null
 }
 
 // ─── Vues anti-triche ────────────────────────────────────────────────────────
@@ -765,6 +838,12 @@ export type EspionClientView = Omit<
   isSpy: boolean
   /** Le vrai lieu — null pour l'espion (jusqu'au reveal), toujours visible pour les autres. */
   location: string | null
+  /** Révélation : instant (epoch ms serveur) où « Manche suivante » est accepté. */
+  continueAt: number | null
+}
+
+function continueAtOf(state: EspionState): number | null {
+  return state.phase === 'reveal' && state.revealAt != null ? state.revealAt + ESPION_REVEAL_MIN_MS : null
 }
 
 /**
@@ -788,6 +867,7 @@ export function toEspionClientView(state: EspionState, viewerId: string): Espion
     phaseKey: phaseKey(state),
     isSpy: Boolean(viewerIsSpy),
     location: revealed || !viewerIsSpy ? location : null,
+    continueAt: continueAtOf(state),
     players: players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -814,6 +894,7 @@ export function toEspionSpectatorView(state: EspionState): EspionClientView {
     phaseKey: phaseKey(state),
     isSpy: false,
     location: revealed ? location : null,
+    continueAt: continueAtOf(state),
     players: players.map((p) => ({
       id: p.id,
       name: p.name,

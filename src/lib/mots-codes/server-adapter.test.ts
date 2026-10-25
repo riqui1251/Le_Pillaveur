@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { applyMCRoomAction, buildMCState, type MCRoomMember } from './server-adapter'
-import { mcSpymasterOf, MC_COUNTDOWN_MS, type MCState, type MCTeam } from './engine'
+import { mcSpymasterOf, reduceMC, MC_COUNTDOWN_MS, type MCState, type MCTeam } from './engine'
 import { phaseKey } from '@/lib/online/phase-clock'
 
 /** L'adaptateur lit l'horloge (Date.now) : on la fige pour sortir du countdown. */
@@ -73,5 +73,53 @@ describe('mots-codes — mot de la grille refusé, jamais maquillé', () => {
     const state = inClue()
     const word = state.words[5].toUpperCase()
     expect(giveClue(state, word)).toEqual({ ok: false, error: 'CLUE_ON_GRID' })
+  })
+})
+
+describe('mots-codes — équipe sans devineur présent', () => {
+  /** Phase guess de l'équipe active, ses devineurs partis (pas encore remplacés). */
+  function guessersGone(): MCState {
+    const state = expectOk(giveClue(inClue(), 'Zorglub'))
+    expect(state.phase).toBe('guess')
+    return {
+      ...state,
+      players: state.players.map((p) =>
+        p.team === state.activeTeam && !p.isSpymaster ? { ...p, leftAt: T0 } : p
+      ),
+    }
+  }
+
+  it('le tick bot passe la main à l’autre équipe au lieu d’attendre 2 min', () => {
+    const state = guessersGone()
+    const next = expectOk(applyMCRoomAction(state, 'r1', { type: 'bot' }))
+    expect(next.phase).toBe('clue')
+    expect(next.activeTeam).not.toBe(state.activeTeam)
+  })
+
+  it('un devineur humain présent : le bot n’a pas la main', () => {
+    const state = expectOk(giveClue(inClue(), 'Zorglub'))
+    expect(applyMCRoomAction(state, 'r1', { type: 'bot' })).toEqual({ ok: false, error: 'NOT_BOT_TURN' })
+  })
+
+  it('le moteur refuse de passer la main tant qu’un devineur est là', () => {
+    const state = expectOk(giveClue(inClue(), 'Zorglub'))
+    expect(() => reduceMC(state, { type: 'SKIP_GUESS', now: T0 })).toThrow('GUESSERS_PRESENT')
+    expect(() => reduceMC(inClue(), { type: 'SKIP_GUESS', now: T0 })).toThrow('NOT_GUESS_PHASE')
+  })
+})
+
+describe('mots-codes — tuile entière seulement', () => {
+  it('une tuile 1.5 ne passe plus la main : refusée par l’adaptateur (400) et le moteur', async () => {
+    const state = expectOk(giveClue(inClue(), 'Zorglub'))
+    const guesser = state.players.find((p) => p.team === state.activeTeam && !p.isSpymaster)!
+    expect(() =>
+      reduceMC(state, { type: 'GUESS', playerId: guesser.id, tile: 1.5, now: T0 })
+    ).toThrow('INVALID_TILE')
+    const { getGameAdapter } = await import('@/lib/online/game-adapters')
+    expect(getGameAdapter('mots-codes')!.applyAction(state, guesser.id, { action: 'guess', tile: 1.5 })).toEqual({
+      ok: false,
+      error: 'invalid_action',
+      status: 400,
+    })
   })
 })

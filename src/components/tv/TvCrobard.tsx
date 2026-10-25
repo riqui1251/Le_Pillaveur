@@ -8,6 +8,7 @@ import {
   CROBARD_CHOOSING_MS,
   CROBARD_COUNTDOWN_MS,
   CROBARD_DRAWING_MS,
+  crobardFoundTally,
   type CrobardClientView,
   type CrobardPlayerView,
 } from '@/lib/crobard/engine'
@@ -230,7 +231,6 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
   const roundTotalMs = (leftMs: number) =>
     drawer?.isBot && leftMs <= CROBARD_BOT_DRAWER_ROUND_MS + 2_000 ? CROBARD_BOT_DRAWER_ROUND_MS : CROBARD_DRAWING_MS
   const leftPlayer = players.find((p) => !p.isBot && p.leftAt)
-  const guesserCount = players.filter((p) => p.id !== state.drawerId && !p.leftAt).length
 
   return (
     <div className="flex min-h-0 flex-1 gap-6 px-6 py-4">
@@ -253,7 +253,7 @@ export function TvCrobard({ room, state }: { room: TvRoomDto; state: CrobardClie
         <div className="flex items-baseline justify-between gap-3">
           <p className="truncate text-lg font-bold uppercase tracking-[0.2em] text-gold/90">{roundLabel}</p>
           <p className="shrink-0 text-2xl font-black text-emerald-300">
-            {t('foundCount', { found: state.correctGuessers.length, total: guesserCount })}
+            {t('foundCount', crobardFoundTally(state))}
           </p>
         </div>
         <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-amber-400/50 bg-amber-500/20 px-4 py-2">

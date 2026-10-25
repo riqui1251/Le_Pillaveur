@@ -49,6 +49,7 @@ import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * TÉLÉPHONE DESSINÉ en ligne (serveur-autoritaire). Chaque joueur ne voit
@@ -161,7 +162,7 @@ export function TelephoneDessineOnline() {
       body: JSON.stringify(body),
     }).catch(() => {
       autoSubmitRef.current = null
-      if (Date.now() < phaseEndsAt) retryTimer = setTimeout(retryAutoSubmit, AUTO_SUBMIT_RETRY_MS)
+      if (serverNow() < phaseEndsAt) retryTimer = setTimeout(retryAutoSubmit, AUTO_SUBMIT_RETRY_MS)
     })
     return () => clearTimeout(retryTimer)
   }, [view, room, user, autoSubmitDue, autoSubmitRetry])

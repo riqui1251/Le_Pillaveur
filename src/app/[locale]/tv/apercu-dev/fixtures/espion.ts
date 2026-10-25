@@ -1,5 +1,6 @@
 import {
   createEspionState,
+  ESPION_REVEAL_MIN_MS,
   pendingEspionQuestion,
   reduceEspion,
   type EspionAction,
@@ -37,14 +38,15 @@ function table(humans: number, bots: number, names: readonly string[]): Table {
 
 /**
  * Partie jouée par le vrai moteur, sur une horloge qui avance d’1 s par
- * coup, commencée assez tôt pour que tout soit « dans le passé » au rendu.
+ * coup (du temps de lecture de la révélation avant « Manche suivante »),
+ * commencée assez tôt pour que tout soit « dans le passé » au rendu.
  */
 class Game {
   now = Date.now() - 30 * 60_000
   constructor(public s: EspionState) {}
 
   act(action: Move): this {
-    this.now += 1_000
+    this.now += action.type === 'CONTINUE' ? ESPION_REVEAL_MIN_MS : 1_000
     this.s = reduceEspion(this.s, { ...action, now: this.now } as EspionAction)
     return this
   }
@@ -173,6 +175,11 @@ function fullTable(): TvPreviewFixture {
   for (const id of g.others(spy, accuser, ...voters.slice(0, 5))) {
     if (g.s.phase !== 'discussion') break
     g.act({ type: 'SUPPORT', playerId: id })
+  }
+  // Espion humain démasqué : il garde une dernière chance de nommer le lieu.
+  if (g.s.phase === 'lastChance') {
+    steps.push(step('dernière chance : l’espion démasqué cherche le lieu', g, members))
+    g.advance()
   }
   steps.push(step('révélation : espion démasqué', g, members))
 

@@ -332,7 +332,7 @@ describe('anti-triche : le cerveau ne lit que la vue du bot', () => {
       const rng = createRng(`brouille-${i}`)
       const other: MenteurState = {
         ...s,
-        rngState: (s.rngState ^ 0x9e3779b9) >>> 0,
+        rngState: createRng(`brouille-rng-${i}`).getState(),
         players: s.players.map((p) => (p.id === id ? p : { ...p, dice: p.dice.map(() => rng.int(1, 6)) })),
       }
       if (JSON.stringify(other.players) !== JSON.stringify(s.players)) moved += 1

@@ -141,3 +141,32 @@ export function planPing(ctx: PingContext): PingWrite[] {
 
   return writes
 }
+
+/**
+ * Quotas du ping, route PUBLIQUE et la plus appelée du site (bornes en
+ * mémoire, rate-limit.ts).
+ * - Toutes requêtes : 120 par minute et par RÉSEAU (clé /64 en IPv6). Un
+ *   navigateur envoie une vue par page et un battement par minute : de quoi
+ *   laisser passer des dizaines d'onglets derrière la même box.
+ * - CRÉATIONS de présence (cookie lp_vid neuf, ou lp_vid inconnu de la base) :
+ *   chacune ajoute une ligne SitePresence, DailyVisitor et IpSeenLog. 20 par
+ *   heure et par réseau, compté AVANT le plafond global pour qu'un réseau
+ *   refusé n'use pas le plafond commun ; puis un plafond GLOBAL horaire contre
+ *   des réseaux nombreux (un /48 IPv6 fournit 65 536 clés /64). Au-delà, la
+ *   présence n'est simplement pas créée (le navigateur réessaie au battement
+ *   suivant) : la mesure sous-estime, la base ne grossit plus. À relever si
+ *   le site grandit.
+ */
+export const PING_NETWORK_LIMIT_PER_MINUTE = 120
+export const PING_NEW_PRESENCE_NETWORK_LIMIT_PER_HOUR = 20
+export const PING_NEW_PRESENCE_GLOBAL_CAP_PER_HOUR = 500
+
+/**
+ * Forme d'un lp_vid tel que createVisitorId le pose (16 octets en hexadécimal,
+ * depuis toujours). Le cookie arrive du client : sans ce contrôle, une valeur
+ * forgée de plusieurs Ko était recopiée telle quelle en base (SitePresence,
+ * DailyVisitor, IpSeenLog `visitor:<vid>`).
+ */
+export function isVisitorId(value: string | null | undefined): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value)
+}

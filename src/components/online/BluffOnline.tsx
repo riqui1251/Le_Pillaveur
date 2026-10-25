@@ -19,6 +19,7 @@ import {
   BLUFF_REVEAL_BOT_TICK_MS,
   BLUFF_SUBMIT_MS,
   BLUFF_VOTE_MS,
+  bluffRevealLeaderId,
   type BluffClientView,
 } from '@/lib/bluff/engine'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
@@ -111,7 +112,7 @@ export function BluffOnline() {
         ? view.players.find((p) => p.isBot && !p.hasVoted)
         : undefined
   const revealActorIsBot = Boolean(
-    view?.phase === 'reveal' && view.players.find((p) => p.id === room?.currentTurnUserId)?.isBot
+    view?.phase === 'reveal' && view.players.find((p) => p.id === bluffRevealLeaderId(view))?.isBot
   )
   useBotReferee({
     roomId: room?.id,

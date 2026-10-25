@@ -137,6 +137,40 @@ export const ONLINE_ERROR_CODES = [
   'request_not_found',
   'request_already_handled',
   'request_already_declined',
+
+  // ── Écriture venue d'un autre site (withApiRoute) ──
+  // Les routes qui marchent SANS session (connexion, invité, déconnexion…)
+  // ne sont pas couvertes par SameSite=Lax : un formulaire posté depuis une
+  // page tierce est refusé avant toute lecture du corps.
+  'cross_site_request',
+
+  // ── Connexion Facebook (/api/auth/oauth) ──
+  // Adresse fournie sans preuve de confirmation, déjà portée par un compte :
+  // elle n'ouvre jamais ce compte, il faut s'y connecter autrement.
+  'oauth_email_in_use',
+
+  // ── Chat (/api/chat/messages) ──
+  // Mort au Loup-Garou, partie en cours : il voit tous les rôles, il lit les
+  // canaux mais n'y écrit plus (chat-access.ts).
+  'chat_read_only',
+
+  // ── Sanctions (/api/admin/users) ──
+  // Lever ou remplacer un ban en place exige un grade au moins égal à celui
+  // de son auteur (et le droit de le poser, pour un ban définitif).
+  'sanction_outranked',
+  // Durée de ban fractionnaire : `setDate` la tronquait, 0,5 jour = déjà échu.
+  'invalid_duration',
+
+  // ── Jeux de dessin et de mots ──
+  // Crobard : propositions comptées (une par seconde, quota par manche) — un
+  // script parcourait la liste des mots en deux secondes.
+  'guess_too_fast',
+  'guess_limit_reached',
+  // Tabou : TROUVÉ / TABOU sur un mot arrivé à l'instant (un verdict par mot).
+  'word_too_recent',
+
+  // Chat : message vide (une fois retirés les caractères invisibles) ou trop long.
+  'invalid_message',
 ] as const
 
 export type OnlineErrorCode = (typeof ONLINE_ERROR_CODES)[number]
@@ -166,6 +200,12 @@ const LEGACY_ALIASES: Record<string, OnlineErrorCode> = {
   CONTEST_NEEDS_MORE_PLAYERS: 'contest_needs_more_players',
   // Grand Bluff : bluff identique à la vraie réponse ou à celui d'un autre.
   FAKE_TAKEN: 'fake_taken',
+  // Crobard : proposition trop rapprochée, quota épuisé, texte vide ou trop long.
+  GUESS_TOO_FAST: 'guess_too_fast',
+  GUESS_LIMIT_REACHED: 'guess_limit_reached',
+  INVALID_GUESS: 'invalid_action',
+  // Tabou : verdict sur un mot arrivé à l'instant.
+  WORD_TOO_RECENT: 'word_too_recent',
 }
 
 /** Résout une valeur `error` de l'API vers un code stable, ou null si inconnue */
@@ -280,6 +320,15 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   request_not_found: 'Demande introuvable',
   request_already_handled: 'Cette demande a déjà été traitée',
   request_already_declined: 'Demande déjà refusée',
+  cross_site_request: 'Requête refusée : elle ne vient pas du site',
+  oauth_email_in_use: 'Un compte existe déjà avec cette adresse : connectez-vous autrement',
+  chat_read_only: 'Les morts ne parlent plus : chat en lecture seule jusqu’à la fin de la partie',
+  sanction_outranked: 'Votre grade ne permet pas de lever ni de modifier cette sanction',
+  invalid_duration: 'Durée invalide : un nombre entier de jours',
+  guess_too_fast: 'Une proposition par seconde : doucement',
+  guess_limit_reached: 'Plus d’essais pour cette manche',
+  word_too_recent: 'Trop tôt : ce mot vient d’arriver',
+  invalid_message: 'Message vide ou trop long',
 }
 
 /**

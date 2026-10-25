@@ -8,6 +8,8 @@ import {
   recordMatchResults,
   type MatchOutcome,
 } from './match-results'
+import { createPurpleState, PURPLE_MIN_BETS_FOR_RESULTS } from '@/lib/purple/engine'
+import { createGame1220State, GAME_1220_MIN_ROLLS_FOR_RESULTS } from '@/lib/1220/engine'
 
 /**
  * Règles du classement en ligne : qui est enregistré, qui gagne, qui perd.
@@ -50,9 +52,22 @@ describe('computeMatchResults (règles de comptage)', () => {
   })
 
   it('déserteur (compte converti en bot) : défaite, même si son bot a gagné', () => {
-    const rows = computeMatchResults([O('u1', false), O('u2', true, true)])
+    const rows = computeMatchResults([O('u1', false), O('u3', false), O('u2', true, true)])
     expect(rows.find((r) => r.userId === 'u2')?.outcome).toBe('loss')
     expect(rows.find((r) => r.userId === 'u1')?.outcome).toBe('loss')
+    expect(rows.find((r) => r.userId === 'u3')?.outcome).toBe('loss')
+    expect(rows[0].humanCount).toBe(3)
+  })
+
+  it('un second compte remplacé par un bot ne fait pas le quorum : partie contre des bots', () => {
+    // Compte invité ouvert en navigation privée : il rejoint, l'hôte lance, il
+    // quitte et devient bot. Il comptait comme deuxième compte — victoire
+    // classée et XP pleine contre des bots seulement.
+    expect(
+      computeMatchResults([O('main', true), O('alt', false, true), O('bot-1', false, true), O('bot-2', false, true)])
+    ).toEqual([])
+    // Tout le monde parti sauf un : même règle.
+    expect(computeMatchResults([O('u1', true), O('u2', false, true), O('u3', false, true)])).toEqual([])
   })
 
   it('le rang est conservé quand le jeu en produit un', () => {
@@ -144,6 +159,89 @@ describe('matchOutcomesFor (extraction par jeu)', () => {
 
   it('jeu inconnu → null (rien enregistré)', () => {
     expect(matchOutcomesFor('plinko', {})).toBeNull()
+  })
+
+  it('purple « Terminer » sitôt lancé : aucune issue, donc ni XP ni série, même en solo', () => {
+    const players = [
+      { id: 'u1', name: 'A', isBot: false },
+      { id: 'bot-1', name: 'Bot', isBot: true },
+    ]
+    const ended = { ...createPurpleState(players, 'seed'), phase: 'finished' as const }
+
+    expect(matchOutcomesFor('purple', ended)).toEqual([])
+    expect(matchOutcomesFor('purple', { ...ended, betsCount: PURPLE_MIN_BETS_FOR_RESULTS })).toEqual([
+      { playerId: 'u1', isBot: false, won: false },
+      { playerId: 'bot-1', isBot: true, won: false },
+    ])
+  })
+
+  it('1220 « Terminer » sitôt les paris réglés : aucune issue, partie comptée après assez de lancers', () => {
+    const players = [
+      { id: 'u1', name: 'A', isBot: false },
+      { id: 'u2', name: 'B', isBot: false },
+    ]
+    const ended = { ...createGame1220State(players, 'seed'), phase: 'finished' as const }
+    const roll = { d12: 1, d20: 1, results: [] }
+
+    expect(matchOutcomesFor('1220', ended)).toEqual([])
+    expect(
+      matchOutcomesFor('1220', { ...ended, history: Array(GAME_1220_MIN_ROLLS_FOR_RESULTS - 1).fill(roll) })
+    ).toEqual([])
+    expect(
+      matchOutcomesFor('1220', { ...ended, history: Array(GAME_1220_MIN_ROLLS_FOR_RESULTS).fill(roll) })
+    ).toEqual([
+      { playerId: 'u1', isBot: false, won: false },
+      { playerId: 'u2', isBot: false, won: false },
+    ])
+  })
+
+  it('sans-filtre : ex æquo en tête = égalité (winnerId null), comme l’écran de fin', () => {
+    const tie = {
+      winnerId: null,
+      players: [
+        { id: 'a', isBot: false, crowns: 3 },
+        { id: 'b', isBot: false, crowns: 3 },
+        { id: 'c', isBot: false, crowns: 1 },
+      ],
+    }
+    const rows = computeMatchResults(matchOutcomesFor('sans-filtre', tie)!)
+    expect(rows.map((r) => r.outcome)).toEqual(['loss', 'loss', 'loss'])
+    // Le rang dit quand même qui était en tête.
+    expect(rows.map((r) => r.rank)).toEqual([1, 1, 3])
+
+    const solo = { ...tie, winnerId: 'a', players: [{ ...tie.players[0], crowns: 4 }, ...tie.players.slice(1)] }
+    const out = matchOutcomesFor('sans-filtre', solo)!
+    expect(out.map((o) => o.won)).toEqual([true, false, false])
+  })
+
+  it('petit-bac : un déserteur en tête est hors classement, la table garde son vainqueur', () => {
+    const state = {
+      players: [
+        { id: 'a', isBot: false, leftAt: 1_000, total: 20 },
+        { id: 'b', isBot: false, leftAt: null, total: 18 },
+        { id: 'c', isBot: false, leftAt: null, total: 10 },
+      ],
+    }
+    const out = matchOutcomesFor('petit-bac', state)!
+    expect(out).toEqual([
+      { playerId: 'a', isBot: true, won: false, rank: undefined },
+      { playerId: 'b', isBot: false, won: true, rank: 1 },
+      { playerId: 'c', isBot: false, won: false, rank: 2 },
+    ])
+    const rows = computeMatchResults(out)
+    expect(rows.find((r) => r.userId === 'b')?.outcome).toBe('win')
+    // Défaite anti rage-quit pour le partant.
+    expect(rows.find((r) => r.userId === 'a')).toMatchObject({ outcome: 'loss', rank: null })
+  })
+
+  it('petit-bac à 2 : le partant laisse une partie solo, pas une défaite à celui qui reste', () => {
+    const state = {
+      players: [
+        { id: 'a', isBot: false, leftAt: 1_000, total: 20 },
+        { id: 'b', isBot: false, leftAt: null, total: 18 },
+      ],
+    }
+    expect(computeMatchResults(matchOutcomesFor('petit-bac', state)!)).toEqual([])
   })
 })
 
@@ -288,6 +386,31 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     expect(userUpdates).toHaveLength(0)
   })
 
+  it('compte complice parti (converti en bot) : ni classement, ni XP_WIN, ni first_win — règle solo', async () => {
+    const { client, created, xpUpdates, userUpdates, achievements } = fakeClient({
+      main: { onlineXp: 0 },
+      alt: { onlineXp: 0 },
+    })
+    const state = {
+      winnerId: 'main',
+      players: [
+        { id: 'main', isBot: false },
+        { id: 'alt', isBot: true },
+        { id: 'bot-1', isBot: true },
+        { id: 'bot-2', isBot: true },
+      ],
+    }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'menteur', state })
+    expect(n).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toHaveLength(0)
+    // XP d'entraînement plafonnée, pour le seul compte resté humain.
+    expect(userUpdates.map((u) => u.id)).toEqual(['main', 'main'])
+    expect(userUpdates[1]).toEqual({ id: 'main', data: { onlineXp: { increment: 10 } } })
+    expect(recallXpGain('main')).toMatchObject({ reason: 'solo' })
+    expect(achievements.map((a) => a.type)).not.toContain('first_win')
+  })
+
   it('déserteur solo (converti en bot) : aucune XP d’entraînement', async () => {
     const { client, userUpdates } = fakeClient({ u1: { onlineXp: 0 } })
     const state = { players: [
@@ -296,6 +419,19 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     ], winner: 'bot-1' }
     await recordMatchResults(client, { roomId: 'r1', gameId: 'petit-buveur', state })
     expect(userUpdates).toHaveLength(0)
+  })
+
+  it('purple arrêté aussitôt contre des bots : aucune XP d’entraînement', async () => {
+    const { client, created, xpUpdates, userUpdates } = fakeClient({ u1: {} })
+    const state = {
+      ...createPurpleState([{ id: 'u1', name: 'A' }, { id: 'bot-1', name: 'Bot', isBot: true }], 'seed'),
+      phase: 'finished' as const,
+    }
+
+    expect(await recordMatchResults(client, { roomId: 'r1', gameId: 'purple', state })).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toEqual([])
+    expect(userUpdates).toEqual([])
   })
 
   it('dilemmes (sans gagnant) : XP de participation pour tous, zéro ligne de classement', async () => {

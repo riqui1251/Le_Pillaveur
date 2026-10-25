@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -106,7 +106,7 @@ export type PbcState = TimedPhaseState & {
   /** Cases invalidées par la majorité (clés `${playerId}:${catIndex}`). */
   rejected: string[]
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type PbcAction =
@@ -241,8 +241,11 @@ export const PBC_CONTEST_MIN_VOTES = 2
  * convertis — ne contestent jamais : les compter au dénominateur rendrait la
  * majorité inatteignable dès qu'ils remplacent la moitié des votants.
  */
-export function pbcContestThreshold(state: PbcState, targetId: string): number | null {
-  const others = pbcActive(state).filter((p) => !p.isBot && p.id !== targetId).length
+export function pbcContestThreshold(
+  state: { players: ReadonlyArray<Pick<PbcPlayer, 'id' | 'isBot' | 'leftAt'>> },
+  targetId: string
+): number | null {
+  const others = state.players.filter((p) => !p.leftAt && !p.isBot && p.id !== targetId).length
   if (others < PBC_CONTEST_MIN_VOTES) return null
   return Math.max(PBC_CONTEST_MIN_VOTES, Math.floor(others / 2) + 1)
 }
@@ -320,12 +323,20 @@ function enterReveal(state: PbcState, now: number): PbcState {
   }
 }
 
+/**
+ * Points de la manche que la clôture créditera : rien à un joueur absent à
+ * ce moment-là. Parti AVANT le dépouillement, il n'a rien marqué ; parti
+ * PENDANT, il quittait pour échapper à la contestation et revenir ensuite
+ * avec ses points — il ne les garde que s'il est revenu avant la clôture.
+ */
+function pbcCreditedPoints(state: PbcState, player: PbcPlayer): number {
+  if (player.leftAt) return 0
+  return (state.roundPoints?.[player.id] ?? []).reduce((a, b) => a + b, 0)
+}
+
 /** Clôt la manche révélée : cumul des points, puis manche suivante ou podium. */
 function pbcNextRound(state: PbcState, now: number): PbcState {
-  const players = state.players.map((p) => ({
-    ...p,
-    total: p.total + (state.roundPoints?.[p.id] ?? []).reduce((a, b) => a + b, 0),
-  }))
+  const players = state.players.map((p) => ({ ...p, total: p.total + pbcCreditedPoints(state, p) }))
   const nextRound = state.round + 1
   if (nextRound >= state.letters.length) {
     return {
@@ -499,10 +510,32 @@ export function reducePbc(state: PbcState, action: PbcAction): PbcState {
 
 // ─── Acteur courant ──────────────────────────────────────────────────────────
 
-/** Phases simultanées ; en `reveal`, le premier joueur actif mène le « continuer ». */
+/**
+ * Jamais d'acteur unique → null : les phases sont simultanées, et le
+ * « continuer » du reveal est ouvert à tous. Son meneur (pbcRevealLeaderId),
+ * s'il est bot, le lance ; personne n'y est expulsable pour inactivité.
+ */
 export function currentPbcActorId(state: PbcState): string | null {
-  if (state.phase === 'reveal') return pbcActive(state)[0]?.id ?? null
+  void state
   return null
+}
+
+/** Le premier joueur encore en jeu mène le « continuer » du reveal. */
+export function pbcRevealLeaderId(state: {
+  players: ReadonlyArray<Pick<PbcPlayer, 'id' | 'leftAt'>>
+}): string | null {
+  return state.players.find((p) => !p.leftAt)?.id ?? null
+}
+
+/**
+ * Colonnes de la grille du reveal : les joueurs comptés à son entrée. Un
+ * départ PENDANT le reveal y laisse ses cases, toujours contestables —
+ * quitter escamotait sinon une contestation en cours. Un joueur parti avant
+ * le dépouillement n'y figure pas : il n'a rien marqué.
+ */
+function pbcRevealPlayers(state: PbcState): PbcPlayer[] {
+  const revealStart = state.phaseEndsAt === null ? null : state.phaseEndsAt - PBC_REVEAL_MS
+  return state.players.filter((p) => !p.leftAt || (revealStart !== null && p.leftAt > revealStart))
 }
 
 // ─── Vues ────────────────────────────────────────────────────────────────────
@@ -527,7 +560,7 @@ export type PbcClientView = Omit<PbcState, 'rngState' | 'players' | 'letters' | 
   myAnswers: string[] | null
   /** Grille publique du reveal : [catIndex][joueur] (null hors reveal). */
   revealGrid: PbcRevealCell[][] | null
-  /** Points de la manche courante par joueur (null hors reveal). */
+  /** Points de la manche que la clôture créditera, par joueur (null hors reveal). */
   roundTotals: Record<string, number> | null
   /** Instant (epoch ms) à partir duquel un STOP est recevable (null hors write). */
   stopAt: number | null
@@ -547,9 +580,9 @@ export function toPbcClientView(state: PbcState, viewerId: string): PbcClientVie
   let revealGrid: PbcRevealCell[][] | null = null
   let roundTotals: Record<string, number> | null = null
   if (showReveal && roundPoints) {
-    const active = pbcActive(state)
+    const columns = pbcRevealPlayers(state)
     revealGrid = state.categories.map((_, cat) =>
-      active.map((p) => {
+      columns.map((p) => {
         const key = `${p.id}:${cat}`
         const voters = contests[key] ?? []
         return {
@@ -563,9 +596,7 @@ export function toPbcClientView(state: PbcState, viewerId: string): PbcClientVie
       })
     )
     roundTotals = {}
-    for (const p of state.players) {
-      roundTotals[p.id] = (roundPoints[p.id] ?? []).reduce((a, b) => a + b, 0)
-    }
+    for (const p of state.players) roundTotals[p.id] = pbcCreditedPoints(state, p)
   }
   return {
     ...rest,

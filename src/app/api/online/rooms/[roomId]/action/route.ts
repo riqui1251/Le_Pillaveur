@@ -3,7 +3,8 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { applyActionToRoom, loadActionRoom } from '@/lib/online/room-actions'
 import { PRESENCE_WRITE_INTERVAL_MS, touchMemberPresence } from '@/lib/online-room'
 import { onlineErrorBody } from '@/lib/online-errors'
-import { readJsonBodyLimited } from '@/lib/rate-limit'
+import { checkRateLimit, readJsonBodyLimited, userRateLimitKey } from '@/lib/rate-limit'
+import { apiError, withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -33,6 +34,16 @@ const MAX_DRAWING_ACTION_BODY_BYTES = 512 * 1024
 const DRAWING_GAMES = new Set(['crobard', 'telephone-dessine'])
 
 /**
+ * Coups par minute et par compte. Chaque coup relit et réécrit tout l'état en
+ * SQLite : sans plafond, une rafale d'un seul compte occupait la connexion
+ * unique de toutes les tables. Large devant le jeu normal — le plus bavard est
+ * le dessinateur du Crobard, un trait par action, envoyés un par un —, ticks
+ * d'arbitre (bots, échéances) compris.
+ */
+const ACTION_RATE_LIMIT = 600
+const ACTION_RATE_WINDOW_MS = 60_000
+
+/**
  * Action de jeu SERVEUR-AUTORITAIRE — GÉNÉRIQUE à tous les jeux du registre
  * (`src/lib/online/game-adapters.ts`).
  *
@@ -42,11 +53,14 @@ const DRAWING_GAMES = new Set(['crobard', 'telephone-dessine'])
  * minuteur de service (room-ticker.ts) ; la route n'y ajoute que ce qui est
  * propre à HTTP — la session, et le plafond du corps de la requête.
  */
-export async function POST(request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/action POST', async (request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
+
+  const rate = checkRateLimit(userRateLimitKey('room-action', user.id), ACTION_RATE_LIMIT, ACTION_RATE_WINDOW_MS)
+  if (!rate.ok) return apiError('rate_limited', 429, { retryAfterSec: rate.retryAfterSec })
 
   const { roomId } = await params
   const checked = await loadActionRoom(roomId, user.id)
@@ -87,4 +101,4 @@ export async function POST(request: Request, { params }: Params) {
 
   const result = await applyActionToRoom(checked.loaded, user.id, body)
   return NextResponse.json(result.body, { status: result.status })
-}
+})

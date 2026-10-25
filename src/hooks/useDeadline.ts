@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useReducer, useRef } from 'react'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * ÉCHÉANCE FRANCHIE — un seul re-rendu, au bon moment.
@@ -11,7 +12,9 @@ import { useEffect, useReducer, useRef } from 'react'
  * close ? ». Une horloge à 500 ms re-rendait tout l'arbre pour rien : la
  * réponse ne change qu'UNE fois. Ce hook la calcule à la lecture et arme un
  * unique setTimeout sur l'échéance ; le composant ne se re-rend qu'au
- * franchissement. L'horloge serveur reste l'autorité (les routes revalident).
+ * franchissement. L'échéance est une date serveur, comparée à l'heure serveur
+ * estimée (serverNow), pas à l'horloge du téléphone ; le serveur reste
+ * l'autorité (les routes revalident).
  */
 
 /** setTimeout plafonne à 2^31-1 ms : au-delà il tirerait immédiatement. */
@@ -34,7 +37,7 @@ export function deadlineDelayMs(endsAt: number, now: number): number {
  */
 export function useDeadline(endsAt: number | null | undefined): boolean {
   const [, rerender] = useReducer((n: number) => n + 1, 0)
-  const passed = deadlinePassed(endsAt, Date.now())
+  const passed = deadlinePassed(endsAt, serverNow())
   // Ce que ce rendu a répondu. L'effet tourne quelques millisecondes après :
   // si l'échéance tombe dans cet intervalle (reconnexion pile dessus), il n'y
   // a plus rien à armer — mais l'écran dit encore « pas encore ». On compare
@@ -47,14 +50,14 @@ export function useDeadline(endsAt: number | null | undefined): boolean {
     if (endsAt == null) return
     let timer: ReturnType<typeof setTimeout> | undefined
     const arm = () => {
-      const now = Date.now()
+      const now = serverNow()
       if (now >= endsAt) {
         if (!renderedRef.current) rerender()
         return
       }
       timer = setTimeout(() => {
         // Horloge en avance sur le minuteur (dérive) : on réarme le reliquat.
-        if (Date.now() < endsAt) arm()
+        if (serverNow() < endsAt) arm()
         else rerender()
       }, deadlineDelayMs(endsAt, now))
     }

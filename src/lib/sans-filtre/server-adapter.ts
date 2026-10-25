@@ -1,8 +1,9 @@
 import {
   createSFState,
-  currentSFActorId,
   reduceSF,
   sfActive,
+  sfReadingTimeOk,
+  sfRevealLeaderId,
   toSFClientView,
   toSFSpectatorView,
   SFEngineError,
@@ -82,6 +83,7 @@ export function parseSFState(json: string | null): SFState | null {
       submissions: raw.submissions ?? [],
       rematchVotes: raw.rematchVotes ?? [],
       whiteDeck: raw.whiteDeck ?? [],
+      revealAt: raw.revealAt ?? null,
     }
   } catch {
     return null
@@ -130,11 +132,11 @@ export function applySFRoomAction(
           ok: true,
           state: reduceSF(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now: Date.now() }),
         }
-      case 'continue':
-        return {
-          ok: true,
-          state: reduceSF(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
-        }
+      case 'continue': {
+        const now = Date.now()
+        if (!sfReadingTimeOk(state, userId, now)) return { ok: false, error: 'READING_TIME' }
+        return { ok: true, state: reduceSF(state, { type: 'CONTINUE', playerId: userId, now }) }
+      }
       case 'bot':
         return applySFBotAction(state)
       case 'replace-left':
@@ -284,13 +286,12 @@ export function applySFBotAction(
     }
 
     if (state.phase === 'reveal') {
-      const actorId = currentSFActorId(state)
-      const actor = state.players.find((p) => p.id === actorId)
-      if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
-      return {
-        ok: true,
-        state: reduceSF(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
-      }
+      const leaderId = sfRevealLeaderId(state)
+      const leader = state.players.find((p) => p.id === leaderId)
+      if (!leader?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+      const now = Date.now()
+      if (!sfReadingTimeOk(state, leader.id, now)) return { ok: false, error: 'READING_TIME' }
+      return { ok: true, state: reduceSF(state, { type: 'CONTINUE', playerId: leader.id, now }) }
     }
 
     return { ok: false, error: 'NOT_BOT_TURN' }

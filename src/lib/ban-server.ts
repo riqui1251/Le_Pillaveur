@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { canOverrideSanction, canPermanentBanTarget } from '@/lib/roles'
 
 export type BanType = 'permanent' | 'temporary'
 
@@ -92,6 +93,28 @@ export async function clearExpiredBanIfNeeded(userOrId: string | BanExpiryFields
       },
     })
   }
+}
+
+/** Grade ACTUEL de l'auteur d'une sanction, ou null s'il n'existe plus. */
+export async function sanctionAuthorRole(authorId: string | null): Promise<string | null> {
+  if (!authorId) return null
+  const author = await prisma.user.findUnique({ where: { id: authorId }, select: { role: true } })
+  return author?.role ?? null
+}
+
+/**
+ * Le ban de compte EN PLACE peut-il être levé ou remplacé par `actorRole` ?
+ * Ban absent ou échu : rien à protéger. Ban définitif : il faut pouvoir le
+ * poser. Et toujours un grade au moins égal à celui de son auteur.
+ */
+export async function canOverrideAccountBan(
+  actorRole: string,
+  target: UserBanFields & { role: string; bannedById: string | null }
+): Promise<boolean> {
+  const ban = getBanState(target)
+  if (!ban.banned) return true
+  if (ban.banType === 'permanent' && !canPermanentBanTarget(actorRole, target.role)) return false
+  return canOverrideSanction(actorRole, await sanctionAuthorRole(target.bannedById))
 }
 
 export async function isUserCurrentlyBanned(userId: string): Promise<boolean> {

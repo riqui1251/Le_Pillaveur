@@ -1,4 +1,4 @@
-import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 
 /**
  * Moteur pur du Purple en ligne — SERVEUR-AUTORITAIRE.
@@ -46,6 +46,8 @@ export interface PurpleState {
   amountToDrink: number
   cardHistory: PurpleCard[]
   totalCardsDrawn: number
+  /** Paris joués depuis le lancement (absent des vieux états : défaut au parse). */
+  betsCount: number
   rematchVotes: string[]
 }
 
@@ -63,6 +65,12 @@ export class PurpleEngineError extends Error {}
 
 export const PURPLE_MIN_PLAYERS = 2
 export const PURPLE_MAX_PLAYERS = 16
+/**
+ * Paris joués avant qu'une partie compte pour la progression (XP, série,
+ * succès) : sans fin fixée, « Terminer » dès le lancement les créditait en
+ * une seconde, partie après partie.
+ */
+export const PURPLE_MIN_BETS_FOR_RESULTS = 10
 const CARD_VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'V', 'D', 'R', 'A']
 const CARD_SUITS = ['♠', '♥', '♦', '♣']
 const HISTORY_LIMIT = 6
@@ -101,7 +109,7 @@ export function createPurpleState(
   players: { id: string; name: string; isBot?: boolean }[],
   seed: string | number
 ): PurpleState {
-  const rng = rngFromState(hashSeed(seed))
+  const rng = createRng(seed)
   const deck = rng.shuffle(freshDeck())
   return {
     version: 1,
@@ -120,8 +128,14 @@ export function createPurpleState(
     amountToDrink: 0,
     cardHistory: [],
     totalCardsDrawn: 0,
+    betsCount: 0,
     rematchVotes: [],
   }
+}
+
+/** La partie a-t-elle été assez jouée pour compter (voir PURPLE_MIN_BETS_FOR_RESULTS) ? */
+export function purpleCountsForResults(state: Pick<PurpleState, 'betsCount'>): boolean {
+  return state.betsCount >= PURPLE_MIN_BETS_FOR_RESULTS
 }
 
 function activePlayerIds(state: PurpleState): string[] {
@@ -149,8 +163,11 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
       if (state.phase === 'finished') throw new PurpleEngineError('GAME_FINISHED')
       if (action.playerId !== currentPurpleActorId(state)) throw new PurpleEngineError('NOT_YOUR_TURN')
       if (state.canContinue || state.pendingReveal) throw new PurpleEngineError('AWAITING_DECISION')
+      // Clé propre seulement : « constructor » lisait le prototype et tirait tout le paquet.
+      if (!Object.prototype.hasOwnProperty.call(PURPLE_BET_META, action.bet)) {
+        throw new PurpleEngineError('INVALID_BET')
+      }
       const meta = PURPLE_BET_META[action.bet]
-      if (!meta) throw new PurpleEngineError('INVALID_BET')
 
       let deck = state.deck
       let rngState = state.rngState
@@ -178,6 +195,7 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
           drinkCounter: state.drinkCounter + meta.gulps,
           cardHistory,
           totalCardsDrawn: state.totalCardsDrawn + meta.cards,
+          betsCount: state.betsCount + 1,
         }
       }
 
@@ -198,6 +216,7 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
         gameResults: { ...state.gameResults, [playerId]: (state.gameResults[playerId] ?? 0) + total },
         cardHistory,
         totalCardsDrawn: state.totalCardsDrawn + meta.cards,
+        betsCount: state.betsCount + 1,
       }
     }
 
@@ -258,8 +277,20 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
       const players = state.players.map((p) => (p.id === action.playerId ? { ...p, leftAt: action.at } : p))
       const next = { ...state, players, version: state.version + 1 }
       // Si c'était le tour du partant, passe la main sans changer la cagnotte.
+      // Un verdict en attente se referme d'abord, comme CLOSE_REVEAL (gorgées
+      // déjà comptées) ou PASS après une bonne pioche : sinon tous les écrans
+      // désignaient le suivant comme buveur, et il perdait son pari.
       if (currentPurpleActorId(state) === action.playerId && activePlayerIds(next).length > 0) {
-        return { ...next, currentPlayer: nextActiveIndex(next, next.currentPlayer) }
+        return {
+          ...next,
+          currentPlayer: nextActiveIndex(next, next.currentPlayer),
+          drawnCards: [],
+          lastBet: null,
+          isCorrect: null,
+          canContinue: false,
+          pendingReveal: false,
+          amountToDrink: 0,
+        }
       }
       return next
     }

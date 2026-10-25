@@ -5,8 +5,10 @@ import {
   deleteIncomingSession,
   getCurrentUser,
   hashPassword,
+  isPasswordHashBusyError,
   isValidEmail,
   isValidPassword,
+  passwordHashBusyResponse,
   sessionCookieOptions,
 } from '@/lib/auth-server'
 import { verifyGoogleIdToken } from '@/lib/google-auth-server'
@@ -127,6 +129,7 @@ export const POST = withApiRoute('auth/guest/upgrade POST', async (request: Requ
     if (token) response.cookies.set(sessionCookieOptions(token))
     return response
   } catch (error) {
+    if (isPasswordHashBusyError(error)) return passwordHashBusyResponse()
     // 503 conservé : le compte invité est intact, le joueur peut réessayer.
     console.error('[api] auth/guest/upgrade POST', error instanceof Error ? error.name : typeof error)
     return apiError('service_unavailable', 503)

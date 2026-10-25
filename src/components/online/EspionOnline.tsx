@@ -24,6 +24,7 @@ import {
   pendingEspionQuestion,
   ESPION_ACCUSATION_WINDOW_MS,
   ESPION_ASKS_PER_PLAYER,
+  ESPION_LAST_CHANCE_MS,
   ESPION_QUESTION_TIMEOUT_MS,
   ESPION_SAME_QUESTION_MAX,
   ESPION_SPEECH_CAP,
@@ -51,6 +52,7 @@ import { EspionNotebook } from './espion/EspionNotebook'
 import { LocationGuessGrid } from './espion/LocationGuessGrid'
 import { EspionRoleCard } from './espion/EspionRoleCard'
 import { espionTurn } from './espion/espion-turn'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * QUI EST L'ESPION ? en ligne (serveur-autoritaire). `location` est null
@@ -62,7 +64,8 @@ import { espionTurn } from './espion/espion-turn'
  * s'ajoute au vocal, avec une seule zone d'action, par priorité : on
  * m'interroge (QuestionCard) ; une accusation est en cours (soutenir ou
  * « Je ne suis pas d'accord ») ; c'est à moi de poser (AskSheet) ; sinon
- * accuser, poser une question et, pour l'espion, deviner — plus deux paroles
+ * accuser, poser une question et, pour l'espion, deviner (accusé aussi, puis
+ * pendant sa dernière chance une fois démasqué) — plus deux paroles
  * libres, « Je trouve ça louche » et « Me défendre » (quand on me vise,
  * espionAimedBy), auxquelles les bots réagissent. Une table 100 % humaine
  * garde l'écran d'avant, sans fil, sans refus ni paroles.
@@ -157,7 +160,7 @@ export function EspionOnline() {
   // vient du calendrier public des bots (bot-tick.ts), le même que celui du
   // filet serveur : la prochaine échéance d'un bot (réponse, question,
   // décision sur une accusation, dernier appel) ou le reveal qu'il mène.
-  const botDelayMs = view ? espionBotTickDelayMs(view, Date.now(), Math.random) : null
+  const botDelayMs = view ? espionBotTickDelayMs(view, serverNow(), Math.random) : null
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
@@ -169,8 +172,11 @@ export function EspionOnline() {
   })
 
   // Une question restée sans réponse n'attend plus au bout de 25 s : un rendu à l'échéance retire la carte.
-  const pending = view ? pendingEspionQuestion(view, Date.now()) : null
+  const pending = view ? pendingEspionQuestion(view, serverNow()) : null
   useDeadline(pending ? pending.askedAt + ESPION_QUESTION_TIMEOUT_MS : null)
+  // Le moteur refuse « Manche suivante » avant le temps de lecture
+  // (READING_TIME) : le bouton reste grisé, décompte affiché, jusque-là.
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
 
   // Les volets se ferment au changement de phase ou quand MES échanges
   // bougent, pas à chaque version : les bots parlent pendant qu'on choisit.
@@ -294,6 +300,7 @@ export function EspionOnline() {
               ? t('reveal.outcome.spyGuessedWrong')
               : t('reveal.outcome.timeout', { name: nameOf(reveal.spyId) })
     const matchOver = view.roundWins.spy >= view.roundsToWin || view.roundWins.crew >= view.roundsToWin
+    const continueLocked = view.continueAt != null && !continueUnlocked
     return (
       <>
         <div
@@ -313,10 +320,20 @@ export function EspionOnline() {
             size="gameLg"
             className="w-full"
             onClick={() => void sendAction({ action: 'continue' })}
-            disabled={busy}
+            disabled={busy || continueLocked}
           >
             {busy && <Loader2 className="mr-2 h-5 w-5 motion-safe:animate-spin" aria-hidden />}
-            {matchOver ? t('reveal.seeResult') : t('reveal.continue')}
+            {continueLocked ? (
+              <PhaseCountdown endsAt={view.continueAt}>
+                {({ seconds }) =>
+                  matchOver ? t('reveal.seeResultIn', { seconds }) : t('reveal.continueIn', { seconds })
+                }
+              </PhaseCountdown>
+            ) : matchOver ? (
+              t('reveal.seeResult')
+            ) : (
+              t('reveal.continue')
+            )}
           </Button>
         </OnlineActionBar>
       </>
@@ -325,7 +342,7 @@ export function EspionOnline() {
 
   // ── Discussion en cours ───────────────────────────────────────────────────
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
-  const now = Date.now()
+  const now = serverNow()
   const hasBot = activePlayers.some((p) => p.isBot)
   const acc = view.activeAccusation
   const iSupported = acc?.supporters.includes(user.id) ?? false
@@ -380,9 +397,10 @@ export function EspionOnline() {
       return { round: view.round, ids: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] }
     })
 
+  // L'espion accusé peut ouvrir sa grille : l'accusation s'efface alors de son volet, pas de la barre.
   const mode: PanelMode = myQuestion
     ? 'question'
-    : acc
+    : acc && !(iAmAccused && view.isSpy && showGuessGrid)
       ? 'accusation'
       : askable && (askOpen || (myHand && !askDismissed))
         ? 'ask'
@@ -430,6 +448,77 @@ export function EspionOnline() {
     if (res?.ok) setGuessPick(null)
   }
   const sendingIcon = busy ? <Loader2 className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" aria-hidden /> : null
+  const guessConfirm = (pickedName: string | undefined) => (
+    <Button
+      variant="danger"
+      size="gameLg"
+      className="min-w-0 flex-[2] whitespace-normal leading-tight"
+      disabled={!pickedName || busy}
+      onClick={() => void confirmGuess()}
+    >
+      {pickedName && sendingIcon}
+      {pickedName ? t('guess.confirm', { location: pickedName }) : t('guess.pickFirst')}
+    </Button>
+  )
+
+  // ── Dernière chance de l'espion démasqué ─────────────────────────────────
+  // La table attend : seul l'espion (sur son téléphone) devine, avant l'échéance.
+  if (view.phase === 'lastChance' && acc) {
+    const caughtId = acc.targetId
+    return (
+      <>
+        <div
+          className={cn(
+            'flex flex-1 flex-col gap-3 p-3 text-cream sm:mx-auto sm:w-full sm:max-w-lg',
+            onlineActionBarPadding('tall')
+          )}
+        >
+          <div className="space-y-3 rounded-2xl border border-suit-red/40 bg-suit-red/10 p-3 text-center">
+            <Siren className="mx-auto h-8 w-8 text-gold" aria-hidden />
+            <p className="font-display text-xl font-bold text-gold">
+              {t('lastChance.title', { name: nameOf(caughtId) })}
+            </p>
+            <p className="text-sm text-cream/80">
+              {view.isSpy ? t('lastChance.spyHint') : t('lastChance.othersHint', { name: nameOf(caughtId) })}
+            </p>
+            <PhaseCountdown
+              variant="bar"
+              showDigits
+              endsAt={acc.endsAt}
+              total={ESPION_LAST_CHANCE_MS}
+              dangerMs={5_000}
+              colorClassName="bg-gold"
+              className="mx-auto flex w-full max-w-xs items-center gap-3"
+            />
+          </div>
+          {actionError && (
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-center text-sm font-semibold text-red-300"
+            >
+              {actionError}
+            </div>
+          )}
+          {view.isSpy && (
+            <LocationGuessGrid
+              locations={locations}
+              struck={struckIds}
+              onToggle={toggleStruck}
+              guessing
+              selectedId={guessPick}
+              onSelect={setGuessPick}
+              disabled={busy}
+            />
+          )}
+        </div>
+        {view.isSpy && (
+          <OnlineActionBar maxWidthClass="max-w-lg">
+            {guessConfirm(locations.find((l) => l.id === guessPick)?.name)}
+          </OnlineActionBar>
+        )}
+      </>
+    )
+  }
 
   // ── Volet d'action, dans le flux ─────────────────────────────────────────
   let panel: ReactNode = null
@@ -520,10 +609,11 @@ export function EspionOnline() {
     panel = (
       <div className="space-y-3 rounded-2xl border border-gold/20 bg-felt-deep/70 p-3">
         <p className="text-center font-display text-base font-bold text-gold">{t('accuseWho')}</p>
+        {/* Un parti reste accusable : l'espion ne gagne pas en quittant la table. */}
         <TargetGrid
           mode="select"
           tone="danger"
-          players={othersActive}
+          players={view.players.filter((p) => p.id !== user.id)}
           iconOf={iconOf}
           selectedId={accusePick}
           onSelect={setAccusePick}
@@ -631,8 +721,23 @@ export function EspionOnline() {
           </Button>
         </div>
       )
-    } else if (iAmAccused && hasBot && defendButton) {
-      barActions = defendButton
+    } else if (iAmAccused && (view.isSpy || (hasBot && defendButton))) {
+      barActions = (
+        <div className="flex gap-2">
+          {hasBot && defendButton && <div className="min-w-0 flex-1">{defendButton}</div>}
+          {view.isSpy && (
+            <Button
+              variant="quiet"
+              size="game"
+              onClick={() => openPanel('guess')}
+              className="min-w-0 flex-1 whitespace-normal leading-tight"
+            >
+              <MapPin aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+              {t('guessButton')}
+            </Button>
+          )}
+        </div>
+      )
     }
   } else if (mode === 'ask') {
     barStatus = t('asksLeft', { n: ESPION_ASKS_PER_PLAYER - myAsks, max: ESPION_ASKS_PER_PLAYER })
@@ -688,16 +793,7 @@ export function EspionOnline() {
         >
           {t('guess.toStrike')}
         </Button>
-        <Button
-          variant="danger"
-          size="gameLg"
-          className="min-w-0 flex-[2] whitespace-normal leading-tight"
-          disabled={!pickedName || busy}
-          onClick={() => void confirmGuess()}
-        >
-          {pickedName && sendingIcon}
-          {pickedName ? t('guess.confirm', { location: pickedName }) : t('guess.pickFirst')}
-        </Button>
+        {guessConfirm(pickedName)}
       </div>
     ) : (
       <div className="flex gap-2">

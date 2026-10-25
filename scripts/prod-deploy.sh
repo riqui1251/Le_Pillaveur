@@ -147,8 +147,15 @@ echo "=== Build image ==="
 # Le sha entre dans l'image (ARG GIT_SHA du Dockerfile -> NEXT_PUBLIC_BUILD_SHA
 # + etiquette OCI). Meme argument pour les deux builds : sinon la cible builder
 # ne retrouverait pas les couches que le build complet vient de produire.
-docker build --build-arg "GIT_SHA=$GIT_SHA" -t le-pillaveur:latest . 2>&1 | tail -20
-docker build --build-arg "GIT_SHA=$GIT_SHA" --target builder -t le-pillaveur:builder . >/dev/null
+# --pull : sans lui, docker reprend le node:22-alpine tire au premier build du
+# VPS, et aucun correctif de Node ni d'Alpine n'arrive jamais en prod. Sur les
+# DEUX builds : rien ne garantit que le premier retague node:22-alpine en local
+# (BuildKit garde la base dans son propre cache), et la cible builder, repartie
+# de l'ancienne base, ne partagerait plus le cache. Base inchangee : cache
+# intact. Base nouvelle : `npm ci` refait, deploiement plus long. Docker Hub
+# injoignable : echec ici, avant toute etape destructive, le site continue.
+docker build --pull --build-arg "GIT_SHA=$GIT_SHA" -t le-pillaveur:latest . 2>&1 | tail -20
+docker build --pull --build-arg "GIT_SHA=$GIT_SHA" --target builder -t le-pillaveur:builder . >/dev/null
 
 echo "=== Tags de version ==="
 # le-pillaveur:<sha> = retrouver l'image d'un deploiement donne (retour a une

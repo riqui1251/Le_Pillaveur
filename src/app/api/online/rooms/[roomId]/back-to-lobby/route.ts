@@ -7,6 +7,7 @@ import { getGameAdapter } from '@/lib/online/game-adapters'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -80,7 +81,7 @@ function mayBringBack(room: BackToLobbyRoom, userId: string, now: number): boole
  * de la table ; `room_not_found` (404) ; `conflict` (409) si la course
  * d'écriture est perdue trois fois.
  */
-export async function POST(_request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/back-to-lobby POST', async (_request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -141,4 +142,4 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   return NextResponse.json(onlineErrorBody('conflict'), { status: 409 })
-}
+})

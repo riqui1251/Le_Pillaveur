@@ -15,10 +15,17 @@ import { PhaseHeader } from './PhaseHeader'
 import { TurnBanner } from '@/components/game/TurnBanner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { SF_JUDGE_MS, SF_SUBMIT_MS, type SFClientView } from '@/lib/sans-filtre/engine'
+import {
+  SF_JUDGE_MS,
+  SF_REVEAL_BOT_TICK_MS,
+  SF_SUBMIT_MS,
+  sfRevealLeaderId,
+  type SFClientView,
+} from '@/lib/sans-filtre/engine'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useDeadline } from '@/hooks/useDeadline'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -136,6 +143,9 @@ export function SansFiltreOnline() {
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const tutorial = useGameTutorial('sans-filtre', inGame)
   const cosmetics = useMemberCosmetics(room)
+  // Le serveur refuse « manche suivante » avant le temps de lecture
+  // (READING_TIME) : le bouton reste grisé, décompte affiché, jusque-là.
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
 
   // ÉCHÉANCE DE PHASE : tick « advance » arbitré par rang (cf. useAdvanceTick)
   // — le rang 0 tire à l'échéance, le suivant prend le relais 4 s plus tard si
@@ -163,7 +173,7 @@ export function SansFiltreOnline() {
       : view?.phase === 'judging'
         ? view.players.find((p) => p.isJudge && p.isBot)
         : view?.phase === 'reveal'
-          ? view.players.find((p) => p.id === room?.currentTurnUserId && p.isBot)
+          ? view.players.find((p) => p.id === sfRevealLeaderId(view) && p.isBot)
           : undefined
   useBotReferee({
     roomId: room?.id,
@@ -172,7 +182,13 @@ export function SansFiltreOnline() {
     players: view?.players,
     enabled: Boolean(view && user && room && view.phase !== 'finished'),
     botTick: pendingBot
-      ? { body: { action: 'bot' }, delayMs: botTickDelayMs(pendingBot.name) }
+      ? {
+          body: { action: 'bot' },
+          delayMs:
+            view?.phase === 'reveal'
+              ? Math.max(SF_REVEAL_BOT_TICK_MS, botTickDelayMs(pendingBot.name))
+              : botTickDelayMs(pendingBot.name),
+        }
       : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
@@ -191,6 +207,8 @@ export function SansFiltreOnline() {
   }
 
   const finished = view.phase === 'finished'
+  const continueLocked = view.continueAt != null && !continueUnlocked
+  const isLastRound = view.round + 1 >= view.totalRounds
   const judge = view.players.find((p) => p.isJudge)
   const iAmJudge = judge?.id === user.id
 
@@ -576,11 +594,21 @@ export function SansFiltreOnline() {
           variant="primary"
           size="gameLg"
           className="w-full"
-          disabled={busy}
+          disabled={busy || continueLocked}
           onClick={() => void sendAction({ action: 'continue' })}
         >
           {busy && <Loader2 className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" aria-hidden />}
-          {view.round + 1 >= view.totalRounds ? t('reveal.seeResult') : t('reveal.continue')}
+          {continueLocked ? (
+            <PhaseCountdown endsAt={view.continueAt}>
+              {({ seconds }) =>
+                isLastRound ? t('reveal.seeResultIn', { seconds }) : t('reveal.continueIn', { seconds })
+              }
+            </PhaseCountdown>
+          ) : isLastRound ? (
+            t('reveal.seeResult')
+          ) : (
+            t('reveal.continue')
+          )}
         </Button>
       )}
     </OnlineActionBar>

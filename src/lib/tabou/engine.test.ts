@@ -11,6 +11,9 @@ import {
   TABOU_COUNTDOWN_MS,
   TABOU_ROUND_MS,
   TABOU_BOT_DESCRIBER_ROUND_MS,
+  TABOU_MIN_WORD_MS,
+  tabouRoundEndLeaderId,
+  tabouVerdictTooSoon,
   type TabouState,
   type TabouEntry,
 } from './engine'
@@ -105,16 +108,53 @@ describe('FOUND / PASS / TABOO_CALLED', () => {
     expect(next.currentWord).not.toEqual(wordBefore)
   })
 
-  it('refuse FOUND du décrivant lui-même ou d’un adversaire', () => {
+  it('le décrivant peut valider lui-même (l’orateur confirme), un adversaire jamais', () => {
     const s = make(4)
     const describer = s.players.find((p) => p.id === s.describerId)!
     const opponent = s.players.find((p) => p.team !== describer.team)!
-    expect(() =>
-      reduceTabou(s, { type: 'FOUND', playerId: describer.id, now: T0 })
-    ).toThrow('DESCRIBER_CANNOT_FOUND')
+    const next = reduceTabou(s, { type: 'FOUND', playerId: describer.id, now: T0 })
+    expect(next.scores[describer.team]).toBe(1)
     expect(() =>
       reduceTabou(s, { type: 'FOUND', playerId: opponent.id, now: T0 })
     ).toThrow('NOT_TEAMMATE')
+  })
+
+  it('une équipe réduite au décrivant et à un bot marque encore pendant ses manches', () => {
+    let s = make(4)
+    const describer = s.players.find((p) => p.id === s.describerId)!
+    const teammate = s.players.find((p) => p.team === describer.team && p.id !== describer.id)!
+    s = reduceTabou(s, { type: 'LEAVE', playerId: teammate.id, at: T0 })
+    s = reduceTabou(s, { type: 'REPLACE_LEFT', now: T0 + 200_000, graceMs: 180_000 })
+    expect(s.players.find((p) => p.id === teammate.id)?.isBot).toBe(true)
+    s = reduceTabou(s, { type: 'FOUND', playerId: describer.id, now: T0 + 200_000 })
+    expect(s.scores[describer.team]).toBe(1)
+  })
+
+  it('pendant la manche d’un décrivant bot, ni TROUVÉ ni TABOU : il n’y a rien à deviner', () => {
+    const s = make(4)
+    const describer = s.players.find((p) => p.id === s.describerId)!
+    const botLed: TabouState = {
+      ...s,
+      players: s.players.map((p) => (p.id === describer.id ? { ...p, isBot: true } : p)),
+    }
+    const teammate = s.players.find((p) => p.team === describer.team && p.id !== describer.id)!
+    const opponent = s.players.find((p) => p.team !== describer.team)!
+    expect(() => reduceTabou(botLed, { type: 'FOUND', playerId: teammate.id, now: T0 })).toThrow('BOT_DESCRIBER')
+    expect(() => reduceTabou(botLed, { type: 'TABOO_CALLED', playerId: opponent.id, now: T0 })).toThrow(
+      'BOT_DESCRIBER'
+    )
+  })
+
+  it('chaque nouveau mot note son heure d’arrivée : le plancher de verdict se compte depuis elle', () => {
+    const s = make(4)
+    expect(s.wordDrawnAt).toBe(T0)
+    expect(tabouVerdictTooSoon(s, T0 + TABOU_MIN_WORD_MS - 1)).toBe(true)
+    expect(tabouVerdictTooSoon(s, T0 + TABOU_MIN_WORD_MS)).toBe(false)
+    const passed = reduceTabou(s, { type: 'PASS', playerId: s.describerId, now: T0 + 5_000 })
+    expect(passed.wordDrawnAt).toBe(T0 + 5_000)
+    expect(tabouVerdictTooSoon(passed, T0 + 5_500)).toBe(true)
+    // État écrit avant le plancher : le mot en cours reste jugeable.
+    expect(tabouVerdictTooSoon({ wordDrawnAt: undefined }, T0)).toBe(false)
   })
 
   it('PASS uniquement par le décrivant, ne change aucun score', () => {
@@ -234,7 +274,7 @@ describe('LEAVE / REJOIN / REPLACE_LEFT', () => {
 })
 
 describe('currentTabouActorId', () => {
-  it('le décrivant en describing, le premier joueur actif en roundEnd', () => {
+  it('le décrivant en describing, personne au bilan (le meneur est calculé à part)', () => {
     const s = make(4)
     expect(currentTabouActorId(s)).toBe(s.describerId)
     const ended = reduceTabou(s, {
@@ -242,7 +282,13 @@ describe('currentTabouActorId', () => {
       claimedKey: phaseKey(s),
       now: T0 + TABOU_ROUND_MS,
     })
-    expect(currentTabouActorId(ended)).toBe('p0')
+    // Bilan sans chrono où tout le monde peut « continuer » : aucun joueur au
+    // tour, donc personne à faire expulser pour inactivité.
+    expect(currentTabouActorId(ended)).toBeNull()
+    expect(tabouRoundEndLeaderId(ended)).toBe('p0')
+    const p0Left = reduceTabou(ended, { type: 'LEAVE', playerId: 'p0', at: T0 })
+    expect(tabouRoundEndLeaderId(p0Left)).toBe('p1')
+    expect(tabouRoundEndLeaderId(s)).toBeNull()
   })
 })
 

@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
@@ -182,7 +182,7 @@ export type MenteurState = {
   winnerId: string | null
   rematchVotes: string[]
   /** SECRET serveur — jamais dans une vue client. */
-  rngState: number
+  rngState: RngState
   /** Règle Palifico activée pour la partie (choix hôte, figé au lancement). */
   rulePalifico: boolean
   /** Règle Calza activée pour la partie (choix hôte, figé au lancement). */
@@ -429,6 +429,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (state.phase !== 'bidding') throw new MenteurEngineError('NOT_BIDDING')
       const actor = state.players[state.turnIdx]
       if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
+      if (state.currentBid?.by === actor.id) throw new MenteurEngineError('OWN_BID')
       if (!isLegalRaise(state.currentBid, action.qty, action.face, menteurTotalDice(state), state.palifico)) {
         throw new MenteurEngineError('ILLEGAL_BID')
       }
@@ -452,6 +453,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
       const bid = state.currentBid
       if (!bid) throw new MenteurEngineError('NO_BID_TO_CHALLENGE')
+      if (bid.by === actor.id) throw new MenteurEngineError('OWN_BID')
       const speech = withSay(state, actor, 'DUDO', action.say, bid.by)
 
       const alive = menteurAlivePlayers(state)
@@ -501,6 +503,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       if (actor.id !== action.playerId) throw new MenteurEngineError('NOT_YOUR_TURN')
       const bid = state.currentBid
       if (!bid) throw new MenteurEngineError('NO_BID_TO_CHALLENGE')
+      if (bid.by === actor.id) throw new MenteurEngineError('OWN_BID')
       const speech = withSay(state, actor, 'CALZA', action.say, bid.by)
 
       const alive = menteurAlivePlayers(state)
@@ -639,40 +642,21 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new MenteurEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      const players = state.players.map((p) =>
-        p.id === action.playerId ? { ...p, leftAt: action.at } : p
-      )
-      const next: MenteurState = { ...state, players, version: state.version + 1 }
-      // Le partant garde ses dés (il peut revenir, ou finir en bot). Mais
-      // l'état du Menteur n'a AUCUNE horloge de phase : s'il tenait les
-      // enchères, la table resterait figée jusqu'au remplacement automatique
-      // (plusieurs minutes). On rend donc la main tout de suite au suivant
-      // encore en lice, en sautant au passage les autres partants.
-      // (`isMenteurAlive` garantit au passage qu'un suivant existe : au pire
-      // nextAliveIdx revient sur le partant lui-même, jamais NO_ALIVE_PLAYER.)
-      if (
-        state.phase !== 'bidding' ||
-        players[state.turnIdx]?.id !== action.playerId ||
-        !isMenteurAlive(player)
-      ) {
-        return next
+      // Le partant garde ses dés ET la main. La lui retirer faisait esquiver
+      // une enchère dangereuse en partant puis revenant, et, à deux, rendait
+      // la main à l'adversaire face à sa propre enchère. Le Menteur n'a pas
+      // d'horloge de phase : c'est le cerveau du bot qui joue le tour d'un
+      // parti, au tempo d'un bot (menteurSeatPlayedByBot), s'il ne revient pas.
+      return {
+        ...state,
+        players: state.players.map((p) => (p.id === action.playerId ? { ...p, leftAt: action.at } : p)),
+        version: state.version + 1,
       }
-      let turnIdx = nextAliveIdx(next, state.turnIdx)
-      for (let step = 0; step < players.length && players[turnIdx].leftAt; step += 1) {
-        const after = nextAliveIdx(next, turnIdx)
-        if (after === turnIdx) break // plus qu'un seul vivant : on lui laisse la main
-        turnIdx = after
-      }
-      return { ...next, turnIdx }
     }
 
     case 'REJOIN': {
-      // Le revenant a PERDU son tour, et c'est volontaire : LEAVE a rendu la
-      // main au suivant, la table a continué de jouer (une enchère a pu
-      // tomber). Ramener le tour en arrière écraserait ce qui s'est passé
-      // entre-temps et permettrait de « rejouer » un tour en partant/revenant.
-      // On ne restaure donc QUE sa présence : ses dés, eux, ne l'ont jamais
-      // quitté (LEAVE ne touche pas aux gobelets), l'état reste cohérent.
+      // Le revenant reprend sa place telle quelle : la main, si le bot ne l'a
+      // pas encore jouée pour lui ; ses dés n'ont jamais quitté le gobelet.
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot || !player.leftAt) throw new MenteurEngineError('CANNOT_REJOIN')
       return {
@@ -708,22 +692,60 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
 
 // ─── Acteur courant (tour, AFK, bots) ────────────────────────────────────────
 
+/** Un siège tel que l'état serveur ou la vue d'un joueur le portent (dés cachés : `diceCount`). */
+export type MenteurSeat = Pick<MenteurPlayer, 'id' | 'name' | 'isBot' | 'leftAt'> & {
+  dice: readonly number[]
+  diceCount?: number
+}
+
+/** Ce que les ticks lisent d'une table : l'état serveur comme la vue d'un joueur. */
+export type MenteurSeatTable = {
+  phase: MenteurPhase
+  turnIdx: number
+  players: readonly MenteurSeat[]
+  lastReveal: Pick<MenteurReveal, 'loserId'> | null
+}
+
+const seatAlive = (p: MenteurSeat): boolean => (p.diceCount ?? p.dice.length) > 0
+
 /**
- * Joueur « au tour » : l'enchérisseur pendant les enchères ; pendant la
- * révélation, le PERDANT mène le « continuer » (s'il est éliminé : le joueur
- * vivant suivant) — cela donne une cible aux ticks bot/AFK à chaque phase.
+ * Le siège que joue un tick « bot » : l'enchérisseur au tour ; pendant la
+ * révélation, le PERDANT mène le « continuer » (éliminé : le premier vivant).
+ * MenteurOnline et le filet serveur visent ainsi le même siège.
  */
-export function currentMenteurActorId(state: MenteurState): string | null {
-  if (state.phase === 'bidding') return state.players[state.turnIdx]?.id ?? null
-  if (state.phase === 'reveal') {
-    const loserIdx = state.players.findIndex((p) => p.id === state.lastReveal?.loserId)
-    if (loserIdx >= 0 && isMenteurAlive(state.players[loserIdx])) {
-      return state.players[loserIdx].id
-    }
-    const alive = menteurAlivePlayers(state)
-    return alive[0]?.id ?? null
+export function menteurBotSeatId(table: MenteurSeatTable): string | null {
+  if (table.phase === 'bidding') return table.players[table.turnIdx]?.id ?? null
+  if (table.phase === 'reveal') {
+    const loser = table.players.find((p) => p.id === table.lastReveal?.loserId)
+    if (loser && seatAlive(loser)) return loser.id
+    return table.players.find(seatAlive)?.id ?? null
   }
   return null
+}
+
+/** Siège joué par le cerveau du bot : un bot, ou un humain parti dont le tour ne doit pas figer la table. */
+export function menteurSeatPlayedByBot(p: Pick<MenteurPlayer, 'isBot' | 'leftAt'>): boolean {
+  return p.isBot || Boolean(p.leftAt)
+}
+
+/**
+ * Joueur « au tour » (colonne currentTurnUserId : bandeau, remplacement AFK) :
+ * l'enchérisseur pendant les enchères. Null pendant la révélation, que
+ * n'importe qui referme : personne n'y est « inactif ».
+ */
+export function currentMenteurActorId(state: MenteurSeatTable): string | null {
+  return state.phase === 'bidding' ? menteurBotSeatId(state) : null
+}
+
+/**
+ * Partie sérialisée quand LEAVE rendait encore la main : le tour a pu échoir
+ * à l'auteur de l'enchère en cours, qui ne peut pas y répondre (OWN_BID). La
+ * main passe au vivant suivant, comme après son enchère.
+ */
+export function menteurSkipOwnBidTurn(state: MenteurState): MenteurState {
+  if (state.phase !== 'bidding' || !state.currentBid) return state
+  if (state.players[state.turnIdx]?.id !== state.currentBid.by) return state
+  return { ...state, turnIdx: nextAliveIdx(state, state.turnIdx) }
 }
 
 // ─── Vues anti-triche ────────────────────────────────────────────────────────

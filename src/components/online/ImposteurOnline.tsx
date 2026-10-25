@@ -43,6 +43,7 @@ import { TargetGrid } from './TargetGrid'
 import { BotSpeechFeed } from './bot-speech/BotSpeechFeed'
 import { genreOf, genreOfId, type LineTranslator } from './bot-speech/bot-speech-feed'
 import { ImposteurWordChip } from './imposteur/ImposteurWordChip'
+import { serverNow } from '@/hooks/server-clock'
 
 /**
  * L'IMPOSTEUR en ligne (serveur-autoritaire). La vue est déjà filtrée par le
@@ -171,9 +172,9 @@ export function ImposteurOnline() {
   })
 
   // Anti-AFK (phase indices uniquement — le vote a son échéance).
-  const turnStartRef = useRef({ version: stateVersion, at: Date.now() })
+  const turnStartRef = useRef({ version: stateVersion, at: serverNow() })
   if (turnStartRef.current.version !== stateVersion) {
-    turnStartRef.current = { version: stateVersion, at: Date.now() }
+    turnStartRef.current = { version: stateVersion, at: serverNow() }
   }
   const afkTarget = view?.players.find((p) => p.id === room?.currentTurnUserId)
   const afkWatchable = Boolean(

@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   MAX_STREAMS_PER_USER,
+  MAX_TV_STREAMS_PER_NETWORK,
+  MAX_TV_STREAMS_TOTAL,
   acquireStream,
+  acquireTvStream,
   resetStreamRegistry,
   streamCounts,
+  tvStreamCounts,
 } from './stream-registry'
 
 /**
@@ -63,5 +67,48 @@ describe('registre des flux SSE', () => {
     acquireStream('u1')
     expect(Object.keys(streamCounts()).sort()).toEqual(['accounts', 'maxPerAccount', 'total'])
     expect(JSON.stringify(streamCounts())).not.toContain('u1')
+  })
+})
+
+describe('registre des flux TV (publics, par réseau)', () => {
+  beforeEach(() => {
+    resetStreamRegistry()
+  })
+
+  it('plafond par réseau : un réseau plein n’empêche pas les autres', () => {
+    for (let i = 0; i < MAX_TV_STREAMS_PER_NETWORK; i += 1) {
+      expect(acquireTvStream('net-a')).not.toBeNull()
+    }
+    expect(acquireTvStream('net-a')).toBeNull()
+    expect(acquireTvStream('net-b')).not.toBeNull()
+    expect(tvStreamCounts()).toEqual({ total: MAX_TV_STREAMS_PER_NETWORK + 1, networks: 2 })
+  })
+
+  it('plafond global, quel que soit le nombre de réseaux', () => {
+    for (let i = 0; i < MAX_TV_STREAMS_TOTAL; i += 1) {
+      expect(acquireTvStream(`net-${i}`)).not.toBeNull()
+    }
+    expect(acquireTvStream('net-neuf')).toBeNull()
+    expect(tvStreamCounts().total).toBe(MAX_TV_STREAMS_TOTAL)
+  })
+
+  it('libération idempotente, et un réseau revenu à zéro ne laisse aucune trace', () => {
+    const releases = Array.from({ length: MAX_TV_STREAMS_PER_NETWORK }, () => acquireTvStream('net-a')!)
+    releases[0]()
+    releases[0]()
+    expect(acquireTvStream('net-a')).not.toBeNull()
+    expect(acquireTvStream('net-a')).toBeNull()
+
+    resetStreamRegistry()
+    const release = acquireTvStream('net-a')!
+    release()
+    expect(tvStreamCounts()).toEqual({ total: 0, networks: 0 })
+  })
+
+  it('les flux TV ne prennent pas de place aux comptes, ni l’inverse', () => {
+    for (let i = 0; i < MAX_STREAMS_PER_USER; i += 1) acquireStream('u1')
+    expect(acquireTvStream('net-a')).not.toBeNull()
+    expect(streamCounts().total).toBe(MAX_STREAMS_PER_USER)
+    expect(tvStreamCounts().total).toBe(1)
   })
 })

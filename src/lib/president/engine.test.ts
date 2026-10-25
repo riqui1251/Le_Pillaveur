@@ -5,6 +5,7 @@ import {
   currentPreActorId,
   preCanPlay,
   preComboIssue,
+  preInterludeLeaderId,
   preOuRien,
   prePickBotPlay,
   preRankOf,
@@ -103,6 +104,51 @@ describe('président — règles de pose', () => {
     expect(state.lastPlay).toBeNull()
     expect(state.trickRun).toBeNull()
     expect(state.currentTurnId).toBe('p4')
+  })
+
+  it('« ou rien » : un passe ne lève pas le verrou, les suivants sans le rang sautent encore', () => {
+    // Rang 4 = le 7. p3 pourrait égaler mais passe ; ni p4 ni p1 n'ont de 7.
+    let state = rigged(
+      {
+        p1: [c(4), c(2)],
+        p2: [c(4, 1), c(8)],
+        p3: [c(4, 2), c(9)],
+        p4: [c(2, 1), c(10)],
+      },
+      'p1'
+    )
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(4)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(4, 1)], now: NOW })
+    expect(preOuRien(state)).toBe(4)
+    expect(state.currentTurnId).toBe('p3')
+    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
+    // Tout le monde a passé ou sauté : le pli revient à l'égaliseur, qui remène.
+    expect(state.currentTurnId).toBe('p2')
+    expect(state.lastPlay).toBeNull()
+    expect(state.trickHistory.at(-1)?.winnerId).toBe('p2')
+  })
+
+  it('« ou rien » : après un passe, la main va au prochain qui peut égaler (joker compris)', () => {
+    const hands = {
+      p1: [c(4), c(2)],
+      p2: [c(4, 1), c(8)],
+      p3: [c(4, 2), c(9)],
+      p4: [c(2, 1), c(10)],
+      p5: [52, c(11)],
+    }
+    let state = rigged(hands, 'p1')
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(4)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(4, 1)], now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
+    expect(state.currentTurnId).toBe('p5')
+    expect(state.passedIds).toEqual(['p3', 'p4'])
+    expect(preOuRien(state)).toBe(4)
+    // Le départ du joueur au tour vaut un passe : même saut.
+    let left = rigged(hands, 'p1')
+    left = reducePre(left, { type: 'PLAY', playerId: 'p1', cards: [c(4)], now: NOW })
+    left = reducePre(left, { type: 'PLAY', playerId: 'p2', cards: [c(4, 1)], now: NOW })
+    left = reducePre(left, { type: 'LEAVE', playerId: 'p3', at: NOW })
+    expect(left.currentTurnId).toBe('p5')
   })
 
   it('preComboIssue : la vue d’un joueur dit pourquoi sa sélection ne passe pas', () => {
@@ -354,6 +400,23 @@ describe('président — fin de manche et rôles', () => {
       now: NOW + PRE_INTERLUDE_MIN_MS,
     })
     expect(next.phase).toBe('playing')
+  })
+
+  it('interlude : personne n’est « au tour » (le continuer est à tous), le premier présent la mène', () => {
+    let state = rigged({ p1: [c(9)], p2: [c(3)], p3: [c(5)], p4: [c(7), c(8)] }, 'p1', {
+      totalManches: 3,
+    })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p1', cards: [c(9)], now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p2', cards: [c(3)], now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p3', now: NOW })
+    state = reducePre(state, { type: 'PASS', playerId: 'p4', now: NOW })
+    state = reducePre(state, { type: 'PLAY', playerId: 'p3', cards: [c(5)], now: NOW })
+    expect(state.phase).toBe('interlude')
+    expect(currentPreActorId(state)).toBeNull()
+    expect(preInterludeLeaderId(state)).toBe('p1')
+    const p1Gone = reducePre(state, { type: 'LEAVE', playerId: 'p1', at: NOW })
+    expect(preInterludeLeaderId(p1Gone)).toBe('p2')
+    expect(preInterludeLeaderId(toPreClientView(p1Gone, 'p3'))).toBe('p2')
   })
 
   it('avec plusieurs manches : interlude, puis échanges automatiques à la redistribution', () => {

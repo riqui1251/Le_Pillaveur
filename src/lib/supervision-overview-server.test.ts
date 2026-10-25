@@ -8,7 +8,7 @@ const { prismaMock, cleanupAbandonedRoomsMock, listFlaggedMock } = vi.hoisted(()
     user: { count: vi.fn(), findMany: vi.fn() },
     onlineGameSession: { findMany: vi.fn() },
     siteSetting: { findUnique: vi.fn() },
-    accountBanEvent: { create: vi.fn(), findMany: vi.fn() },
+    accountBanEvent: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
     cosmeticGrant: { findMany: vi.fn() },
     featureBan: { findMany: vi.fn() },
     moderationTerm: { findMany: vi.fn() },

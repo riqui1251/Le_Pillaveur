@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Play } from 'lucide-react'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
+import { noteServerDate, serverNow } from '@/hooks/server-clock'
 import { Button } from '@/components/ui/button'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { PhaseCountdown } from './PhaseCountdown'
@@ -26,7 +27,10 @@ type Rejoinable = {
   roomId: string
   code: string
   gameId: string
-  /** Échéance du remplacement, sur l'horloge locale (calée à la réception). */
+  /**
+   * Échéance du remplacement, calée à la réception sur l'heure serveur
+   * estimée : celle que PhaseCountdown lui compare.
+   */
   deadlineAt: number
 }
 
@@ -51,11 +55,13 @@ export function RejoinBanner({ onJoin, joining }: RejoinBannerProps) {
     if (inFlightRef.current) return
     inFlightRef.current = true
     try {
+      const sentAt = Date.now()
       const res = await fetch('/api/online/rooms/rejoinable', { credentials: 'include' })
+      noteServerDate(res, sentAt)
       if (res.ok) {
         const data = await res.json()
         const next = data?.rejoinable
-        const receivedAt = Date.now()
+        const receivedAt = serverNow()
         setRejoinable(
           next
             ? {

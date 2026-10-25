@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { GAMES } from '@/lib/games'
 import { canViewUserFeedback, canManageUsers, canViewSupervisionAnalytics } from '@/lib/roles'
@@ -9,6 +10,7 @@ import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
 import { LOCAL_GAMES_WITHOUT_END_SCREEN } from '@/lib/local-game-beacon'
 import { errorTrace } from '@/lib/error-trace'
+import { parseFeatureBanEventAction } from '@/lib/feature-ban-events'
 import {
   RETENTION_LAST_RUN_KEY,
   parseRetentionLastRun,
@@ -118,6 +120,7 @@ export type JournalKind =
   | 'ban'
   | 'unban'
   | 'feature-ban'
+  | 'feature-unban'
   | 'cosmetic-grant'
   | 'moderation-term'
   | 'role-change'
@@ -972,6 +975,8 @@ const JOURNAL_BAN_EVENT_WHERE = { action: { notIn: JOURNAL_HIDDEN_ACTIONS } }
 /** Nature d'entrée de journal déduite de l'action stockée sur AccountBanEvent. */
 function journalKindForAction(action: string): JournalKind | null {
   if (JOURNAL_HIDDEN_ACTIONS.includes(action)) return null
+  const featureEvent = parseFeatureBanEventAction(action)
+  if (featureEvent) return featureEvent.kind === 'ban' ? 'feature-ban' : 'feature-unban'
   switch (action) {
     case 'unban':
       return 'unban'
@@ -1008,11 +1013,31 @@ function compareJournalEntries(a: JournalEntry, b: JournalEntry): number {
 }
 
 /**
+ * Bans de vocal/chat posés AVANT leur historique ('feature-ban:*' sur
+ * AccountBanEvent) : seule leur ligne vivante FeatureBan en garde la trace.
+ * Les suivants se lisent dans l'historique, qui garde aussi remplacements et
+ * levées : les relire dans FeatureBan les doublerait. La ligne et son
+ * événement s'écrivent dans la même transaction, à quelques millisecondes
+ * près : la marge d'une minute les sépare sans ambiguïté.
+ */
+async function legacyFeatureBanWhere(): Promise<Prisma.FeatureBanWhereInput> {
+  const first = await prisma.accountBanEvent.findFirst({
+    where: { action: { startsWith: 'feature-' } },
+    orderBy: { createdAt: 'asc' },
+    select: { createdAt: true },
+  })
+  return first ? { createdAt: { lt: new Date(first.createdAt.getTime() - 60_000) } } : {}
+}
+
+/**
  * Les `depth` entrées les plus récentes du journal, fusionné depuis ses quatre
  * sources. Lire les `depth` plus récentes de CHAQUE source suffit : aucune
  * entrée plus ancienne d'une source ne peut passer devant elles.
  */
-async function readJournal(depth: number): Promise<JournalEntry[]> {
+async function readJournal(
+  depth: number,
+  legacyFeatureBans: Prisma.FeatureBanWhereInput
+): Promise<JournalEntry[]> {
   const [banEvents, grants, featureBans, terms] = await Promise.all([
     prisma.accountBanEvent.findMany({
       where: JOURNAL_BAN_EVENT_WHERE,
@@ -1032,6 +1057,7 @@ async function readJournal(depth: number): Promise<JournalEntry[]> {
       },
     }),
     prisma.featureBan.findMany({
+      where: legacyFeatureBans,
       orderBy: JOURNAL_ORDER,
       take: depth,
       include: {
@@ -1064,7 +1090,8 @@ async function readJournal(depth: number): Promise<JournalEntry[]> {
       // porte le sujet réel (compte supprimé, code de table, réglage).
       targetName: selfAnchored ? null : e.user.displayName,
       targetUserId: selfAnchored ? null : e.userId,
-      detail: e.comment,
+      // Ban de vocal/chat : le détail est la fonctionnalité, traduite à l'écran.
+      detail: parseFeatureBanEventAction(e.action)?.feature ?? e.comment,
       createdAt: e.createdAt.toISOString(),
     })
   }
@@ -1104,8 +1131,8 @@ async function readJournal(depth: number): Promise<JournalEntry[]> {
 }
 
 /** Les dernières entrées, pour la Salle (vue d'ensemble rafraîchie en boucle) : sans comptage. */
-function getJournal(limit = 20): Promise<JournalEntry[]> {
-  return readJournal(limit)
+async function getJournal(limit = 20): Promise<JournalEntry[]> {
+  return readJournal(limit, await legacyFeatureBanWhere())
 }
 
 /**
@@ -1121,11 +1148,12 @@ export async function getJournalPage({
   skip: number
   take: number
 }): Promise<{ entries: JournalEntry[]; total: number }> {
+  const legacyFeatureBans = await legacyFeatureBanWhere()
   const [merged, banEvents, grants, featureBans, terms] = await Promise.all([
-    readJournal(skip + take),
+    readJournal(skip + take, legacyFeatureBans),
     prisma.accountBanEvent.count({ where: JOURNAL_BAN_EVENT_WHERE }),
     prisma.cosmeticGrant.count(),
-    prisma.featureBan.count(),
+    prisma.featureBan.count({ where: legacyFeatureBans }),
     prisma.moderationTerm.count(),
   ])
   return { entries: merged.slice(skip, skip + take), total: banEvents + grants + featureBans + terms }

@@ -1,21 +1,31 @@
 import { NextResponse } from 'next/server'
-import { canBanFeatureTarget, canBanUsers, normalizeRole } from '@/lib/roles'
-import { adminErrorResponse, requireRole } from '../../_guard'
-import { applyFeatureBan, liftFeatureBan, isBannableFeature } from '@/lib/feature-bans'
+import { apiError, withApiRoute } from '@/lib/api-route'
+import { canBanFeatureTarget, canBanUsers, canOverrideSanction, normalizeRole } from '@/lib/roles'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
+import {
+  applyFeatureBan,
+  findActiveFeatureBan,
+  liftFeatureBan,
+  isBannableFeature,
+} from '@/lib/feature-bans'
 import { prisma } from '@/lib/prisma'
 
 /**
  * Bannir / débannir un joueur d'une fonctionnalité (vocal ou chat écrit) —
  * indépendant du ban de compte. Modérateur et grades supérieurs, uniquement
  * sur un grade strictement inférieur (même règle que les bans de compte).
+ * Lever ou remplacer un ban en place exige en plus un grade au moins égal à
+ * celui de son auteur.
  *
  * Body : { userId, feature: 'voice'|'chat', action: 'ban'|'unban',
  *          durationDays?, comment? }.  durationDays absent = permanent.
  */
-export async function POST(request: Request) {
+export const POST = withApiRoute('admin/users/feature-ban POST', async (request: Request) => {
   try {
     const actor = await requireRole(canBanUsers)
-    const body = await request.json().catch(() => ({}))
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const feature = typeof body.feature === 'string' ? body.feature : ''
     const action = body.action === 'unban' ? 'unban' : 'ban'
@@ -27,6 +37,9 @@ export async function POST(request: Request) {
 
     if (!userId || !isBannableFeature(feature)) {
       return NextResponse.json({ error: 'Paramètres invalides' }, { status: 400 })
+    }
+    if (action === 'ban' && typeof body.durationDays === 'number' && !Number.isInteger(body.durationDays)) {
+      return apiError('invalid_duration', 400)
     }
     if (userId === actor.id) {
       return NextResponse.json({ error: 'Tu ne peux pas te sanctionner toi-même' }, { status: 400 })
@@ -46,8 +59,13 @@ export async function POST(request: Request) {
       )
     }
 
+    const existing = await findActiveFeatureBan(userId, feature)
+    if (existing && !canOverrideSanction(actor.role, existing.authorRole)) {
+      return apiError('sanction_outranked', 403)
+    }
+
     if (action === 'unban') {
-      await liftFeatureBan(userId, feature)
+      if (existing) await liftFeatureBan({ userId, actorId: actor.id, feature, comment })
     } else {
       await applyFeatureBan({ userId, actorId: actor.id, feature, comment, durationDays })
     }
@@ -56,4 +74,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'feature-ban POST')
   }
-}
+})

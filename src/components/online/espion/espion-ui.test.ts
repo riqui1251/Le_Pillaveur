@@ -311,3 +311,43 @@ describe('lot 5 : paroles libres et TV, dans les 4 langues', () => {
     }
   })
 })
+
+describe('dernière chance de l’espion démasqué, dans les 4 langues', () => {
+  it('TV : le démasqué nommé, son décompte ; jamais le lieu ni un rôle', () => {
+    const ROOM: TvRoomDto = {
+      code: 'ABCD',
+      status: 'playing',
+      gameId: 'espion',
+      hostUserId: 'h',
+      members: [],
+      settings: {},
+      stateVersion: 3,
+      currentTurnUserId: null,
+      gameStateJson: null,
+    }
+    const seats = [
+      { id: 'h', name: 'Riqui' },
+      { id: 'u2', name: 'Léa' },
+      { id: 'u3', name: 'Max' },
+    ]
+    for (const locale of LOCALES) {
+      let s = createEspionState(seats, getEspionLocations(locale), 'tv-derniere-chance', Date.now() - 10_000)
+      s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+      s = { ...s, players: s.players.map((p) => ({ ...p, role: p.id === 'h' ? 'spy' : 'crew' })) }
+      s = reduceEspion(s, { type: 'ACCUSE', playerId: 'u2', targetId: 'h', now: Date.now() })
+      s = reduceEspion(s, { type: 'SUPPORT', playerId: 'u3', now: Date.now() })
+      expect(s.phase, locale).toBe('lastChance')
+      const view = toEspionSpectatorView(s)
+      expect(view.location, locale).toBeNull()
+      expect(view.players.every((p) => p.role === null), locale).toBe(true)
+      const errors: unknown[] = []
+      const html = render(createElement(TvEspion, { room: ROOM, state: view }), locale, errors)
+      expect(errors, locale).toEqual([])
+      const text = textOf(html)
+      expect(text, locale).toContain('Riqui')
+      expect(text, locale).not.toContain(s.location)
+      const hint = (catalogue(locale).games.espion.game.lastChance as Record<string, string>).othersHint
+      expect(text, locale).toContain(hint.replace('{name}', 'Riqui'))
+    }
+  })
+})

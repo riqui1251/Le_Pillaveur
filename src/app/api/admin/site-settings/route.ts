@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { canManageSiteSettings } from '@/lib/roles'
 import { isVoiceEnabled, setVoiceEnabled } from '@/lib/site-settings'
 import { logStaffAction } from '@/lib/supervision-overview-server'
-import { adminErrorResponse, requireRole, requireSignedIn } from '../_guard'
+import { adminErrorResponse, requireRole, requireSignedIn, readAdminBody } from '../_guard'
 
 /**
  * Réglages globaux du site. Lecture : tout compte connecté (le réglage
@@ -18,10 +19,12 @@ export async function GET() {
   }
 }
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('admin/site-settings PATCH', async (request: Request) => {
   try {
     const actor = await requireRole(canManageSiteSettings)
-    const body = await request.json().catch(() => ({}))
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
 
     if (typeof body.voiceEnabled === 'boolean') {
       const previous = await isVoiceEnabled()
@@ -40,4 +43,4 @@ export async function PATCH(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'site-settings PATCH')
   }
-}
+})

@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma'
 import {
   hashPassword,
   hashToken,
+  isPasswordHashBusyError,
   isValidPassword,
+  passwordHashBusyResponse,
   revokeAllUserSessions,
 } from '@/lib/auth-server'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
@@ -28,7 +30,11 @@ export const POST = withApiRoute('auth/reset-password POST', async (request: Req
     return apiError('invalid_reset_token', 400)
   }
 
-  const passwordHash = await hashPassword(password)
+  const passwordHash = await hashPassword(password).catch((error: unknown) => {
+    if (isPasswordHashBusyError(error)) return null
+    throw error
+  })
+  if (passwordHash === null) return passwordHashBusyResponse()
 
   await prisma.$transaction([
     prisma.user.update({

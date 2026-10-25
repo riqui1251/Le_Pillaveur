@@ -204,3 +204,72 @@ export function mergePolledState(
     currentTurnUserId: data.currentTurnUserId,
   }
 }
+
+// ─── Changement de table ─────────────────────────────────────────────────────
+
+/**
+ * La réponse d'une relecture (GET /rooms/[roomId], /state) parle-t-elle d'une
+ * AUTRE table que celle où l'on est assis ? Changer de table (lien
+ * d'invitation, bandeau « Rejoindre ») fait publier un `lobby` sur l'ancienne
+ * (leaveOtherRooms) avant la réponse du join : son flux encore ouvert relit
+ * l'ancienne, dont le 403 arrivait APRÈS l'entrée dans la nouvelle et la
+ * vidait — « tu n'es plus dans cette table » affiché à la place de la table
+ * tout juste rejointe. Sans table courante, rien n'est « autre » : la réponse
+ * suit les règles habituelles (raison d'un départ forcé, verrou de départ).
+ */
+export function isOtherRoom(currentRoomId: string | null | undefined, roomId: string): boolean {
+  return currentRoomId != null && currentRoomId !== roomId
+}
+
+/**
+ * Verrou de départ après une ENTRÉE réussie (création, join) : la table d'avant,
+ * que le serveur vient de nous faire quitter, passe sous verrou — une
+ * relecture partie avant l'entrée ne la fait pas réapparaître. Rentrer dans la
+ * même table (son propre code), ou s'asseoir sans table d'avant, ne verrouille
+ * rien.
+ */
+export function leavingRoomAfterEntry(
+  previousRoomId: string | null | undefined,
+  enteredRoomId: string | null | undefined
+): string | null {
+  return previousRoomId && previousRoomId !== enteredRoomId ? previousRoomId : null
+}
+
+// ─── Réouverture du flux ─────────────────────────────────────────────────────
+
+/**
+ * Délai avant de ROUVRIR un flux SSE que le navigateur a abandonné. Un
+ * EventSource ne se reconnecte tout seul qu'après une coupure en cours de
+ * route (readyState CONNECTING) ; s'il reçoit un statut non-200 (502 du proxy
+ * pendant un redéploiement) ou une réponse qui n'est pas du text/event-stream
+ * (portail captif), il passe CLOSED et n'y revient JAMAIS : tous les clients
+ * de la table restaient alors au sondage serré (1,5 s) jusqu'au changement de
+ * salle ou au rechargement — exactement les requêtes que la cadence longue
+ * économise. Cinq secondes : le temps qu'un redéploiement finisse de
+ * répondre, sans marteler un serveur qui redémarre.
+ */
+export const STREAM_REOPEN_MS = 5_000
+
+/**
+ * Plafond de l'attente entre deux réouvertures refusées d'affilée.
+ *
+ * Un EventSource ne sait pas lire le STATUT qui l'a fait tomber : un 429 du
+ * plafond de flux par compte (stream-registry.ts) le met CLOSED exactement
+ * comme un 502 de redéploiement. À cadence fixe, l'onglet au plafond rejouait
+ * donc /stream toutes les 5 s indéfiniment — douze requêtes par minute, chacune
+ * avec sa lecture de session et de membre — et le refus ne peut PAS se lever
+ * tout seul en cinq secondes : une place de flux ne se libère qu'à la mort
+ * d'une connexion. On double l'attente à chaque échec consécutif jusqu'à une
+ * minute ; le premier événement reçu (`ready`, `ping`…) remet le compteur à
+ * zéro. Pendant ce temps le sondage de secours continue : la table reste à
+ * jour, elle perd seulement le temps réel.
+ */
+export const STREAM_REOPEN_MAX_MS = 60_000
+
+/**
+ * Attente avant la réouverture n° `refusals` (1 = premier abandon depuis le
+ * dernier événement reçu) : 5 s, 10 s, 20 s, 40 s, puis une minute.
+ */
+export function streamReopenDelayMs(refusals: number): number {
+  return Math.min(STREAM_REOPEN_MS * 2 ** Math.max(0, refusals - 1), STREAM_REOPEN_MAX_MS)
+}

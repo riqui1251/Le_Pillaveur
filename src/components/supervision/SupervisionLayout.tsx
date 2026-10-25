@@ -457,6 +457,7 @@ export type JournalKind =
   | 'ban'
   | 'unban'
   | 'feature-ban'
+  | 'feature-unban'
   | 'cosmetic-grant'
   | 'moderation-term'
   | 'role-change'
@@ -468,6 +469,7 @@ const JOURNAL_DOT: Record<JournalKind, string> = {
   ban: 'bg-suit-red',
   unban: 'bg-emerald-400',
   'feature-ban': 'bg-amber-400',
+  'feature-unban': 'bg-emerald-400',
   'cosmetic-grant': 'bg-chip-blue',
   'moderation-term': 'bg-amber-400',
   'role-change': 'bg-gold',

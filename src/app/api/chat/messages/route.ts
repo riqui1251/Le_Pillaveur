@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError, withApiRoute } from '@/lib/api-route'
+import { isOnlineErrorCode } from '@/lib/online-errors'
 import { getCurrentUser } from '@/lib/auth-server'
 import { parseOnlinePreferences } from '@/lib/online-preferences'
 import { censorChatMessage } from '@/lib/chat-moderation'
@@ -177,7 +179,7 @@ async function markChannelRead(
   })
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('chat messages POST', async (request: Request) => {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
 
@@ -186,10 +188,7 @@ export async function POST(request: Request) {
 
   const parsed = await readJsonBodyLimited<Record<string, unknown>>(request, MAX_CHAT_BODY_BYTES)
   if (!parsed.ok) {
-    return NextResponse.json(
-      { error: 'Message invalide' },
-      { status: parsed.reason === 'too_large' ? 413 : 400 }
-    )
+    return parsed.reason === 'too_large' ? apiError('payload_too_large', 413) : apiError('invalid_json', 400)
   }
   const payload = parsed.body
   const scope = typeof payload.scope === 'string' ? payload.scope : null
@@ -197,7 +196,7 @@ export async function POST(request: Request) {
   const body = typeof payload.body === 'string' ? payload.body.trim() : ''
 
   if (!body || body.length > MAX_BODY_LENGTH) {
-    return NextResponse.json({ error: 'Message invalide' }, { status: 400 })
+    return apiError('invalid_message', 400)
   }
 
   // Ban de chat écrit (modérateur) : lecture autorisée, envoi bloqué.
@@ -205,8 +204,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'chat-banned' }, { status: 403 })
   }
 
-  const resolved = await resolveChatChannel(user, scope, friendUserId)
+  // Droits d'ÉCRITURE : en pleine partie de Loup-Garou, un mort lit mais
+  // n'écrit plus (chat-access.ts).
+  const resolved = await resolveChatChannel(user, scope, friendUserId, 'write')
   if (!resolved.ok) {
+    if (isOnlineErrorCode(resolved.error)) return apiError(resolved.error, resolved.status)
     return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
 
@@ -214,6 +216,9 @@ export async function POST(request: Request) {
   // message est délivré censuré (termes de modération DB inclus).
   await ensureServerModerationTermsLoaded()
   const { text: cleanBody } = censorChatMessage(body)
+  // Fait d'invisibles seulement (U+200B, U+202E, remplissage Hangul) : le
+  // `trim` plus haut les laisse passer, la censure les retire — il ne reste rien.
+  if (!cleanBody.trim()) return apiError('invalid_message', 400)
 
   const created = await prisma.chatMessage.create({
     data: { channel: resolved.channel, senderId: user.id, body: cleanBody },
@@ -221,4 +226,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({ message: toDto(created, user.id) })
-}
+})

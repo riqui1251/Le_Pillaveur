@@ -11,6 +11,7 @@ import {
   readJsonBodyLimited,
   userRateLimitKey,
 } from '@/lib/rate-limit'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -55,7 +56,7 @@ const RTC_WINDOW_MS = 60_000
  * SSE. Le serveur ne stocke rien et ne voit jamais l'audio — il ne fait que
  * mettre les pairs en relation.
  */
-export async function POST(request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/rtc POST', async (request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -124,4 +125,4 @@ export async function POST(request: Request, { params }: Params) {
   })
 
   return NextResponse.json({ ok: true })
-}
+})

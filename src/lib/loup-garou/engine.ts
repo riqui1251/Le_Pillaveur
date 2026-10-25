@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotTrait } from '@/lib/online/bot-personas'
 import { mostSuspect, speechSuspicion, type BotSpeech, type SpeechMood } from '@/lib/online/bot-speech'
@@ -22,11 +22,18 @@ import { LG_DEBATE_DEFAULT_MS } from './debate'
  *
  * ANTI-LEAK DE TIMING : les actions de nuit sont bufferisées et résolues à
  * l'échéance de la phase. Quand l'acteur attendu a joué, l'échéance est
- * RACCOURCIE à LG_EARLY_FINISH_MS (rythme de jeu) — un plancher de 10 s qui
- * masque la vitesse réelle de l'action, sans révéler qui a agi. EXCEPTION :
- * la phase des loups garde sa durée pleine (leur vote reste modifiable
- * jusqu'au bout, ils se coordonnent au chat). Seules les phases dont
- * l'acteur est PUBLIQUEMENT mort sont sautées.
+ * RACCOURCIE (rythme de jeu) à `earlyFinishMs` après l'action — tiré au
+ * hasard par le serveur à l'entrée de la phase, LG_EARLY_FINISH_MS à défaut :
+ * l'échéance affichée ne date pas l'action. EXCEPTION : la phase des loups
+ * garde sa durée pleine (leur vote reste modifiable jusqu'au bout, ils se
+ * coordonnent au chat). Seules les phases dont l'acteur est PUBLIQUEMENT
+ * mort sont sautées. Un bot de nuit agit à `botActAt`, instant secret tiré
+ * dans la phase (server-adapter.ts) : son coup ne se distingue pas, par son
+ * heure, de celui d'un humain.
+ *
+ * GORGÉES : celles d'un vivant restent cachées aux autres jusqu'à sa mort ou
+ * la fin de la partie — le +3 des loups quand un complice est lynché et le +1
+ * de potion de la Sorcière trahiraient un rôle.
  */
 
 export const LG_MIN_PLAYERS = 4
@@ -45,8 +52,10 @@ export const LG_HUNTER_MS = 20_000
 export { LG_DEBATE_DEFAULT_MS, LG_DEBATE_CHOICES_MIN } from './debate'
 export const LG_VOTE_MS = 60_000
 export const LG_REVOTE_MS = 45_000
-/** Échéance raccourcie quand tous les acteurs attendus d'une phase ont agi. */
+/** Échéance raccourcie quand tous les acteurs attendus d'une phase ont agi (plancher). */
 export const LG_EARLY_FINISH_MS = 10_000
+/** Part tirée au hasard ajoutée au plancher : l'échéance resserrée tombe 10 à 20 s après l'action. */
+export const LG_EARLY_FINISH_JITTER_MS = 10_000
 /** Gorgées : mourir / lyncher un innocent (tous les vivants) / loup lynché (chaque loup) / potion. */
 export const LG_SIPS_DEATH = 3
 export const LG_SIPS_BAD_LYNCH = 2
@@ -85,6 +94,15 @@ export type LGPhase =
   | 'day-vote'
   | 'day-revote'
   | 'finished'
+
+/** Phases de nuit : l'acteur y est secret (voir currentLGActorId). */
+export const LG_NIGHT_PHASES: ReadonlySet<LGPhase> = new Set<LGPhase>([
+  'night-guard',
+  'night-seer',
+  'night-raven',
+  'night-wolves',
+  'night-witch',
+])
 
 export type LGPlayer = {
   id: string
@@ -186,7 +204,15 @@ export type LGState = TimedPhaseState & {
   winnerTeam: LGTeam | null
   rematchVotes: string[]
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
+  /**
+   * SECRET serveur — tempo de la phase de nuit courante, tiré à son entrée
+   * par l'adaptateur : instant où un bot tenant le rôle agit (minuteur de
+   * service) et délai de l'échéance resserrée après l'action. Absents des
+   * parties créées avant eux et hors de la nuit.
+   */
+  botActAt?: number | null
+  earlyFinishMs?: number | null
 }
 
 export type LGAction =
@@ -368,16 +394,23 @@ export function createLGState(
 // ─── Transitions ─────────────────────────────────────────────────────────────
 
 /**
- * Raccourcit l'échéance de la phase COURANTE à LG_EARLY_FINISH_MS sans en
- * changer la clé (phaseSeq intact : les ticks `advance` des clients restent
- * valides, seul le compte à rebours affiché se resserre). Appelé quand tous
- * les acteurs attendus ont agi — jamais pendant la phase des loups.
- * N'allonge jamais une échéance déjà plus courte.
+ * Raccourcit l'échéance de la phase COURANTE à `earlyFinishMs` (tiré par le
+ * serveur, LG_EARLY_FINISH_MS à défaut) sans en changer la clé (phaseSeq
+ * intact : les ticks `advance` des clients restent valides, seul le compte à
+ * rebours affiché se resserre). Appelé quand tous les acteurs attendus ont
+ * agi — jamais pendant la phase des loups. N'allonge jamais une échéance déjà
+ * plus courte.
  */
 function shortenPhase(state: LGState, now: number | undefined): LGState {
   const at = now ?? Date.now()
-  if (state.phaseEndsAt !== null && state.phaseEndsAt - at <= LG_EARLY_FINISH_MS) return state
-  return { ...state, phaseEndsAt: at + LG_EARLY_FINISH_MS }
+  const ms = state.earlyFinishMs ?? LG_EARLY_FINISH_MS
+  if (state.phaseEndsAt !== null && state.phaseEndsAt - at <= ms) return state
+  return { ...state, phaseEndsAt: at + ms }
+}
+
+/** Vivants encore à table : un parti n'empêche pas l'unanimité (il ne votera pas). */
+function alivePresent(state: LGState): LGPlayer[] {
+  return state.players.filter((p) => p.alive && !p.leftAt)
 }
 
 function toPhase(state: LGState, phase: LGPhase, durationMs: number | null, now: number): LGState {
@@ -701,8 +734,8 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       if (!target?.alive) throw new LGEngineError('INVALID_TARGET')
       const mayorVotes = { ...state.mayorVotes, [actor.id]: target.id }
       const next = { ...state, mayorVotes, version: state.version + 1 }
-      // Tous les vivants ont voté → dépouillement immédiat.
-      if (lgAlive(state).every((p) => mayorVotes[p.id])) {
+      // Tous les vivants présents ont voté → dépouillement immédiat.
+      if (alivePresent(state).every((p) => mayorVotes[p.id])) {
         return resolveMayorElection(next, action.now)
       }
       return next
@@ -876,8 +909,8 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       if (state.debateSkips.includes(actor.id)) return state
       const debateSkips = [...state.debateSkips, actor.id]
       const next = { ...state, debateSkips, version: state.version + 1 }
-      // Unanimité des vivants → on passe au vote sans attendre (info publique).
-      if (lgAlive(state).every((p) => debateSkips.includes(p.id))) {
+      // Unanimité des vivants présents → on passe au vote sans attendre (info publique).
+      if (alivePresent(state).every((p) => debateSkips.includes(p.id))) {
         return { ...toPhase(next, 'day-vote', LG_VOTE_MS, action.now), debateSkips: [] }
       }
       return next
@@ -897,8 +930,8 @@ export function reduceLG(state: LGState, action: LGAction): LGState {
       }
       const dayVotes = { ...state.dayVotes, [actor.id]: target.id }
       const next = { ...state, dayVotes, version: state.version + 1 }
-      // Tous les vivants ont voté → dépouillement immédiat (fin de journée).
-      if (lgAlive(state).every((p) => dayVotes[p.id])) {
+      // Tous les vivants présents ont voté → dépouillement immédiat (fin de journée).
+      if (alivePresent(state).every((p) => dayVotes[p.id])) {
         return resolveDayVote(next, action.now, state.phase === 'day-revote')
       }
       return next
@@ -1258,6 +1291,8 @@ export type LGPlayerView = Omit<LGPlayer, 'role'> & {
 export type LGClientView = Omit<
   LGState,
   | 'rngState'
+  | 'botActAt'
+  | 'earlyFinishMs'
   | 'players'
   | 'wolfVotes'
   | 'seerPeeks'
@@ -1313,6 +1348,8 @@ export type LGClientView = Omit<
 export function toLGClientView(state: LGState, viewerId: string): LGClientView {
   const {
     rngState: _rng,
+    botActAt: _botAt,
+    earlyFinishMs: _early,
     players,
     wolfVotes,
     seerPeeks,
@@ -1332,6 +1369,8 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     ...rest
   } = state
   void _rng
+  void _botAt
+  void _early
   void _ws
   void _wk
   void _wsu
@@ -1364,6 +1403,8 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     !p.alive || // les morts sont révélés publiquement
     p.id === viewerId ||
     (iAmWolf && p.role === 'loup') // les loups se connaissent
+  /** Gorgées d'un vivant : à lui seul (+ fantômes, fin de partie) — cf. en-tête. */
+  const sipsVisible = (p: LGPlayer): boolean => finished || ghost || !p.alive || p.id === viewerId
 
   const hasVoted: Record<string, boolean> = {}
   if (state.phase === 'day-vote' || state.phase === 'day-revote') {
@@ -1385,7 +1426,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
       isBot: p.isBot,
       leftAt: p.leftAt,
       alive: p.alive,
-      sips: p.sips,
+      sips: sipsVisible(p) ? p.sips : 0,
       role: roleVisible(p) ? p.role : null,
     })),
     wolfVotes: iAmWolf || ghost || finished ? wolfVotes : null,

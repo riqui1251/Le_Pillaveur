@@ -2,6 +2,7 @@ import {
   createPreState,
   currentPreActorId,
   preCloseNeeded,
+  preInterludeLeaderId,
   preRankOf,
   prePickBotPlay,
   reducePre,
@@ -208,7 +209,7 @@ export function applyPreBotAction(state: PreState): PreRoomActionResult {
       }
     }
 
-    const actorId = currentPreActorId(state)
+    const actorId = state.phase === 'interlude' ? preInterludeLeaderId(state) : currentPreActorId(state)
     const actor = state.players.find((p) => p.id === actorId)
     if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
 

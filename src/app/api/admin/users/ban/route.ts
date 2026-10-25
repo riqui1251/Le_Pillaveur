@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server'
-import { applyBan, type BanType } from '@/lib/ban-server'
+import { apiError, withApiRoute } from '@/lib/api-route'
+import { applyBan, canOverrideAccountBan, type BanType } from '@/lib/ban-server'
 import {
   canBanUsers,
   canPermanentBanTarget,
   canTemporaryBanTarget,
   normalizeRole,
 } from '@/lib/roles'
-import { adminErrorResponse, requireRole } from '../../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('admin/users/ban POST', async (request: Request) => {
   try {
     const actor = await requireRole(canBanUsers)
-    const body = await request.json()
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const type = body.type === 'permanent' || body.type === 'temporary' ? body.type : null
     const comment = typeof body.comment === 'string' ? body.comment.trim() : ''
@@ -25,13 +28,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Paramètres invalides' }, { status: 400 })
     }
 
+    if (type === 'temporary' && typeof body.durationDays === 'number' && !Number.isInteger(body.durationDays)) {
+      return apiError('invalid_duration', 400)
+    }
+
     if (userId === actor.id) {
       return NextResponse.json({ error: 'Tu ne peux pas te bannir toi-même' }, { status: 400 })
     }
 
     const target = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, displayName: true },
+      select: {
+        id: true,
+        role: true,
+        displayName: true,
+        banType: true,
+        bannedUntil: true,
+        banComment: true,
+        bannedAt: true,
+        bannedById: true,
+      },
     })
 
     if (!target) {
@@ -60,6 +76,11 @@ export async function POST(request: Request) {
       )
     }
 
+    // Un nouveau ban REMPLACE celui en place : le raccourcir revenait à le lever.
+    if (!(await canOverrideAccountBan(actorRole, target))) {
+      return apiError('sanction_outranked', 403)
+    }
+
     await applyBan({
       userId,
       actorId: actor.id,
@@ -72,4 +93,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'ban POST')
   }
-}
+})

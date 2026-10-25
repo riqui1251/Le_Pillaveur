@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { forceLaunchDecision, lobbyLaunchStatus, MC_TEAM_MIN_PLAYERS, type ForceLaunchSeat } from './lobby-launch'
+import {
+  forceLaunchDecision,
+  isWrongGameLobby,
+  lobbyLaunchStatus,
+  MC_TEAM_MIN_PLAYERS,
+  wrongGameError,
+  type ForceLaunchSeat,
+} from './lobby-launch'
 
 /**
  * Le raccourci « Lancer sans les retardataires » doit tenir ces promesses :
@@ -176,5 +183,38 @@ describe('lobbyLaunchStatus', () => {
   it('bots négatifs (réglage corrompu) : zéro ; table vide : jamais lançable', () => {
     expect(lobbyLaunchStatus({ members: [seat('A', true, true)], botCount: -2, minPlayers: 2 }).missingPlayers).toBe(1)
     expect(lobbyLaunchStatus({ members: [], botCount: 0, minPlayers: 1 }).launchable).toBe(false)
+  })
+})
+
+/**
+ * « Tu es dans un lobby pour un autre jeu » : assis à une table Bluff, le
+ * joueur ouvre la page Quiz, puis touche « Aller à la table ». Le message vit
+ * dans l'erreur partagée du salon ; il restait affiché en rouge dans le BON
+ * lobby (et au hub), poussant à quitter la table où il était bien assis.
+ */
+describe('message « autre jeu »', () => {
+  const MESSAGE = 'Tu es dans un lobby pour un autre jeu.'
+  const bluffTable = { gameId: 'bluff', status: 'waiting' }
+
+  it('vaut sur la page d’un autre jeu que celui de la table en attente', () => {
+    expect(isWrongGameLobby(bluffTable, 'quiz', false)).toBe(true)
+  })
+
+  it('tombe sur la page du bon jeu, hors table, en partie ou pendant une bascule de jeu', () => {
+    expect(isWrongGameLobby(bluffTable, 'bluff', false)).toBe(false)
+    expect(isWrongGameLobby(null, 'quiz', false)).toBe(false)
+    expect(isWrongGameLobby({ gameId: 'bluff', status: 'playing' }, 'quiz', false)).toBe(false)
+    expect(isWrongGameLobby(bluffTable, 'quiz', true)).toBe(false)
+  })
+
+  it('arrivé dans le bon lobby, le message posé par la page Quiz est effacé', () => {
+    const onQuizPage = wrongGameError(null, isWrongGameLobby(bluffTable, 'quiz', false), MESSAGE)
+    expect(onQuizPage).toBe(MESSAGE)
+    expect(wrongGameError(onQuizPage, isWrongGameLobby(bluffTable, 'bluff', false), MESSAGE)).toBeNull()
+  })
+
+  it('une autre erreur (lancement refusé, réseau) reste affichée', () => {
+    expect(wrongGameError('Problème de connexion', false, MESSAGE)).toBe('Problème de connexion')
+    expect(wrongGameError(null, false, MESSAGE)).toBeNull()
   })
 })

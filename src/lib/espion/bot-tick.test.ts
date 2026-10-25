@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { phaseKey } from '@/lib/online/phase-clock'
 import { BOT_PERSONAS, botDisplayName, personaForBotName } from '@/lib/online/bot-personas'
 import { getGameAdapter } from '@/lib/online/game-adapters'
-import { buildEspionState } from './server-adapter'
+import { applyEspionBotAction, buildEspionState } from './server-adapter'
 import {
   reduceEspion,
   toEspionSpectatorView,
   ESPION_ACCUSATION_WINDOW_MS,
   ESPION_HUMAN_ASK_PRIORITY_MS,
+  ESPION_LAST_CHANCE_MS,
+  ESPION_REVEAL_MIN_MS,
   ESPION_QUESTION_TIMEOUT_MS,
   type EspionSpeech,
   type EspionState,
@@ -36,6 +38,7 @@ import {
   ESPION_REMARK_SPAN_MS,
   ESPION_REMARK_WINDOW_MS,
   ESPION_REVEAL_BOT_TICK_MS,
+  ESPION_REVEAL_READ_BOT_TICK_MS,
   ESPION_SPEECH_END_MS,
   ESPION_SPEECH_PAUSE_MS,
   type EspionBotTickInput,
@@ -307,6 +310,47 @@ describe('serviceTick et client calculent le même délai', () => {
         expect(adapter.serviceTick!(s, at)).toEqual(server)
       }
     }
+  })
+
+  /** Table solo passée en discussion, les bots devant : le premier présent (bot-1) mène la révélation. */
+  const botsFirst = (seed: string): EspionState => {
+    const built = buildEspionState([{ userId: 'h1', user: { displayName: 'Léa' } }], 'fr', 4, seed)
+    const s = reduceEspion(built, { type: 'ADVANCE', claimedKey: phaseKey(built), now: built.phaseEndsAt! })
+    return { ...s, players: [...s.players.filter((p) => p.isBot), ...s.players.filter((p) => !p.isBot)] }
+  }
+
+  it('révélation menée par un bot, un humain assis : le tick, client comme serveur, tombe après le plancher de lecture', () => {
+    const table = botsFirst('plancher')
+    const reveal = reduceEspion(table, { type: 'ADVANCE', claimedKey: phaseKey(table), now: table.phaseEndsAt! })
+    const at = reveal.revealAt!
+    const server = adapter.serviceTick!(reveal, at)!
+    expect(server.body).toEqual({ action: 'bot' })
+    expect(server.dueAt - at).toBeGreaterThanOrEqual(ESPION_REVEAL_MIN_MS + 1_000)
+    expect(clientDelay(reveal, at, zero)).toBe(ESPION_REVEAL_READ_BOT_TICK_MS)
+    for (const delay of [clientDelay(reveal, at, zero)!, server.dueAt - at]) {
+      const r = applyEspionBotAction(reveal, zero, at + delay)
+      expect(r.ok && r.state.phase).toBe('discussion')
+    }
+    // Avant le plancher, le même tick serait refusé : la marge sert.
+    expect(applyEspionBotAction(reveal, zero, at + ESPION_REVEAL_MIN_MS - 1)).toEqual({ ok: false, error: 'READING_TIME' })
+    // Personne n'est « au tour » : la révélation se referme par n'importe qui, pas d'expulsion AFK.
+    expect(adapter.currentActorId(reveal)).toBeNull()
+  })
+
+  it('dernière chance de l’humain démasqué : aucun tick bot, seule l’échéance de la phase est due', () => {
+    const table = botsFirst('derniere-chance')
+    const spied: EspionState = { ...table, players: table.players.map((p) => ({ ...p, role: p.id === 'h1' ? 'spy' : 'crew' })) }
+    const at = spied.phaseEndsAt! - 60_000
+    let lc = reduceEspion(spied, { type: 'ACCUSE', playerId: 'bot-1', targetId: 'h1', now: at })
+    for (const id of ['bot-2', 'bot-3']) lc = reduceEspion(lc, { type: 'SUPPORT', playerId: id, now: at })
+    expect(lc.phase).toBe('lastChance')
+    expect(adapter.serviceTick!(lc, at)).toEqual({
+      body: { action: 'advance', phaseKey: phaseKey(lc) },
+      dueAt: at + ESPION_LAST_CHANCE_MS,
+    })
+    expect(clientDelay(lc, at, zero)).toBeNull()
+    expect(applyEspionBotAction(lc, zero, at + 1_000)).toEqual({ ok: false, error: 'NOT_BOT_TURN' })
+    expect(adapter.currentActorId(lc)).toBeNull()
   })
 })
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withApiRoute } from '@/lib/api-route'
 import { getCurrentUser } from '@/lib/auth-server'
 import { resolveChatChannel } from '@/lib/moderation/chat-access'
 import {
@@ -21,6 +22,10 @@ import {
  * lecture) : c'est ce qui empêche d'utiliser cette route pour faire remonter
  * au staff des bouts de conversations auxquelles on n'a pas droit. Le dossier
  * embarque ensuite un extrait FIGÉ du canal — la modération instruit là-dessus.
+ *
+ * Exception : un MESSAGE privé se signale tant qu'on est l'un des deux
+ * participants du canal (voir participantFriendChannel), même sans amitié ou
+ * après un blocage.
  */
 
 const MAX_COMMENT_LENGTH = 500
@@ -30,7 +35,24 @@ const MAX_BODY_BYTES = 4 * 1024
 const REPORT_LIMIT = 5
 const REPORT_WINDOW_MS = 10 * 60 * 1000
 
-export async function POST(request: Request) {
+/**
+ * Canal privé `friend:<a>:<b>` dont l'appelant est l'un des deux ids, sans
+ * exiger l'amitié ni l'absence de blocage : un harceleur retirait l'ami — ou
+ * la victime le bloquait — et ses messages, toujours en base, ne pouvaient
+ * plus être signalés. Réservé au signalement d'un message : celui-ci doit
+ * appartenir au canal (vérifié plus bas), c'est la preuve de l'échange. Null
+ * pour un identifiant inutilisable : le contrôle ordinaire s'applique alors.
+ */
+function participantFriendChannel(
+  userId: string,
+  friendUserId: string | null
+): { ok: true; channel: string; peerUserId: string } | null {
+  if (!friendUserId || friendUserId === userId || friendUserId.includes(':')) return null
+  const [a, b] = [userId, friendUserId].sort()
+  return { ok: true, channel: `friend:${a}:${b}`, peerUserId: friendUserId }
+}
+
+export const POST = withApiRoute('chat report POST', async (request: Request) => {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
 
@@ -59,7 +81,9 @@ export async function POST(request: Request) {
   }
 
   // Le canal borne le droit d'accès ET fournit le contexte du dossier.
-  const resolved = await resolveChatChannel(user, scope, friendUserId)
+  const resolved =
+    (scope === 'friend' && messageId ? participantFriendChannel(user.id, friendUserId) : null) ??
+    (await resolveChatChannel(user, scope, friendUserId))
   if (!resolved.ok) {
     return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
@@ -107,7 +131,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'already-reported' })
   }
   return NextResponse.json({ status: 'created', reportId: result.reportId })
-}
+})
 
 /**
  * Le joueur visé est-il réellement en face du signalant ? On ne veut pas

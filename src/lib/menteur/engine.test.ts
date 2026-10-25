@@ -4,6 +4,7 @@ import {
   createMenteurState,
   currentMenteurActorId,
   isLegalRaise,
+  menteurBotSeatId,
   menteurHumanSeated,
   menteurTotalDice,
   reduceMenteur,
@@ -409,7 +410,7 @@ describe('temps de lecture de la révélation (F33)', () => {
     const alive = botLedReveal([P('h', [2, 3]), P('c', [4], { isBot: true })])
     const eliminated = botLedReveal([P('c', [4], { isBot: true }), P('h', [])])
     for (const s of [alive, eliminated]) {
-      expect(currentMenteurActorId(s)).toBe('b')
+      expect(menteurBotSeatId(s)).toBe('b')
       expect(() => botContinue(s, T0 + 3_900)).toThrow('READING_TIME')
       expect(botContinue(s, T0 + MENTEUR_REVEAL_MIN_MS).phase).toBe('bidding')
       // Vieil état sans horodatage : lisible tout de suite, jamais figé.
@@ -456,7 +457,7 @@ describe('tour et acteur courant', () => {
     const after = reduceMenteur(s, { type: 'BID', playerId: 'a', qty: 1, face: 2 })
     expect(after.turnIdx).toBe(2)
   })
-  it('acteur pendant reveal = perdant vivant, sinon suivant', () => {
+  it('reveal : aucun joueur « au tour » (pas d’AFK), le tick bot vise le perdant vivant, sinon le premier vivant', () => {
     const base = {
       bid: { qty: 1, face: 2, by: 'a' },
       challengerId: 'b',
@@ -469,12 +470,17 @@ describe('tour et acteur courant', () => {
       phase: 'reveal',
       lastReveal: { ...base, loserId: 'a', eliminatedId: null },
     })
-    expect(currentMenteurActorId(alive)).toBe('a')
+    expect(menteurBotSeatId(alive)).toBe('a')
+    expect(currentMenteurActorId(alive)).toBeNull()
     const dead = craft([P('a', []), P('b', [3])], {
       phase: 'reveal',
       lastReveal: { ...base, loserId: 'a', eliminatedId: 'a' },
     })
-    expect(currentMenteurActorId(dead)).toBe('b')
+    expect(menteurBotSeatId(dead)).toBe('b')
+    expect(currentMenteurActorId(dead)).toBeNull()
+    // La vue d'un joueur (dés des autres cachés, compte seul) vise le même siège.
+    expect(menteurBotSeatId(toMenteurClientView(alive, 'b'))).toBe('a')
+    expect(menteurBotSeatId(toMenteurClientView(dead, 'a'))).toBe('b')
     expect(currentMenteurActorId(craft([P('a', [2])], { phase: 'finished' }))).toBeNull()
   })
 })
@@ -494,37 +500,85 @@ describe('contrat remplacement (LEAVE / REJOIN / REPLACE_LEFT)', () => {
     ).toThrow('NOTHING_TO_REPLACE')
   })
 
-  it('le partant qui tenait les enchères rend la main immédiatement', () => {
+  it('le partant qui tenait les enchères GARDE la main : son tour est joué par le bot, pas sauté', () => {
     const s = craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1])], {
       turnIdx: 0,
       currentBid: { qty: 2, face: 4, by: 'c' },
     })
     const left = reduceMenteur(s, { type: 'LEAVE', playerId: 'a', at: 1000 })
-    expect(left.turnIdx).toBe(1)
-    expect(currentMenteurActorId(left)).toBe('b')
-    // Rien d'autre ne bouge : dés gardés, enchère en cours intacte.
+    expect(left.turnIdx).toBe(0)
+    expect(currentMenteurActorId(left)).toBe('a')
     expect(left.players[0].dice).toEqual([2, 3])
     expect(left.currentBid).toEqual(s.currentBid)
-    expect(left.phase).toBe('bidding')
-    // Départ en chaîne : le tour saute les partants pour atteindre 'c'.
-    const left2 = reduceMenteur(left, { type: 'LEAVE', playerId: 'b', at: 1100 })
-    expect(left2.turnIdx).toBe(2)
+    expect(() => reduceMenteur(left, { type: 'BID', playerId: 'b', qty: 3, face: 4 })).toThrow('NOT_YOUR_TURN')
+    // Le tick « bot » joue SON coup (pas de parole : il n'a rien dit).
+    const r = applyMenteurBotAction(left, createRng('parti').next, T0)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const played = r.state
+    const answered = played.phase === 'reveal' ? played.lastReveal?.challengerId : played.currentBid?.by
+    expect(answered).toBe('a')
+    expect((played.speech ?? []).some((sp) => sp.playerId === 'a')).toBe(false)
   })
 
-  it('le revenant a perdu son tour : REJOIN ne ramène pas la main en arrière', () => {
-    const s = craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1])], { turnIdx: 0 })
+  it('à deux, partir puis revenir ne renvoie pas l’adversaire face à sa propre enchère', () => {
+    const s = craft([P('a', [2, 3, 4, 5, 6]), P('z', [4, 4, 4, 1, 2])], {
+      turnIdx: 0,
+      currentBid: { qty: 3, face: 4, by: 'z' },
+    })
     const left = reduceMenteur(s, { type: 'LEAVE', playerId: 'a', at: 1000 })
-    // Entre-temps la table a joué : 'b' a enchéri, c'est au tour de 'c'.
-    const played = reduceMenteur(left, { type: 'BID', playerId: 'b', qty: 2, face: 4 })
-    const back = reduceMenteur(played, { type: 'REJOIN', playerId: 'a' })
+    const back = reduceMenteur(left, { type: 'REJOIN', playerId: 'a' })
+    expect(currentMenteurActorId(back)).toBe('a')
     expect(back.players.find((p) => p.id === 'a')?.leftAt).toBeNull()
-    // Le tour NE revient PAS au revenant, et rien d'autre n'a bougé.
-    expect(back.turnIdx).toBe(played.turnIdx)
-    expect(currentMenteurActorId(back)).toBe('c')
-    expect(back.currentBid).toEqual(played.currentBid)
-    // Ses dés ne l'ont jamais quitté : il reprend sa place telle qu'il l'a laissée.
-    expect(back.players.find((p) => p.id === 'a')?.dice).toEqual([2, 3])
+    for (const action of [
+      { type: 'DUDO', playerId: 'z', now: T0 },
+      { type: 'BID', playerId: 'z', qty: 4, face: 4 },
+    ] as const) {
+      expect(() => reduceMenteur(back, action)).toThrow('NOT_YOUR_TURN')
+    }
+    // Revenu, A répond lui-même à l'enchère : aucun dé n'a bougé entre-temps.
     expect(menteurTotalDice(back)).toBe(menteurTotalDice(s))
+    expect(applyMenteurBotAction(back, createRng('revenu').next, T0)).toEqual({ ok: false, error: 'NOT_BOT_TURN' })
+  })
+
+  it('à trois, partir sur un tour délicat ne le fait pas esquiver : le bot le joue avec ses dés', () => {
+    const s = craft([P('a', [2, 3, 4, 5, 6]), P('b', [4, 5, 6, 1, 2]), P('c', [6, 1, 3, 3, 2])], {
+      turnIdx: 0,
+      currentBid: { qty: 9, face: 6, by: 'c' },
+    })
+    const left = reduceMenteur(s, { type: 'LEAVE', playerId: 'a', at: 1000 })
+    const r = applyMenteurBotAction(left, createRng('delicat').next, T0)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    // Seule réponse sensée à 9 × 6 sur 15 dés : « Menteur ! » — joué au nom de A.
+    expect(r.state.phase).toBe('reveal')
+    expect(r.state.lastReveal?.challengerId).toBe('a')
+  })
+
+  it('personne ne répond à sa propre enchère (BID, DUDO, CALZA → OWN_BID)', () => {
+    const s = craft([P('a', [2, 3]), P('b', [4, 5])], {
+      turnIdx: 1,
+      currentBid: { qty: 1, face: 4, by: 'b' },
+      ruleCalza: true,
+    })
+    expect(() => reduceMenteur(s, { type: 'BID', playerId: 'b', qty: 2, face: 4 })).toThrow('OWN_BID')
+    expect(() => reduceMenteur(s, { type: 'DUDO', playerId: 'b', now: T0 })).toThrow('OWN_BID')
+    expect(() => reduceMenteur(s, { type: 'CALZA', playerId: 'b', now: T0 })).toThrow('OWN_BID')
+  })
+
+  it('partie sérialisée avec la main à l’auteur de l’enchère (ancien LEAVE) : la main passe au vivant suivant au parse', () => {
+    const legacy = craft([P('a', [2, 3]), P('b', [], { lostCount: 5 }), P('c', [4, 5], { isBot: true })], {
+      turnIdx: 2,
+      currentBid: { qty: 2, face: 4, by: 'c' },
+    })
+    const parsed = parseMenteurState(JSON.stringify(legacy))!
+    expect(parsed.turnIdx).toBe(0)
+    expect(currentMenteurActorId(parsed)).toBe('a')
+    // Le bot n'a plus à surenchérir sur lui-même : ce n'est plus son tour.
+    expect(applyMenteurBotAction(parsed, createRng('vieux').next, T0)).toEqual({ ok: false, error: 'NOT_BOT_TURN' })
+    // Un état sain ressort tel quel.
+    const sane = { ...legacy, turnIdx: 0 }
+    expect(parseMenteurState(JSON.stringify(sane))).toEqual({ ...sane, bids: [], duels: [], speech: [] })
   })
 
   it('un départ hors tour (ou hors enchères) ne déplace pas le tour', () => {
@@ -795,7 +849,7 @@ describe('IA du bot : décision sur sa seule vue, rejouable par graine', () => {
     const rng = createRng(seed)
     return {
       ...s,
-      rngState: (s.rngState ^ 0x5bd1e995) >>> 0,
+      rngState: createRng(`${seed}-rng`).getState(),
       players: s.players.map((p) => (p.id === keepId ? p : { ...p, dice: p.dice.map(() => rng.int(1, 6)) })),
     }
   }
@@ -1127,7 +1181,7 @@ describe('mémoire de la table : la chaîne des enchères et les duels', () => {
           const rng = createRng(`brouille-${g}-${i}-${viewer.id}`)
           const other: MenteurState = {
             ...s,
-            rngState: (s.rngState ^ 0x2545f491) >>> 0,
+            rngState: createRng(`brouille-rng-${g}-${i}-${viewer.id}`).getState(),
             players: s.players.map((p) =>
               p.id === viewer.id ? p : { ...p, dice: p.dice.map(() => rng.int(1, 6)) }
             ),

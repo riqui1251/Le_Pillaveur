@@ -278,6 +278,12 @@
         "inviteConfirm": "Crea e invita ({count})",
         "createAlone": "Crea un tavolo vuoto",
         "cancel": "Annulla"
+      },
+      "inviteLeave": {
+        "title": "Lasciare la partita in corso?",
+        "description": "Unirti a questo tavolo ti fa lasciare la tua partita a {game}. Un bot prenderà il tuo posto se non torni in tempo.",
+        "confirm": "Unisciti al nuovo tavolo",
+        "cancel": "Resta nella mia partita"
       }
     },
     "ambianceMode": {
@@ -715,7 +721,16 @@
       "request_not_found": "Richiesta non trovata.",
       "request_already_handled": "Questa richiesta è già stata gestita.",
       "request_already_declined": "Richiesta già rifiutata.",
-      "fake_taken": "Questa risposta è già presa: inventa qualcos'altro."
+      "fake_taken": "Questa risposta è già presa: inventa qualcos'altro.",
+      "cross_site_request": "Richiesta rifiutata: non proviene da questo sito.",
+      "oauth_email_in_use": "Esiste già un account con questo indirizzo: accedi in un altro modo.",
+      "chat_read_only": "I morti non parlano: la chat è in sola lettura fino alla fine della partita.",
+      "sanction_outranked": "Il tuo grado non ti permette di revocare né di modificare questa sanzione.",
+      "invalid_duration": "Durata non valida: un numero intero di giorni.",
+      "guess_too_fast": "Una proposta al secondo: piano!",
+      "guess_limit_reached": "Nessun tentativo rimasto in questa manche.",
+      "word_too_recent": "Troppo presto: questa parola è appena arrivata.",
+      "invalid_message": "Messaggio vuoto o troppo lungo."
     },
     "showcase": {
       "players": "Da {min} a {max} giocatori",
@@ -2553,6 +2568,7 @@
       "game": {
         "placementTitle": "Posiziona le tue navi",
         "placementHint": "Scegli una nave, poi tocca la sua casella di partenza: se esce dal bordo, rientra da sola. Tocca una nave posizionata per riprenderla.",
+        "placementDeadlineHint": "Allo scadere del tempo, le navi dei ritardatari vengono posizionate a caso.",
         "shipLabel": "{size} caselle",
         "horizontal": "Orizzontale",
         "vertical": "Verticale",
@@ -3159,6 +3175,8 @@
           "location": "Il luogo era: {location}",
           "seeResult": "Vedi il risultato",
           "continue": "Manche successiva",
+          "continueIn": "Manche successiva tra {seconds} s",
+          "seeResultIn": "Risultato tra {seconds} s",
           "outcome": {
             "spyCaught": "{genre, select, f {{name} era la spia — smascherata!} m {{name} era la spia — smascherato!} other {Giù la maschera: {name} era la spia!}}",
             "accusationFailed": "Bersaglio sbagliato… la spia fugge!",
@@ -3166,6 +3184,11 @@
             "spyGuessedWrong": "Risposta sbagliata della spia!",
             "timeout": "Tempo scaduto — {name} la fa franca!"
           }
+        },
+        "lastChance": {
+          "title": "Giù la maschera: {name} è la spia!",
+          "spyHint": "Ultima possibilità: indovina il luogo per vincere comunque la manche.",
+          "othersHint": "Ultima possibilità: {name} prova a indovinare il luogo…"
         },
         "victory": {
           "crewWin": "La squadra ha smascherato la spia!",
@@ -3642,7 +3665,9 @@
           "drawing": "disegna",
           "found": "ha indovinato",
           "away": "offline"
-        }
+        },
+        "guessesLeft": "{count, plural, one {Ti resta # tentativo} other {Ti restano # tentativi}} in questa manche",
+        "noGuessesLeft": "Nessun tentativo rimasto in questa manche: guarda il disegno, la prossima è quella buona!"
       },
       "tutorial": {
         "steps": [
@@ -4937,6 +4962,8 @@
         "reveal": {
           "continue": "Round successivo",
           "seeResult": "Vedi il podio",
+          "continueIn": "Round successivo tra {seconds} s",
+          "seeResultIn": "Podio tra {seconds} s",
           "everyone": "Basta un tocco per far proseguire tutto il tavolo."
         },
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
@@ -5124,6 +5151,8 @@
         "minorityDrinks": "La minoranza beve 🍺",
         "nextCard": "Carta successiva",
         "seeEnd": "Termina",
+        "nextCardIn": "Carta successiva tra {seconds} s",
+        "seeEndIn": "Termina tra {seconds} s",
         "waitingReturn": "In attesa del ritorno di {name} — bot tra {seconds}s",
         "finished": {
           "title": "Fine dei dilemmi!",
@@ -5930,6 +5959,7 @@
       "journalBanReason": "{actor} ha bannato {target} — «{detail}»",
       "journalUnban": "{actor} ha sbannato {target}",
       "journalFeatureBan": "{actor} ha disattivato il {feature} di {target}",
+      "journalFeatureUnban": "{actor} ha riattivato il {feature} di {target}",
       "journalGrant": "{actor} ha regalato un cosmetico a {target}",
       "journalTerm": "Termine moderato aggiunto: «{detail}»",
       "journalTermByActor": "{actor} ha aggiunto il termine «{detail}»",
@@ -6279,7 +6309,9 @@
       "roleChange": "Cambio di grado",
       "metricsExclusion": "Statistiche: account di test",
       "metricsExclusionOn": "Statistiche: segnato come account di test",
-      "metricsExclusionOff": "Statistiche: reinserito (non è più un account di test)"
+      "metricsExclusionOff": "Statistiche: reinserito (non è più un account di test)",
+      "featureBan": "Esclusione dal {feature}",
+      "featureUnban": "Riautorizzazione del {feature}"
     },
     "dialogs": {
       "deleteTitle": "Eliminare definitivamente questo account?",

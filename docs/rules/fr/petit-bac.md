@@ -53,8 +53,11 @@ premier impatient ne peut pas enchaîner la manche suivante avant les autres.
 
 - **2 joueurs minimum**, jusqu'à 16 — le comptage doublon/unique devient
   vraiment drôle à partir de 4.
-- Pas de bots : le Petit Bac repose sur de vraies réponses tapées (un joueur
-  qui quitte est remplacé par une copie blanche).
+- Pas de bots : le Petit Bac repose sur de vraies réponses tapées. Un joueur
+  qui quitte n'est pas remplacé et peut revenir avec le code de la table, mais
+  une manche ne lui rapporte rien s'il n'est pas à table quand elle se clôt.
+  Quitter pendant la révélation ne fait pas disparaître ses réponses : elles
+  restent affichées et contestables.
 - Le mode TV affiche la lettre en géant, la progression des copies, puis la
   grille de comptage.
 - Jouable dans les quatre langues du site (catégories traduites).

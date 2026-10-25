@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import {
   preCloseNeeded,
   preComboIssue,
+  preInterludeLeaderId,
   preIsJoker,
   preLastPlayRank,
   preOuRien,
@@ -294,7 +295,9 @@ export function PresidentOnline() {
 
   // Arbitre (avec secours par rang, cf. useBotReferee) : tours des bots +
   // remplacement des partis.
-  const botActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
+  // L'interlude n'a pas de joueur au tour : son meneur se lit sur la vue.
+  const botActorId = view?.phase === 'interlude' ? preInterludeLeaderId(view) : room?.currentTurnUserId
+  const botActor = view?.players.find((p) => p.id === botActorId)
   // Tick spéculatif « fermeture de carré » : quand un run ≥ 2 traîne au
   // sommet du pli, un bot détenant le complément peut fermer HORS TOUR — le
   // serveur tranche (NOT_BOT_TURN sinon, inoffensif). La fermeture complète

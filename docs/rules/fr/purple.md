@@ -26,7 +26,7 @@ Le purple mise sur le mélange : une rouge ET une noire dans la pioche, dans n'
 
 ## Victoire
 
-Pas de podium : le Purple s'arrête quand la table le décide, et le jeu affiche qui a bu combien. Le classement en ligne compte quand même les parties.
+Pas de podium : le Purple s'arrête quand la table le décide, et le jeu affiche qui a bu combien. Le classement en ligne compte quand même les parties, à partir de 10 paris joués : une partie arrêtée aussitôt lancée ne rapporte pas d'XP.
 
 ## Astuces
 

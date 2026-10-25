@@ -40,12 +40,11 @@ import {
 } from '@/lib/menteur/server-adapter'
 import {
   currentMenteurActorId,
-  menteurHumanSeated,
   toMenteurClientView,
   MENTEUR_MAX_PLAYERS,
   type MenteurState,
 } from '@/lib/menteur/engine'
-import { menteurBotTickDelayMs } from '@/lib/menteur/bot-tick'
+import { menteurTableBotTickDelayMs } from '@/lib/menteur/bot-tick'
 import {
   parseImposteurState,
   serializeImposteurState,
@@ -91,6 +90,7 @@ import {
   rejoinLGPlayer,
   lgClientViewJson,
   lgSpectatorViewJson,
+  lgServiceBotDelayMs,
   LG_SPEAK_KINDS,
   type LGRoomActionInput,
   type LGSpeakKind,
@@ -152,6 +152,7 @@ import {
   type BluffRoomActionInput,
 } from '@/lib/bluff/server-adapter'
 import {
+  bluffRevealLeaderId,
   currentBluffActorId,
   toBluffClientView,
   BLUFF_MIN_PLAYERS,
@@ -192,6 +193,7 @@ import {
 } from '@/lib/tabou/server-adapter'
 import {
   currentTabouActorId,
+  tabouRoundEndLeaderId,
   toTabouClientView,
   TABOU_MIN_PLAYERS,
   TABOU_MAX_PLAYERS,
@@ -210,6 +212,7 @@ import {
 } from '@/lib/crobard/server-adapter'
 import {
   currentCrobardActorId,
+  crobardRoundEndLeaderId,
   toCrobardClientView,
   CROBARD_MIN_PLAYERS,
   CROBARD_MAX_PLAYERS,
@@ -248,9 +251,11 @@ import {
 } from '@/lib/sans-filtre/server-adapter'
 import {
   currentSFActorId,
+  sfRevealLeaderId,
   toSFClientView,
   SF_MIN_PLAYERS,
   SF_MAX_PLAYERS,
+  SF_REVEAL_BOT_TICK_MS,
   type SFState,
 } from '@/lib/sans-filtre/engine'
 import {
@@ -284,9 +289,11 @@ import {
 } from '@/lib/dilemmes/server-adapter'
 import {
   currentDilActorId,
+  dilRevealLeaderId,
   toDilClientView,
   DIL_MIN_PLAYERS,
   DIL_MAX_PLAYERS,
+  DIL_REVEAL_BOT_TICK_MS,
   type DilState,
 } from '@/lib/dilemmes/engine'
 import {
@@ -302,6 +309,7 @@ import {
 } from '@/lib/petit-bac/server-adapter'
 import {
   currentPbcActorId,
+  pbcRevealLeaderId,
   toPbcClientView,
   PBC_MIN_PLAYERS,
   PBC_MAX_PLAYERS,
@@ -320,6 +328,7 @@ import {
 } from '@/lib/president/server-adapter'
 import {
   currentPreActorId,
+  preInterludeLeaderId,
   toPreClientView,
   PRE_MIN_PLAYERS,
   PRE_MAX_PLAYERS,
@@ -569,10 +578,18 @@ const toucherCouleAdapter: GameAdapter = {
   applyAction(rawState, userId, body) {
     const state = rawState as TCState
     let input: TCRoomActionInput
-    if (body.action === 'place' && Array.isArray(body.ships)) {
+    // Cases entières seulement : un navire posé en 0.5, 1.5… n'était jamais
+    // touché par un tir de l'interface (le moteur revérifie les bornes).
+    if (
+      body.action === 'place' &&
+      Array.isArray(body.ships) &&
+      body.ships.every((cells) => Array.isArray(cells) && cells.every((c) => Number.isInteger(c)))
+    ) {
       input = { type: 'place', ships: body.ships as number[][] }
-    } else if (body.action === 'fire' && typeof body.cell === 'number') {
-      input = { type: 'fire', cell: body.cell, bomb: body.bomb === true }
+    } else if (body.action === 'fire' && Number.isInteger(body.cell)) {
+      input = { type: 'fire', cell: body.cell as number, bomb: body.bomb === true }
+    } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
+      input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'bot') {
       input = { type: 'bot' }
     } else if (body.action === 'replace-left') {
@@ -581,7 +598,13 @@ const toucherCouleAdapter: GameAdapter = {
       return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyTCRoomAction(state, userId, input)
-    if (!result.ok) return { ok: false, error: result.error, status: 403 }
+    if (!result.ok) {
+      if (['INVALID_SHIP_SIZES', 'INVALID_SHIP_SHAPE', 'CELL_OUT_OF_BOUNDS'].includes(result.error)) {
+        return { ok: false, error: 'invalid_action', status: 400 }
+      }
+      const conflict = ['NOT_EXPIRED', 'PHASE_CHANGED', 'NO_DEADLINE', 'NOTHING_TO_ADVANCE'].includes(result.error)
+      return { ok: false, error: result.error, status: conflict ? 409 : 403 }
+    }
     return { ok: true, state: result.state }
   },
   convertToBot: (state, userId) => convertTCPlayerToBot(state as TCState, userId),
@@ -605,13 +628,14 @@ const toucherCouleAdapter: GameAdapter = {
     if (!player) return null
     return reduceTC(state, { type: 'REJOIN', playerId: userId })
   },
-  // ToucherCouleOnline : tir du bot au tour, en bataille seulement (hors
-  // bataille, currentTCPlayerId rend null — le placement des bots est
-  // immédiat côté moteur).
+  // ToucherCouleOnline : échéance du placement (le placement des bots est
+  // immédiat côté moteur), puis tir du bot au tour en bataille (hors
+  // bataille, currentTCPlayerId rend null).
   serviceTick(rawState, now, options) {
     const state = rawState as TCState
     const actor = playerById(state.players, currentTCPlayerId(state))
     return serviceTickOf(state.players, now, options, {
+      advance: state.phase === 'placement' ? advanceAt(state, state.phaseEndsAt ?? null) : null,
       botDelayMs: (rand) => (actor?.isBot ? botTickDelayMs(actor.name, rand) : null),
     })
   },
@@ -671,23 +695,13 @@ const menteurAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markMenteurPlayerLeft(state as MenteurState, userId, at),
   rejoin: (state, userId) => rejoinMenteurPlayer(state as MenteurState, userId),
-  // MenteurOnline : bot au tour (enchère, ou « continuer » de la révélation
-  // qu'il mène), délai calculé par la même fonction que le client
-  // (menteurBotTickDelayMs) : 5 s de lecture dès qu'un humain est assis.
+  // MenteurOnline : bot (ou humain parti) au tour, ou « continuer » de la
+  // révélation que mène un bot, délai calculé par la même fonction que le
+  // client (menteurTableBotTickDelayMs) : 5 s de lecture dès qu'un humain est assis.
   serviceTick(rawState, now, options) {
     const state = rawState as MenteurState
-    const actor = playerById(state.players, currentMenteurActorId(state))
     return serviceTickOf(state.players, now, options, {
-      botDelayMs: (rand) =>
-        menteurBotTickDelayMs(
-          {
-            phase: state.phase,
-            actorIsBot: Boolean(actor?.isBot),
-            actorName: actor?.name,
-            humanSeated: menteurHumanSeated(state.players),
-          },
-          rand
-        ),
+      botDelayMs: (rand) => menteurTableBotTickDelayMs(state, rand),
     })
   },
 }
@@ -788,8 +802,8 @@ const quizAdapter: GameAdapter = {
   applyAction(rawState, userId, body) {
     const state = rawState as QuizState
     let input: QuizRoomActionInput
-    if (body.action === 'answer' && typeof body.choice === 'number') {
-      input = { type: 'answer', choice: body.choice }
+    if (body.action === 'answer' && Number.isInteger(body.choice)) {
+      input = { type: 'answer', choice: body.choice as number }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
       input = { type: 'advance', phaseKey: body.phaseKey }
     } else if (body.action === 'continue') {
@@ -909,16 +923,17 @@ const loupGarouAdapter: GameAdapter = {
   }),
   markLeft: (state, userId, at) => markLGPlayerLeft(state as LGState, userId, at),
   rejoin: (state, userId) => rejoinLGPlayer(state as LGState, userId),
-  // LoupGarouOnline : échéance de phase (nuit, débat, votes) + tick bot « au
-  // cas où » dès qu'un bot est à table, 2,5 à 5,5 s après l'état. Le moteur
-  // répond NOT_BOT_TURN si aucun bot n'a rien à faire : le minuteur retombe
-  // alors sur l'échéance (skipBot, room-ticker.ts).
+  // LoupGarouOnline : échéance de phase (nuit, débat, votes) + tick bot. Le
+  // jour, « au cas où » dès qu'un bot est à table, 2,5 à 5,5 s après l'état :
+  // le moteur répond NOT_BOT_TURN si aucun bot n'a rien à faire, le minuteur
+  // retombe alors sur l'échéance (skipBot, room-ticker.ts). La nuit, le
+  // serveur seul fait jouer le bot qui tient le rôle, à l'instant secret
+  // `botActAt` (lgServiceBotDelayMs).
   serviceTick(rawState, now, options) {
     const state = rawState as LGState
-    const hasBot = state.players.some((p) => p.isBot)
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
-      botDelayMs: (rand) => (hasBot ? 2500 + rand() * 3000 : null),
+      botDelayMs: (rand) => lgServiceBotDelayMs(state, now, rand),
     })
   },
 }
@@ -938,6 +953,8 @@ const game1220Adapter: GameAdapter = {
     let input: Game1220RoomActionInput
     if (body.action === 'set-draft' && body.choices && typeof body.choices === 'object') {
       input = { type: 'set-draft', choices: body.choices as Partial<Choices1220> }
+    } else if (body.action === 'set-bets' && body.choices && typeof body.choices === 'object') {
+      input = { type: 'set-bets', choices: body.choices }
     } else if (body.action === 'ready') {
       input = { type: 'ready' }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
@@ -955,6 +972,8 @@ const game1220Adapter: GameAdapter = {
     }
     const result = applyGame1220RoomAction(state, userId, input)
     if (!result.ok) {
+      // Le moteur valide chaque pari (clés, types, bornes).
+      if (result.error === 'INVALID_CHOICE') return { ok: false, error: 'invalid_action', status: 400 }
       const conflict = [
         'NOTHING_TO_REPLACE',
         'NOT_EXPIRED',
@@ -1113,7 +1132,7 @@ const bluffAdapter: GameAdapter = {
           : undefined
     const revealActorIsBot =
       state.phase === 'reveal' &&
-      Boolean(playerById(state.players, currentBluffActorId(state))?.isBot)
+      Boolean(playerById(state.players, bluffRevealLeaderId(state))?.isBot)
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
       botDelayMs: (rand) =>
@@ -1291,8 +1310,9 @@ const tabouAdapter: GameAdapter = {
   // TabouOnline : échéance de phase + bot meneur du bilan de manche.
   serviceTick(rawState, now, options) {
     const state = rawState as TabouState
-    const roundEndActor =
-      state.phase === 'roundEnd' ? playerById(state.players, currentTabouActorId(state)) : undefined
+    // Le meneur du bilan n'est pas l'acteur courant (null en roundEnd, pour
+    // l'AFK) : il est calculé à part.
+    const roundEndActor = playerById(state.players, tabouRoundEndLeaderId(state))
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
       botDelayMs: (rand) =>
@@ -1340,13 +1360,10 @@ const crobardAdapter: GameAdapter = {
     } else {
       return { ok: false, error: 'invalid_action', status: 400 }
     }
+    // Une réponse fausse ou proche n'est pas un refus : elle est écrite (quota
+    // d'essais) et son issue ne part que dans la vue de son auteur.
     const result = applyCrobardRoomAction(state, userId, input)
     if (!result.ok) {
-      // Une réponse fausse/proche n'est PAS une erreur de validation — c'est
-      // une issue normale du jeu, jamais persistée dans l'état partagé.
-      if (result.error === 'GUESS_WRONG' || result.error === 'GUESS_CLOSE') {
-        return { ok: false, error: result.error, status: 200 }
-      }
       const conflict = ['NOTHING_TO_REPLACE', 'NOT_EXPIRED', 'PHASE_CHANGED'].includes(
         result.error
       )
@@ -1370,10 +1387,9 @@ const crobardAdapter: GameAdapter = {
   // s'écourte d'elle-même côté moteur.
   serviceTick(rawState, now, options) {
     const state = rawState as CrobardState
-    const roundEndActor =
-      state.phase === 'roundEnd'
-        ? playerById(state.players, currentCrobardActorId(state))
-        : undefined
+    // Le meneur du bilan n'est pas l'acteur courant (null en roundEnd, pour
+    // l'AFK) : il est calculé à part.
+    const roundEndActor = playerById(state.players, crobardRoundEndLeaderId(state))
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
       botDelayMs: (rand) =>
@@ -1397,17 +1413,9 @@ const telephoneAdapter: GameAdapter = {
     let input: TelephoneRoomActionInput
     if (body.action === 'write' && typeof body.text === 'string') {
       input = { type: 'write', text: body.text }
-    } else if (
-      body.action === 'draw-stroke' &&
-      body.stroke &&
-      typeof body.stroke === 'object' &&
-      Array.isArray((body.stroke as { points?: unknown }).points)
-    ) {
-      input = { type: 'draw-stroke', stroke: body.stroke as Stroke }
-    } else if (body.action === 'clear') {
-      input = { type: 'clear' }
     } else if (body.action === 'submit') {
-      // Le dessin COMPLET voyage avec le submit (sanitisé par le moteur).
+      // Le dessin COMPLET voyage avec le submit (sanitisé par le moteur) :
+      // pas de `draw-stroke` / `clear`, que le client n'envoie plus.
       input = {
         type: 'submit',
         strokes: Array.isArray(body.strokes) ? (body.strokes as Stroke[]) : undefined,
@@ -1525,7 +1533,8 @@ const sansFiltreAdapter: GameAdapter = {
   markLeft: (state, userId, at) => markSFPlayerLeft(state as SFState, userId, at),
   rejoin: (state, userId) => rejoinSFPlayer(state as SFState, userId),
   // SansFiltreOnline : échéance de phase + prochain bot à agir — le PREMIER
-  // en attente en submit (un par tick), le juge bot, le meneur bot du reveal.
+  // en attente en submit (un par tick), le juge bot, le meneur bot du reveal
+  // (plancher de lecture + 1 s au moins).
   serviceTick(rawState, now, options) {
     const state = rawState as SFState
     const pendingBot =
@@ -1541,11 +1550,16 @@ const sansFiltreAdapter: GameAdapter = {
         : state.phase === 'judging'
           ? state.players.find((p) => p.id === state.judgeId && p.isBot)
           : state.phase === 'reveal'
-            ? state.players.find((p) => p.id === currentSFActorId(state) && p.isBot)
+            ? state.players.find((p) => p.id === sfRevealLeaderId(state) && p.isBot)
             : undefined
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
-      botDelayMs: (rand) => (pendingBot ? botTickDelayMs(pendingBot.name, rand) : null),
+      botDelayMs: (rand) =>
+        !pendingBot
+          ? null
+          : state.phase === 'reveal'
+            ? Math.max(SF_REVEAL_BOT_TICK_MS, botTickDelayMs(pendingBot.name, rand))
+            : botTickDelayMs(pendingBot.name, rand),
     })
   },
 }
@@ -1562,10 +1576,12 @@ const motsCodesAdapter: GameAdapter = {
   applyAction(rawState, userId, body) {
     const state = rawState as MCState
     let input: MCRoomActionInput
-    if (body.action === 'clue' && typeof body.word === 'string' && typeof body.count === 'number') {
-      input = { type: 'clue', word: body.word, count: body.count }
-    } else if (body.action === 'guess' && typeof body.tile === 'number') {
-      input = { type: 'guess', tile: body.tile }
+    if (body.action === 'clue' && typeof body.word === 'string' && Number.isInteger(body.count)) {
+      input = { type: 'clue', word: body.word, count: body.count as number }
+    } else if (body.action === 'guess' && Number.isInteger(body.tile)) {
+      // Tuile entière seulement : `revealed[1.5]` n'existe pas, le moteur
+      // l'aurait prise pour une tuile neutre et passé la main.
+      input = { type: 'guess', tile: body.tile as number }
     } else if (body.action === 'pass') {
       input = { type: 'pass' }
     } else if (body.action === 'advance' && typeof body.phaseKey === 'string') {
@@ -1670,7 +1686,7 @@ const dilemmesAdapter: GameAdapter = {
   markLeft: (state, userId, at) => markDilPlayerLeft(state as DilState, userId, at),
   rejoin: (state, userId) => rejoinDilPlayer(state as DilState, userId),
   // DilemmesOnline : échéance de phase + votes des bots au tempo de leur
-  // persona, ou bot meneur du reveal (au moins 3,5 s de lecture).
+  // persona, ou bot meneur du reveal (plancher de lecture + 1 s au moins).
   serviceTick(rawState, now, options) {
     const state = rawState as DilState
     const pendingBot =
@@ -1678,14 +1694,14 @@ const dilemmesAdapter: GameAdapter = {
         ? state.players.find((p) => p.isBot && !state.votes[p.id] && !p.leftAt)
         : undefined
     const revealActor =
-      state.phase === 'reveal' ? playerById(state.players, currentDilActorId(state)) : undefined
+      state.phase === 'reveal' ? playerById(state.players, dilRevealLeaderId(state)) : undefined
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
       botDelayMs: (rand) =>
         pendingBot
           ? botTickDelayMs(pendingBot.name, rand)
           : revealActor?.isBot
-            ? Math.max(3500, botTickDelayMs(revealActor.name, rand))
+            ? Math.max(DIL_REVEAL_BOT_TICK_MS, botTickDelayMs(revealActor.name, rand))
             : null,
     })
   },
@@ -1751,7 +1767,7 @@ const petitBacAdapter: GameAdapter = {
     const state = rawState as PbcState
     const revealActorIsBot =
       state.phase === 'reveal' &&
-      Boolean(playerById(state.players, currentPbcActorId(state))?.isBot)
+      Boolean(playerById(state.players, pbcRevealLeaderId(state))?.isBot)
     return serviceTickOf(state.players, now, options, {
       advance: advanceAt(state),
       botDelayMs: () => (revealActorIsBot ? 5000 : null),
@@ -1771,9 +1787,11 @@ const presidentAdapter: GameAdapter = {
   applyAction(rawState, userId, body) {
     const state = rawState as PreState
     let input: PreRoomActionInput
-    if (body.action === 'play' && Array.isArray(body.cards)) {
+    // Cartes = entiers seulement (le moteur revérifie bornes et propriété).
+    const cardsOk = Array.isArray(body.cards) && body.cards.every((card) => Number.isInteger(card))
+    if (body.action === 'play' && cardsOk) {
       input = { type: 'play', cards: body.cards as number[] }
-    } else if (body.action === 'close' && Array.isArray(body.cards)) {
+    } else if (body.action === 'close' && cardsOk) {
       // Fermeture de carré (hors tour) — ne pas oublier de transmettre cards.
       input = { type: 'close', cards: body.cards as number[] }
     } else if (body.action === 'pass') {
@@ -1815,7 +1833,10 @@ const presidentAdapter: GameAdapter = {
   // le complément, et le minuteur retombe sur l'échéance.
   serviceTick(rawState, now, options) {
     const state = rawState as PreState
-    const actor = playerById(state.players, currentPreActorId(state))
+    const actor = playerById(
+      state.players,
+      state.phase === 'interlude' ? preInterludeLeaderId(state) : currentPreActorId(state)
+    )
     const run = state.trickRun ?? null
     const closeChance =
       state.phase === 'playing' &&

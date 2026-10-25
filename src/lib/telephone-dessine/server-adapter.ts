@@ -73,10 +73,13 @@ export function parseTelephoneState(json: string | null): TelephoneState | null 
   }
 }
 
+/**
+ * Pas de `draw-stroke` ni de `clear` : le client dessine en local et envoie
+ * le dessin entier avec `submit`. Ouverts à l'API, ils empilaient des traits
+ * bruts dans l'état sans que personne d'honnête ne s'en serve.
+ */
 export type TelephoneRoomActionInput =
   | { type: 'write'; text: string }
-  | { type: 'draw-stroke'; stroke: Stroke }
-  | { type: 'clear' }
   | { type: 'submit'; strokes?: Stroke[] }
   | { type: 'advance'; phaseKey: string }
   | { type: 'continue'; phaseKey?: string }
@@ -105,13 +108,6 @@ export function applyTelephoneRoomAction(
             now: Date.now(),
           }),
         }
-      case 'draw-stroke':
-        return {
-          ok: true,
-          state: reduceTelephone(state, { type: 'DRAW_STROKE', playerId: userId, stroke: input.stroke }),
-        }
-      case 'clear':
-        return { ok: true, state: reduceTelephone(state, { type: 'CLEAR', playerId: userId }) }
       case 'submit':
         return {
           ok: true,

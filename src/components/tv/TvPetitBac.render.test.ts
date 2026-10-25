@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl'
 import { describe, expect, it } from 'vitest'
 import fr from '../../../messages/fr.json'
-import type { PbcClientView } from '@/lib/petit-bac/engine'
+import { createPbcState, reducePbc, PBC_CATEGORY_COUNT, type PbcClientView } from '@/lib/petit-bac/engine'
+import { phaseKey } from '@/lib/online/phase-clock'
 import { build } from '@/app/[locale]/tv/apercu-dev/fixtures/petit-bac'
+import { onlineRoom, previewMembers } from '@/app/[locale]/tv/apercu-dev/fixture-kit'
 import { TvPetitBac } from './TvPetitBac'
 
 ;(globalThis as { React?: typeof React }).React = React
@@ -73,6 +75,26 @@ describe('TvPetitBac — écran TV du Petit Bac', () => {
       if (view.phase !== 'write' && view.phase !== 'flush') continue
       expect(html, step.label).not.toMatch(/class="[^"]*truncate[^"]*text-(gold|amber-200)/)
     }
+  })
+
+  it('un joueur parti PENDANT la révélation garde ses réponses à l’écran (contestables)', () => {
+    const members = previewMembers(4)
+    const at = Date.now() - 60_000
+    let state = createPbcState(members.map((m) => ({ id: m.userId, name: m.displayName })), 'tv-depart', at, 1)
+    state = reducePbc(state, { type: 'ADVANCE', claimedKey: phaseKey(state), now: at + 5_000 })
+    const letter = state.letters[0]
+    const answers = (tag: string) => Array.from({ length: PBC_CATEGORY_COUNT }, (_, i) => `${letter}${tag}${i}`)
+    state = reducePbc(state, { type: 'STOP', playerId: 'u1', answers: answers('triche'), now: at + 30_000 })
+    for (const id of ['u2', 'u3', 'u4']) {
+      state = reducePbc(state, { type: 'SUBMIT', playerId: id, answers: answers(id), now: at + 31_000 })
+    }
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'u2', targetId: 'u1', category: 0, now: at + 32_000 })
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'u1', at: at + 33_000 })
+    const room = onlineRoom('petit-bac', state, { members, stateVersion: state.version })
+    const { html, view } = render({ label: 'départ au reveal', room, fixture: 'test' })
+    expect(view.revealGrid?.[0]?.map((c) => c.playerId)).toContain('u1')
+    expect(html).toContain(`${letter}triche0`)
+    expect(html).toMatch(/1\/2/)
   })
 
   it('aucune taille de texte illisible ni opacité morte', () => {

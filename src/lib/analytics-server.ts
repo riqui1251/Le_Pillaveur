@@ -365,8 +365,10 @@ async function findAddressesInNetwork(
 
 /**
  * `visitorDetails` (admins seulement) : détail des navigateurs trouvés. Sans
- * lui, seuls leur identifiant et leur activité sortent — le bandeau n'affiche
- * que leur nombre, et un modérateur n'a pas accès aux cartes visiteurs.
+ * lui, seule leur activité sort — le bandeau n'affiche que leur nombre, et un
+ * modérateur n'a pas accès aux cartes visiteurs. Surtout pas leur identifiant :
+ * c'est la valeur brute du cookie lp_vid, qui, posée dans un autre navigateur,
+ * permet d'effacer ou de réécrire les traces de celui-ci (/api/analytics/ping).
  */
 export async function lookupByIp(
   ip: string,
@@ -486,7 +488,7 @@ export async function lookupByIp(
     })),
     visitors: presences.map((p) => {
       const online = isOnline(p.lastSeen, now.getTime())
-      if (!visitorDetails) return { visitorId: p.visitorId, online }
+      if (!visitorDetails) return { online }
       // Identité servie seulement si le navigateur était connecté à ce compte
       // au dernier ping (isPresenceConnectedHere) : jamais le dernier compte vu.
       const identity =

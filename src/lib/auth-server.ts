@@ -1,7 +1,9 @@
 import { cookies } from 'next/headers'
+import type { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { createHash, randomBytes } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/api-route'
 import {
   canAccessSupervision,
   canAssignRoles,
@@ -71,13 +73,65 @@ function sessionExpiry(days: number, now: Date = new Date()): Date {
   return new Date(now.getTime() + days * DAY_MS)
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12)
+/**
+ * bcryptjs calcule en JavaScript, sur l'unique thread de Node, par tranches de
+ * 100 ms : au coût 12 un calcul occupe ~400 ms, et dix en parallèle
+ * retardaient TOUTES les requêtes (parties en ligne comprises) de plusieurs
+ * secondes. Au-delà de trois calculs en cours, refus immédiat
+ * (PasswordHashBusyError, puis passwordHashBusyResponse) plutôt qu'une file
+ * qui grossit.
+ */
+const MAX_CONCURRENT_PASSWORD_HASHES = 3
+const PASSWORD_HASH_RETRY_AFTER_SEC = 2
+let passwordHashesInFlight = 0
+
+export class PasswordHashBusyError extends Error {
+  constructor() {
+    super('password hashing busy')
+    this.name = 'PasswordHashBusyError'
+  }
 }
 
+async function withPasswordHashSlot<T>(run: () => Promise<T>): Promise<T> {
+  if (passwordHashesInFlight >= MAX_CONCURRENT_PASSWORD_HASHES) throw new PasswordHashBusyError()
+  passwordHashesInFlight += 1
+  try {
+    return await run()
+  } finally {
+    passwordHashesInFlight -= 1
+  }
+}
+
+export function isPasswordHashBusyError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'PasswordHashBusyError'
+}
+
+/** 503 avec Retry-After : trop de calculs de mot de passe en cours, réessayer dans un instant. */
+export function passwordHashBusyResponse(): NextResponse {
+  const response = apiError('service_unavailable', 503, { retryAfterSec: PASSWORD_HASH_RETRY_AFTER_SEC })
+  response.headers.set('Retry-After', String(PASSWORD_HASH_RETRY_AFTER_SEC))
+  return response
+}
+
+/**
+ * Empreinte (coût 12, comme hashPassword) d'un secret aléatoire jeté. Un
+ * compte inconnu ou sans mot de passe est comparé à elle : la connexion
+ * répondait sinon en ~1 ms au lieu de ~400 ms, ce qui disait quelles adresses
+ * ont un compte.
+ */
+const DECOY_PASSWORD_HASH = '$2b$12$KT77rdIL.tMUiMCUUBDas.CgUVYGOp75ZaFm2vku4vapqiQw/nLTC'
+
+export async function hashPassword(password: string): Promise<string> {
+  return withPasswordHashSlot(() => bcrypt.hash(password, 12))
+}
+
+/** Un hash vide (compte Google, compte inconnu) n'accepte rien, après le même calcul qu'un vrai. */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  if (!hash) return false
-  return bcrypt.compare(password, hash)
+  if (!hash) {
+    await withPasswordHashSlot(() => bcrypt.compare(password, DECOY_PASSWORD_HASH))
+    return false
+  }
+  return withPasswordHashSlot(() => bcrypt.compare(password, hash))
 }
 
 export function createSessionToken(): string {
@@ -399,8 +453,43 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
   await prisma.session.deleteMany({ where: { userId } })
 }
 
+/**
+ * Prise de compte par PRÉ-INSCRIPTION : l'inscription par mot de passe (et
+ * Facebook, dont l'adresse n'est pas prouvée) ne vérifie pas l'adresse.
+ * N'importe qui pouvait ouvrir un compte avec celle d'autrui, puis attendre
+ * que son vrai titulaire s'y connecte par Google, Discord ou Apple : il
+ * entrait dans un compte dont l'intrus gardait le mot de passe et les
+ * sessions.
+ *
+ * À appeler quand un fournisseur vient de PROUVER l'adresse du compte retrouvé
+ * par e-mail. Si elle ne l'avait jamais été et que le compte porte un accès
+ * qu'un tiers a pu poser (mot de passe, identité liée), le titulaire prouvé le
+ * réclame : mot de passe effacé (il en refera un par « mot de passe oublié »),
+ * sessions révoquées, identités déliées. Une seule transaction : un échec à
+ * mi-chemin laisserait à l'intrus l'un de ses accès, et le compte, devenu
+ * vérifié, ne serait plus jamais réclamé. Renvoie true si le compte a été
+ * réclamé.
+ */
+export async function claimUnprovenAccount(user: {
+  id: string
+  emailVerified: Date | null
+  passwordHash: string
+}): Promise<boolean> {
+  if (user.emailVerified) return false
+  if (!user.passwordHash && (await prisma.oAuthAccount.count({ where: { userId: user.id } })) === 0) return false
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { passwordHash: '' } }),
+    prisma.session.deleteMany({ where: { userId: user.id } }),
+    prisma.oAuthAccount.deleteMany({ where: { userId: user.id } }),
+  ])
+  return true
+}
+
+/** RFC 5321 : une adresse tient en 254 caractères. Contrôlé avant la regex et avant toute clé de quota. */
+const EMAIL_MAX_LENGTH = 254
+
 export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return email.length <= EMAIL_MAX_LENGTH && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
 export function isValidPassword(password: string): boolean {

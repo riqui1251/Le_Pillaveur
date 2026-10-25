@@ -9,6 +9,7 @@ import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 import { GAMES, hasContentIn } from '@/lib/games'
 import { getGameAdapter } from '@/lib/online/game-adapters'
+import { apiError, withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -57,6 +58,25 @@ function settingsForGame(current: RoomSettings, gameId: string, humans: number):
 }
 
 /**
+ * Tours de compare-and-swap sur settingsJson : un choix d'équipe (/team) écrit
+ * entre la lecture et l'écriture fait perdre le tour, on relit et on rejoue.
+ */
+const SETTINGS_WRITE_ATTEMPTS = 10
+
+type SettingsRoom = { status: string; hostUserId: string }
+
+/** Refus tenus à la première lecture comme à chaque relecture après un conflit. */
+function settingsRefusal(room: SettingsRoom, userId: string): NextResponse | null {
+  if (room.status !== 'waiting') {
+    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
+  }
+  if (room.hostUserId !== userId) {
+    return NextResponse.json(onlineErrorBody('host_only_settings'), { status: 403 })
+  }
+  return null
+}
+
+/**
  * L'hôte met à jour les paramètres (difficulté, etc.) pendant le lobby — et
  * peut changer de JEU (`gameId`) sans refaire de table : même code, mêmes
  * joueurs, qui suivent vers la page du nouveau jeu (GameOnlineLobby). Refus :
@@ -65,23 +85,19 @@ function settingsForGame(current: RoomSettings, gameId: string, humans: number):
  * `content_lang_unavailable` (409) si ses cartes n'existent pas dans la
  * langue de la table.
  */
-export async function PUT(request: Request, { params }: Params) {
+export const PUT = withApiRoute('online/rooms/[roomId]/settings PUT', async (request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
   }
 
   const { roomId } = await params
-  const room = await prisma.onlineRoom.findUnique({ where: { id: roomId } })
+  let room = await prisma.onlineRoom.findUnique({ where: { id: roomId } })
   if (!room) {
     return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
   }
-  if (room.status !== 'waiting') {
-    return NextResponse.json(onlineErrorBody('game_already_started'), { status: 409 })
-  }
-  if (room.hostUserId !== user.id) {
-    return NextResponse.json(onlineErrorBody('host_only_settings'), { status: 403 })
-  }
+  const refused = settingsRefusal(room, user.id)
+  if (refused) return refused
 
   // Refus de corps trop gros : `payload_too_large`, le code générique que
   // withApiRoute/readApiJson posent déjà partout ailleurs (il est traduit dans
@@ -99,43 +115,11 @@ export async function PUT(request: Request, { params }: Params) {
   // Forme libre comme avant : chaque réglage est validé un à un ci-dessous.
   const body = parsed.body
 
-  // Changement de jeu : même garde qu'à la création (POST /rooms) — un jeu
-  // masqué ou purement local n'a pas d'écran en ligne à rendre. Le jeu
-  // actuel redemandé n'est pas un changement.
-  let nextGameId: string | null = null
-  let humans = 0
-  if (body.gameId !== undefined) {
-    const requested = typeof body.gameId === 'string' ? body.gameId.trim() : ''
-    const game = GAMES.find((g) => g.id === requested && !g.hidden && g.onlineReady)
-    if (!game) {
-      return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
-    }
-    if (game.id !== room.gameId) {
-      nextGameId = game.id
-      humans = await prisma.onlineRoomMember.count({ where: { roomId } })
-      // Une tablée déjà trop nombreuse pour le nouveau jeu ne pourrait plus
-      // être lancée : refusé ici, plutôt qu'une table qui bute sur
-      // max_players au lancement (même borne, même code, même `count`).
-      const max = getGameAdapter(game.id)?.maxPlayers ?? Number.MAX_SAFE_INTEGER
-      if (humans > max) {
-        return NextResponse.json(onlineErrorBody('max_players', { count: max }), { status: 409 })
-      }
-      // La langue de la table est posée à sa création (POST /rooms) et suit
-      // le changement de jeu (settingsForGame) : une table anglaise ne passe
-      // pas à un jeu dont les cartes n'existent qu'en français. Seul le
-      // CHANGEMENT est contrôlé — une table déjà ouverte sur ce jeu garde ses
-      // autres réglages.
-      if (!hasContentIn(game, parseRoomSettings(room.settingsJson).lang)) {
-        return NextResponse.json(onlineErrorBody('content_lang_unavailable'), { status: 409 })
-      }
-    }
-  }
-
-  const current = parseRoomSettings(room.settingsJson)
-  const next: RoomSettings = nextGameId ? settingsForGame(current, nextGameId, humans) : { ...current }
-
+  // Réglages demandés, validés une fois pour toutes ; ils s'appliquent sur la
+  // salle lue, relue après chaque conflit d'écriture.
+  const patch: RoomSettings = {}
   if (typeof body.difficulty === 'string' && VALID_DIFFICULTIES.has(body.difficulty)) {
-    next.difficulty = body.difficulty as NonNullable<RoomSettings['difficulty']>
+    patch.difficulty = body.difficulty as NonNullable<RoomSettings['difficulty']>
   }
   // Valeur rediffusée à tous les membres du lobby : liste blanche obligatoire,
   // comme les autres réglages (une chaîne libre était persistée telle quelle).
@@ -143,24 +127,24 @@ export async function PUT(request: Request, { params }: Params) {
     typeof body.plinkoDifficulty === 'string' &&
     VALID_PLINKO_DIFFICULTIES.has(body.plinkoDifficulty)
   ) {
-    next.plinkoDifficulty = body.plinkoDifficulty as NonNullable<
+    patch.plinkoDifficulty = body.plinkoDifficulty as NonNullable<
       RoomSettings['plinkoDifficulty']
     >
   }
   if (body.hiLoMode === 'standard' || body.hiLoMode === 'traversee') {
-    next.hiLoMode = body.hiLoMode
+    patch.hiLoMode = body.hiLoMode
   }
   if (typeof body.tcMode === 'string' && VALID_TC_MODES.has(body.tcMode)) {
-    next.tcMode = body.tcMode as NonNullable<RoomSettings['tcMode']>
+    patch.tcMode = body.tcMode as NonNullable<RoomSettings['tcMode']>
   }
   if (typeof body.quizCount === 'number' && [10, 15, 20].includes(body.quizCount)) {
-    next.quizCount = body.quizCount
+    patch.quizCount = body.quizCount
   }
   if (typeof body.lgDebateMin === 'number' && [1, 2, 3, 4, 5].includes(body.lgDebateMin)) {
-    next.lgDebateMin = body.lgDebateMin
+    patch.lgDebateMin = body.lgDebateMin
   }
   if (typeof body.lgExtraWolf === 'boolean') {
-    next.lgExtraWolf = body.lgExtraWolf
+    patch.lgExtraWolf = body.lgExtraWolf
   }
   if (
     typeof body.botsCount === 'number' &&
@@ -168,16 +152,16 @@ export async function PUT(request: Request, { params }: Params) {
     body.botsCount >= 0 &&
     body.botsCount <= 11
   ) {
-    next.botsCount = body.botsCount
+    patch.botsCount = body.botsCount
   }
   if (typeof body.menteurPalifico === 'boolean') {
-    next.menteurPalifico = body.menteurPalifico
+    patch.menteurPalifico = body.menteurPalifico
   }
   if (typeof body.menteurCalza === 'boolean') {
-    next.menteurCalza = body.menteurCalza
+    patch.menteurCalza = body.menteurCalza
   }
   if (typeof body.tcPowerups === 'boolean') {
-    next.tcPowerups = body.tcPowerups
+    patch.tcPowerups = body.tcPowerups
   }
   if (
     typeof body.imposteurCount === 'number' &&
@@ -185,37 +169,37 @@ export async function PUT(request: Request, { params }: Params) {
     body.imposteurCount >= 1 &&
     body.imposteurCount <= 3
   ) {
-    next.imposteurCount = body.imposteurCount
+    patch.imposteurCount = body.imposteurCount
   }
   if (typeof body.bluffRounds === 'number' && [6, 8, 10].includes(body.bluffRounds)) {
-    next.bluffRounds = body.bluffRounds
+    patch.bluffRounds = body.bluffRounds
   }
   if (typeof body.espionDiscussionMin === 'number' && [3, 5, 7].includes(body.espionDiscussionMin)) {
-    next.espionDiscussionMin = body.espionDiscussionMin
+    patch.espionDiscussionMin = body.espionDiscussionMin
   }
   if (typeof body.espionRoundsToWin === 'number' && [3, 5, 7].includes(body.espionRoundsToWin)) {
-    next.espionRoundsToWin = body.espionRoundsToWin
+    patch.espionRoundsToWin = body.espionRoundsToWin
   }
   if (typeof body.tabouTargetScore === 'number' && [15, 20, 25].includes(body.tabouTargetScore)) {
-    next.tabouTargetScore = body.tabouTargetScore
+    patch.tabouTargetScore = body.tabouTargetScore
   }
   if (typeof body.crobardRounds === 'number' && [6, 8, 10].includes(body.crobardRounds)) {
-    next.crobardRounds = body.crobardRounds
+    patch.crobardRounds = body.crobardRounds
   }
   if (typeof body.sfRounds === 'number' && [5, 8, 12].includes(body.sfRounds)) {
-    next.sfRounds = body.sfRounds
+    patch.sfRounds = body.sfRounds
   }
   if (typeof body.dilRounds === 'number' && [10, 15, 20].includes(body.dilRounds)) {
-    next.dilRounds = body.dilRounds
+    patch.dilRounds = body.dilRounds
   }
   if (typeof body.dilCoquin === 'boolean') {
-    next.dilCoquin = body.dilCoquin
+    patch.dilCoquin = body.dilCoquin
   }
   if (typeof body.pbcRounds === 'number' && [3, 5, 8].includes(body.pbcRounds)) {
-    next.pbcRounds = body.pbcRounds
+    patch.pbcRounds = body.pbcRounds
   }
   if (typeof body.preManches === 'number' && [1, 3, 5].includes(body.preManches)) {
-    next.preManches = body.preManches
+    patch.preManches = body.preManches
   }
 
   const visibilityUpdate =
@@ -223,23 +207,90 @@ export async function PUT(request: Request, { params }: Params) {
       ? { visibility: body.visibility }
       : {}
 
-  if (nextGameId) {
-    // Nouveau jeu = nouvelle décision : chacun se remet « prêt » en
-    // connaissance de cause. Les deux écritures ensemble — une table au jeu
-    // changé mais aux joueurs encore « prêts » se lancerait d'un clic.
-    await prisma.$transaction([
-      prisma.onlineRoomMember.updateMany({ where: { roomId }, data: { isReady: false } }),
-      prisma.onlineRoom.update({
-        where: { id: roomId },
-        data: { gameId: nextGameId, settingsJson: JSON.stringify(next), ...visibilityUpdate },
-      }),
-    ])
-  } else {
-    await prisma.onlineRoom.update({
-      where: { id: roomId },
-      data: { settingsJson: JSON.stringify(next), ...visibilityUpdate },
-    })
+  // Compare-and-swap sur les réglages lus (et le jeu) : un choix d'équipe
+  // (/team) écrit entre la lecture et l'écriture était effacé par l'objet
+  // entier réécrit ici.
+  for (let attempt = 1; ; attempt += 1) {
+    // Changement de jeu : même garde qu'à la création (POST /rooms) — un jeu
+    // masqué ou purement local n'a pas d'écran en ligne à rendre. Le jeu
+    // actuel redemandé n'est pas un changement.
+    let nextGameId: string | null = null
+    let humans = 0
+    if (body.gameId !== undefined) {
+      const requested = typeof body.gameId === 'string' ? body.gameId.trim() : ''
+      const game = GAMES.find((g) => g.id === requested && !g.hidden && g.onlineReady)
+      if (!game) {
+        return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
+      }
+      if (game.id !== room.gameId) {
+        nextGameId = game.id
+        humans = await prisma.onlineRoomMember.count({ where: { roomId } })
+        // Une tablée déjà trop nombreuse pour le nouveau jeu ne pourrait plus
+        // être lancée : refusé ici, plutôt qu'une table qui bute sur
+        // max_players au lancement (même borne, même code, même `count`).
+        const max = getGameAdapter(game.id)?.maxPlayers ?? Number.MAX_SAFE_INTEGER
+        if (humans > max) {
+          return NextResponse.json(onlineErrorBody('max_players', { count: max }), { status: 409 })
+        }
+        // La langue de la table est posée à sa création (POST /rooms) et suit
+        // le changement de jeu (settingsForGame) : une table anglaise ne passe
+        // pas à un jeu dont les cartes n'existent qu'en français. Seul le
+        // CHANGEMENT est contrôlé — une table déjà ouverte sur ce jeu garde ses
+        // autres réglages.
+        if (!hasContentIn(game, parseRoomSettings(room.settingsJson).lang)) {
+          return NextResponse.json(onlineErrorBody('content_lang_unavailable'), { status: 409 })
+        }
+      }
+    }
+
+    const current = parseRoomSettings(room.settingsJson)
+    const next: RoomSettings = {
+      ...(nextGameId ? settingsForGame(current, nextGameId, humans) : current),
+      ...patch,
+    }
+    const where = {
+      id: roomId,
+      status: 'waiting',
+      hostUserId: user.id,
+      gameId: room.gameId,
+      settingsJson: room.settingsJson,
+    }
+
+    let written: number
+    if (nextGameId) {
+      // Nouveau jeu = nouvelle décision : chacun se remet « prêt » en
+      // connaissance de cause. Les deux écritures ensemble — une table au jeu
+      // changé mais aux joueurs encore « prêts » se lancerait d'un clic. La
+      // remise à zéro ne suit que si la salle a bien changé de jeu.
+      const [roomWrite] = await prisma.$transaction([
+        prisma.onlineRoom.updateMany({
+          where,
+          data: { gameId: nextGameId, settingsJson: JSON.stringify(next), ...visibilityUpdate },
+        }),
+        prisma.onlineRoomMember.updateMany({
+          where: { roomId, room: { gameId: nextGameId } },
+          data: { isReady: false },
+        }),
+      ])
+      written = roomWrite.count
+    } else {
+      const roomWrite = await prisma.onlineRoom.updateMany({
+        where,
+        data: { settingsJson: JSON.stringify(next), ...visibilityUpdate },
+      })
+      written = roomWrite.count
+    }
+    if (written === 1) break
+    if (attempt >= SETTINGS_WRITE_ATTEMPTS) return apiError('version_conflict', 409)
+
+    room = await prisma.onlineRoom.findUnique({ where: { id: roomId } })
+    if (!room) {
+      return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
+    }
+    const refusedAgain = settingsRefusal(room, user.id)
+    if (refusedAgain) return refusedAgain
   }
+
   // Un passage public ↔ privé/invitation change ce que le guichet liste — et
   // un changement de jeu, le jeu affiché de la table.
   invalidateLobbiesCache()
@@ -248,4 +299,4 @@ export async function PUT(request: Request, { params }: Params) {
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })
-}
+})

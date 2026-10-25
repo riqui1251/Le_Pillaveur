@@ -78,3 +78,26 @@ describe('POST /action — présence', () => {
     expect(applyMock).not.toHaveBeenCalled()
   })
 })
+
+describe('POST /action — quota par compte', () => {
+  it('au-delà de 600 coups par minute : 429 rate_limited, sans relire la salle', async () => {
+    userMock.mockResolvedValue({ id: 'rafale' })
+    loadMock.mockResolvedValue(loaded(secondsAgo(5)))
+
+    for (let i = 0; i < 600; i++) expect((await play()).status).toBe(200)
+    loadMock.mockClear()
+    const res = await play()
+
+    expect(res.status).toBe(429)
+    expect(await res.json()).toMatchObject({ error: 'rate_limited', code: 'rate_limited' })
+    expect(loadMock).not.toHaveBeenCalled()
+    expect(applyMock).toHaveBeenCalledTimes(600)
+  })
+
+  it('le quota d’un compte ne touche pas les autres joueurs de la table', async () => {
+    userMock.mockResolvedValue({ id: 'voisin' })
+    loadMock.mockResolvedValue(loaded(secondsAgo(5)))
+
+    expect((await play()).status).toBe(200)
+  })
+})

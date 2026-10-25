@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth-server'
 import { prisma } from '@/lib/prisma'
 import { createUniqueRoomCode } from '@/lib/online-room'
-import { readJsonBodyLimited } from '@/lib/rate-limit'
+import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
+import { MAX_CAST_BODY_BYTES } from '@/lib/cast-types'
 
 /**
  * Crée une SALLE DE CAST éphémère pour diffuser un jeu LOCAL sur une TV.
@@ -15,34 +16,24 @@ export const dynamic = 'force-dynamic'
 
 const CASTABLE_GAMES = new Set(['plinko', 'pmu', 'petit-buveur'])
 
-/**
- * Le corps porte l'état d'affichage du jeu local (`state`, écrit tel quel en
- * base) : quelques kilo-octets en pratique, mais rien ne le bornait — n'importe
- * quel client pouvait pousser plusieurs mégaoctets dans `gameStateJson`.
- * 256 Ko laisse une marge confortable à l'état le plus bavard.
- */
-const MAX_CAST_BODY_BYTES = 256 * 1024
-
-export async function POST(request: Request) {
+export const POST = withApiRoute('tv/cast POST', async (request: Request) => {
   const user = await getCurrentUser()
   if (!user) {
-    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    return apiError('auth_required', 401)
   }
 
-  // Cette route garde ses codes d'erreur à elle (la TV n'utilise pas
-  // online-errors.ts) : un corps refusé répond dans le même vocabulaire.
-  const parsed = await readJsonBodyLimited<{ gameId?: string; state?: string } | null>(
+  // Le corps porte l'état d'affichage du jeu local, écrit tel quel en base :
+  // borné (MAX_CAST_BODY_BYTES), comme la mise à jour.
+  const parsed = await readApiJson<{ gameId?: string; state?: string } | null>(
     request,
     MAX_CAST_BODY_BYTES
   )
-  if (!parsed.ok && parsed.reason === 'too_large') {
-    return NextResponse.json({ error: 'body-too-large' }, { status: 413 })
-  }
-  const body = (parsed.ok ? parsed.body : null) ?? {}
+  if (!parsed.ok) return parsed.response
+  const body = parsed.body ?? {}
 
   const gameId = typeof body.gameId === 'string' ? body.gameId : ''
   if (!CASTABLE_GAMES.has(gameId)) {
-    return NextResponse.json({ error: 'invalid-game' }, { status: 400 })
+    return apiError('invalid_game', 400)
   }
 
   // Une seule salle de cast active par utilisateur.
@@ -62,4 +53,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({ code: room.code })
-}
+})

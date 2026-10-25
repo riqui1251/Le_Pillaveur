@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { prisma } from '@/lib/prisma'
 import { canManageUserFeedback, canViewUserFeedback } from '@/lib/roles'
 import { feedbackStatusLabel, feedbackTypeLabel, isFeedbackStatus } from '@/lib/feedback'
 import { logAccountEvent } from '@/lib/ban-server'
-import { adminErrorResponse, requireRole } from '../../_guard'
+import { adminErrorResponse, requireRole, readAdminBody } from '../../_guard'
 
 function parseScreenshots(raw: string | null): string[] {
   if (!raw) return []
@@ -66,16 +67,18 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+export const PATCH = withApiRoute('admin/feedback/[id] PATCH', async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     // Lire un retour est ouvert aux modérateurs (F44) ; le CLORE reste admin+.
     const actor = await requireRole(canManageUserFeedback)
 
     const { id } = await params
-    const body = await request.json()
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const status = typeof body.status === 'string' ? body.status : ''
 
     if (!isFeedbackStatus(status)) {
@@ -117,4 +120,4 @@ export async function PATCH(
   } catch (error) {
     return adminErrorResponse(error, 'feedback PATCH')
   }
-}
+})

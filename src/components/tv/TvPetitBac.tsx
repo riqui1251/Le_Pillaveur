@@ -219,8 +219,8 @@ function Reveal({
   const rows = rowIds
     .map((id, r) => ({ player: state.players.find((p) => p.id === id), cells: grid.map((col) => col[r]) }))
     .filter((row): row is { player: Player; cells: PbcRevealCell[] } => Boolean(row.player))
-  // La grille du moteur ne garde que les joueurs actifs : un parti garde sa ligne
-  // de score en bas, comme dans les totaux des téléphones.
+  // La grille du moteur ne garde que les joueurs comptés au dépouillement : un
+  // parti d'avant garde sa ligne de score en bas, comme dans les totaux des téléphones.
   const absent = state.players.filter((p) => !rowIds.includes(p.id))
   // Le seuil de la vue spectateur compte TOUS les joueurs (personne n'est
   // exclu du vote) : celui d'une case exclut son propriétaire, comme sur les téléphones.

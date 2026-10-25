@@ -43,11 +43,18 @@ import { TurnBanner } from '@/components/game/TurnBanner'
 import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
+import {
+  TC_MODES,
+  TC_PLACEMENT_MS,
+  TC_REJOIN_GRACE_MS,
+  otherTeam,
+  type TCClientView,
+  type TeamId,
+} from '@/lib/toucher-coule/engine'
 import { tcBombCells, tcBombFits, tcCellPx, tcColumnLetter, tcCoord, tcShipCells } from '@/lib/toucher-coule/board'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -335,6 +342,23 @@ export function ToucherCouleOnline() {
       : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
     graceMs: TC_REJOIN_GRACE_MS,
+  })
+
+  // ÉCHÉANCE DU PLACEMENT : phase simultanée, sans joueur « au tour » à
+  // expulser. Le tick « advance », arbitré par rang, place au hasard les
+  // navires des retardataires. Réarmé après l'échéance (retryMs), comme la
+  // mise en place du 1220 : seul ce tick fait bouger la phase.
+  const placementEndsAt = view?.phase === 'placement' ? (view.phaseEndsAt ?? null) : null
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room && view.phase === 'placement'),
+    advance:
+      placementEndsAt !== null && view?.phaseKey
+        ? { phaseKey: view.phaseKey, dueAt: placementEndsAt, retryMs: 5000 }
+        : null,
   })
 
   // Toute écriture d'état (tir, tour qui passe, départ) remet la visée à zéro :
@@ -715,6 +739,8 @@ export function ToucherCouleOnline() {
       <PhaseHeader
         round={t('boardInfo', { mode: view.mode, size })}
         phase={placementPhase ? (placingNow ? t('phasePlacement') : t('waitingPlacement')) : t('phaseBattle')}
+        endsAt={placementEndsAt}
+        total={TC_PLACEMENT_MS}
         status={
           placementPhase
             ? t('placedCount', { placed: view.players.filter((p) => p.placed).length, total: view.players.length })
@@ -819,7 +845,10 @@ export function ToucherCouleOnline() {
       {/* ── PHASE PLACEMENT ── */}
       {placingNow && (
         <div className="flex flex-col gap-3">
-          <p className="text-center text-sm text-cream/80">{t('placementHint')}</p>
+          <p className="text-center text-sm text-cream/80">
+            {t('placementHint')}
+            {placementEndsAt !== null && <> {t('placementDeadlineHint')}</>}
+          </p>
 
           {/* Bateaux à poser */}
           <div className="flex flex-wrap items-center justify-center gap-2">

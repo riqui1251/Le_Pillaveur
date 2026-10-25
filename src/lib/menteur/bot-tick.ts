@@ -1,5 +1,11 @@
 import { botTickDelayMs } from '@/lib/online/bot-personas'
-import type { MenteurPhase } from './engine'
+import {
+  menteurBotSeatId,
+  menteurHumanSeated,
+  menteurSeatPlayedByBot,
+  type MenteurPhase,
+  type MenteurSeatTable,
+} from './engine'
 
 /**
  * Délai du tick « bot » du Menteur, PARTAGÉ par le client (MenteurOnline →
@@ -8,7 +14,7 @@ import type { MenteurPhase } from './engine'
  * tirage diffère, et le serveur ne devance donc jamais un client éveillé.
  * Pur, sans données — un composant client l'importe.
  *
- *   • enchères, bot au tour : le tempo de son persona ;
+ *   • enchères, bot (ou humain parti) au tour : le tempo de son persona ;
  *   • révélation menée par un bot : 5 s si un humain non parti est assis
  *     (vivant ou éliminé), 2,6 s sinon ;
  *   • sinon null : aucun bot n'a la main.
@@ -26,7 +32,7 @@ export const MENTEUR_REVEAL_BOTS_ONLY_TICK_MS = 2600
 
 export type MenteurBotTickInput = {
   phase: MenteurPhase
-  /** L'acteur courant (enchérisseur au tour, meneur de la révélation) est un bot. */
+  /** Le siège du tick (enchérisseur au tour, meneur de la révélation) est joué par le bot : bot ou parti. */
   actorIsBot: boolean
   actorName: string | null | undefined
   /** Un humain non parti est assis, vivant ou éliminé (menteurHumanSeated). */
@@ -41,4 +47,22 @@ export function menteurBotTickDelayMs(
   if (phase === 'bidding') return botTickDelayMs(actorName, rand)
   if (phase === 'reveal') return humanSeated ? MENTEUR_REVEAL_BOT_TICK_MS : MENTEUR_REVEAL_BOTS_ONLY_TICK_MS
   return null
+}
+
+/**
+ * Le même délai lu sur une table, état serveur ou vue d'un joueur : le siège
+ * du tick (menteurBotSeatId), joué par le bot s'il est bot ou parti.
+ */
+export function menteurTableBotTickDelayMs(table: MenteurSeatTable, rand: () => number): number | null {
+  const seatId = menteurBotSeatId(table)
+  const seat = table.players.find((p) => p.id === seatId)
+  return menteurBotTickDelayMs(
+    {
+      phase: table.phase,
+      actorIsBot: Boolean(seat && menteurSeatPlayedByBot(seat)),
+      actorName: seat?.name,
+      humanSeated: menteurHumanSeated(table.players),
+    },
+    rand
+  )
 }

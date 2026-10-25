@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { Prisma } from '@prisma/client'
 import { assertCanAssignRoles } from '@/lib/auth-server'
 import { getBanState, logAccountEvent } from '@/lib/ban-server'
@@ -38,7 +39,7 @@ import {
   NON_LEGACY_ACCOUNT_WHERE,
   type ListedAccountKind,
 } from '@/lib/account-kind-server'
-import { adminErrorResponse, parsePaging, requireRole } from '../_guard'
+import { adminErrorResponse, parsePaging, requireRole, readAdminBody } from '../_guard'
 
 /**
  * Liste des comptes — PAGINÉE et filtrée EN BASE (F75). Auparavant la route
@@ -281,10 +282,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('admin/users PATCH', async (request: Request) => {
   try {
     const actor = await requireRole(canAccessSupervision)
-    const body = await request.json()
+    const read = await readAdminBody(request)
+    if (!read.ok) return read.response
+    const body = read.body
     const userId = typeof body.userId === 'string' ? body.userId : ''
     const displayName =
       typeof body.displayName === 'string' ? body.displayName.trim() : undefined
@@ -419,4 +422,4 @@ export async function PATCH(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'users PATCH')
   }
-}
+})

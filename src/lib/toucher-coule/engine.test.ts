@@ -10,11 +10,13 @@ import {
   toTCClientView,
   toTCSpectatorView,
   TC_MODES,
+  TC_PLACEMENT_MS,
   TC_REJOIN_GRACE_MS,
   type TCInitialPlayer,
   type TCState,
 } from './engine'
 import { rngFromState } from '@/lib/petit-buveur/rng'
+import { phaseKey } from '@/lib/online/phase-clock'
 
 function players1v1(): TCInitialPlayer[] {
   return [
@@ -115,6 +117,37 @@ describe('toucher-coule — placement', () => {
     ).toThrow('SHIPS_OVERLAP')
   })
 
+  it('refuse des cases à virgule (navire intouchable par un tir de l’interface)', () => {
+    const state = createInitialTCState(players1v1(), '1v1', 42)
+    expect(() =>
+      reduceTC(state, {
+        type: 'PLACE',
+        playerId: 'alice',
+        ships: [
+          [0.5, 1.5, 2.5, 3.5],
+          [8.5, 9.5, 10.5],
+          [16.5, 17.5],
+        ],
+      })
+    ).toThrow('INVALID_SHIP_SHAPE')
+    expect(() =>
+      reduceTC(state, {
+        type: 'PLACE',
+        playerId: 'alice',
+        ships: [['0', '1', '2', '3'], [16, 17, 18], [32, 33]] as unknown as number[][],
+      })
+    ).toThrow('INVALID_SHIP_SHAPE')
+  })
+
+  it('refuse une flotte qui n’est pas une liste de navires', () => {
+    const state = createInitialTCState(players1v1(), '1v1', 42)
+    for (const ships of [[0, 1, 2], 'abc', null, [[0, 1, 2, 3], 5, [32, 33]]]) {
+      expect(() =>
+        reduceTC(state, { type: 'PLACE', playerId: 'alice', ships: ships as unknown as number[][] })
+      ).toThrow(/INVALID_SHIP_(SHAPE|SIZES)/)
+    }
+  })
+
   it('passe en phase bataille quand tous ont placé', () => {
     let state = createInitialTCState(players1v1(), '1v1', 42)
     state = place1v1(state, 'alice')
@@ -157,6 +190,23 @@ describe('toucher-coule — tirs et règles apéro', () => {
       'CELL_ALREADY_SHOT'
     )
     expect(() => reduceTC(state, { type: 'FIRE', playerId: 'bob', cell: 5 })).toThrow('NOT_YOUR_TURN')
+  })
+
+  it('refuse un tir sur une case à virgule ou non numérique (le tour ne passe pas)', () => {
+    const state = battleState()
+    for (const cell of [0.25, 40.25, Number.NaN, Number.POSITIVE_INFINITY, '3']) {
+      expect(() =>
+        reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: cell as number })
+      ).toThrow('CELL_OUT_OF_BOUNDS')
+    }
+    expect(() =>
+      reduceTC({ ...state, rulePowerups: true, players: state.players.map((p) => ({ ...p, hasBomb: true })) }, {
+        type: 'FIRE',
+        playerId: 'alice',
+        cell: 0.5,
+        bomb: true,
+      })
+    ).toThrow('CELL_OUT_OF_BOUNDS')
   })
 
   it('coulé puis victoire quand toute la flotte ennemie est détruite', () => {
@@ -343,18 +393,22 @@ describe('toucher-coule — départ / retour / remplacement par bot', () => {
 })
 
 describe('toucher-coule — anti-triche (vue client)', () => {
-  it('masque les cellules des navires ennemis non coulés et le rngState', () => {
+  it('n’envoie aucun navire ennemi à flot, même touché (ni son id ni ses touches) ni le rngState', () => {
     let state = createInitialTCState(players1v1(), '1v1', 42)
     state = place1v1(state, 'alice')
     state = place1v1(state, 'bob')
-    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 0 })
+    // Touche le navire de 2 cases de Bob (ligne 4) : l'id « bob-ship-2 » disait sa taille.
+    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 4 * 8 })
 
     const view = toTCClientView(state, 'alice')
+    const json = JSON.stringify(view)
     expect((view as { rngState?: number }).rngState).toBeUndefined()
-    const bobBig = view.ships.find((s) => s.ownerId === 'bob' && s.id.endsWith('ship-0'))!
-    expect(bobBig.revealed).toBe(false)
-    expect(bobBig.cells).toEqual([0])
+    expect(json).not.toContain('rngState')
+    expect(view.ships.some((s) => s.ownerId === 'bob')).toBe(false)
+    expect(json).not.toContain('bob-ship-')
+    expect(view.shotsAt.B[4 * 8]).toBe('hit')
     const aliceShips = view.ships.filter((s) => s.ownerId === 'alice')
+    expect(aliceShips).toHaveLength(3)
     expect(aliceShips.every((s) => s.revealed && s.cells.length >= 2)).toBe(true)
   })
 
@@ -381,26 +435,17 @@ describe('toucher-coule — vue spectateur neutre (écran TV)', () => {
     return state
   }
 
-  it("cache les cases intactes des DEUX équipes (navire non coulé = seules ses cases touchées)", () => {
-    const state = battleState()
-    // Un navire touché mais pas coulé (une seule case atteinte).
-    const withHit: TCState = {
-      ...state,
-      ships: state.ships.map((s, i) => (i === 0 ? { ...s, hits: [s.cells[0]] } : s)),
-    }
-    const view = toTCSpectatorView(withHit)
+  it("n'envoie aucun navire à flot des DEUX équipes, même touché", () => {
+    let state = battleState()
+    state = reduceTC(state, { type: 'FIRE', playerId: 'alice', cell: 4 * 8 })
+    const view = toTCSpectatorView(state)
+    const json = JSON.stringify(view)
 
     expect(view.viewerTeam).toBeNull()
     expect('rngState' in view).toBe(false)
-
-    const hitShip = view.ships[0]
-    expect(hitShip.revealed).toBe(false)
-    expect(hitShip.cells).toEqual([state.ships[0].cells[0]]) // uniquement la case touchée
-
-    // Aucun navire non coulé n'expose plus de cases que celles réellement touchées.
-    for (const s of view.ships) {
-      if (!s.sunk) expect(s.cells.length).toBe(s.hits.length)
-    }
+    expect(view.ships).toEqual([])
+    expect(json).not.toContain('-ship-')
+    expect(view.shotsAt.B[4 * 8]).toBe('hit')
   })
 
   it('révèle entièrement un navire coulé', () => {
@@ -410,7 +455,60 @@ describe('toucher-coule — vue spectateur neutre (écran TV)', () => {
       ships: state.ships.map((s, i) => (i === 0 ? { ...s, hits: [...s.cells], sunk: true } : s)),
     }
     const view = toTCSpectatorView(sunkState)
+    expect(view.ships).toHaveLength(1)
     expect(view.ships[0].revealed).toBe(true)
     expect(view.ships[0].cells).toEqual(state.ships[0].cells)
+  })
+})
+
+describe('toucher-coule — échéance du placement', () => {
+  const T0 = 1_700_000_000_000
+
+  function placementState(): TCState {
+    return place1v1(createInitialTCState(players1v1(), '1v1', 42, {}, T0), 'alice')
+  }
+
+  it('pose une échéance sur le placement, aucune en bataille', () => {
+    const state = createInitialTCState(players1v1(), '1v1', 42, {}, T0)
+    expect(state.phaseEndsAt).toBe(T0 + TC_PLACEMENT_MS)
+    const battle = place1v1(place1v1(state, 'alice'), 'bob')
+    expect(battle.phase).toBe('battle')
+    expect(battle.phaseEndsAt).toBeNull()
+    expect(phaseKey(battle)).not.toBe(phaseKey(state))
+  })
+
+  it('refuse d’avancer avant l’échéance ou avec une clé périmée', () => {
+    const state = placementState()
+    expect(() =>
+      reduceTC(state, { type: 'ADVANCE', claimedKey: phaseKey(state), now: T0 + TC_PLACEMENT_MS - 1 })
+    ).toThrow('NOT_EXPIRED')
+    expect(() =>
+      reduceTC(state, { type: 'ADVANCE', claimedKey: 'placement#0', now: T0 + TC_PLACEMENT_MS })
+    ).toThrow('PHASE_CHANGED')
+  })
+
+  it('à l’échéance, le retardataire (même parti) reçoit une flotte au hasard et la bataille démarre', () => {
+    const left = reduceTC(placementState(), { type: 'LEAVE', playerId: 'bob', at: T0 })
+    const aliceShips = left.ships.map((s) => s.cells)
+    const next = reduceTC(left, { type: 'ADVANCE', claimedKey: phaseKey(left), now: T0 + TC_PLACEMENT_MS })
+    expect(next.phase).toBe('battle')
+    expect(next.players.every((p) => p.placed)).toBe(true)
+    expect(next.ships.filter((s) => s.ownerId === 'alice').map((s) => s.cells)).toEqual(aliceShips)
+    expect(next.ships.filter((s) => s.ownerId === 'bob').map((s) => s.cells.length).sort()).toEqual([2, 3, 4])
+    expect(currentTCPlayerId(next)).toBe('alice')
+    // Second tick concurrent : la phase a déjà changé.
+    expect(() =>
+      reduceTC(next, { type: 'ADVANCE', claimedKey: phaseKey(left), now: T0 + TC_PLACEMENT_MS })
+    ).toThrow('PHASE_CHANGED')
+    expect(() =>
+      reduceTC(next, { type: 'ADVANCE', claimedKey: phaseKey(next), now: T0 + TC_PLACEMENT_MS })
+    ).toThrow('NO_DEADLINE')
+  })
+
+  it('la vue client porte la clé de phase et l’échéance', () => {
+    const state = placementState()
+    const view = toTCClientView(state, 'bob')
+    expect(view.phaseKey).toBe(phaseKey(state))
+    expect(view.phaseEndsAt).toBe(T0 + TC_PLACEMENT_MS)
   })
 })

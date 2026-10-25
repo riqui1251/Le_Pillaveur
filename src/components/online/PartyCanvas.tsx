@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Check, Eraser, Trash2, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -56,6 +56,37 @@ const WIDTHS = [
   { id: 'thick', px: 12 },
 ] as const
 
+/**
+ * Traits prêts à peindre. Ce qui arrive du serveur n'est pas toujours un
+ * trait propre (état écrit avant l'assainissement serveur, état abîmé) : un
+ * trait sans couleur faisait lever `toLowerCase` dans l'effet de rendu, et
+ * tout l'écran — maillon reçu, révélation, TV — tombait sur la page d'erreur.
+ * Les traits inexploitables sont écartés, la gomme d'avant le crème repeinte
+ * en fond actuel.
+ */
+export function drawableStrokes(raw: unknown): Stroke[] {
+  if (!Array.isArray(raw)) return []
+  const out: Stroke[] = []
+  for (const item of raw) {
+    const s = item as Partial<Stroke> | null
+    if (!s || !Array.isArray(s.points)) continue
+    const points: number[] = []
+    for (let i = 0; i + 1 < s.points.length; i += 2) {
+      const x: unknown = s.points[i]
+      const y: unknown = s.points[i + 1]
+      if (typeof x === 'number' && Number.isFinite(x) && typeof y === 'number' && Number.isFinite(y)) {
+        points.push(x, y)
+      }
+    }
+    if (points.length < 4) continue
+    const color = typeof s.color === 'string' ? s.color : COLORS[0].hex
+    const width =
+      typeof s.width === 'number' && Number.isFinite(s.width) ? Math.min(24, Math.max(1, s.width)) : WIDTHS[1].px
+    out.push({ points, color: color.toLowerCase() === LEGACY_ERASER ? BG_COLOR : color, width })
+  }
+  return out
+}
+
 export type PartyCanvasTool = {
   color: string
   width: number
@@ -100,6 +131,7 @@ export function PartyCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const drawingRef = useRef<number[] | null>(null)
+  const paintable = useMemo(() => drawableStrokes(strokes), [strokes])
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current
@@ -113,7 +145,7 @@ export function PartyCanvas({
 
     const drawStroke = (points: number[], strokeColor: string, strokeWidth: number) => {
       if (points.length < 4) return
-      ctx.strokeStyle = strokeColor.toLowerCase() === LEGACY_ERASER ? BG_COLOR : strokeColor
+      ctx.strokeStyle = strokeColor
       ctx.lineWidth = strokeWidth * (w / 600)
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
@@ -125,9 +157,9 @@ export function PartyCanvas({
       ctx.stroke()
     }
 
-    for (const s of strokes) drawStroke(s.points, s.color, s.width)
+    for (const s of paintable) drawStroke(s.points, s.color, s.width)
     if (drawingRef.current) drawStroke(drawingRef.current, color, width)
-  }, [strokes, color, width])
+  }, [paintable, color, width])
 
   // Le redimensionnement appelle le DERNIER redraw : celui capturé au montage
   // repeignait les traits du montage, et un canvas élargi (barre de défilement
@@ -215,7 +247,7 @@ export function PartyCanvas({
       {!readOnly && !controlledTool && (
         <PartyCanvasTools
           tool={tool}
-          hasStrokes={strokes.length > 0}
+          hasStrokes={paintable.length > 0}
           onClear={onClear}
           onUndo={onUndo}
           className="mt-3"

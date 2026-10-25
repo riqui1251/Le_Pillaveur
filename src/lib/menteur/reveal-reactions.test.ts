@@ -249,8 +249,10 @@ describe('menteurRevealReactions', () => {
     expect(menteurRevealReactions(legacy)).toEqual([said('k', 'gotcha', 'h')])
   })
 
-  it('un bot qui défie sa propre enchère (son répondant est parti) ne se répond pas à lui-même', () => {
-    const state = revealOf([seat('g', 'Gépéto'), seat('h', 'Riqui', false, { leftAt: T0 })], 'g', 'g', { held: false })
+  it('révélation d’avant OWN_BID où un bot défiait sa propre enchère (son répondant était parti) : il ne se répond pas', () => {
+    const normal = revealOf([seat('g', 'Gépéto'), seat('h', 'Riqui', false, { leftAt: T0 })], 'g', 'h', { held: false })
+    // Le moteur refuse désormais ce défi : l'état ne se fabrique qu'à la main.
+    const state: MenteurState = { ...normal, lastReveal: { ...normal.lastReveal!, challengerId: 'g' } }
     expect(state.lastReveal).toMatchObject({ challengerId: 'g', bid: { by: 'g' } })
     expect(reactions(state)).toEqual([])
   })

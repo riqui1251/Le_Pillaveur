@@ -10,10 +10,12 @@ import {
 } from './players'
 import {
   flushPlayersPush,
+  mergePlayerLists,
   pushPlayersToCloud,
   schedulePlayersPush,
   syncLocalWithCloud,
 } from './player-sync'
+import { formatPlayerNameHtml } from './playerUtils'
 
 /**
  * La resynchro au retour sur la page (focus, visibilitychange, pageshow) ne
@@ -281,5 +283,71 @@ describe('schedulePlayersPush', () => {
     const cloud = fakeCloud([])
     await flushPlayersPush()
     expect(cloud.requests).toEqual([])
+  })
+})
+
+describe('mergePlayerLists — nuage empoisonné', () => {
+  const PAYLOAD = 'fire"><img src=x onerror=alert(document.domain)>'
+
+  /** Le « Marie » d'un autre compte (connexion forcée), daté de 2100 pour imposer ses préférences. */
+  function poisonedCloudMarie(): Player {
+    return {
+      id: 'player-attaquant',
+      name: 'Marie',
+      createdAt: 1,
+      stats: { gamesPlayed: 0, wins: 0, totalDrinks: 0, lastPlayed: 4102444800000 },
+      preferences: { color: 'bg-red-500" onclick="x', icon: '<svg onload=x>', specialEffect: PAYLOAD as never },
+    }
+  }
+
+  it('ne transmet pas l’effet piégé au joueur local du même nom, ni au HTML du Petit Buveur', () => {
+    const local = { ...makePlayer('p1', 'Marie', 5), preferences: { color: 'bg-blue-500', specialEffect: 'ice' as const } }
+    const [merged] = mergePlayerLists([local], [poisonedCloudMarie()])
+
+    expect(merged?.preferences.specialEffect).toBe('ice')
+    expect(merged?.preferences.color).toMatch(/^bg-[a-z]+-\d+$/)
+    expect(merged?.preferences.icon).toBeUndefined()
+    expect(JSON.stringify(merged)).not.toContain('onerror')
+    expect(formatPlayerNameHtml(merged!)).not.toContain('<img')
+  })
+
+  it('nettoie un joueur qui n’existe que dans le nuage, et retire les clés inconnues', () => {
+    const cloudOnly = { ...poisonedCloudMarie(), evil: '<script>', stats: { gamesPlayed: 'x', wins: 1, totalDrinks: 2 } }
+    const [merged] = mergePlayerLists([], [cloudOnly as unknown as Player])
+
+    expect(merged).not.toHaveProperty('evil')
+    expect(merged?.preferences).toEqual({ color: 'bg-red-500' })
+    expect(merged?.stats).toMatchObject({ gamesPlayed: 0, wins: 1, totalDrinks: 2 })
+  })
+
+  it('syncLocalWithCloud écrit la fusion assainie dans le stockage et la renvoie au nuage', async () => {
+    savePlayers([makePlayer('p1', 'Marie', 5)])
+    const cloud = fakeCloud([poisonedCloudMarie()])
+
+    const result = await syncLocalWithCloud()
+    await flushPlayersPush()
+
+    expect(JSON.stringify(result)).not.toContain('onerror')
+    expect(JSON.stringify(getStoredPlayers())).not.toContain('onerror')
+    expect(JSON.stringify(cloud.players)).not.toContain('onerror')
+  })
+
+  it('une fusion stable ne repousse rien : l’ordre des clés ne bouge plus d’une synchro à l’autre', async () => {
+    // Clés dans le désordre, comme après un updatePlayerPreferences ; gameStats
+    // présent, comme après une première fusion (mergeStats le pose toujours).
+    savePlayers([{
+      ...makePlayer('p1', 'Léa', 1),
+      stats: { gamesPlayed: 0, wins: 0, totalDrinks: 0, gameStats: {} },
+      preferences: { icon: '🎮', specialEffect: 'fire', color: 'bg-red-500' },
+    }])
+    const cloud = fakeCloud([])
+
+    await syncLocalWithCloud()
+    await flushPlayersPush()
+    expect(cloud.requests).toEqual(['GET', 'PUT'])
+
+    await syncLocalWithCloud()
+    await flushPlayersPush()
+    expect(cloud.requests).toEqual(['GET', 'PUT', 'GET'])
   })
 })

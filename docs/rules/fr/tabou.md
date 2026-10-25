@@ -10,9 +10,10 @@ Deux équipes s'affrontent. À chaque manche, un orateur voit un mot à faire de
 
 1. **Les équipes** se forment au lobby (A contre B).
 2. **L'orateur** voit le mot + ses tabous sur son téléphone ; son équipe écoute au vocal.
-3. **Ça devine** à toute vitesse pendant 60 secondes : mot trouvé = point, on passe au suivant, le chrono tourne.
-4. Trop dur ? On peut passer. Un tabou prononcé annule le mot — l'équipe adverse, qui voit la carte et ses tabous, le signale.
-5. Chacun devient orateur à son tour ; la première équipe au score cible gagne.
+3. **Ça devine** à toute vitesse pendant 60 secondes : mot trouvé = point, on passe au suivant, le chrono tourne. L'orateur ou un coéquipier appuie sur « Trouvé ».
+4. **Un verdict par mot** : un mot reste au moins deux secondes à l'écran avant d'être validé ou dénoncé — le temps de le décrire, et pas de rafale de clics.
+5. Trop dur ? On peut passer. Un tabou prononcé annule le mot — l'équipe adverse, qui voit la carte et ses tabous, le signale.
+6. Chacun devient orateur à son tour ; la première équipe au score cible gagne.
 
 ## Victoire
 
@@ -40,7 +41,9 @@ Le jeu ne compte que des points, mais la tradition veut que l'équipe qui boucle
   joueurs. Chacun décrit une fois par tour de table : l'équipe la plus
   nombreuse a donc plus de manches.
 - **Avec des bots** : un bot ne décrit pas — sa manche est écourtée à quelques
-  secondes — et ne devine pas. Comptez au moins deux humains par équipe.
+  secondes, sans mot à trouver ni à dénoncer — et ne devine pas. Comptez au
+  moins deux humains par équipe ; resté seul avec un bot, l'orateur valide
+  lui-même les mots trouvés.
 
 ## Questions fréquentes
 

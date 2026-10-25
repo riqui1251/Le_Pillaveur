@@ -4,12 +4,15 @@ import {
   currentSFActorId,
   reduceSF,
   sfActive,
+  sfReadingTimeOk,
+  sfRevealLeaderId,
   toSFClientView,
   toSFSpectatorView,
   SFEngineError,
   SF_COUNTDOWN_MS,
   SF_HAND_SIZE,
   SF_JUDGE_MS,
+  SF_REVEAL_MIN_MS,
   SF_SUBMIT_MS,
   type SFState,
 } from './engine'
@@ -275,5 +278,139 @@ describe('vues anti-triche', () => {
     const tv = toSFSpectatorView(s)
     expect(tv.myHand).toHaveLength(0)
     expect(tv.submissions).toBeNull()
+  })
+})
+
+const play = (s: SFState, id: string, now = T0): SFState =>
+  reduceSF(s, { type: 'PLAY_CARD', playerId: id, card: s.players.find((p) => p.id === id)!.hand[0], now })
+
+describe('LEAVE du juge : le rôle passe tout de suite', () => {
+  it('en abattage : au suivant de la rotation qui n’a pas encore joué', () => {
+    let s = play(make(), 'p1', T0 + 1_000)
+    expect(s.judgeId).toBe('p0')
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p0', at: T0 + 5_000 })
+    expect(s.judgeId).toBe('p2')
+    expect(s.phase).toBe('submit')
+    expect(s.submissions.map((sub) => sub.playerId)).toEqual(['p1'])
+    expect(() => play(s, 'p2')).toThrow('JUDGE_CANNOT_PLAY')
+    s = play(s, 'p3', T0 + 6_000)
+    expect(s.phase).toBe('judging')
+    const picked = reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p2', card: s.submissions[0].card, now: T0 + 7_000 })
+    expect(picked.phase).toBe('reveal')
+  })
+
+  it('tous ont joué : le nouveau juge reprend sa carte en main, il ne couronne jamais la sienne', () => {
+    let s = make()
+    for (const id of ['p1', 'p2']) s = play(s, id, T0 + 1_000)
+    const p1Card = s.submissions.find((sub) => sub.playerId === 'p1')!.card
+    s = play(s, 'p3', T0 + 2_000)
+    expect(s.phase).toBe('judging')
+    const deadline = s.phaseEndsAt
+    const oldKey = phaseKey(s)
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p0', at: T0 + 80_000 })
+    expect(s.judgeId).toBe('p1')
+    expect(s.phase).toBe('judging')
+    expect(s.submissions.map((sub) => sub.playerId)).toEqual(['p2', 'p3'])
+    expect(s.players.find((p) => p.id === 'p1')!.hand).toContain(p1Card)
+    expect(s.players.find((p) => p.id === 'p1')!.hand).toHaveLength(SF_HAND_SIZE)
+    // Chrono plein pour lire ; l'échéance de l'ancien juge ne vaut plus.
+    expect(s.phaseEndsAt).toBe(T0 + 80_000 + SF_JUDGE_MS)
+    expect(s.phaseEndsAt).not.toBe(deadline)
+    expect(() => reduceSF(s, { type: 'ADVANCE', claimedKey: oldKey, now: T0 + SF_JUDGE_MS + 5_000 })).toThrow(
+      'PHASE_CHANGED'
+    )
+    expect(() => reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: p1Card, now: T0 + 81_000 })).toThrow(
+      'INVALID_PICK'
+    )
+    const view = toSFClientView(s, 'p2')
+    expect(view.submissions?.map((sub) => sub.card)).not.toContain(p1Card)
+    expect(view.players.find((p) => p.id === 'p1')?.isJudge).toBe(true)
+    const picked = reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: s.submissions[0].card, now: T0 + 82_000 })
+    expect(picked.crowned?.playerId).toBe('p2')
+  })
+
+  it('en jugement après l’échéance d’abattage : un retardataire reprend le rôle', () => {
+    let s = play(make(), 'p1', T0 + 1_000)
+    s = reduceSF(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + SF_SUBMIT_MS })
+    expect(s.phase).toBe('judging')
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p0', at: T0 + SF_SUBMIT_MS + 1_000 })
+    expect(s.judgeId).toBe('p2')
+    expect(s.submissions.map((sub) => sub.playerId)).toEqual(['p1'])
+  })
+
+  it('seule carte abattue reprise par le nouveau juge : reveal sans couronne', () => {
+    let s = make()
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p2', at: T0 + 500 })
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p3', at: T0 + 600 })
+    s = play(s, 'p1', T0 + 1_000)
+    expect(s.phase).toBe('judging')
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p0', at: T0 + 2_000 })
+    expect(s.phase).toBe('reveal')
+    expect(s.crowned).toBeNull()
+    expect(s.judgeId).toBe('p1')
+    expect(s.players.find((p) => p.id === 'p1')!.hand).toHaveLength(SF_HAND_SIZE)
+  })
+
+  it('un départ hors abattage/jugement ne touche pas au juge (la rotation suivante l’ignore)', () => {
+    let s = playAll(make())
+    s = reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p0', card: s.submissions[0].card, now: T0 })
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p0', at: T0 + 1_000 })
+    expect(s.phase).toBe('reveal')
+    expect(s.judgeId).toBe('p0')
+    s = reduceSF(s, { type: 'CONTINUE', playerId: 'p1', now: T0 + 10_000 })
+    expect(s.judgeId).toBe('p1')
+  })
+})
+
+describe('LEAVE : le départ du dernier attendu ouvre le jugement', () => {
+  it('deux cartes abattues, le troisième joueur part → jugement sans attendre le chrono', () => {
+    let s = make()
+    s = play(s, 'p1', T0 + 1_000)
+    s = play(s, 'p2', T0 + 2_000)
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p3', at: T0 + 3_000 })
+    expect(s.phase).toBe('judging')
+    expect(s.judgeId).toBe('p0')
+    expect(s.phaseEndsAt).toBe(T0 + 3_000 + SF_JUDGE_MS)
+  })
+
+  it('un départ qui laisse des cartes attendues ne clôt rien', () => {
+    let s = play(make(), 'p1', T0 + 1_000)
+    s = reduceSF(s, { type: 'LEAVE', playerId: 'p3', at: T0 + 3_000 })
+    expect(s.phase).toBe('submit')
+  })
+})
+
+describe('reveal : personne au tour, temps de lecture', () => {
+  function reveal(): SFState {
+    const s = playAll(make())
+    return reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p0', card: s.submissions[0].card, now: T0 + 1_000 })
+  }
+
+  it('currentSFActorId null au reveal (pas d’expulsion AFK) ; le meneur reste le premier actif', () => {
+    const r = reveal()
+    expect(currentSFActorId(r)).toBeNull()
+    expect(sfRevealLeaderId(r)).toBe('p0')
+    expect(sfRevealLeaderId(reduceSF(r, { type: 'LEAVE', playerId: 'p0', at: T0 + 2_000 }))).toBe('p1')
+  })
+
+  it('« manche suivante » refusé avant SF_REVEAL_MIN_MS, continueAt publié', () => {
+    const r = reveal()
+    expect(r.revealAt).toBe(T0 + 1_000)
+    expect(sfReadingTimeOk(r, 'p2', T0 + 1_000)).toBe(false)
+    expect(sfReadingTimeOk(r, 'p2', T0 + 1_000 + SF_REVEAL_MIN_MS - 1)).toBe(false)
+    expect(sfReadingTimeOk(r, 'p2', T0 + 1_000 + SF_REVEAL_MIN_MS)).toBe(true)
+    expect(toSFClientView(r, 'p2').continueAt).toBe(T0 + 1_000 + SF_REVEAL_MIN_MS)
+    expect(toSFSpectatorView(r).continueAt).toBe(T0 + 1_000 + SF_REVEAL_MIN_MS)
+    const next = reduceSF(r, { type: 'CONTINUE', playerId: 'p2', now: T0 + 1_000 + SF_REVEAL_MIN_MS })
+    expect(next.revealAt).toBeNull()
+    expect(toSFClientView(next, 'p2').continueAt).toBeNull()
+  })
+
+  it('un bot lit aussi tant qu’un humain est assis ; un état sans revealAt n’est jamais bloqué', () => {
+    const r = { ...reveal(), players: reveal().players.map((p) => (p.id === 'p3' ? { ...p, isBot: true } : p)) }
+    expect(sfReadingTimeOk(r, 'p3', T0 + 1_000)).toBe(false)
+    const botsOnly = { ...r, players: r.players.map((p) => (p.isBot ? p : { ...p, leftAt: T0 })) }
+    expect(sfReadingTimeOk(botsOnly, 'p3', T0 + 1_000)).toBe(true)
+    expect(sfReadingTimeOk({ ...r, revealAt: null }, 'p2', T0 + 1_000)).toBe(true)
   })
 })

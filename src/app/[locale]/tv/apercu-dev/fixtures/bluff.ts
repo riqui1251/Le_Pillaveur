@@ -1,5 +1,6 @@
 import {
   createBluffState,
+  currentBluffActorId,
   reduceBluff,
   BLUFF_REVEAL_MIN_MS,
   type BluffPrompt,
@@ -17,7 +18,7 @@ const PROMPT_IDS = ['fr-sp-106', 'fr-fe-26', 'fr-fe-129', 'fr-ec-131', 'fr-fe-13
 
 /**
  * Bluffs plausibles (≤ 60 caractères), dont un très long. Jamais la vraie
- * réponse : le moteur la refuse à un humain (FAKE_TAKEN).
+ * réponse : elle se confondrait avec elle au vote.
  */
 const FAKES = [
   'Nadia Comăneci',
@@ -100,10 +101,10 @@ function live(state: BluffState): BluffState {
 }
 
 function step(label: string, members: PreviewMember[], state: BluffState, version: number): TvPreviewStep {
-  const actor = state.phase === 'reveal' ? state.players.find((p) => !p.leftAt)?.id ?? null : null
+  // Comme le serveur : personne n'est « au tour » au Bluff, reveal compris.
   return {
     label,
-    room: onlineRoom(GAME, live(state), { members, currentTurnUserId: actor, stateVersion: version }),
+    room: onlineRoom(GAME, live(state), { members, currentTurnUserId: currentBluffActorId(state), stateVersion: version }),
   }
 }
 

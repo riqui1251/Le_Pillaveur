@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { getCurrentUser } from '@/lib/auth-server'
 import { dismissNameModerationWarning } from '@/lib/name-moderation-attempts-server'
 
 /** L'utilisateur ferme le bandeau d'avertissement de modération de pseudo. */
-export async function POST() {
+export const POST = withApiRoute('name-moderation dismiss-warning POST', async () => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
@@ -11,4 +12,4 @@ export async function POST() {
 
   await dismissNameModerationWarning(user.id)
   return NextResponse.json({ ok: true })
-}
+})
