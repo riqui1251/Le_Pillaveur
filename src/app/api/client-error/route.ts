@@ -19,10 +19,10 @@ export const runtime = 'nodejs'
  * ressortir par ce chemin.
  *
  * Cinq garde-fous, dans cet ordre, parce qu'elle est ouverte à tous :
- * 1. refus d'un envoi depuis un AUTRE site (`Sec-Fetch-Site: cross-site`) :
- *    nos écrans d'erreur appellent en même origine ; un sendBeacon posé sur
- *    une page tierce n'a rien à faire ici. Un script sans navigateur n'envoie
- *    pas l'en-tête, il tombe sur les quotas ;
+ * 1. refus d'un envoi depuis un AUTRE site, fait par withApiRoute avant
+ *    d'entrer ici : nos écrans d'erreur appellent en même origine ; un
+ *    sendBeacon posé sur une page tierce n'a rien à faire ici. Un script sans
+ *    navigateur n'envoie ni Origin ni Sec-Fetch-Site, il tombe sur les quotas ;
  * 2. quota GLOBAL (120/min, toutes sources) : le quota par réseau ne borne
  *    rien contre des réseaux nombreux, et chaque rapport DISTINCT crée une
  *    ligne — sans plafond commun, un script noyait le panneau de Supervision
@@ -44,11 +44,6 @@ const GLOBAL_RATE_LIMIT_PER_WINDOW = 120
 const RATE_WINDOW_MS = 60 * 1000
 
 export const POST = withApiRoute('client-error POST', async (request: Request) => {
-  // Refus nu, comme pour un corps hors contrat : personne ne lit la réponse.
-  if (request.headers.get('sec-fetch-site') === 'cross-site') {
-    return new Response(null, { status: 403 })
-  }
-
   const global = checkRateLimit('client-error:global', GLOBAL_RATE_LIMIT_PER_WINDOW, RATE_WINDOW_MS)
   if (!global.ok) return rateLimitResponse(global.retryAfterSec)
 

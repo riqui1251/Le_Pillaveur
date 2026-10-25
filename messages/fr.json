@@ -715,7 +715,8 @@
       "request_not_found": "Demande introuvable.",
       "request_already_handled": "Cette demande a déjà été traitée.",
       "request_already_declined": "Demande déjà refusée.",
-      "fake_taken": "Cette réponse est déjà prise : invente autre chose."
+      "fake_taken": "Cette réponse est déjà prise : invente autre chose.",
+      "cross_site_request": "Requête refusée : elle ne vient pas du site."
     },
     "showcase": {
       "players": "{min} à {max} joueurs",

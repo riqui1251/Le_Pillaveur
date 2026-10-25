@@ -715,7 +715,8 @@
       "request_not_found": "Request not found.",
       "request_already_handled": "This request has already been handled.",
       "request_already_declined": "Request already declined.",
-      "fake_taken": "That answer's already taken — make up something else."
+      "fake_taken": "That answer's already taken — make up something else.",
+      "cross_site_request": "Request refused: it did not come from this site."
     },
     "showcase": {
       "players": "{min} to {max} players",

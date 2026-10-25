@@ -19,9 +19,9 @@ export const runtime = 'nodejs'
  * jamais devenir une erreur à l'écran du joueur.
  *
  * Garde-fous, dans cet ordre, parce qu'elle est ouverte à tous :
- * 1. refus d'un envoi depuis un AUTRE site (`Sec-Fetch-Site: cross-site`) :
- *    une page tierce pourrait sinon gonfler les compteurs depuis le
- *    navigateur de ses visiteurs ;
+ * 1. refus d'un envoi depuis un AUTRE site, fait par withApiRoute avant
+ *    d'entrer ici : une page tierce pourrait sinon gonfler les compteurs
+ *    depuis le navigateur de ses visiteurs ;
  * 2. quota par RÉSEAU (60/h, clé /64 en IPv6) : une tablée qui enchaîne les
  *    revanches toute la soirée envoie quelques dizaines d'événements par
  *    heure ; au-delà, c'est un script. Compté AVANT le quota global, pour
@@ -52,10 +52,6 @@ function tooMany(retryAfterSec: number): Response {
 }
 
 export const POST = withApiRoute('local-game POST', async (request: Request) => {
-  if (request.headers.get('sec-fetch-site') === 'cross-site') {
-    return new Response(null, { status: 403 })
-  }
-
   const quota = checkRateLimit(
     networkRateLimitKey(request, 'local-game'),
     NETWORK_LIMIT_PER_WINDOW,

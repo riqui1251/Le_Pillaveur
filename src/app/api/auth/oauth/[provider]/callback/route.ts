@@ -126,7 +126,9 @@ export const GET = withApiRoute(
  * nos cookies Lax — ni l'état de l'aller, ni la session —, alors qu'une
  * navigation GET de premier niveau les emporte : on le reformule en GET vers
  * cette même adresse. Le prénom, transmis à la première autorisation
- * seulement, passe par un cookie plutôt que par l'URL.
+ * seulement, passe par un cookie plutôt que par l'URL. `allowCrossSite` :
+ * c'est justement une écriture venue d'un autre site, que withApiRoute
+ * refuserait ; le GET qui suit vérifie l'état signé de l'aller.
  */
 export const POST = withApiRoute(
   'auth/oauth/[provider]/callback POST',
@@ -143,7 +145,8 @@ export const POST = withApiRoute(
     const firstName = appleFirstName(form?.get('user'))
     if (firstName) response.cookies.set(oauthNameCookieOptions(firstName))
     return response
-  }
+  },
+  { allowCrossSite: true }
 )
 
 /** `user` du POST d'Apple : {"name":{"firstName","lastName"},"email"}, à la première autorisation. */

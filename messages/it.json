@@ -715,7 +715,8 @@
       "request_not_found": "Richiesta non trovata.",
       "request_already_handled": "Questa richiesta è già stata gestita.",
       "request_already_declined": "Richiesta già rifiutata.",
-      "fake_taken": "Questa risposta è già presa: inventa qualcos'altro."
+      "fake_taken": "Questa risposta è già presa: inventa qualcos'altro.",
+      "cross_site_request": "Richiesta rifiutata: non proviene da questo sito."
     },
     "showcase": {
       "players": "Da {min} a {max} giocatori",

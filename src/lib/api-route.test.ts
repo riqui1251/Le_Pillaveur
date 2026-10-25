@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
+import { apiError, isCrossSiteRequest, readApiJson, withApiRoute } from '@/lib/api-route'
 
 /**
  * Le contrat de l'enveloppe : quoi qu'il arrive dans un handler, le client
@@ -32,6 +32,7 @@ beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
     logged.push(args)
   })
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -162,5 +163,128 @@ describe('readApiJson', () => {
       error: 'payload_too_large',
       code: 'payload_too_large',
     })
+  })
+})
+
+/**
+ * CSRF des routes SANS session (connexion, invité, déconnexion) : SameSite=Lax
+ * ne les protège pas. Un formulaire posté depuis une page tierce connectait la
+ * victime au compte de l'attaquant, ou effaçait le cookie d'un invité, sa
+ * seule clé. L'enveloppe refuse AVANT le handler, donc avant toute lecture du
+ * corps, d'après ce que le navigateur dit de la provenance.
+ */
+describe('withApiRoute — écriture venue d’un autre site', () => {
+  const SITE = 'https://lepillaveur.test'
+
+  beforeEach(() => {
+    vi.stubEnv('SITE_URL', SITE)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  /** Écriture telle qu'un navigateur l'envoie, avec ce qu'il dit de sa provenance. */
+  function write(
+    headers: Record<string, string>,
+    { method = 'POST', url = 'https://example.test/api' }: { method?: string; url?: string } = {}
+  ): Request {
+    const hasBody = !['GET', 'HEAD', 'OPTIONS'].includes(method)
+    return new Request(url, { method, headers, body: hasBody ? '{"email":"a@b.c"}' : undefined })
+  }
+
+  function wrapped(options?: { allowCrossSite?: boolean }) {
+    const handler = vi.fn(async (_request: Request) => Response.json({ ok: true }))
+    return { handler, route: withApiRoute('test POST', handler, options) }
+  }
+
+  async function expectRefused(response: Response) {
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({
+      error: 'cross_site_request',
+      code: 'cross_site_request',
+    })
+  }
+
+  it('refuse un POST annoncé Sec-Fetch-Site: cross-site, sans appeler le handler ni lire le corps', async () => {
+    const { handler, route } = wrapped()
+    // Le formulaire piégé de l'audit : enctype=text/plain dont le nom de champ
+    // forme un JSON de connexion au compte de l'attaquant.
+    const request = write({
+      'sec-fetch-site': 'cross-site',
+      origin: 'https://evil.example',
+      'content-type': 'text/plain',
+    })
+    await expectRefused(await route(request))
+    expect(handler).not.toHaveBeenCalled()
+    expect(request.bodyUsed).toBe(false)
+  })
+
+  it('refuse un Origin étranger, même sans Sec-Fetch-Site (navigateur ancien)', async () => {
+    const { handler, route } = wrapped()
+    await expectRefused(await route(write({ origin: 'https://evil.example' })))
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('refuse Origin: null (iframe sandbox, redirection), qui ne prouve rien', async () => {
+    const { handler, route } = wrapped()
+    await expectRefused(await route(write({ origin: 'null' })))
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('accepte l’Origin du site même quand request.url porte l’hôte interne du proxy', async () => {
+    const { handler, route } = wrapped()
+    const response = await route(
+      write({ origin: SITE, 'sec-fetch-site': 'same-origin' }, { url: 'http://127.0.0.1:3000/api' })
+    )
+    expect(response.status).toBe(200)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepte une requête de même origine que l’URL appelée', async () => {
+    const { handler, route } = wrapped()
+    const response = await route(
+      write({ origin: 'https://example.test', 'sec-fetch-site': 'same-origin' })
+    )
+    expect(response.status).toBe(200)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('laisse passer sans Origin ni Sec-Fetch-Site (curl, script) : ce n’est pas du CSRF', async () => {
+    const { handler, route } = wrapped()
+    const response = await route(write({ 'content-type': 'application/json' }))
+    expect(response.status).toBe(200)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('ne refuse jamais GET, HEAD ni OPTIONS, même venus d’un autre site', async () => {
+    for (const method of ['GET', 'HEAD', 'OPTIONS']) {
+      const { handler, route } = wrapped()
+      const response = await route(
+        write({ 'sec-fetch-site': 'cross-site', origin: 'https://evil.example' }, { method })
+      )
+      expect({ method, status: response.status }).toEqual({ method, status: 200 })
+      expect(handler).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('allowCrossSite laisse passer le POST d’un autre site (form_post d’Apple)', async () => {
+    const { handler, route } = wrapped({ allowCrossSite: true })
+    const response = await route(
+      write({ 'sec-fetch-site': 'cross-site', origin: 'https://appleid.apple.com' })
+    )
+    expect(response.status).toBe(200)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('ne touche pas à un handler appelé sans requête (les tests de l’enveloppe elle-même)', async () => {
+    const handler = withApiRoute('test', async () => Response.json({ ok: true }))
+    expect((await handler()).status).toBe(200)
+  })
+
+  it('isCrossSiteRequest : l’URL du site mal configurée n’ouvre rien, un Origin inconnu reste refusé', () => {
+    vi.stubEnv('SITE_URL', 'pas une url')
+    expect(isCrossSiteRequest(write({ origin: 'https://evil.example' }))).toBe(true)
+    expect(isCrossSiteRequest(write({ origin: 'https://example.test' }))).toBe(false)
   })
 })

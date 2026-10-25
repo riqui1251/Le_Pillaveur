@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { appBaseUrl } from '@/lib/email'
 import { type OnlineErrorCode } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 
@@ -48,9 +49,82 @@ type ApiHandler<Args extends unknown[]> = (
   ...args: Args
 ) => Response | Promise<Response>
 
+export type ApiRouteOptions = {
+  /**
+   * Accepte une écriture venue d'un autre site. Réservé aux routes qu'un
+   * tiers appelle légitimement en POST (form_post d'Apple, désinscription en
+   * un clic des messageries) : c'est alors l'état signé ou le jeton qu'elles
+   * vérifient qui tient lieu de garde.
+   */
+  allowCrossSite?: boolean
+}
+
+/** Méthodes de lecture : jamais refusées, elles ne modifient rien. */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin
+  } catch {
+    return null
+  }
+}
+
+/** Origine publique du site, ou null si l'URL configurée est illisible. */
+function siteOrigin(): string | null {
+  try {
+    return originOf(appBaseUrl())
+  } catch {
+    return null
+  }
+}
+
+/** Premier argument du handler : la requête, si c'en est bien une (un test peut n'en passer aucune). */
+function requestOf(args: unknown[]): Request | null {
+  const candidate = args[0] as Request | undefined
+  const looksLikeRequest =
+    typeof candidate === 'object' &&
+    candidate !== null &&
+    typeof candidate.method === 'string' &&
+    typeof candidate.url === 'string' &&
+    typeof candidate.headers === 'object' &&
+    candidate.headers !== null &&
+    typeof candidate.headers.get === 'function'
+  return looksLikeRequest ? candidate : null
+}
+
 /**
- * Enveloppe un handler de route : plus aucune exception ne sort en HTML.
+ * Écriture venue d'un AUTRE site ? SameSite=Lax protège les routes qui
+ * exigent une session, pas celles qui marchent sans (connexion, inscription,
+ * invité, Google, déconnexion) : un formulaire posté depuis une page tierce
+ * connectait la victime au compte de l'attaquant, ou effaçait le cookie d'un
+ * invité — sa seule clé. Le navigateur dit d'où vient la requête :
+ * `Sec-Fetch-Site: cross-site`, ou un `Origin` qui n'est ni celui de l'URL
+ * appelée ni celui du site (derrière le proxy du VPS, `request.url` porte
+ * l'hôte et le schéma internes, d'où appBaseUrl). Un `Origin: null` (iframe
+ * sandbox, redirection) ne prouve rien : refusé aussi. Sans Origin ni
+ * Sec-Fetch-Site (curl, script), ce n'est pas du CSRF : on laisse passer.
+ * L'application Capacitor charge le site lui-même (server.url) : ses
+ * requêtes sont de même origine.
+ */
+export function isCrossSiteRequest(request: Request): boolean {
+  if (SAFE_METHODS.has(request.method.toUpperCase())) return false
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return true
+  const origin = request.headers.get('origin')
+  if (origin === null) return false
+  const claimed = originOf(origin)
+  if (claimed === null) return true
+  if (claimed === originOf(request.url)) return false
+  return claimed !== siteOrigin()
+}
+
+/**
+ * Enveloppe un handler de route : plus aucune exception ne sort en HTML, et
+ * aucune écriture venue d'un autre site n'atteint le handler.
  *
+ * - POST/PUT/PATCH/DELETE d'un autre site (isCrossSiteRequest) → 403
+ *   cross_site_request, AVANT toute lecture du corps — sauf
+ *   `options.allowCrossSite` ;
  * - JSON malformé (SyntaxError levée par `request.json()`) → 400 invalid_json ;
  * - contrainte d'unicité Prisma (P2002) → 409 conflict ;
  * - ligne absente au moment de l'écriture (P2025) → 404 not_found ;
@@ -63,9 +137,15 @@ type ApiHandler<Args extends unknown[]> = (
  */
 export function withApiRoute<Args extends unknown[]>(
   name: string,
-  handler: ApiHandler<Args>
+  handler: ApiHandler<Args>,
+  options: ApiRouteOptions = {}
 ): (...args: Args) => Promise<Response> {
   return async (...args: Args): Promise<Response> => {
+    const request = options.allowCrossSite ? null : requestOf(args)
+    if (request && isCrossSiteRequest(request)) {
+      console.warn('[api] ' + name, 'cross_site_request', request.headers.get('origin'))
+      return apiError('cross_site_request', 403)
+    }
     try {
       return await handler(...args)
     } catch (error) {

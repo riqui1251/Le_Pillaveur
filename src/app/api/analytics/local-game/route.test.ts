@@ -95,7 +95,7 @@ describe('refus nus, rien d’écrit', () => {
   it('envoi depuis un autre site : 403', async () => {
     const res = await send({ gameId: LOCAL_ID, event: 'start' }, { 'sec-fetch-site': 'cross-site' })
     expect(res.status).toBe(403)
-    expect(await res.text()).toBe('')
+    expect(await res.json()).toEqual({ error: 'cross_site_request', code: 'cross_site_request' })
     expect(localGameDailyDb.upsert).not.toHaveBeenCalled()
   })
 

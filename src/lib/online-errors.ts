@@ -137,6 +137,12 @@ export const ONLINE_ERROR_CODES = [
   'request_not_found',
   'request_already_handled',
   'request_already_declined',
+
+  // ── Écriture venue d'un autre site (withApiRoute) ──
+  // Les routes qui marchent SANS session (connexion, invité, déconnexion…)
+  // ne sont pas couvertes par SameSite=Lax : un formulaire posté depuis une
+  // page tierce est refusé avant toute lecture du corps.
+  'cross_site_request',
 ] as const
 
 export type OnlineErrorCode = (typeof ONLINE_ERROR_CODES)[number]
@@ -280,6 +286,7 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   request_not_found: 'Demande introuvable',
   request_already_handled: 'Cette demande a déjà été traitée',
   request_already_declined: 'Demande déjà refusée',
+  cross_site_request: 'Requête refusée : elle ne vient pas du site',
 }
 
 /**
