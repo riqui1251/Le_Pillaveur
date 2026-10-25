@@ -13,6 +13,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { routing } from '@/i18n/routing'
 import { coreMessages } from '@/i18n/messages-slices'
 import { INSTALL_PROMPT_CAPTURE } from '@/lib/pwa-install'
+import { DOM_MUTATION_GUARD } from '@/lib/dom-mutation-guard'
 import { buildOpenGraphLocale } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 
@@ -152,6 +153,7 @@ export default async function LocaleLayout({
             souvent avant tout bundle : la carte d'installation de
             /application, atteinte par navigation client, le retrouve ici. */}
         <script dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_CAPTURE }} />
+        <script dangerouslySetInnerHTML={{ __html: DOM_MUTATION_GUARD }} />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ErrorBoundary>
             <Providers>
