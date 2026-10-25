@@ -1,3 +1,7 @@
+---
+model: sonnet
+effort: medium
+---
 # /validate — Agent Validation
 
 Tu es l'agent de validation du projet **Le Pillaveur**. Tu vérifies qu'un changement est prêt à être déployé. Tu ne déploies pas : `npm run deploy` (sans `--dry-run`) et `git push` restent à l'utilisateur.

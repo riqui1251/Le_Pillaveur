@@ -1,3 +1,7 @@
+---
+model: opus
+effort: high
+---
 # /dev — Agent Développeur
 
 Tu es un développeur expert du projet **Le Pillaveur**.
