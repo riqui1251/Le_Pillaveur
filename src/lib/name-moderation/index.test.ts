@@ -190,3 +190,35 @@ describe('couverture des listes par langue', () => {
     }
   })
 })
+
+describe('pseudos — homoglyphes, formes de compatibilité et invisibles', () => {
+  const validators = [
+    ['validateAccountDisplayName', validateAccountDisplayName],
+    ['validateLocalPlayerName', validateLocalPlayerName],
+  ] as const
+
+  for (const [label, validate] of validators) {
+    it(`${label} : refuse l'insulte en pleine chasse, lettres mathématiques, petites capitales ou au о cyrillique`, () => {
+      for (const name of ['cоnnаrd', 'ｃｏｎｎａｒｄ', '𝐜𝐨𝐧𝐧𝐚𝐫𝐝', 'ᴄᴏɴɴᴀʀᴅ', 'pуte']) {
+        expect(validate(name), name).toMatchObject({ ok: false, reason: 'profanity' })
+      }
+    })
+
+    it(`${label} : refuse un pseudo invisible (remplissage Hangul) ou coupé par U+FEFF`, () => {
+      for (const name of ['ㅤ', 'ㅤㅤ', 'ﾠ', 'ᅟ', 'Kev﻿in']) {
+        expect(validate(name), JSON.stringify(name)).toMatchObject({ ok: false, reason: 'invalid_characters' })
+      }
+    })
+
+    it(`${label} : refuse le sosie qui mêle les alphabets (« Kеvin » au е cyrillique)`, () => {
+      expect(validate('Kеvin')).toMatchObject({ ok: false, reason: 'invalid_characters' })
+      expect(validate('Τom')).toMatchObject({ ok: false, reason: 'invalid_characters' })
+    })
+
+    it(`${label} : garde les pseudos accentués et ceux d'un seul autre alphabet`, () => {
+      for (const name of ['Élodie', 'Zoé', 'Søren', 'Дмитрий', 'Νίκος', '王小明']) {
+        expect(validate(name), name).toEqual({ ok: true, value: name })
+      }
+    })
+  }
+})

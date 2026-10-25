@@ -5,6 +5,7 @@ import {
   getStoredPlayers,
   savePlayers,
   dedupePlayersById,
+  sanitizePlayers,
 } from '@/lib/players'
 import { getSafeStorage } from '@/lib/storage'
 
@@ -64,21 +65,27 @@ function mergePlayerPair(cloudPlayer: Player, localPlayer: Player): Player {
   }
 }
 
-/** Fusionne deux listes (même nom = même joueur, stats cumulées au max). */
+/**
+ * Fusionne deux listes (même nom = même joueur, stats cumulées au max).
+ * Les deux copies sont assainies AVANT : la plus récente impose ses
+ * préférences, et un nuage empoisonné (daté de 2100) écrasait sinon l'effet
+ * légitime du joueur local. Le résultat l'est APRÈS, pour un ordre de clés
+ * stable d'une fusion à l'autre.
+ */
 export function mergePlayerLists(local: Player[], cloud: Player[]): Player[] {
   const byKey = new Map<string, Player>()
 
-  for (const player of cloud) {
+  for (const player of sanitizePlayers(cloud)) {
     byKey.set(playerKey(player), player)
   }
 
-  for (const player of local) {
+  for (const player of sanitizePlayers(local)) {
     const key = playerKey(player)
     const existing = byKey.get(key)
     byKey.set(key, existing ? mergePlayerPair(existing, player) : player)
   }
 
-  return dedupePlayersById([...byKey.values()].sort((a, b) => a.createdAt - b.createdAt))
+  return sanitizePlayers(dedupePlayersById([...byKey.values()].sort((a, b) => a.createdAt - b.createdAt)))
 }
 
 /**
@@ -194,7 +201,10 @@ export function pushPlayersToCloud(players: Player[]): Promise<boolean> {
     // modération d'un pseudo, session perdue) la lève — repousser la même
     // liste échouerait pareil, et la resynchro doit retrouver la fusion
     // habituelle ; une panne passagère (5xx) la laisse, pour réessayer.
-    if (res.ok || (res.status >= 400 && res.status < 500)) clearCloudBehind()
+    // Le quota (429) vaut une coupure : la liste n'est pas arrivée, et une
+    // fusion avec la copie du nuage ressusciterait le joueur supprimé.
+    if (res.status === 429) markCloudBehind()
+    else if (res.ok || (res.status >= 400 && res.status < 500)) clearCloudBehind()
     return res.ok
   })()
   pushesInFlight.add(push)

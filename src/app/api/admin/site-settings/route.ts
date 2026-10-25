@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { canManageSiteSettings } from '@/lib/roles'
 import { isVoiceEnabled, setVoiceEnabled } from '@/lib/site-settings'
 import { logStaffAction } from '@/lib/supervision-overview-server'
@@ -18,7 +19,7 @@ export async function GET() {
   }
 }
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('admin/site-settings PATCH', async (request: Request) => {
   try {
     const actor = await requireRole(canManageSiteSettings)
     const body = await request.json().catch(() => ({}))
@@ -40,4 +41,4 @@ export async function PATCH(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'site-settings PATCH')
   }
-}
+})

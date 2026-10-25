@@ -9,6 +9,7 @@ import {
 import { allowedSpansInWord } from './allowed-words'
 import { getPreparedTerms, type PreparedTerm } from './prepared-terms'
 import { getModerationErrorMessage } from './messages'
+import { hasInvisibleChars, mixesConfusableScripts } from './confusables'
 
 export type NameModerationReason =
   | 'empty'
@@ -25,6 +26,16 @@ const ACCOUNT_CHARS_RE = /^[\p{L}\p{N}\s]+$/u
 
 /** Joueurs locaux : lettres, chiffres, espaces, tiret, apostrophe. */
 const PLAYER_CHARS_RE = /^[\p{L}\p{N}\s'-]+$/u
+
+/**
+ * Lettres admises par les classes ci-dessus mais qui trompent l'œil : remplissage
+ * Hangul invisible (« ㅤ »), U+FEFF (compté comme espace), mélange d'alphabets
+ * (« Kеvin » au е cyrillique, sosie d'un « Kevin » de la table). Testé APRÈS
+ * l'insulte : « cоnnаrd » reste compté comme une tentative d'insulte.
+ */
+function hasMisleadingChars(name: string): boolean {
+  return hasInvisibleChars(name) || mixesConfusableScripts(name)
+}
 
 type Span = { start: number; end: number }
 
@@ -131,7 +142,24 @@ function scanHasAnyTerm(scan: Scan, terms: readonly PreparedTerm[], squash: bool
 /** Salve de 3 lettres identiques ou plus : « puuuute », « c000nnard ». */
 const HAMMERED_RE = /(.)\1\1/
 
+/**
+ * у cyrillique : dessiné comme un y (c'est ainsi que le replie la table des
+ * homoglyphes) mais lu « ou », il passe aussi pour un u (« pуte »). Un texte
+ * qui en contient est relu avec cette seconde lecture.
+ */
+const CYRILLIC_U_RE = /[\u0423\u0443]/gu
+
+function readAsLatinU(text: string): string {
+  return text.replace(CYRILLIC_U_RE, 'u')
+}
+
 export function containsProfanity(name: string): boolean {
+  if (containsProfanityAsRead(name)) return true
+  const alternate = readAsLatinU(name)
+  return alternate !== name && containsProfanityAsRead(alternate)
+}
+
+function containsProfanityAsRead(name: string): boolean {
   const words = splitModerationWords(name)
   if (words.length === 0) return false
 
@@ -160,6 +188,18 @@ export function containsProfanityAcrossWords(
   fragments: readonly string[],
   minTermLength: number
 ): boolean {
+  if (containsProfanityAcrossWordsAsRead(fragments, minTermLength)) return true
+  const alternates = fragments.map(readAsLatinU)
+  return (
+    alternates.some((fragment, i) => fragment !== fragments[i]) &&
+    containsProfanityAcrossWordsAsRead(alternates, minTermLength)
+  )
+}
+
+function containsProfanityAcrossWordsAsRead(
+  fragments: readonly string[],
+  minTermLength: number
+): boolean {
   const words = fragments.flatMap((fragment) => splitModerationWords(fragment))
   if (words.length === 0) return false
 
@@ -177,6 +217,7 @@ export function validateAccountDisplayName(
   if (trimmed.length > maxLength) return { ok: false, reason: 'too_long' }
   if (!ACCOUNT_CHARS_RE.test(trimmed)) return { ok: false, reason: 'invalid_characters' }
   if (containsProfanity(trimmed)) return { ok: false, reason: 'profanity' }
+  if (hasMisleadingChars(trimmed)) return { ok: false, reason: 'invalid_characters' }
 
   return { ok: true, value: trimmed }
 }
@@ -191,6 +232,7 @@ export function validateLocalPlayerName(
   if (trimmed.length > maxLength) return { ok: false, reason: 'too_long' }
   if (!PLAYER_CHARS_RE.test(trimmed)) return { ok: false, reason: 'invalid_characters' }
   if (containsProfanity(trimmed)) return { ok: false, reason: 'profanity' }
+  if (hasMisleadingChars(trimmed)) return { ok: false, reason: 'invalid_characters' }
 
   return { ok: true, value: trimmed }
 }

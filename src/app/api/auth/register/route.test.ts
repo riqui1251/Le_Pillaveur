@@ -6,27 +6,35 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * Le client envoie l'ambiance de l'appareil (« Sans alcool » d'office dans
  * l'app, ou le choix fait avant de s'inscrire). La route ne s'en sert qu'à la
  * CRÉATION, ignore toute valeur inconnue (défaut du schéma, 'alcool') et ne
- * touche jamais un compte existant. Vraie route, base, session et cookies
- * simulés.
+ * touche jamais un compte existant. Quotas : par adresse IP + e-mail, et par
+ * réseau quel que soit l'e-mail, avant toute recherche d'adresse ou tout
+ * bcrypt. Vraie route, base, session et cookies simulés.
  */
 
-const { userDb } = vi.hoisted(() => ({
+const { userDb, hashMock } = vi.hoisted(() => ({
   userDb: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+  hashMock: vi.fn(async () => 'hash'),
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: { user: userDb } }))
 vi.mock('next/headers', () => ({
   cookies: async () => ({ has: () => false, get: () => undefined }),
 }))
-vi.mock('@/lib/auth-server', () => ({
-  createSession: vi.fn(async () => 'jeton-session'),
-  clearLocalPlayCookieOptions: () => ({ name: 'lp_local_play', value: '', path: '/', maxAge: 0 }),
-  deleteIncomingSession: vi.fn(async () => {}),
-  hashPassword: vi.fn(async () => 'hash'),
-  isValidEmail: (email: string) => email.includes('@'),
-  isValidPassword: () => true,
-  sessionCookieOptions: (token: string) => ({ name: 'lp_session', value: token, path: '/' }),
-}))
+vi.mock('@/lib/auth-server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/auth-server')>()
+  return {
+    createSession: vi.fn(async () => 'jeton-session'),
+    clearLocalPlayCookieOptions: () => ({ name: 'lp_local_play', value: '', path: '/', maxAge: 0 }),
+    deleteIncomingSession: vi.fn(async () => {}),
+    hashPassword: hashMock,
+    isPasswordHashBusyError: actual.isPasswordHashBusyError,
+    isValidEmail: actual.isValidEmail,
+    isValidPassword: () => true,
+    PasswordHashBusyError: actual.PasswordHashBusyError,
+    passwordHashBusyResponse: actual.passwordHashBusyResponse,
+    sessionCookieOptions: (token: string) => ({ name: 'lp_session', value: token, path: '/' }),
+  }
+})
 vi.mock('@/lib/account-code', () => ({ createUniqueAccountCode: vi.fn(async () => 'CODE1234') }))
 vi.mock('@/lib/display-name', () => ({
   getDisplayNameValidationError: () => null,
@@ -41,6 +49,7 @@ vi.mock('@/lib/name-moderation-attempts-server', () => ({ linkVisitorNameModerat
 vi.mock('@/lib/ip-history-server', () => ({ recordIpSeen: vi.fn(async () => {}) }))
 
 import { POST } from './route'
+import { PasswordHashBusyError } from '@/lib/auth-server'
 
 /** Adresse neuve à chaque requête : le quota (par adresse ET e-mail) reste hors jeu. */
 let seq = 0
@@ -109,5 +118,53 @@ describe('POST /api/auth/register — ambiance à la création', () => {
     expect(res.status).toBe(409)
     expect(userDb.create).not.toHaveBeenCalled()
     expect(userDb.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/auth/register — quotas et calcul du mot de passe', () => {
+  const fromIp = (ip: string, email: string) =>
+    POST(
+      new Request('http://test/api/auth/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'cf-connecting-ip': ip },
+        body: JSON.stringify({ email, password: 'motdepasse-solide', displayName: 'Kevin', locale: 'fr' }),
+      })
+    )
+
+  it('un même réseau qui change d’e-mail à chaque compte : 20 inscriptions, puis 429 sans bcrypt', async () => {
+    const statuses: number[] = []
+    for (let i = 1; i <= 21; i += 1) statuses.push((await fromIp('203.0.113.50', `serie${i}@exemple.fr`)).status)
+
+    expect(statuses.slice(0, 20).every((status) => status === 200)).toBe(true)
+    expect(statuses[20]).toBe(429)
+    expect(hashMock).toHaveBeenCalledTimes(20)
+    expect(userDb.create).toHaveBeenCalledTimes(20)
+  })
+
+  it('le même /64 IPv6 compte comme un seul réseau', async () => {
+    const statuses: number[] = []
+    for (let i = 1; i <= 21; i += 1) {
+      statuses.push((await fromIp(`2001:db8:abcd:13::${i.toString(16)}`, `v6-${i}@exemple.fr`)).status)
+    }
+    expect(statuses[20]).toBe(429)
+  })
+
+  it('« e-mail » de 8 000 caractères : refusé avant le limiteur, jamais mémorisé', async () => {
+    const giant = `${'a'.repeat(8000)}@exemple.fr`
+    const statuses: number[] = []
+    for (let i = 0; i < 8; i += 1) statuses.push((await fromIp('203.0.113.60', giant)).status)
+
+    expect(statuses.every((status) => status === 400)).toBe(true)
+    expect(userDb.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('trop de calculs bcrypt en cours : 503 avec Retry-After, aucun compte créé', async () => {
+    hashMock.mockRejectedValueOnce(new PasswordHashBusyError())
+
+    const res = await register()
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('retry-after')).toBe('2')
+    expect(userDb.create).not.toHaveBeenCalled()
   })
 })

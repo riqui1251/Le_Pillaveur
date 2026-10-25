@@ -19,19 +19,28 @@ import {
   recordVisitorPing,
   syncVisitorLocalPlayers,
 } from '@/lib/analytics-server'
-import { parsePingBody, planPing } from '@/lib/analytics-ping'
+import {
+  PING_NETWORK_LIMIT_PER_MINUTE,
+  PING_NEW_PRESENCE_GLOBAL_CAP_PER_HOUR,
+  PING_NEW_PRESENCE_NETWORK_LIMIT_PER_HOUR,
+  isVisitorId,
+  parsePingBody,
+  planPing,
+} from '@/lib/analytics-ping'
 import { recordAccountBeat } from '@/lib/account-visits-server'
+import { apiError, withApiRoute } from '@/lib/api-route'
 import { recordIpSeen } from '@/lib/ip-history-server'
+import { prisma } from '@/lib/prisma'
 import { runRetentionSweep } from '@/lib/retention-sweep'
-import { readJsonBodyLimited } from '@/lib/rate-limit'
+import { checkRateLimit, networkRateLimitKey, readJsonBodyLimited } from '@/lib/rate-limit'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 
 export const runtime = 'nodejs'
 
 /**
- * Plafond du corps du ping. La route est PUBLIQUE — ni session exigée, ni
- * quota — et c'est la plus appelée du site : un `request.json()` à cru y
+ * Plafond du corps du ping. La route est PUBLIQUE — aucune session exigée —
+ * et c'est la plus appelée du site : un `request.json()` à cru y
  * matérialisait en mémoire n'importe quel corps, de n'importe qui. Le bornage
  * des pseudos (MAX_VISITOR_LOCAL_PLAYER_NAMES, visitor-local-players.ts)
  * arrive APRÈS le parse, donc trop tard. Avec connection_limit=1
@@ -56,10 +65,50 @@ async function readJsonBody(request: Request): Promise<unknown> {
   return parsed.ok ? parsed.body : null /* corps vide, invalide ou trop gros */
 }
 
-export async function POST(request: Request) {
+const MINUTE_MS = 60 * 1000
+const HOUR_MS = 60 * MINUTE_MS
+
+/**
+ * Une présence de plus peut-elle naître (voir PING_NEW_PRESENCE_*) ? Quota du
+ * réseau d'abord : un réseau déjà refusé n'use pas le plafond commun.
+ */
+function admitNewPresence(request: Request): boolean {
+  const network = checkRateLimit(
+    networkRateLimitKey(request, 'analytics-ping:new-presence'),
+    PING_NEW_PRESENCE_NETWORK_LIMIT_PER_HOUR,
+    HOUR_MS
+  )
+  if (!network.ok) return false
+  return checkRateLimit(
+    'analytics-ping:new-presence:global',
+    PING_NEW_PRESENCE_GLOBAL_CAP_PER_HOUR,
+    HOUR_MS
+  ).ok
+}
+
+async function presenceExists(visitorId: string): Promise<boolean> {
+  const row = await prisma.sitePresence.findUnique({
+    where: { visitorId },
+    select: { visitorId: true },
+  })
+  return row !== null
+}
+
+export const POST = withApiRoute('analytics ping POST', async (request: Request) => {
+  // Avant toute lecture et toute écriture : chaque ping coûte des écritures
+  // SQLite sur une connexion unique.
+  const quota = checkRateLimit(
+    networkRateLimitKey(request, 'analytics-ping'),
+    PING_NETWORK_LIMIT_PER_MINUTE,
+    MINUTE_MS
+  )
+  if (!quota.ok) return apiError('rate_limited', 429, { retryAfterSec: quota.retryAfterSec })
+
   try {
     const cookieStore = await cookies()
-    let visitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    const rawVisitorId = cookieStore.get(VISITOR_COOKIE)?.value
+    // Hors du format de createVisitorId : valeur forgée, tenue pour absente.
+    let visitorId = isVisitorId(rawVisitorId) ? rawVisitorId : undefined
     // Accord donné sous le libellé actuel seulement ('2') : l'ancien '1'
     // (« statistiques anonymes ») ne vaut plus accord et le bandeau se repose.
     const consentValue = cookieStore.get(ANALYTICS_CONSENT_COOKIE)?.value
@@ -67,7 +116,7 @@ export async function POST(request: Request) {
 
     // lp_vid sans accord valable : identifiant de suivi qui ne sert plus à rien,
     // retiré dans la réponse et plus jamais lu ici.
-    const dropVisitorCookie = !hasConsent && Boolean(visitorId)
+    const dropVisitorCookie = !hasConsent && Boolean(rawVisitorId)
     if (dropVisitorCookie && visitorId && consentValue === ANALYTICS_CONSENT_LEGACY) {
       // Navigateur resté à l'ancien '1' : on efface ce qu'il a laissé sous cet
       // accord, y compris ce que l'ancien conteneur a pu réécrire APRÈS la
@@ -129,16 +178,31 @@ export async function POST(request: Request) {
     }
 
     // Suivi du navigateur : planPing ne le prévoit qu'avec consentement
-    // (art. 82 loi I&L).
-    const createdVisitorId = writes.includes('visitor-cookie') ? createVisitorId() : null
-    if (createdVisitorId) visitorId = createdVisitorId
+    // (art. 82 loi I&L). Une présence qui NAÎT — cookie neuf, ou lp_vid que
+    // la base ne connaît pas (un script en forge un par requête) — passe par
+    // admitNewPresence ; refusée, rien n'est écrit pour le navigateur.
+    const wantsPresence = writes.includes('visitor-beat') || writes.includes('visitor-view')
+    let createdVisitorId: string | null = null
+    if (writes.includes('visitor-cookie')) {
+      if (admitNewPresence(request)) {
+        createdVisitorId = createVisitorId()
+        visitorId = createdVisitorId
+      }
+    } else if (
+      visitorId &&
+      wantsPresence &&
+      !(await presenceExists(visitorId)) &&
+      !admitNewPresence(request)
+    ) {
+      visitorId = undefined
+    }
     // Vrai seulement si la présence du navigateur porte la liste reçue : le
     // client ne tient la synchro pour faite qu'à cette condition, et la
     // renvoie sinon (première visite : aucune présence avant le premier
     // signal consenti).
     let localPlayersSynced = false
     if (visitorId) {
-      if (writes.includes('visitor-beat') || writes.includes('visitor-view')) {
+      if (wantsPresence) {
         await recordVisitorPing(visitorId, {
           country,
           ip,
@@ -173,4 +237,4 @@ export async function POST(request: Request) {
     console.error('analytics ping error:', error)
     return NextResponse.json({ ok: false }, { status: 500 })
   }
-}
+})

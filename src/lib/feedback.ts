@@ -35,6 +35,16 @@ export const MAX_SCREENSHOTS = 3
 export const MAX_SCREENSHOT_BYTES = 500 * 1024
 export const MAX_TOTAL_SCREENSHOT_BYTES = 1.5 * 1024 * 1024
 
+/**
+ * Plafond COMMUN des captures stockées par 24 h (base64 tel qu'écrit en base),
+ * toutes sources confondues. Les quotas par compte et par réseau bornent le
+ * débit de chaque émetteur, pas leur somme : des réseaux nombreux (un /48
+ * IPv6 fournit 65 536 clés /64) écrivaient chacun 2 Mo par retour jusqu'à
+ * remplir le disque. 50 Mo : des dizaines de vrais rapports de bug par jour.
+ * Au-delà, le retour est gardé SANS ses captures.
+ */
+export const FEEDBACK_SCREENSHOT_DAILY_BYTES_CAP = 50 * 1024 * 1024
+
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp']
 
 export function isFeedbackType(value: string): value is FeedbackType {

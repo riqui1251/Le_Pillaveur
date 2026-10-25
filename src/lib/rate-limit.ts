@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { getClientIpFromRequest } from '@/lib/geo-server'
 import { ipNetworkKey } from '@/lib/ip-network'
 
@@ -7,6 +8,14 @@ type RateLimitEntry = {
 }
 
 const store = new Map<string, RateLimitEntry>()
+
+/**
+ * Plafond d'entrées du compteur. Chaque clé neuve (une IP, un e-mail) en crée
+ * une, purgée seulement à la fin de sa fenêtre (jusqu'à une heure) : un script
+ * qui varie la clé à chaque requête faisait gonfler la mémoire du conteneur
+ * sans limite. Au-delà, les entrées les plus anciennes sont évincées.
+ */
+export const RATE_LIMIT_MAX_ENTRIES = 50_000
 
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000
 let lastCleanup = Date.now()
@@ -29,7 +38,11 @@ export function checkRateLimit(
 
   const entry = store.get(key)
   if (!entry || entry.resetAt <= now) {
+    // Supprimée puis reposée : la clé passe en fin d'ordre d'insertion, celui
+    // que suit l'éviction.
+    store.delete(key)
     store.set(key, { count: 1, resetAt: now + windowMs })
+    evictOldestEntries()
     return { ok: true }
   }
 
@@ -44,6 +57,56 @@ export function checkRateLimit(
   return { ok: true }
 }
 
+function evictOldestEntries(): void {
+  if (store.size <= RATE_LIMIT_MAX_ENTRIES) return
+  for (const key of store.keys()) {
+    store.delete(key)
+    if (store.size <= RATE_LIMIT_MAX_ENTRIES) return
+  }
+}
+
+/**
+ * Rend l'unité qu'un checkRateLimit accepté vient de prendre. Pour un quota
+ * qui ne compte que les ÉCHECS (connexion) : la tentative est comptée AVANT le
+ * calcul — deux essais simultanés ne passent pas tous deux sous la limite —
+ * puis rendue si elle réussit.
+ */
+export function refundRateLimit(key: string): void {
+  const entry = store.get(key)
+  if (entry && entry.count > 0 && entry.resetAt > Date.now()) entry.count -= 1
+}
+
+export type RateLimitRule = { key: string; limit: number; windowMs: number }
+
+/**
+ * Plusieurs quotas pour une même requête (adresse, réseau, compte) : refus au
+ * premier compteur plein, et les unités déjà prises par les précédents sont
+ * rendues — une requête refusée n'use pas les autres compteurs.
+ */
+export function checkRateLimits(
+  rules: RateLimitRule[]
+): { ok: true } | { ok: false; retryAfterSec: number } {
+  const taken: string[] = []
+  for (const rule of rules) {
+    const result = checkRateLimit(rule.key, rule.limit, rule.windowMs)
+    if (!result.ok) {
+      for (const key of taken) refundRateLimit(key)
+      return result
+    }
+    taken.push(rule.key)
+  }
+  return { ok: true }
+}
+
+/**
+ * Empreinte courte (SHA-256 tronqué à 128 bits) d'un identifiant mis dans une
+ * clé : jamais l'adresse en clair dans la mémoire du limiteur, et une taille
+ * fixe quelle que soit la saisie (un « e-mail » de 8 Ko restait tel quel).
+ */
+function keyDigest(value: string): string {
+  return createHash('sha256').update(value).digest('hex').slice(0, 32)
+}
+
 /** Adresse du client, ou « unknown » : sans IP lisible, un compteur à part. */
 function clientIp(request: Request): string {
   return getClientIpFromRequest(request) ?? 'unknown'
@@ -52,7 +115,7 @@ function clientIp(request: Request): string {
 export function rateLimitKey(request: Request, scope: string, email?: string): string {
   const ip = clientIp(request)
   const normalizedEmail = email?.trim().toLowerCase()
-  return normalizedEmail ? `${scope}:${ip}:${normalizedEmail}` : `${scope}:${ip}`
+  return normalizedEmail ? `${scope}:${ip}:${keyDigest(normalizedEmail)}` : `${scope}:${ip}`
 }
 
 /**
@@ -76,6 +139,17 @@ export function networkRateLimitKey(request: Request, scope: string): string {
  */
 export function userRateLimitKey(scope: string, userId: string): string {
   return `${scope}:user:${userId}`
+}
+
+/**
+ * Clé par ADRESSE e-mail, quelle que soit l'IP, pour les routes sans session
+ * (connexion, mot de passe oublié) : changer d'adresse IP à chaque essai ne
+ * remet pas le compteur d'un compte à zéro. Valable pour une adresse inconnue
+ * comme pour un compte existant — un refus réservé aux comptes existants dirait
+ * lesquels existent.
+ */
+export function emailRateLimitKey(scope: string, email: string): string {
+  return `${scope}:email:${keyDigest(email.trim().toLowerCase())}`
 }
 
 const TEXT_ENCODER = new TextEncoder()

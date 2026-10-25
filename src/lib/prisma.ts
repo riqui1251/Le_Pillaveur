@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { displayNameKey } from '@/lib/name-moderation/confusables'
 
 /**
  * Paramètres imposés à la datasource SQLite, et SEULE source de vérité du
@@ -55,6 +56,58 @@ export function withSqliteConnectionParams(url: string): string {
   return query ? `${base}?${query}` : base
 }
 
+type Fields = Record<string, unknown>
+
+function isFields(value: unknown): value is Fields {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** Clé d'un pseudo écrit (chaîne ou `{ set }`), null s'il est effacé, undefined sinon. */
+function keyOfWrittenName(value: unknown): string | null | undefined {
+  const written = isFields(value) && 'set' in value ? value.set : value
+  if (typeof written === 'string') return displayNameKey(written)
+  return written === null ? null : undefined
+}
+
+function withKeysInData(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(withKeysInData)
+  if (!isFields(data)) return data
+  const next: Fields = { ...data }
+  const displayKey = keyOfWrittenName(data.displayName)
+  if (displayKey !== undefined) next.displayNameKey = displayKey
+  // Le pseudo en ligne vit dans `name` (route online-display-name, auth-server).
+  const onlineKey = keyOfWrittenName(data.name)
+  if (onlineKey !== undefined) next.onlineDisplayNameKey = onlineKey
+  return next
+}
+
+/** Champs d'arguments qui portent des données écrites, par opération sur User. */
+const USER_WRITE_DATA_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  create: ['data'],
+  createMany: ['data'],
+  createManyAndReturn: ['data'],
+  update: ['data'],
+  updateMany: ['data'],
+  updateManyAndReturn: ['data'],
+  upsert: ['create', 'update'],
+}
+
+/**
+ * Pose User.displayNameKey / onlineDisplayNameKey dès qu'une écriture touche
+ * displayName ou name : un seul endroit pour toutes les routes, et la clé ne
+ * peut pas diverger du pseudo. Les écritures imbriquées (user: { create })
+ * n'y passent pas : le projet n'en fait aucune sur User.
+ */
+export function withDisplayNameKeys<T>(operation: string, args: T): T {
+  const fields = USER_WRITE_DATA_FIELDS[operation]
+  if (!fields || !isFields(args)) return args
+  const next: Fields = { ...args }
+  for (const field of fields) {
+    if (field in args) next[field] = withKeysInData(args[field])
+  }
+  return next as T
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
@@ -64,7 +117,25 @@ function createPrismaClient(): PrismaClient {
   // Sans DATABASE_URL (tests, outillage), on laisse Prisma lire lui-même
   // l'environnement et lever son erreur habituelle : la surcharger ici
   // n'apporterait qu'un message moins clair.
-  return url ? new PrismaClient({ datasourceUrl: withSqliteConnectionParams(url) }) : new PrismaClient()
+  const client = url ? new PrismaClient({ datasourceUrl: withSqliteConnectionParams(url) }) : new PrismaClient()
+  const extended = client.$extends({
+    name: 'displayNameKeys',
+    query: {
+      user: {
+        create: ({ args, query }) => query(withDisplayNameKeys('create', args)),
+        createMany: ({ args, query }) => query(withDisplayNameKeys('createMany', args)),
+        createManyAndReturn: ({ args, query }) => query(withDisplayNameKeys('createManyAndReturn', args)),
+        update: ({ args, query }) => query(withDisplayNameKeys('update', args)),
+        updateMany: ({ args, query }) => query(withDisplayNameKeys('updateMany', args)),
+        updateManyAndReturn: ({ args, query }) => query(withDisplayNameKeys('updateManyAndReturn', args)),
+        upsert: ({ args, query }) => query(withDisplayNameKeys('upsert', args)),
+      },
+    },
+  })
+  // Une extension de requêtes ne change ni les modèles ni les résultats : le
+  // client garde son type de base, celui qu'attendent les fonctions qui le
+  // reçoivent en paramètre (rankings, match-results…).
+  return extended as unknown as PrismaClient
 }
 
 /**

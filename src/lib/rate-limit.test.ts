@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RATE_LIMIT_MAX_ENTRIES,
   checkRateLimit,
+  checkRateLimits,
+  emailRateLimitKey,
   networkRateLimitKey,
   rateLimitKey,
   rateLimitResponse,
   readJsonBodyLimited,
+  refundRateLimit,
   userRateLimitKey,
 } from '@/lib/rate-limit'
 
@@ -49,6 +53,63 @@ describe('checkRateLimit', () => {
     expect(checkRateLimit(a, 1, 10_000).ok).toBe(false)
     expect(checkRateLimit(b, 1, 10_000).ok).toBe(true)
   })
+
+  it('refundRateLimit rend l’unité prise (quota qui ne compte que les échecs)', () => {
+    const key = freshKey()
+    expect(checkRateLimit(key, 2, 10_000).ok).toBe(true)
+    expect(checkRateLimit(key, 2, 10_000).ok).toBe(true)
+    refundRateLimit(key)
+    expect(checkRateLimit(key, 2, 10_000).ok).toBe(true)
+    expect(checkRateLimit(key, 2, 10_000).ok).toBe(false)
+    // Clé inconnue : sans effet.
+    expect(() => refundRateLimit(freshKey())).not.toThrow()
+  })
+
+  it('le nombre d’entrées est plafonné : les plus anciennes sont évincées', () => {
+    const oldest = freshKey()
+    expect(checkRateLimit(oldest, 1, 60_000).ok).toBe(true)
+    expect(checkRateLimit(oldest, 1, 60_000).ok).toBe(false)
+
+    let newest = ''
+    for (let i = 0; i < RATE_LIMIT_MAX_ENTRIES; i += 1) {
+      newest = `${oldest}:flot:${i}`
+      checkRateLimit(newest, 1, 60_000)
+    }
+
+    // La plus ancienne a été évincée (son compteur repart), la plus récente est gardée.
+    expect(checkRateLimit(newest, 1, 60_000).ok).toBe(false)
+    expect(checkRateLimit(oldest, 1, 60_000).ok).toBe(true)
+  })
+})
+
+describe('checkRateLimits', () => {
+  it('accepte si tous les compteurs ont de la place, et les consomme tous', () => {
+    const a = freshKey()
+    const b = freshKey()
+    expect(
+      checkRateLimits([
+        { key: a, limit: 1, windowMs: 10_000 },
+        { key: b, limit: 1, windowMs: 10_000 },
+      ])
+    ).toEqual({ ok: true })
+    expect(checkRateLimit(a, 1, 10_000).ok).toBe(false)
+    expect(checkRateLimit(b, 1, 10_000).ok).toBe(false)
+  })
+
+  it('refuse au premier compteur plein et rend les unités déjà prises', () => {
+    const first = freshKey()
+    const full = freshKey()
+    checkRateLimit(full, 1, 10_000)
+
+    const refused = checkRateLimits([
+      { key: first, limit: 1, windowMs: 10_000 },
+      { key: full, limit: 1, windowMs: 10_000 },
+    ])
+
+    expect(refused.ok).toBe(false)
+    // La requête refusée n'a pas usé le premier compteur.
+    expect(checkRateLimit(first, 1, 10_000).ok).toBe(true)
+  })
 })
 
 describe('clés de quota', () => {
@@ -86,6 +147,24 @@ describe('clés de quota', () => {
     expect(checkRateLimit(key('2a01:cb05:545:a200::2'), 1, 10_000).ok).toBe(false)
     expect(checkRateLimit(key('203.0.113.7'), 1, 10_000).ok).toBe(true)
     expect(checkRateLimit(key('203.0.113.8'), 1, 10_000).ok).toBe(true)
+  })
+
+  it('rateLimitKey ne garde de l’e-mail qu’une empreinte de taille fixe', () => {
+    const request = cloudflareRequest('203.0.113.7')
+    const giant = `${'a'.repeat(8000)}@exemple.fr`
+    const key = rateLimitKey(request, 'login', 'Kevin@Exemple.fr ')
+    expect(key).not.toContain('kevin')
+    expect(key).toMatch(/^login:203\.0\.113\.7:[0-9a-f]{32}$/)
+    expect(rateLimitKey(request, 'login', 'kevin@exemple.fr')).toBe(key)
+    expect(rateLimitKey(request, 'login', 'autre@exemple.fr')).not.toBe(key)
+    expect(rateLimitKey(request, 'login', giant).length).toBe(key.length)
+  })
+
+  it('emailRateLimitKey suit l’adresse quelle que soit l’IP, sans la garder en clair', () => {
+    const key = emailRateLimitKey('login-account', ' Cible@Exemple.fr')
+    expect(key).toBe(emailRateLimitKey('login-account', 'cible@exemple.fr'))
+    expect(key).toMatch(/^login-account:email:[0-9a-f]{32}$/)
+    expect(key).not.toBe(emailRateLimitKey('login-account', 'autre@exemple.fr'))
   })
 
   it('sans adresse lisible, la clé réseau retombe sur « unknown » comme rateLimitKey', () => {

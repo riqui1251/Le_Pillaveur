@@ -1,7 +1,7 @@
-import type { Player } from './players';
+import { isLocalIconFrame, isLocalSpecialEffect, type Player } from './players';
 
 export function getPlayerFrameClass(frame: string | null | undefined): string {
-  if (!frame) return '';
+  if (!isLocalIconFrame(frame)) return '';
   return `player-icon-frame player-icon-frame-${frame}`;
 }
 
@@ -19,13 +19,15 @@ export function formatPlayerNameHtml(
   options?: { compliment?: string }
 ): string {
   const effectClass = getSpecialEffectClass(player);
-  const classAttr = effectClass || 'player-name-default';
+  const specialClass = effectClass ? ' player-name-special' : '';
+  const classAttr = escapeHtml(
+    `player-name${specialClass} ${effectClass || 'player-name-default'} font-semibold`
+  );
   const safeName = escapeHtml(player.name);
   const prefix = options?.compliment
     ? `"${escapeHtml(options.compliment)}" `
     : '';
-  const specialClass = effectClass ? ' player-name-special' : '';
-  return `<span class="player-name${specialClass} ${classAttr} font-semibold">${prefix}${safeName}</span>`;
+  return `<span class="${classAttr}">${prefix}${safeName}</span>`;
 }
 
 // Fonction pour convertir les classes Tailwind en couleurs CSS
@@ -38,7 +40,7 @@ export const getColorFromClass = (colorClass: string): string => {
 // Fonction pour vérifier si un joueur est spécial (Sim ou Riqui ou a l'effet spécial activé)
 export const isSpecialPlayer = (player: any): boolean => {
   // Si le joueur a explicitement activé l'effet spécial dans ses préférences
-  if (player?.preferences?.specialEffect) {
+  if (isLocalSpecialEffect(player?.preferences?.specialEffect)) {
     return true;
   }
   
@@ -51,9 +53,10 @@ export const isSpecialPlayer = (player: any): boolean => {
 
 // Fonction pour obtenir la classe CSS de l'effet spécial
 export const getSpecialEffectClass = (player: any): string => {
-  // Si le joueur a un effet spécial spécifique
-  if (player?.preferences?.specialEffect) {
-    const effect = player.preferences.specialEffect;
+  // Seul un effet du catalogue devient une classe : la valeur vient du
+  // stockage ou du nuage, et formatPlayerNameHtml la met dans du HTML brut.
+  const effect = player?.preferences?.specialEffect;
+  if (isLocalSpecialEffect(effect)) {
     return `special-player-name-${effect}`;
   }
   

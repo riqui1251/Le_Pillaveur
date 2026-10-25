@@ -95,6 +95,17 @@ export function canPermanentBanTarget(actorRole: string, targetRole: string): bo
   return canPermanentBan(actorRole) && isStrictlyHigher(actorRole, targetRole)
 }
 
+/**
+ * Lever ou remplacer une sanction EN PLACE (ban de compte, vocal, chat), en
+ * plus du droit de la poser : grade au moins égal à celui de son auteur.
+ * Sans ça un modérateur défaisait le ban définitif d'un admin, un admin celui
+ * d'un fondateur. `authorRole` null : auteur inconnu (compte supprimé),
+ * seul le droit de poser compte.
+ */
+export function canOverrideSanction(actorRole: string, authorRole: string | null): boolean {
+  return authorRole === null || roleRank(actorRole) >= roleRank(authorRole)
+}
+
 /** @deprecated Préférer canTemporaryBanTarget ou canPermanentBanTarget */
 export function canBanTarget(actorRole: string, targetRole: string): boolean {
   return canTemporaryBanTarget(actorRole, targetRole)

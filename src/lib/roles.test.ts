@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canAccessSupervision,
   canManageUserFeedback,
+  canOverrideSanction,
   canViewOpsStatus,
   canViewSupervisionAnalytics,
   canViewUserFeedback,
@@ -69,5 +70,28 @@ describe('roles — surveillance du serveur', () => {
     for (const role of USER_ROLES) {
       if (canViewOpsStatus(role)) expect(canAccessSupervision(role)).toBe(true)
     }
+  })
+})
+
+/**
+ * Lever ou remplacer une sanction en place : grade au moins égal à celui de
+ * son auteur. Un modérateur ne défait pas la sanction d'un admin, un admin
+ * pas celle d'un fondateur ; un pair, oui.
+ */
+describe('roles — sanction posée par un autre', () => {
+  it('refuse un grade inférieur à celui de l’auteur', () => {
+    expect(canOverrideSanction('moderator', 'admin')).toBe(false)
+    expect(canOverrideSanction('admin', 'superadmin')).toBe(false)
+    expect(canOverrideSanction('superadmin', 'fondateur')).toBe(false)
+  })
+
+  it('accepte un pair ou un grade supérieur', () => {
+    expect(canOverrideSanction('moderator', 'moderator')).toBe(true)
+    expect(canOverrideSanction('admin', 'moderator')).toBe(true)
+    expect(canOverrideSanction('fondateur', 'fondateur')).toBe(true)
+  })
+
+  it('auteur inconnu (compte supprimé) : ne bloque pas', () => {
+    expect(canOverrideSanction('moderator', null)).toBe(true)
   })
 })

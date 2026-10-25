@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { normalizeRole } from '@/lib/roles'
 import { COSMETICS, cosmeticKey, findCosmetic, type CosmeticKind } from '@/lib/online/cosmetics'
 import { buildProgression } from '@/lib/online/progression-server'
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('admin/users/cosmetics POST', async (request: Request) => {
   try {
     const actor = await requireRole(isFondateur)
 
@@ -99,4 +100,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'cosmetics POST')
   }
-}
+})

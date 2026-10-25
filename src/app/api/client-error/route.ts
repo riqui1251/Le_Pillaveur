@@ -27,7 +27,8 @@ export const runtime = 'nodejs'
  *    rien contre des réseaux nombreux, et chaque rapport DISTINCT crée une
  *    ligne — sans plafond commun, un script noyait le panneau de Supervision
  *    (les 20 groupes les plus récents) et faisait grossir la table 30 jours ;
- *    le serveur ajoute son propre plafond de créations par 24 h ;
+ *    le serveur ajoute son propre plafond de créations par 24 h, commun et
+ *    par réseau (client-errors-server.ts) ;
  * 3. quota par RÉSEAU (10/min, clé /64 en IPv6) — une tablée qui plante en
  *    boucle est déjà dédoublonnée en base, au-delà c'est un script ;
  * 4. corps borné à 4 Ko AVANT d'être matérialisé : un rapport conforme tient
@@ -61,6 +62,11 @@ export const POST = withApiRoute('client-error POST', async (request: Request) =
   // Hors contrat : refus nu, sans code ni détail — personne ne lit la réponse.
   if (!report) return new Response(null, { status: 400 })
 
-  await recordClientError(report, deviceFamilyFromUserAgent(request.headers.get('user-agent')))
+  await recordClientError(
+    report,
+    deviceFamilyFromUserAgent(request.headers.get('user-agent')),
+    new Date(),
+    networkRateLimitKey(request, 'client-error:create')
+  )
   return new Response(null, { status: 204 })
 })

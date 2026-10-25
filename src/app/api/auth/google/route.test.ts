@@ -7,21 +7,35 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * la création prend l'ambiance de l'appareil (« Sans alcool » d'office dans
  * l'app) ; un compte existant garde son réglage, choisi ailleurs et suivi d'un
  * appareil à l'autre. Toute valeur inconnue est ignorée (défaut du schéma).
+ * Et un compte qui portait l'adresse sans l'avoir jamais confirmée (inscrit
+ * par mot de passe, peut-être par un tiers) est RÉCLAMÉ par le titulaire que
+ * Google prouve : mot de passe effacé, sessions révoquées.
  * Vraie route, jeton Google, base, session et cookies simulés.
  */
 
-const { userDb, verifyMock } = vi.hoisted(() => ({
+const { userDb, sessionDb, linkDb, verifyMock, createSessionMock } = vi.hoisted(() => ({
   userDb: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+  sessionDb: { deleteMany: vi.fn() },
+  linkDb: { count: vi.fn(), deleteMany: vi.fn() },
   verifyMock: vi.fn(),
+  createSessionMock: vi.fn(async () => 'jeton-session'),
 }))
 
-vi.mock('@/lib/prisma', () => ({ prisma: { user: userDb } }))
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    user: userDb,
+    session: sessionDb,
+    oAuthAccount: linkDb,
+    $transaction: vi.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+  },
+}))
 vi.mock('next/headers', () => ({
   cookies: async () => ({ has: () => false, get: () => undefined }),
 }))
 vi.mock('@/lib/google-auth-server', () => ({ verifyGoogleIdToken: verifyMock }))
-vi.mock('@/lib/auth-server', () => ({
-  createSession: vi.fn(async () => 'jeton-session'),
+vi.mock('@/lib/auth-server', async (importOriginal) => ({
+  claimUnprovenAccount: (await importOriginal<typeof import('@/lib/auth-server')>()).claimUnprovenAccount,
+  createSession: createSessionMock,
   clearLocalPlayCookieOptions: () => ({ name: 'lp_local_play', value: '', path: '/', maxAge: 0 }),
   deleteIncomingSession: vi.fn(async () => {}),
   sessionCookieOptions: (token: string) => ({ name: 'lp_session', value: token, path: '/' }),
@@ -59,7 +73,7 @@ const existingAccount = {
 }
 
 /** Base simulée : un compte par e-mail (ou aucun), relu par id après création. */
-function database(existing: typeof existingAccount | null) {
+function database(existing: Record<string, unknown> | null) {
   let row: Record<string, unknown> | null = existing
   userDb.findUnique.mockImplementation(async ({ where }: { where: { email?: string; id?: string } }) => {
     if (!row) return null
@@ -72,6 +86,9 @@ function database(existing: typeof existingAccount | null) {
     return row
   })
   userDb.update.mockResolvedValue({})
+  sessionDb.deleteMany.mockResolvedValue({ count: 0 })
+  linkDb.count.mockResolvedValue(0)
+  linkDb.deleteMany.mockResolvedValue({ count: 0 })
 }
 
 let seq = 0
@@ -140,5 +157,53 @@ describe('POST /api/auth/google — ambiance', () => {
     const json = await res.json()
     expect(json.created).toBe(false)
     expect(json.user.ambianceMode).toBe('alcool')
+  })
+})
+
+describe('POST /api/auth/google — compte pré-inscrit avec l’adresse', () => {
+  /** Inscrit par mot de passe avec l'adresse de la victime, jamais confirmée. */
+  const trapped = {
+    ...existingAccount,
+    id: 'compte-piege',
+    displayName: 'Lucas',
+    passwordHash: '$2a$10$hash-choisi-par-attaquant',
+    emailVerified: null,
+  }
+
+  it('adresse jamais confirmée + mot de passe : réclamé (mot de passe effacé, sessions révoquées) avant la session', async () => {
+    database(trapped)
+
+    const res = await google()
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).user.id).toBe('compte-piege')
+    expect(userDb.update).toHaveBeenCalledWith({ where: { id: 'compte-piege' }, data: { passwordHash: '' } })
+    expect(sessionDb.deleteMany).toHaveBeenCalledWith({ where: { userId: 'compte-piege' } })
+    // Révocation AVANT la nouvelle session : celle de la victime survit.
+    expect(sessionDb.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      createSessionMock.mock.invocationCallOrder[0]
+    )
+    expect(createSessionMock).toHaveBeenCalledWith('compte-piege')
+    const login = userDb.update.mock.calls.find(([arg]) => 'lastLoginAt' in arg.data)?.[0]
+    expect(login?.data.emailVerified).toBeInstanceOf(Date)
+  })
+
+  it('adresse déjà confirmée : ni mot de passe effacé, ni session révoquée', async () => {
+    database({ ...trapped, emailVerified: new Date('2026-01-01') })
+
+    const res = await google()
+
+    expect(res.status).toBe(200)
+    expect(userDb.update.mock.calls.some(([arg]) => 'passwordHash' in arg.data)).toBe(false)
+    expect(sessionDb.deleteMany).not.toHaveBeenCalled()
+  })
+
+  it('compte Google ancien (ni mot de passe, ni identité liée, adresse pas encore notée) : sessions intactes', async () => {
+    database({ ...existingAccount, passwordHash: '', emailVerified: null })
+
+    const res = await google()
+
+    expect(res.status).toBe(200)
+    expect(sessionDb.deleteMany).not.toHaveBeenCalled()
   })
 })

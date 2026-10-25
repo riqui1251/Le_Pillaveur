@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { parseDeviceFromUserAgent } from '@/lib/device-from-user-agent'
+import { checkRateLimit } from '@/lib/rate-limit'
 import {
   CLIENT_ERROR_FIELD_LIMITS,
   normalizeClientErrorPath,
@@ -45,6 +46,15 @@ export const CLIENT_ERROR_GROUPS_SHOWN = 20
  * les répétitions des lignes existantes continuent d'être comptées.
  */
 export const CLIENT_ERROR_DAILY_CREATE_CAP = 500
+
+/**
+ * Part du plafond qu'un seul RÉSEAU peut créer par 24 h (un vingtième). Sans
+ * elle, un script à 10 rapports distincts par minute — le quota par réseau de
+ * la route — épuisait le plafond commun en 50 minutes, et plus aucun vrai
+ * plantage n'était gardé de la journée. Compteur en mémoire (rate-limit.ts),
+ * jamais l'adresse en base.
+ */
+export const CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP = CLIENT_ERROR_DAILY_CREATE_CAP / 20
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -146,14 +156,16 @@ export function parseClientErrorReport(body: unknown): ClientErrorInput | null {
  * `updateMany` plutôt que findFirst + update : UNE requête, atomique, dans le
  * cas de loin le plus fréquent (la répétition). S'il n'y avait rien à
  * incrémenter, la ligne est créée — sauf au-delà du plafond de créations des
- * 24 dernières heures, où le rapport est abandonné (`dropped`) sans que la
+ * 24 dernières heures, commun ou de son réseau (`networkKey`, clé de
+ * networkRateLimitKey), où le rapport est abandonné (`dropped`) sans que la
  * route change de réponse. Renvoie ce qui s'est passé, pour les tests et les
  * journaux.
  */
 export async function recordClientError(
   input: ClientErrorInput,
   device: ClientErrorDevice,
-  now: Date = new Date()
+  now: Date = new Date(),
+  networkKey: string | null = null
 ): Promise<'counted' | 'created' | 'dropped'> {
   const since = new Date(now.getTime() - CLIENT_ERROR_DEDUP_WINDOW_MS)
   const repeated = await prisma.clientError.updateMany({
@@ -174,6 +186,10 @@ export async function recordClientError(
     where: { createdAt: { gte: new Date(now.getTime() - DAY_MS) } },
   })
   if (created24h >= CLIENT_ERROR_DAILY_CREATE_CAP) return 'dropped'
+  // Après le plafond commun : seule une création effective use la part du réseau.
+  if (networkKey && !checkRateLimit(networkKey, CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP, DAY_MS).ok) {
+    return 'dropped'
+  }
 
   await prisma.clientError.create({
     data: {

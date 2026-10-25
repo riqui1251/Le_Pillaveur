@@ -130,9 +130,11 @@ export type OAuthProfile = {
   id: string
   email: string | null
   /**
-   * Adresse confirmée auprès du fournisseur. Seule une adresse confirmée peut
-   * retrouver un compte existant ou en créer un : sinon, n'importe qui
-   * s'emparerait du compte d'autrui en déclarant son adresse chez Discord.
+   * Adresse PROUVÉE par le fournisseur. Seule une adresse prouvée peut
+   * retrouver un compte existant : sinon, n'importe qui s'emparerait du compte
+   * d'autrui en déclarant son adresse chez Discord. Elle seule en crée un,
+   * sauf chez un fournisseur qui ne dit rien de la confirmation
+   * (acceptsUnverifiedEmailForNewAccount).
    */
   emailVerified: boolean
   /** Prénom ou nom d'affichage, pour proposer un pseudo à la création. */
@@ -203,15 +205,26 @@ async function facebookProfile(code: string, creds: OAuthCredentials): Promise<O
   const me = await fetchJson(`${FACEBOOK_GRAPH}/me?${meParams.toString()}`)
   const id = text(me?.id)
   if (!me || !id) return null
-  const email = text(me.email).toLowerCase() || null
   return {
     id,
-    email,
-    // Facebook ne transmet une adresse qu'une fois confirmée par le lien
-    // reçu dans la boîte : une adresse présente est une adresse vérifiée.
-    emailVerified: email !== null,
+    email: text(me.email).toLowerCase() || null,
+    // La Graph API n'expose aucun indicateur de confirmation (sa
+    // documentation dit seulement « valid email ») : l'adresse n'est jamais
+    // tenue pour prouvée (acceptsUnverifiedEmailForNewAccount).
+    emailVerified: false,
     name: text(me.first_name) || text(me.name),
   }
+}
+
+/**
+ * Fournisseur qui transmet une adresse sans dire si elle est confirmée
+ * (Facebook) : elle peut ouvrir un compte NEUF ou pérenniser un invité quand
+ * aucun compte ne la porte, sans être marquée vérifiée ; jamais retrouver un
+ * compte existant. Discord et Apple disent explicitement si l'adresse est
+ * confirmée : non confirmée, elle ne sert à rien.
+ */
+export function acceptsUnverifiedEmailForNewAccount(provider: OAuthProvider): boolean {
+  return provider === 'facebook'
 }
 
 function jwtPayload(token: string): Record<string, unknown> | null {

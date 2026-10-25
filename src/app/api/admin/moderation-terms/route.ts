@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { canManageUsers } from '@/lib/roles'
 import { adminErrorResponse, requireRole } from '../_guard'
 import { prisma } from '@/lib/prisma'
@@ -35,7 +36,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('admin/moderation-terms POST', async (request: Request) => {
   try {
     const actor = await requireRole(canManageUsers)
 
@@ -69,9 +70,9 @@ export async function POST(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'moderation-terms POST')
   }
-}
+})
 
-export async function DELETE(request: Request) {
+export const DELETE = withApiRoute('admin/moderation-terms DELETE', async (request: Request) => {
   try {
     await requireRole(canManageUsers)
 
@@ -88,4 +89,4 @@ export async function DELETE(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'moderation-terms DELETE')
   }
-}
+})

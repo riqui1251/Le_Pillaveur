@@ -334,3 +334,18 @@ describe('GET — la carte peut-elle sortir en local pour ce compte ?', () => {
     spy.mockRestore()
   })
 })
+
+describe('enveloppe commune', () => {
+  it('envoi depuis un autre site : 403 cross_site_request, rien d’écrit', async () => {
+    currentUserMock.mockResolvedValue(account())
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const res = await send(RATE, { 'sec-fetch-site': 'cross-site' })
+
+    expect(res.status).toBe(403)
+    expect(await res.json()).toEqual({ error: 'cross_site_request', code: 'cross_site_request' })
+    expect(userDb.updateMany).not.toHaveBeenCalled()
+    expect(feedbackDb.create).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})

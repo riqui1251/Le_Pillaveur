@@ -159,6 +159,27 @@ describe('syncLocalWithCloud après une coupure', () => {
     expect(isCloudBehindFor('u1')).toBe(false)
   })
 
+  it('quota dépassé (429) : vaut une coupure, le joueur supprimé ne ressuscite pas', async () => {
+    const ana = makePlayer('a', 'Ana', 1)
+    const bob = makePlayer('b', 'Bob', 2)
+    savePlayers([ana, bob])
+    const cloud = fakeCloud([ana, bob])
+    setCloudAccount('u1')
+    removePlayer('b')
+    cloud.putStatus = 429
+    expect(await pushPlayersToCloud(getStoredPlayers())).toBe(false)
+    expect(isCloudBehindFor('u1')).toBe(true)
+
+    await expect(syncLocalWithCloud('u1')).rejects.toThrow('cloud_behind')
+    expect(isCloudBehindFor('u1')).toBe(true)
+
+    cloud.putStatus = null
+    const result = await syncLocalWithCloud('u1')
+    expect(names(result)).toEqual(['Ana'])
+    expect(names(cloud.players)).toEqual(['Ana'])
+    expect(cloud.requests).not.toContain('GET')
+  })
+
   it('laisse un AUTRE compte fusionner comme avant, et efface la marque', async () => {
     const ana = makePlayer('a', 'Ana', 1)
     savePlayers([ana])

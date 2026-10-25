@@ -12,9 +12,28 @@ import {
 } from '@/lib/auth-cookies'
 import { getCurrentUser } from '@/lib/auth-server'
 import { eraseVisitorTracking } from '@/lib/analytics-server'
+import { apiError, withApiRoute } from '@/lib/api-route'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit, networkRateLimitKey, readJsonBodyLimited } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
+
+/**
+ * Le corps se réduit à trois champs (`analytics`, `consentOnly`,
+ * `consentVersion`) : quelques dizaines d'octets. La route est publique, sans
+ * compte : un `request.json()` à cru avalait un corps de 100 Mo et figeait le
+ * processus le temps du parse.
+ */
+const ACCEPT_AGE_BODY_MAX_BYTES = 1024
+
+/**
+ * Quota par RÉSEAU (clé /64 en IPv6), compté avant toute lecture du corps :
+ * chaque refus efface des lignes en base. Un navigateur ne répond qu'une fois
+ * au portail et au bandeau ; 60 par 10 minutes laissent passer une soirée
+ * entière derrière la même box.
+ */
+const ACCEPT_AGE_NETWORK_LIMIT = 60
+const ACCEPT_AGE_WINDOW_MS = 10 * 60 * 1000
 
 /**
  * Délai du second passage d'effacement. Un battement parti d'un autre onglet
@@ -64,7 +83,14 @@ async function eraseConsentBasedData({ visitorId, userId }: ErasureTargets): Pro
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('accept-age POST', async (request: Request) => {
+  const rate = checkRateLimit(
+    networkRateLimitKey(request, 'accept-age'),
+    ACCEPT_AGE_NETWORK_LIMIT,
+    ACCEPT_AGE_WINDOW_MS
+  )
+  if (!rate.ok) return apiError('rate_limited', 429, { retryAfterSec: rate.retryAfterSec })
+
   let analytics = false
   // Version du libellé que le client a AFFICHÉ. Seul un accord qui la porte
   // vaut '2' : un onglet chargé avant le changement de libellé (ancien
@@ -75,13 +101,17 @@ export async function POST(request: Request) {
   // y compris sur une page de lecture avant tout portail) : il ne certifie
   // pas l'âge, seul le portail 18+ le fait.
   let consentOnly = false
-  try {
-    const body = await request.json()
+  // Corps vide (ancien client), illisible ou trop gros : refus par défaut, le
+  // consentement ne se présume pas.
+  const parsed = await readJsonBodyLimited<Record<string, unknown> | null>(
+    request,
+    ACCEPT_AGE_BODY_MAX_BYTES
+  )
+  if (parsed.ok) {
+    const body = parsed.body
     analytics = body?.analytics === true
     consentVersion = body?.consentVersion
     consentOnly = body?.consentOnly === true
-  } catch {
-    // Corps vide (ancien client) : refus par défaut, le consentement ne se présume pas.
   }
 
   const granted = analytics && consentVersion === ANALYTICS_CONSENT_GRANTED
@@ -151,4 +181,4 @@ export async function POST(request: Request) {
     response.cookies.delete(VISITOR_COOKIE)
   }
   return response
-}
+})

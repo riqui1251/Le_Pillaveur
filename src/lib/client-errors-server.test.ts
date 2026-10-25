@@ -20,6 +20,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: { clientError: clientErrorMock } }))
 import {
   CLIENT_ERROR_DAILY_CREATE_CAP,
   CLIENT_ERROR_DEDUP_WINDOW_MS,
+  CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP,
   CLIENT_ERROR_GROUPS_SHOWN,
   CLIENT_ERROR_RETENTION_DAYS,
   clientErrorPurgeCutoff,
@@ -225,6 +226,36 @@ describe('recordClientError : dédoublonnage sur 10 minutes', () => {
 
   it('la fenêtre vaut bien 10 minutes', () => {
     expect(CLIENT_ERROR_DEDUP_WINDOW_MS).toBe(10 * 60 * 1000)
+  })
+})
+
+describe('recordClientError : part du plafond par réseau', () => {
+  it('un réseau ne crée qu’une fraction du plafond commun ; un autre réseau crée encore', async () => {
+    expect(CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP).toBeLessThan(CLIENT_ERROR_DAILY_CREATE_CAP)
+    const results: string[] = []
+    for (let i = 0; i < CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP + 5; i += 1) {
+      results.push(await recordClientError({ ...VALID, message: `m${i}` }, 'mobile', NOW, 'ce-test:10.0.0.1'))
+    }
+    expect(results.filter((r) => r === 'created')).toHaveLength(CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP)
+    expect(results.slice(-5)).toEqual(['dropped', 'dropped', 'dropped', 'dropped', 'dropped'])
+    expect(clientErrorMock.create).toHaveBeenCalledTimes(CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP)
+
+    await expect(recordClientError(VALID, 'mobile', NOW, 'ce-test:10.0.0.2')).resolves.toBe('created')
+  })
+
+  it('ni les répétitions ni un refus du plafond commun n’usent la part du réseau', async () => {
+    const key = 'ce-test:10.0.0.3'
+    clientErrorMock.updateMany.mockResolvedValue({ count: 1 })
+    for (let i = 0; i < CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP; i += 1) {
+      await expect(recordClientError(VALID, 'mobile', NOW, key)).resolves.toBe('counted')
+    }
+    clientErrorMock.updateMany.mockResolvedValue({ count: 0 })
+    clientErrorMock.count.mockResolvedValue(CLIENT_ERROR_DAILY_CREATE_CAP)
+    for (let i = 0; i < CLIENT_ERROR_NETWORK_DAILY_CREATE_CAP; i += 1) {
+      await expect(recordClientError(VALID, 'mobile', NOW, key)).resolves.toBe('dropped')
+    }
+    clientErrorMock.count.mockResolvedValue(0)
+    await expect(recordClientError(VALID, 'mobile', NOW, key)).resolves.toBe('created')
   })
 })
 

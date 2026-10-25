@@ -278,6 +278,12 @@
         "inviteConfirm": "Crear e invitar ({count})",
         "createAlone": "Crear una mesa vacía",
         "cancel": "Cancelar"
+      },
+      "inviteLeave": {
+        "title": "¿Salir de tu partida en curso?",
+        "description": "Unirte a esta mesa te hace salir de tu partida de {game}. Un bot ocupará tu lugar si no vuelves a tiempo.",
+        "confirm": "Unirme a la nueva mesa",
+        "cancel": "Quedarme en mi partida"
       }
     },
     "ambianceMode": {
@@ -716,7 +722,14 @@
       "request_already_handled": "Esta solicitud ya se ha tratado.",
       "request_already_declined": "Solicitud ya rechazada.",
       "fake_taken": "Esa respuesta ya está ocupada: inventa otra cosa.",
-      "cross_site_request": "Solicitud rechazada: no procede de este sitio."
+      "cross_site_request": "Solicitud rechazada: no procede de este sitio.",
+      "oauth_email_in_use": "Ya existe una cuenta con esta dirección: inicia sesión de otra forma.",
+      "chat_read_only": "Los muertos no hablan: el chat es de solo lectura hasta el final de la partida.",
+      "sanction_outranked": "Tu rango no te permite levantar ni modificar esta sanción.",
+      "invalid_duration": "Duración no válida: un número entero de días.",
+      "guess_too_fast": "Una propuesta por segundo: ¡más despacio!",
+      "guess_limit_reached": "No te quedan intentos en esta ronda.",
+      "word_too_recent": "Demasiado pronto: esta palabra acaba de salir."
     },
     "showcase": {
       "players": "De {min} a {max} jugadores",
@@ -2554,6 +2567,7 @@
       "game": {
         "placementTitle": "Coloca tus barcos",
         "placementHint": "Elige un barco y toca su casilla de inicio: si se sale del borde, se recoloca solo. Toca un barco colocado para retirarlo.",
+        "placementDeadlineHint": "Cuando se acabe el tiempo, los barcos de los rezagados se colocan al azar.",
         "shipLabel": "{size} casillas",
         "horizontal": "Horizontal",
         "vertical": "Vertical",
@@ -3160,6 +3174,8 @@
           "location": "El lugar era: {location}",
           "seeResult": "Ver el resultado",
           "continue": "Siguiente ronda",
+          "continueIn": "Siguiente ronda en {seconds} s",
+          "seeResultIn": "Resultado en {seconds} s",
           "outcome": {
             "spyCaught": "¡{genre, select, f {{name} era la espía — descubierta} m {{name} era el espía — descubierto} other {Se cae la máscara: {name} era el espía}}!",
             "accusationFailed": "Objetivo equivocado… ¡el espía escapa!",
@@ -3167,6 +3183,11 @@
             "spyGuessedWrong": "¡Respuesta equivocada del espía!",
             "timeout": "Se acabó el tiempo — ¡{name} se libra!"
           }
+        },
+        "lastChance": {
+          "title": "Se cae la máscara: ¡{name} es el espía!",
+          "spyHint": "Última oportunidad: adivina el lugar para ganar la ronda de todos modos.",
+          "othersHint": "Última oportunidad: {name} intenta adivinar el lugar…"
         },
         "victory": {
           "crewWin": "¡El equipo desenmascaró al espía!",
@@ -3643,7 +3664,9 @@
           "drawing": "dibuja",
           "found": "ha acertado",
           "away": "sin conexión"
-        }
+        },
+        "guessesLeft": "{count, plural, one {Te queda # intento} other {Te quedan # intentos}} en esta ronda",
+        "noGuessesLeft": "No te quedan intentos en esta ronda: mira el dibujo, ¡la próxima será la buena!"
       },
       "tutorial": {
         "steps": [
@@ -4938,6 +4961,8 @@
         "reveal": {
           "continue": "Siguiente ronda",
           "seeResult": "Ver el podio",
+          "continueIn": "Siguiente ronda en {seconds} s",
+          "seeResultIn": "Podio en {seconds} s",
           "everyone": "Un solo toque avanza para toda la mesa."
         },
         "waitingReturn": "Esperando a que vuelva {name} — bot en {seconds}s",
@@ -5125,6 +5150,8 @@
         "minorityDrinks": "La minoría bebe 🍺",
         "nextCard": "Siguiente carta",
         "seeEnd": "Terminar",
+        "nextCardIn": "Siguiente carta en {seconds} s",
+        "seeEndIn": "Terminar en {seconds} s",
         "waitingReturn": "Esperando a que vuelva {name} — bot en {seconds}s",
         "finished": {
           "title": "¡Fin de los dilemas!",

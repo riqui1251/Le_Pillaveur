@@ -169,23 +169,146 @@ export function resolveValidatedPlayerName(name: string): string | null {
   return sanitizePlayerName(validation.value);
 }
 
+const PLAYER_ID_PATTERN = /^[\w-]{1,128}$/;
+// Commence par une lettre ou un chiffre : écarte `__proto__` comme clé de gameStats.
+const GAME_ID_PATTERN = /^[a-z0-9][\w-]{0,63}$/i;
+// Une classe Tailwind de fond, rien d'autre : la couleur finit dans un className.
+const PLAYER_COLOR_PATTERN = /^bg-[a-z]+-\d{2,3}$/;
+const PLAYER_ICON_MAX_LENGTH = 32;
+
+const LOCAL_EFFECT_IDS = new Set<string>(
+  PLAYER_EFFECTS.flatMap((effect) => (effect.id ? [effect.id] : []))
+);
+const LOCAL_FRAME_IDS = new Set<string>(
+  PLAYER_FRAMES.flatMap((frame) => (frame.id ? [frame.id] : []))
+);
+
+/** Effet du catalogue LOCAL (PLAYER_EFFECTS) : le seul qui ait une classe CSS ici. */
+export function isLocalSpecialEffect(value: unknown): value is NonNullable<PlayerSpecialEffect> {
+  return typeof value === 'string' && LOCAL_EFFECT_IDS.has(value);
+}
+
+/** Cadre du catalogue LOCAL (PLAYER_FRAMES). */
+export function isLocalIconFrame(value: unknown): value is NonNullable<PlayerIconFrame> {
+  return typeof value === 'string' && LOCAL_FRAME_IDS.has(value);
+}
+
+export function isValidPlayerId(value: unknown): value is string {
+  return typeof value === 'string' && PLAYER_ID_PATTERN.test(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function isSafePlayerIcon(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= PLAYER_ICON_MAX_LENGTH &&
+    !/[<>"'&\p{Cc}]/u.test(value)
+  );
+}
+
+function sanitizeGameStats(raw: unknown): PlayerStats['gameStats'] {
+  if (!isRecord(raw)) return undefined;
+  const gameStats: NonNullable<PlayerStats['gameStats']> = {};
+  for (const [gameId, entry] of Object.entries(raw)) {
+    if (!GAME_ID_PATTERN.test(gameId) || !isRecord(entry)) continue;
+    const totalDrinks = finiteNumber(entry.totalDrinks);
+    gameStats[gameId] = {
+      gamesPlayed: finiteNumber(entry.gamesPlayed) ?? 0,
+      wins: finiteNumber(entry.wins) ?? 0,
+      ...(totalDrinks === undefined ? {} : { totalDrinks }),
+    };
+  }
+  return gameStats;
+}
+
+export function sanitizePlayerStats(raw: unknown): PlayerStats {
+  const source = isRecord(raw) ? raw : {};
+  const stats: PlayerStats = {
+    gamesPlayed: finiteNumber(source.gamesPlayed) ?? 0,
+    wins: finiteNumber(source.wins) ?? 0,
+    totalDrinks: finiteNumber(source.totalDrinks) ?? 0,
+  };
+  if (typeof source.favoriteGame === 'string' && GAME_ID_PATTERN.test(source.favoriteGame)) {
+    stats.favoriteGame = source.favoriteGame;
+  }
+  const lastPlayed = finiteNumber(source.lastPlayed);
+  if (lastPlayed !== undefined) stats.lastPlayed = lastPlayed;
+  const gameStats = sanitizeGameStats(source.gameStats);
+  if (gameStats) stats.gameStats = gameStats;
+  return stats;
+}
+
+/**
+ * Préférences ramenées aux catalogues : l'effet et le cadre finissent dans un
+ * attribut class, jusque dans le HTML brut du Petit Buveur — une valeur hors
+ * catalogue, venue du nuage d'un autre compte, y injectait une balise.
+ * `avatar` n'est posé par aucun écran et finirait dans un <img src> : une URL
+ * tierce y servirait de pixel espion, il n'est donc pas repris.
+ */
+export function sanitizePlayerPreferences(raw: unknown): PlayerPreferences {
+  const source = isRecord(raw) ? raw : {};
+  const preferences: PlayerPreferences = {
+    color:
+      typeof source.color === 'string' && PLAYER_COLOR_PATTERN.test(source.color)
+        ? source.color
+        : DEFAULT_COLORS[0],
+  };
+  if (typeof source.nickname === 'string') preferences.nickname = sanitizePlayerName(source.nickname);
+  if (source.theme === 'light' || source.theme === 'dark') preferences.theme = source.theme;
+  if (isSafePlayerIcon(source.icon)) preferences.icon = source.icon;
+  if (source.specialEffect === null || isLocalSpecialEffect(source.specialEffect)) {
+    preferences.specialEffect = source.specialEffect;
+  }
+  if (source.iconFrame === null || isLocalIconFrame(source.iconFrame)) {
+    preferences.iconFrame = source.iconFrame;
+  }
+  return preferences;
+}
+
+/**
+ * Joueur relu (stockage, nuage) ramené à sa forme : clés inconnues retirées,
+ * nombres finis, préférences dans les catalogues. Toujours le même ordre de
+ * clés, pour que deux copies identiques se sérialisent pareil. Null si ce
+ * n'est pas un objet.
+ */
+export function sanitizePlayer(raw: unknown): Player | null {
+  if (!isRecord(raw)) return null;
+  return {
+    id: isValidPlayerId(raw.id) ? raw.id : generatePlayerId(),
+    name: typeof raw.name === 'string' ? sanitizePlayerName(raw.name) : '',
+    ...(typeof raw.onlineEnabled === 'boolean' ? { onlineEnabled: raw.onlineEnabled } : {}),
+    createdAt: finiteNumber(raw.createdAt) ?? 0,
+    stats: sanitizePlayerStats(raw.stats),
+    preferences: sanitizePlayerPreferences(raw.preferences),
+  };
+}
+
+export function sanitizePlayers(raw: unknown): Player[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => sanitizePlayer(item) ?? []);
+}
+
 export function getStoredPlayers(): Player[] {
   const storage = getSafeStorage();
   if (!storage) return [];
-  
+
   const stored = storage.getItem(STORAGE_KEY);
   if (!stored) return [];
-  
+
   try {
-    const parsed: Player[] = JSON.parse(stored);
-    let changed = false;
-    const sanitized = parsed.map((p) => {
-      const cleanName = sanitizePlayerName(p.name);
-      if (cleanName !== p.name) changed = true;
-      return { ...p, name: cleanName };
-    });
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    const sanitized = sanitizePlayers(parsed);
     const deduped = dedupePlayersById(sanitized);
-    if (changed || deduped.length !== sanitized.length) {
+    if (JSON.stringify(deduped) !== stored) {
       try {
         savePlayers(deduped);
       } catch {

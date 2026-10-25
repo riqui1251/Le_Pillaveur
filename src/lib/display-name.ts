@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import type { AppLocale } from '@/i18n/routing'
 import { normalizeAppLocale } from '@/lib/locale-utils'
@@ -6,6 +7,7 @@ import {
   validateAccountDisplayName,
   type NameModerationReason,
 } from '@/lib/name-moderation'
+import { displayNameKey } from '@/lib/name-moderation/confusables'
 import frMessages from '../../messages/fr.json'
 import enMessages from '../../messages/en.json'
 import esMessages from '../../messages/es.json'
@@ -17,9 +19,7 @@ export function normalizeDisplayName(name: string): string {
   return name.trim()
 }
 
-export function displayNameKey(name: string): string {
-  return normalizeDisplayName(name).toLowerCase()
-}
+export { displayNameKey }
 
 export function getDisplayNameValidationError(name: string): NameModerationReason | null {
   const result = validateAccountDisplayName(name, DISPLAY_NAME_MAX_LENGTH)
@@ -38,12 +38,25 @@ export function displayNameValidationMessage(
   return reason ? getModerationErrorMessage(reason, locale, 'account') : null
 }
 
+/** Ce que LOWER() de SQLite fait d'une chaîne : seules les majuscules ASCII. */
+function sqliteLower(text: string): string {
+  return text.replace(/[A-Z]+/g, (letters) => letters.toLowerCase())
+}
+
 /**
- * Un pseudo est « pris » s'il correspond (casse/espaces ignorés) au pseudo de
- * compte OU au pseudo en ligne de n'importe quel compte actif : mot de passe,
- * Google (email sans mot de passe) ou invité. Sans ça, un homonyme exact
- * permet d'usurper l'identité visuelle d'un joueur à la table (effets,
- * cadres) — seuls les enregistrements fantômes legacy sont ignorés.
+ * Un pseudo est « pris » s'il a la même clé (casse, pleine chasse, invisibles,
+ * homoglyphes : displayNameKey) que le pseudo de compte OU le pseudo en ligne
+ * de n'importe quel compte actif : mot de passe, Google (email sans mot de
+ * passe) ou invité. Sans ça, un homonyme exact permet d'usurper l'identité
+ * visuelle d'un joueur à la table (effets, cadres) — seuls les
+ * enregistrements fantômes legacy sont ignorés.
+ *
+ * La clé est comparée à la colonne stockée, jamais à un LOWER() de SQLite,
+ * qui ne replie que l'ASCII (« Élodie » passait à côté d'« Élodie »). Ligne
+ * sans clé (pseudo non ASCII d'avant la migration, en attendant
+ * scripts/backfill-display-name-keys.mjs) : ancienne comparaison, avec la clé
+ * ET avec l'entrée repliée comme SQLite la replie, ce qui attrape au moins le
+ * doublon exact.
  */
 export async function isDisplayNameTaken(
   displayName: string,
@@ -51,19 +64,17 @@ export async function isDisplayNameTaken(
 ): Promise<boolean> {
   const key = displayNameKey(displayName)
   if (!key) return false
+  const legacyKey = sqliteLower(normalizeDisplayName(displayName))
 
-  const rows = excludeUserId
-    ? await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM "User"
-        WHERE (LOWER(TRIM("displayName")) = ${key} OR LOWER(TRIM(COALESCE("name", ''))) = ${key})
-          AND ("passwordHash" != '' OR "email" IS NOT NULL OR "isGuest" = 1)
-          AND id != ${excludeUserId}
-        LIMIT 1`
-    : await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM "User"
-        WHERE (LOWER(TRIM("displayName")) = ${key} OR LOWER(TRIM(COALESCE("name", ''))) = ${key})
-          AND ("passwordHash" != '' OR "email" IS NOT NULL OR "isGuest" = 1)
-        LIMIT 1`
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "User"
+    WHERE ("displayNameKey" = ${key}
+        OR "onlineDisplayNameKey" = ${key}
+        OR ("displayNameKey" IS NULL AND LOWER(TRIM("displayName")) IN (${key}, ${legacyKey}))
+        OR ("onlineDisplayNameKey" IS NULL AND LOWER(TRIM(COALESCE("name", ''))) IN (${key}, ${legacyKey})))
+      AND ("passwordHash" != '' OR "email" IS NOT NULL OR "isGuest" = 1)
+      ${excludeUserId ? Prisma.sql`AND id != ${excludeUserId}` : Prisma.empty}
+    LIMIT 1`
 
   return rows.length > 0
 }

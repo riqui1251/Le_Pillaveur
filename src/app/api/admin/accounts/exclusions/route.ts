@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { canManageUsers, canViewSupervisionAnalytics } from '@/lib/roles'
 import { prisma } from '@/lib/prisma'
 import { accountKindSelect, kindOfAccount } from '@/lib/account-kind-server'
@@ -47,7 +48,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('admin/accounts/exclusions POST', async (request: Request) => {
   try {
     const actor = await requireRole(canManageUsers)
     const body = await request.json().catch(() => ({}))
@@ -103,4 +104,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'accounts exclusions POST')
   }
-}
+})

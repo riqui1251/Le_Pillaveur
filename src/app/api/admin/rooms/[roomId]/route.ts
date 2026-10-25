@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { prisma } from '@/lib/prisma'
 import { canManageUsers } from '@/lib/roles'
 import { publishRoomChanged } from '@/lib/online/room-bus'
@@ -18,10 +19,10 @@ import { adminErrorResponse, requireRole } from '../../_guard'
  * Les salles `cast` (afficheur TV d'un jeu LOCAL) sont fermables ici depuis
  * G5 : elles étaient jusque-là hors de portée, donc éternelles.
  */
-export async function DELETE(
+export const DELETE = withApiRoute('admin/rooms/[roomId] DELETE', async (
   _request: Request,
   { params }: { params: Promise<{ roomId: string }> }
-) {
+) => {
   try {
     const actor = await requireRole(canManageUsers)
     const { roomId } = await params
@@ -57,4 +58,4 @@ export async function DELETE(
   } catch (error) {
     return adminErrorResponse(error, 'room close')
   }
-}
+})

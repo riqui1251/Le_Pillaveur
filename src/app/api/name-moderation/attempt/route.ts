@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { withApiRoute } from '@/lib/api-route'
 import { createVisitorId, getCurrentUser, visitorCookieOptions } from '@/lib/auth-server'
 import {
   ANALYTICS_CONSENT_COOKIE,
@@ -13,16 +14,17 @@ import {
 import type { NameModerationReason } from '@/lib/name-moderation'
 import {
   checkRateLimit,
-  rateLimitKey,
+  networkRateLimitKey,
   rateLimitResponse,
   readJsonBodyLimited,
 } from '@/lib/rate-limit'
 
 /**
  * Route ouverte (une tentative de pseudo a lieu avant toute connexion) qui
- * écrit une ligne en base à chaque appel : 20 tentatives par heure et par IP,
- * très au-dessus d'un usage réel (le client n'appelle qu'après un refus de
- * validation) mais suffisant pour couper un script.
+ * écrit une ligne en base à chaque appel : 20 tentatives par heure et par
+ * RÉSEAU (clé /64 en IPv6 — par adresse exacte, un /64 changeait d'adresse à
+ * chaque appel), très au-dessus d'un usage réel (le client n'appelle qu'après
+ * un refus de validation) mais suffisant pour couper un script.
  */
 const ATTEMPT_LIMIT = 20
 const ATTEMPT_WINDOW_MS = 60 * 60 * 1000
@@ -42,10 +44,10 @@ const VALID_CONTEXTS = new Set<NameModerationAttemptContext>([
   'local_player_rename',
 ])
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('name-moderation attempt POST', async (request: Request) => {
   try {
     const rate = checkRateLimit(
-      rateLimitKey(request, 'name-moderation-attempt'),
+      networkRateLimitKey(request, 'name-moderation-attempt'),
       ATTEMPT_LIMIT,
       ATTEMPT_WINDOW_MS
     )
@@ -126,4 +128,4 @@ export async function POST(request: Request) {
     console.error('name-moderation attempt POST error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
-}
+})

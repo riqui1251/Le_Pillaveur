@@ -4,7 +4,9 @@ import {
   createSession,
   clearLocalPlayCookieOptions,
   deleteIncomingSession,
+  isPasswordHashBusyError,
   isValidEmail,
+  passwordHashBusyResponse,
   sessionCookieOptions,
   verifyPassword,
 } from '@/lib/auth-server'
@@ -13,7 +15,14 @@ import { normalizeRole } from '@/lib/roles'
 import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
-import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
+import {
+  checkRateLimits,
+  emailRateLimitKey,
+  networkRateLimitKey,
+  rateLimitKey,
+  rateLimitResponse,
+  refundRateLimit,
+} from '@/lib/rate-limit'
 import { apiError, readApiJson, withApiRoute } from '@/lib/api-route'
 import { localeCookieOptions, normalizeAppLocale } from '@/lib/locale-server'
 import { cookies } from 'next/headers'
@@ -22,6 +31,14 @@ import { readConsentedVisitorId } from '@/lib/auth-cookies'
 
 const LOGIN_LIMIT = 10
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
+// Les deux quotas suivants ne comptent que les ÉCHECS (rendus à la réussite).
+// Par réseau (IPv4, ou /64 IPv6), toutes adresses confondues : un même mot de
+// passe essayé sur des milliers de comptes, ou des adresses IPv6 tournées
+// dans un /64. Par compte, quelle que soit l'IP : la force brute qui change
+// d'adresse toutes les dix tentatives.
+const LOGIN_NETWORK_FAILURE_LIMIT = 50
+const LOGIN_ACCOUNT_FAILURE_LIMIT = 20
+const LOGIN_FAILURE_WINDOW_MS = 60 * 60 * 1000
 
 export const POST = withApiRoute('auth/login POST', async (request: Request) => {
   try {
@@ -31,19 +48,27 @@ export const POST = withApiRoute('auth/login POST', async (request: Request) => 
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
 
-    const rate = checkRateLimit(rateLimitKey(request, 'login', email), LOGIN_LIMIT, LOGIN_WINDOW_MS)
-    if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
-
     // MÊME refus pour les trois cas (adresse mal formée, compte inconnu, mot
     // de passe faux) : distinguer reviendrait à dire quelles adresses ont un
-    // compte chez nous.
+    // compte chez nous. L'adresse est validée avant d'entrer dans une clé de
+    // quota : un « e-mail » de 8 Ko n'occupe plus la mémoire du limiteur.
     if (!isValidEmail(email) || !password) return apiError('invalid_credentials', 401)
 
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user?.passwordHash) return apiError('invalid_credentials', 401)
+    // Quotas AVANT tout bcrypt (le calcul coûte ~400 ms de thread).
+    const failureKeys = [networkRateLimitKey(request, 'login-network'), emailRateLimitKey('login-account', email)]
+    const rate = checkRateLimits([
+      { key: rateLimitKey(request, 'login', email), limit: LOGIN_LIMIT, windowMs: LOGIN_WINDOW_MS },
+      { key: failureKeys[0], limit: LOGIN_NETWORK_FAILURE_LIMIT, windowMs: LOGIN_FAILURE_WINDOW_MS },
+      { key: failureKeys[1], limit: LOGIN_ACCOUNT_FAILURE_LIMIT, windowMs: LOGIN_FAILURE_WINDOW_MS },
+    ])
+    if (!rate.ok) return rateLimitResponse(rate.retryAfterSec)
 
-    const valid = await verifyPassword(password, user.passwordHash)
-    if (!valid) return apiError('invalid_credentials', 401)
+    const user = await prisma.user.findUnique({ where: { email } })
+    // Comparé même sans compte ni mot de passe (verifyPassword compare alors à
+    // un leurre) : même durée de réponse que pour un mot de passe faux.
+    const valid = await verifyPassword(password, user?.passwordHash ?? '')
+    if (!user || !valid) return apiError('invalid_credentials', 401)
+    for (const key of failureKeys) refundRateLimit(key)
 
     await clearExpiredBanIfNeeded(user.id)
     const freshUser = await prisma.user.findUnique({ where: { id: user.id } })
@@ -112,6 +137,7 @@ export const POST = withApiRoute('auth/login POST', async (request: Request) => 
     response.cookies.set(localeCookieOptions(userLocale))
     return response
   } catch (error) {
+    if (isPasswordHashBusyError(error)) return passwordHashBusyResponse()
     // 503 conservé : une panne de base ou de session ici n'est pas la faute du
     // joueur, et l'écran de connexion le dit autrement qu'un 500 sec.
     console.error('[api] auth/login POST', error instanceof Error ? error.name : typeof error)

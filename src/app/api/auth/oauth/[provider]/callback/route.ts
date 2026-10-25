@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import {
+  claimUnprovenAccount,
   clearLocalPlayCookieOptions,
   clearSessionCookieOptions,
   createSession,
@@ -14,7 +15,7 @@ import { clearExpiredBanIfNeeded, getBanState } from '@/lib/ban-server'
 import { resolveGeoFromRequest } from '@/lib/geo-server'
 import { deviceKindFromHeader } from '@/lib/device-from-user-agent'
 import { recordIpSeen } from '@/lib/ip-history-server'
-import { checkRateLimit, rateLimitKey } from '@/lib/rate-limit'
+import { checkRateLimit, rateLimitKey, readTextBodyLimited } from '@/lib/rate-limit'
 import { apiError, withApiRoute } from '@/lib/api-route'
 import { appBaseUrl } from '@/lib/email'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
@@ -30,6 +31,7 @@ import type { OnlineErrorCode } from '@/lib/online-errors'
 import {
   OAUTH_NAME_COOKIE,
   OAUTH_STATE_COOKIE,
+  acceptsUnverifiedEmailForNewAccount,
   clearOAuthNameCookieOptions,
   clearOAuthStateCookieOptions,
   decodeOAuthState,
@@ -46,6 +48,9 @@ const CALLBACK_WINDOW_MS = 15 * 60 * 1000
 // Même plafond que POST /api/auth/delete-account.
 const DELETE_LIMIT = 5
 const DELETE_WINDOW_MS = 60 * 60 * 1000
+// Apple ne poste que code, state, error et user (prénom), en form-urlencoded :
+// quelques kilo-octets. request.formData() lisait n'importe quelle taille.
+const APPLE_FORM_MAX_BYTES = 16 * 1024
 
 /**
  * RETOUR du flux Discord / Facebook / Apple (voir POST /api/auth/oauth/[provider]).
@@ -128,14 +133,18 @@ export const GET = withApiRoute(
  * cette même adresse. Le prénom, transmis à la première autorisation
  * seulement, passe par un cookie plutôt que par l'URL. `allowCrossSite` :
  * c'est justement une écriture venue d'un autre site, que withApiRoute
- * refuserait ; le GET qui suit vérifie l'état signé de l'aller.
+ * refuserait ; le GET qui suit vérifie l'état signé de l'aller. Corps borné
+ * (APPLE_FORM_MAX_BYTES) et lu seulement si Apple est configuré : la route
+ * n'a ni session ni quota.
  */
 export const POST = withApiRoute(
   'auth/oauth/[provider]/callback POST',
   async (request: Request, { params }: { params: Promise<{ provider: string }> }) => {
     const { provider } = await params
-    if (provider !== 'apple') return apiError('not_found', 404)
-    const form = await request.formData().catch(() => null)
+    if (provider !== 'apple' || !oauthCredentials('apple')) return apiError('not_found', 404)
+    const body = await readTextBodyLimited(request, APPLE_FORM_MAX_BYTES)
+    if (!body.ok && body.reason === 'too_large') return apiError('payload_too_large', 413)
+    const form = body.ok ? new URLSearchParams(body.text) : null
     const query = new URLSearchParams()
     for (const key of ['code', 'state', 'error']) {
       const value = form?.get(key)
@@ -150,7 +159,7 @@ export const POST = withApiRoute(
 )
 
 /** `user` du POST d'Apple : {"name":{"firstName","lastName"},"email"}, à la première autorisation. */
-function appleFirstName(raw: FormDataEntryValue | null | undefined): string {
+function appleFirstName(raw: string | null | undefined): string {
   if (typeof raw !== 'string') return ''
   try {
     const user = JSON.parse(raw) as { name?: { firstName?: unknown } }
@@ -166,6 +175,8 @@ type Fail = (code: OnlineErrorCode) => NextResponse
  * Connexion. Le lien (fournisseur, identifiant) retrouve le compte ; à
  * défaut, l'adresse CONFIRMÉE chez le fournisseur retrouve le compte qui la
  * porte (créé par mot de passe ou Google) et l'y lie, ou crée le compte.
+ * Une adresse fournie sans preuve (Facebook) ne fait que créer un compte
+ * neuf, jamais entrer dans un compte existant.
  */
 async function signIn(
   request: Request,
@@ -180,8 +191,11 @@ async function signIn(
 
   if (!user) {
     if (!profile.email) return fail('oauth_email_required')
-    if (!profile.emailVerified) return fail('oauth_email_unverified')
+    if (!profile.emailVerified && !acceptsUnverifiedEmailForNewAccount(provider)) {
+      return fail('oauth_email_unverified')
+    }
     user = await prisma.user.findUnique({ where: { email: profile.email } })
+    if (user && !profile.emailVerified) return fail('oauth_email_in_use')
     if (!user) {
       await ensureServerModerationTermsLoaded()
       const displayName = await pickAvailableDisplayName(profile.name || profile.email.split('@')[0])
@@ -192,7 +206,7 @@ async function signIn(
           // Pas de mot de passe : la connexion passe par le fournisseur (un
           // mot de passe pourra être défini plus tard via « mot de passe oublié »).
           passwordHash: '',
-          emailVerified: now,
+          ...(profile.emailVerified ? { emailVerified: now } : {}),
           displayName,
           name: displayName,
           accountCode: await createUniqueAccountCode(),
@@ -207,6 +221,11 @@ async function signIn(
       })
       created = true
       await recordCreationNetwork(request, user.id)
+    } else {
+      // Adresse prouvée par le fournisseur : un compte qui la portait sans
+      // l'avoir jamais confirmée est réclamé (claimUnprovenAccount) — avant
+      // le lien, que la réclamation retirerait sinon.
+      await claimUnprovenAccount(user)
     }
     await prisma.oAuthAccount.upsert({
       where: linkKey(provider, profile),
@@ -280,8 +299,9 @@ async function recordCreationNetwork(request: Request, userId: string): Promise<
 
 /**
  * Pérennisation de l'INVITÉ qui a lancé l'aller : il garde son compte et
- * reçoit l'adresse confirmée du fournisseur, mêmes garde-fous que
+ * reçoit l'adresse du fournisseur, mêmes garde-fous que
  * /api/auth/guest/upgrade (aucune adresse ni identité déjà prise ailleurs).
+ * Une adresse fournie sans preuve (Facebook) n'est pas marquée vérifiée.
  */
 async function upgradeGuest(
   provider: OAuthProvider,
@@ -293,7 +313,9 @@ async function upgradeGuest(
   if (!user || user.id !== saved.userId) return fail('auth_required')
   if (!user.isGuest) return fail('not_guest')
   if (!profile.email) return fail('oauth_email_required')
-  if (!profile.emailVerified) return fail('oauth_email_unverified')
+  if (!profile.emailVerified && !acceptsUnverifiedEmailForNewAccount(provider)) {
+    return fail('oauth_email_unverified')
+  }
 
   const [linked, emailOwner] = await Promise.all([
     prisma.oAuthAccount.findUnique({ where: linkKey(provider, profile), select: { userId: true } }),
@@ -307,7 +329,13 @@ async function upgradeGuest(
   await prisma.$transaction([
     prisma.user.update({
       where: { id: user.id },
-      data: { email: profile.email, emailVerified: now, isGuest: false, lastLoginAt: now, lastSeenAt: now },
+      data: {
+        email: profile.email,
+        ...(profile.emailVerified ? { emailVerified: now } : {}),
+        isGuest: false,
+        lastLoginAt: now,
+        lastSeenAt: now,
+      },
     }),
     prisma.oAuthAccount.upsert({
       where: linkKey(provider, profile),

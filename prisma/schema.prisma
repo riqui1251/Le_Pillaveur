@@ -13,6 +13,14 @@ model User {
   passwordHash     String    @default("")
   displayName      String    @default("Joueur")
   onlineDisplayName String?
+  // Clés d'unicité (displayNameKey de src/lib/name-moderation/confusables.ts :
+  // NFKC, invisibles, homoglyphes, minuscules Unicode) de displayName et du
+  // pseudo en ligne, qui vit dans `name` (online-display-name, auth-server).
+  // Posées par l'extension du client (src/lib/prisma.ts), lues par
+  // isDisplayNameTaken. NULL = pas encore calculée (pseudo non ASCII d'avant
+  // la migration, scripts/backfill-display-name-keys.mjs).
+  displayNameKey       String?
+  onlineDisplayNameKey String?
   onlinePreferencesJson String?
   accountCode      String?   @unique
   role             String    @default("user")
@@ -103,6 +111,9 @@ model User {
   // Balayage des invités (retention-sweep) : isGuest puis borne sur
   // lastSeenAt. Sans index, chaque passage lisait la table entière.
   @@index([isGuest, lastSeenAt])
+  // Non uniques : des homonymes au sens de la clé existent peut-être déjà.
+  @@index([displayNameKey])
+  @@index([onlineDisplayNameKey])
 }
 
 model ChatRead {

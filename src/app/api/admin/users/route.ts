@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { withApiRoute } from '@/lib/api-route'
 import { Prisma } from '@prisma/client'
 import { assertCanAssignRoles } from '@/lib/auth-server'
 import { getBanState, logAccountEvent } from '@/lib/ban-server'
@@ -281,7 +282,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function PATCH(request: Request) {
+export const PATCH = withApiRoute('admin/users PATCH', async (request: Request) => {
   try {
     const actor = await requireRole(canAccessSupervision)
     const body = await request.json()
@@ -419,4 +420,4 @@ export async function PATCH(request: Request) {
   } catch (error) {
     return adminErrorResponse(error, 'users PATCH')
   }
-}
+})

@@ -86,7 +86,7 @@ export const GET = withApiRoute('feedback/first-game GET', async () => {
   return NextResponse.json({ eligible: await isLocalFirstGameFeedbackDue(user.id) })
 })
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('feedback/first-game POST', async (request: Request) => {
   try {
     const user = await getCurrentUser()
     const ip = getClientIpFromRequest(request)
@@ -158,4 +158,4 @@ export async function POST(request: Request) {
     console.error('first-game feedback POST error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
-}
+})

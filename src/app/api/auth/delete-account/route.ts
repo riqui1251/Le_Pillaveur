@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { clearSessionCookieOptions, getCurrentUser, verifyPassword } from '@/lib/auth-server'
+import {
+  clearSessionCookieOptions,
+  getCurrentUser,
+  isPasswordHashBusyError,
+  passwordHashBusyResponse,
+  verifyPassword,
+} from '@/lib/auth-server'
 import { verifyGoogleIdToken } from '@/lib/google-auth-server'
 import { deleteUserAccount } from '@/lib/user-activity-server'
 import { checkRateLimit, rateLimitKey, rateLimitResponse } from '@/lib/rate-limit'
@@ -110,6 +116,7 @@ export const POST = withApiRoute('auth/delete-account POST', async (request: Req
     response.cookies.set(clearSessionCookieOptions())
     return response
   } catch (error) {
+    if (isPasswordHashBusyError(error)) return passwordHashBusyResponse()
     // 503 conservé : l'effacement touche beaucoup de tables, une panne en
     // cours de route se retente. Le journal ne garde que le nom de l'erreur —
     // un message Prisma recopierait l'e-mail de la ligne fautive (RGPD).
