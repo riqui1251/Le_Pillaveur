@@ -138,6 +138,20 @@ function normalize(text: string): string {
 }
 
 /**
+ * Le candidat « à soi » d'un joueur pendant le vote : son bluff, ou la vraie
+ * réponse quand il l'a tapée comme bluff. Elle ne lui rapporte alors rien :
+ * voter pour elle lui est refusé comme voter pour son propre bluff.
+ */
+export function bluffOwnCandidateId(state: BluffState, playerId: string): string | null {
+  const own = state.candidates.find((c) => c.authorId === playerId)
+  if (own) return own.candidateId
+  const fake = state.pendingFakes[playerId]
+  const prompt = state.roundPrompts[state.promptIdx]
+  if (!fake || !prompt || normalize(fake) !== normalize(prompt.answer)) return null
+  return state.candidates.find((c) => c.isReal)?.candidateId ?? null
+}
+
+/**
  * Millisecondes écoulées depuis l'entrée en reveal. Un état sérialisé AVANT
  * l'horodatage (revealAt absent) est traité comme déjà lisible : on ne bloque
  * jamais une partie en cours.
@@ -215,6 +229,9 @@ function enterVotePhase(state: BluffState, now: number): BluffState {
 
   const fakeCandidates: BluffCandidate[] = []
   for (const [playerId, rawText] of entries) {
+    // Un humain qui a tapé la vraie réponse n'ajoute pas de candidat : son
+    // bluff se confond avec elle (bluffOwnCandidateId).
+    if (!botIds.has(playerId) && normalize(rawText) === realNormalized) continue
     let text = rawText
     // Collision avec la vraie réponse (ou un bluff déjà retenu) → leurre de secours.
     if (usedTexts.has(normalize(text)) && prompt.decoys.length > 0) {
@@ -316,16 +333,16 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
       if (trimmed.length < 1 || trimmed.length > BLUFF_FAKE_MAX_LEN) {
         throw new BluffEngineError('INVALID_FAKE')
       }
-      // Texte déjà pris (vraie réponse ou bluff d'un autre) : refusé à la
-      // saisie pour que chaque humain retrouve SON texte au vote. Les bots
-      // piochent au hasard parmi les leurres : leurs collisions se règlent
-      // à l'entrée en vote.
+      // Bluff d'un autre déjà pris : refusé à la saisie pour que chaque humain
+      // retrouve SON texte au vote. La vraie réponse, elle, est acceptée
+      // comme un bluff libre — la refuser la confirmait avant le vote. Les
+      // bots piochent au hasard parmi les leurres : leurs collisions se
+      // règlent à l'entrée en vote.
       if (!actor.isBot) {
         const wanted = normalize(trimmed)
-        const taken =
-          wanted === normalize(state.roundPrompts[state.promptIdx].answer) ||
-          Object.values(state.pendingFakes).some((t) => normalize(t) === wanted)
-        if (taken) throw new BluffEngineError('FAKE_TAKEN')
+        if (Object.values(state.pendingFakes).some((t) => normalize(t) === wanted)) {
+          throw new BluffEngineError('FAKE_TAKEN')
+        }
       }
       const pendingFakes = { ...state.pendingFakes, [actor.id]: trimmed }
       const next = { ...state, pendingFakes, version: state.version + 1 }
@@ -341,7 +358,9 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
       if (state.pendingVotes[voter.id]) throw new BluffEngineError('ALREADY_VOTED')
       const candidate = state.candidates.find((c) => c.candidateId === action.candidateId)
       if (!candidate) throw new BluffEngineError('INVALID_CANDIDATE')
-      if (candidate.authorId === voter.id) throw new BluffEngineError('CANNOT_VOTE_OWN_FAKE')
+      if (candidate.candidateId === bluffOwnCandidateId(state, voter.id)) {
+        throw new BluffEngineError('CANNOT_VOTE_OWN_FAKE')
+      }
       const pendingVotes = { ...state.pendingVotes, [voter.id]: candidate.candidateId }
       const next = { ...state, pendingVotes, version: state.version + 1 }
       const active = bluffActive(state)
@@ -414,13 +433,25 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new BluffEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: BluffState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le partant était peut-être le dernier attendu : la phase se résout
+      // tout de suite, comme au dernier bluff ou vote, sans attendre le chrono.
+      const active = bluffActive(next)
+      if (active.length > 0) {
+        if (next.phase === 'submit' && active.every((p) => next.pendingFakes[p.id])) {
+          return enterVotePhase(next, action.at)
+        }
+        if (next.phase === 'vote' && active.every((p) => next.pendingVotes[p.id])) {
+          return resolveVotes(next, action.at)
+        }
+      }
+      return next
     }
 
     case 'REJOIN': {
@@ -464,13 +495,21 @@ export function reduceBluff(state: BluffState, action: BluffAction): BluffState 
 // ─── Acteur courant (bots / AFK) ─────────────────────────────────────────────
 
 /**
- * `submit`/`vote` sont des phases SIMULTANÉES → pas d'acteur unique (null,
- * l'échéance `ADVANCE` remplace l'anti-AFK). En `reveal`, le premier joueur
- * encore en jeu mène le « continuer ».
+ * Jamais d'acteur unique → null. `submit`/`vote` sont SIMULTANÉES (l'échéance
+ * `ADVANCE` remplace l'anti-AFK), et le « continuer » du reveal est ouvert à
+ * tous : son meneur (bluffRevealLeaderId), s'il est bot, le lance, sans que
+ * personne y soit expulsable pour inactivité.
  */
 export function currentBluffActorId(state: BluffState): string | null {
-  if (state.phase === 'reveal') return bluffActive(state)[0]?.id ?? null
+  void state
   return null
+}
+
+/** Le premier joueur encore en jeu mène le « continuer » du reveal. */
+export function bluffRevealLeaderId(state: {
+  players: ReadonlyArray<Pick<BluffPlayer, 'id' | 'leftAt'>>
+}): string | null {
+  return state.players.find((p) => !p.leftAt)?.id ?? null
 }
 
 // ─── Vues anti-triche ────────────────────────────────────────────────────────
@@ -521,10 +560,7 @@ export function toBluffClientView(state: BluffState, viewerId: string): BluffCli
     prompt: currentPrompt,
     myFake: pendingFakes[viewerId] ?? null,
     myVote: pendingVotes[viewerId] ?? null,
-    myCandidateId:
-      state.phase === 'vote' && viewerId
-        ? candidates.find((c) => c.authorId === viewerId)?.candidateId ?? null
-        : null,
+    myCandidateId: state.phase === 'vote' && viewerId ? bluffOwnCandidateId(state, viewerId) : null,
     voteOptions:
       state.phase === 'vote'
         ? candidates.map((c) => ({ candidateId: c.candidateId, text: c.text }))

@@ -1,6 +1,6 @@
 import {
   createCrobardState,
-  currentCrobardActorId,
+  crobardRoundEndLeaderId,
   reduceCrobard,
   toCrobardClientView,
   toCrobardSpectatorView,
@@ -76,6 +76,7 @@ export function parseCrobardState(json: string | null): CrobardState | null {
       remainingWords: raw.remainingWords ?? [],
       strokes: raw.strokes ?? [],
       correctGuessers: raw.correctGuessers ?? [],
+      guesses: raw.guesses ?? {},
     }
   } catch {
     return null
@@ -203,20 +204,17 @@ export function crobardSpectatorViewJson(state: CrobardState): string {
  * bot, la manche s'écourte d'elle-même côté moteur
  * (`CROBARD_BOT_DRAWER_ROUND_MS`) — rien à faire ici. Seul le bilan de
  * manche (`roundEnd`) a besoin d'un bot qui « continue » s'il est le
- * premier joueur actif restant.
+ * premier joueur actif restant (`crobardRoundEndLeaderId`).
  */
 export function applyCrobardBotAction(state: CrobardState): CrobardRoomActionResult {
   try {
-    const actorId = currentCrobardActorId(state)
-    const actor = state.players.find((p) => p.id === actorId)
-    if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
-    if (state.phase === 'roundEnd') {
-      return {
-        ok: true,
-        state: reduceCrobard(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
-      }
+    const leaderId = crobardRoundEndLeaderId(state)
+    const leader = state.players.find((p) => p.id === leaderId)
+    if (!leader?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+    return {
+      ok: true,
+      state: reduceCrobard(state, { type: 'CONTINUE', playerId: leader.id, now: Date.now() }),
     }
-    return { ok: false, error: 'NOT_BOT_TURN' }
   } catch (e) {
     if (e instanceof CrobardEngineError) return { ok: false, error: e.message }
     throw e

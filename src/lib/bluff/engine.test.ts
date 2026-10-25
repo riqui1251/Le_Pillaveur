@@ -3,6 +3,8 @@ import {
   createBluffState,
   currentBluffActorId,
   bluffActive,
+  bluffOwnCandidateId,
+  bluffRevealLeaderId,
   reduceBluff,
   toBluffClientView,
   toBluffSpectatorView,
@@ -123,12 +125,8 @@ describe('SUBMIT_FAKE', () => {
     expect(timedOut.candidates).toHaveLength(2)
   })
 
-  it('refuse un bluff déjà pris (normalisé) : la vraie réponse ou le bluff d’un autre', () => {
+  it('refuse un bluff déjà pris (normalisé) par un autre joueur', () => {
     const s = make(4)
-    const currentPrompt = s.roundPrompts[s.promptIdx]
-    expect(() =>
-      reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p0', text: ` ${currentPrompt.answer.toUpperCase()} `, now: T0 })
-    ).toThrow('FAKE_TAKEN')
     let next = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p1', text: 'Kyôto', now: T0 })
     expect(() =>
       reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p2', text: 'kyoto', now: T0 })
@@ -143,6 +141,64 @@ describe('SUBMIT_FAKE', () => {
       const mine = view.voteOptions?.find((o) => o.candidateId === view.myCandidateId)
       expect(mine?.text).toBe(next.pendingFakes[p.id])
     }
+  })
+
+  it('la vraie réponse tapée comme bluff est acceptée sans la confirmer, puis se confond avec elle au vote', () => {
+    const s = make(4)
+    const currentPrompt = s.roundPrompts[s.promptIdx]
+    const guess = ` ${currentPrompt.answer.toLowerCase()} `
+    // Même réponse qu'à un bluff libre : ni FAKE_TAKEN, ni autre indice.
+    let next = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p0', text: guess, now: T0 })
+    expect(next.pendingFakes.p0).toBe(guess.trim())
+    const free = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p0', text: 'Sapporo', now: T0 })
+    expect(next.version).toBe(free.version)
+    expect(next.phase).toBe(free.phase)
+    // Un autre qui tape le même texte bute sur le bluff de p0, comme pour tout doublon.
+    expect(() =>
+      reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p1', text: currentPrompt.answer, now: T0 })
+    ).toThrow('FAKE_TAKEN')
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p1', text: 'bluff-p1', now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p2', text: 'bluff-p2', now: T0 })
+    next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: 'p3', text: 'bluff-p3', now: T0 })
+    expect(next.phase).toBe('vote')
+    // Pas de doublon de la vraie réponse : 1 vraie + 3 bluffs.
+    expect(next.candidates).toHaveLength(4)
+    expect(next.candidates.some((c) => c.authorId === 'p0')).toBe(false)
+    const real = next.candidates.find((c) => c.isReal)!
+    expect(bluffOwnCandidateId(next, 'p0')).toBe(real.candidateId)
+    expect(toBluffClientView(next, 'p0').myCandidateId).toBe(real.candidateId)
+    // Elle ne lui rapporte rien : voter pour elle lui est refusé.
+    expect(() =>
+      reduceBluff(next, { type: 'VOTE', playerId: 'p0', candidateId: real.candidateId, now: T0 })
+    ).toThrow('CANNOT_VOTE_OWN_FAKE')
+    const p1Fake = next.candidates.find((c) => c.authorId === 'p1')!
+    const voted = reduceBluff(next, { type: 'VOTE', playerId: 'p0', candidateId: p1Fake.candidateId, now: T0 })
+    expect(voted.pendingVotes.p0).toBe(p1Fake.candidateId)
+    // Les autres votent la vraie normalement.
+    expect(
+      reduceBluff(next, { type: 'VOTE', playerId: 'p1', candidateId: real.candidateId, now: T0 }).pendingVotes.p1
+    ).toBe(real.candidateId)
+  })
+
+  it('la vraie réponse tapée par l’un ne se lit ni dans la vue des autres ni à la TV', () => {
+    const s = make(4)
+    const answer = s.roundPrompts[s.promptIdx].answer
+    let next = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: 'p0', text: answer, now: T0 })
+    for (const viewer of ['p1', 'p2', 'p3']) {
+      expect(JSON.stringify(toBluffClientView(next, viewer))).not.toContain(answer)
+    }
+    expect(JSON.stringify(toBluffSpectatorView(next))).not.toContain(answer)
+    for (const id of ['p1', 'p2', 'p3']) {
+      next = reduceBluff(next, { type: 'SUBMIT_FAKE', playerId: id, text: `bluff-${id}`, now: T0 })
+    }
+    expect(next.phase).toBe('vote')
+    const realId = next.candidates.find((c) => c.isReal)!.candidateId
+    for (const viewer of ['p1', 'p2', 'p3']) {
+      const view = toBluffClientView(next, viewer)
+      expect(view.myCandidateId).not.toBe(realId)
+      expect(JSON.stringify(view)).not.toMatch(/"isReal"|"authorId"|"real"|fake-/)
+    }
+    expect(toBluffSpectatorView(next).myCandidateId).toBeNull()
   })
 
   it('le bluff d’un bot qui tombe sur un texte pris prend un leurre libre, jamais celui d’un humain', () => {
@@ -298,7 +354,7 @@ describe('CONTINUE', () => {
     let s = reduceBluff(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
     s = submitAll(s)
     s = reduceBluff(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + BLUFF_VOTE_MS })
-    expect(currentBluffActorId(s)).toBe('bot-1')
+    expect(bluffRevealLeaderId(s)).toBe('bot-1')
     expect(() =>
       reduceBluff(s, { type: 'CONTINUE', playerId: 'bot-1', now: T0 + BLUFF_VOTE_MS + 1_000 })
     ).toThrow('READING_TIME')
@@ -332,6 +388,40 @@ describe('LEAVE / REJOIN / REPLACE_LEFT', () => {
     expect(s.phase).toBe('vote') // les 3 actifs ont soumis, p3 (parti) n'est pas attendu
   })
 
+  it('le départ du dernier retardataire ouvre le vote sans attendre le chrono', () => {
+    let s = make(4)
+    for (const id of ['p0', 'p1', 'p2']) {
+      s = reduceBluff(s, { type: 'SUBMIT_FAKE', playerId: id, text: `bluff-${id}`, now: T0 })
+    }
+    expect(s.phase).toBe('submit')
+    const at = T0 + 1_000
+    const left = reduceBluff(s, { type: 'LEAVE', playerId: 'p3', at })
+    expect(left.phase).toBe('vote')
+    expect(left.phaseEndsAt).toBe(at + BLUFF_VOTE_MS)
+    expect(left.candidates).toHaveLength(4)
+    expect(left.players.find((p) => p.id === 'p3')?.leftAt).toBe(at)
+  })
+
+  it('le départ du dernier votant attendu passe au reveal ; un départ qui laisse des retardataires ne tranche rien', () => {
+    let s = submitAll(make(4))
+    const realId = s.candidates.find((c) => c.isReal)!.candidateId
+    s = reduceBluff(s, { type: 'VOTE', playerId: 'p0', candidateId: realId, now: T0 })
+    // p2 et p3 n'ont pas voté : le départ de p3 laisse p2 attendu.
+    const stillWaiting = reduceBluff(s, { type: 'LEAVE', playerId: 'p3', at: T0 + 1_000 })
+    expect(stillWaiting.phase).toBe('vote')
+    s = reduceBluff(s, { type: 'VOTE', playerId: 'p1', candidateId: realId, now: T0 })
+    s = reduceBluff(s, { type: 'VOTE', playerId: 'p2', candidateId: realId, now: T0 })
+    expect(s.phase).toBe('vote')
+    const at = T0 + 2_000
+    const revealed = reduceBluff(s, { type: 'LEAVE', playerId: 'p3', at })
+    expect(revealed.phase).toBe('reveal')
+    expect(revealed.revealAt).toBe(at)
+    expect(revealed.lastReveal?.pointsAwarded.p0).toBe(BLUFF_POINTS_FOUND_REAL)
+    // Un départ en submit alors que d'autres n'ont rien envoyé ne tranche rien non plus.
+    const early = reduceBluff(make(4), { type: 'LEAVE', playerId: 'p3', at: T0 })
+    expect(early.phase).toBe('submit')
+  })
+
   it('REJOIN restaure un joueur parti ; REPLACE_LEFT le convertit en bot après le délai', () => {
     let s = make(4)
     s = reduceBluff(s, { type: 'LEAVE', playerId: 'p0', at: T0 })
@@ -352,7 +442,7 @@ describe('LEAVE / REJOIN / REPLACE_LEFT', () => {
 })
 
 describe('currentBluffActorId', () => {
-  it('null pendant submit/vote (simultanés), premier joueur actif en reveal', () => {
+  it('toujours null (personne d’expulsable au reveal ouvert à tous) ; le premier joueur actif mène le reveal', () => {
     const s = make(4)
     expect(currentBluffActorId(s)).toBeNull()
     const voting = submitAll(s)
@@ -362,7 +452,11 @@ describe('currentBluffActorId', () => {
       claimedKey: phaseKey(voting),
       now: T0 + BLUFF_VOTE_MS,
     })
-    expect(currentBluffActorId(revealing)).toBe('p0')
+    expect(currentBluffActorId(revealing)).toBeNull()
+    expect(bluffRevealLeaderId(revealing)).toBe('p0')
+    const p0Gone = reduceBluff(revealing, { type: 'LEAVE', playerId: 'p0', at: T0 })
+    expect(bluffRevealLeaderId(p0Gone)).toBe('p1')
+    expect(bluffRevealLeaderId(toBluffClientView(p0Gone, 'p2'))).toBe('p1')
   })
 })
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  cleanImposteurClue,
   isEmptyClueText,
+  normalizeClue,
   createImposteurState,
   currentImposteurActorId,
   imposteurAlive,
@@ -180,6 +182,50 @@ describe('isValidClue', () => {
     expect(isValidClue('cafe', 'café')).toBe(false) // accents normalisés
     expect(isValidClue(IMPOSTEUR_EMPTY_CLUE, 'piscine')).toBe(true) // « … » auto
   })
+
+  it('un invisible, un sosie cyrillique ou grec, une forme pleine chasse ne font pas passer son mot', () => {
+    for (const text of [
+      'pisc\u200bine', // espace de largeur nulle
+      '\u2060piscine', // gluon de mots
+      'pis\u00adcine', // césure conditionnelle
+      'pisc\ufeffine', // indicateur d'ordre
+      'pisc\u3164ine', // remplissage hangul
+      'pisc\ufe0fine', // sélecteur de variante
+      'p\u0456scine', // і cyrillique
+      '\u0440\u0456\u0455\u0441\u0456n\u0435', // ріѕсіnе, presque tout en cyrillique
+      'P\u0399SCINE', // Ι grec
+      '\uff50\uff49\uff53\uff43\uff49\uff4e\uff45', // pleine chasse
+      '\u{1d429}\u{1d422}\u{1d42c}\u{1d41c}\u{1d422}\u{1d427}\u{1d41e}', // gras mathématique
+    ]) {
+      expect(isValidClue(text, 'piscine'), JSON.stringify(text)).toBe(false)
+    }
+    expect(isValidClue('c\u0430f\u0435', 'café')).toBe(false)
+    expect(normalizeClue('P\u0456SC\u200bINE')).toBe('piscine')
+  })
+
+  it('un indice vide une fois nettoyé est refusé ; les vrais indices, émojis compris, passent', () => {
+    for (const text of ['\u200b', '\u200b\u200d\u2060', '\u3164', '\u202e', '\u00ad']) {
+      expect(isValidClue(text, 'piscine'), JSON.stringify(text)).toBe(false)
+    }
+    for (const text of ['été', 'soleil', 'eau chlorée', '👨\u200d🍳', '❤\ufe0f']) {
+      expect(isValidClue(text, 'piscine'), text).toBe(true)
+    }
+  })
+
+  it('« … » déguisé (invisible, points pleine chasse) reste un indice vide', () => {
+    for (const text of ['\u200b…', '…\u2060', '\uff0e\uff0e\uff0e', '.\u200b.\u200b.']) {
+      expect(isEmptyClueText(text), JSON.stringify(text)).toBe(true)
+    }
+    expect(isEmptyClueText('soleil')).toBe(false)
+  })
+})
+
+describe('cleanImposteurClue', () => {
+  it('retire les caractères de format (bidi compris) mais garde le liant des émojis', () => {
+    expect(cleanImposteurClue('\u202eenicsip')).toBe('enicsip')
+    expect(cleanImposteurClue(' so\u200bleil\u2066 ')).toBe('soleil')
+    expect(cleanImposteurClue('👨\u200d🍳')).toBe('👨\u200d🍳')
+  })
 })
 
 describe('phase indice', () => {
@@ -197,6 +243,27 @@ describe('phase indice', () => {
     expect(s.phase).toBe('vote')
     expect(s.clues).toHaveLength(4)
     expect(s.phaseEndsAt).toBe(T0 + IMPOSTEUR_VOTE_MS)
+  })
+
+  it('son mot coupé par un invisible ou écrit en sosies est refusé ; le texte gardé et diffusé est nettoyé', () => {
+    const s = make(4)
+    const actor = s.clueOrder[0]
+    const word = s.players.find((p) => p.id === actor)!.word
+    const sosies: Record<string, string> = { a: '\u0430', e: '\u0435', p: '\u0440', c: '\u0441', i: '\u0456', o: '\u043e' }
+    for (const text of [
+      `${word.slice(0, 2)}\u200b${word.slice(2)}`,
+      [...word].map((ch) => sosies[ch] ?? ch).join(''),
+      '\u200b\u2060',
+    ]) {
+      expect(() => reduceImposteur(s, { type: 'CLUE', playerId: actor, text, now: T0 }), JSON.stringify(text)).toThrow(
+        'INVALID_CLUE'
+      )
+    }
+    const next = reduceImposteur(s, { type: 'CLUE', playerId: actor, text: ' \u202esol\u200beil\u2069 ', now: T0 })
+    expect(next.clues[0].text).toBe('soleil')
+    for (const view of [toImposteurClientView(next, actor), toImposteurSpectatorView(next)]) {
+      expect(JSON.stringify(view)).not.toMatch(/\\u20[0-6][0-9a-f]|[\u200b-\u200f\u202a-\u202e\u2060-\u2069]/i)
+    }
   })
 
   it("l'indice contenant son propre mot est rejeté", () => {

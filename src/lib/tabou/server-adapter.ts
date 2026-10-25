@@ -1,6 +1,7 @@
 import {
   createTabouState,
-  currentTabouActorId,
+  tabouRoundEndLeaderId,
+  tabouVerdictTooSoon,
   reduceTabou,
   toTabouClientView,
   toTabouSpectatorView,
@@ -114,6 +115,8 @@ export function parseTabouState(json: string | null): TabouState | null {
       ...raw,
       rematchVotes: raw.rematchVotes ?? [],
       remainingWords: raw.remainingWords ?? [],
+      // Partie lancée avant le plancher par mot : le mot en cours est jugeable.
+      wordDrawnAt: raw.wordDrawnAt ?? 0,
     }
   } catch {
     return null
@@ -139,6 +142,9 @@ export function applyTabouRoomAction(
   input: TabouRoomActionInput
 ): TabouRoomActionResult {
   try {
+    if ((input.type === 'found' || input.type === 'taboo-called') && tabouVerdictTooSoon(state, Date.now())) {
+      return { ok: false, error: 'WORD_TOO_RECENT' }
+    }
     switch (input.type) {
       case 'found':
         return { ok: true, state: reduceTabou(state, { type: 'FOUND', playerId: userId, now: Date.now() }) }
@@ -220,20 +226,17 @@ export function tabouSpectatorViewJson(state: TabouState): string {
  * bot, la manche s'écourte d'elle-même côté moteur (`TABOU_BOT_DESCRIBER_ROUND_MS`)
  * — rien à faire ici, le tick `advance` générique suffit. Seul le bilan de
  * manche (`roundEnd`) a besoin d'un bot qui « continue » s'il est le premier
- * joueur actif restant.
+ * joueur actif restant (`tabouRoundEndLeaderId`).
  */
 export function applyTabouBotAction(state: TabouState): TabouRoomActionResult {
   try {
-    const actorId = currentTabouActorId(state)
-    const actor = state.players.find((p) => p.id === actorId)
-    if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
-    if (state.phase === 'roundEnd') {
-      return {
-        ok: true,
-        state: reduceTabou(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
-      }
+    const leaderId = tabouRoundEndLeaderId(state)
+    const leader = state.players.find((p) => p.id === leaderId)
+    if (!leader?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+    return {
+      ok: true,
+      state: reduceTabou(state, { type: 'CONTINUE', playerId: leader.id, now: Date.now() }),
     }
-    return { ok: false, error: 'NOT_BOT_TURN' }
   } catch (e) {
     if (e instanceof TabouEngineError) return { ok: false, error: e.message }
     throw e

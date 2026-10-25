@@ -37,6 +37,17 @@ export const CROBARD_POINTS_OTHER = 150
 /** Points du dessinateur par bon devineur. */
 export const CROBARD_DRAWER_POINTS_PER_GUESSER = 100
 
+/** Longueur maximale d'une proposition : le plus long mot des listes en fait 19. */
+export const CROBARD_GUESS_MAX_LEN = 40
+/** Écart minimal entre deux propositions d'un même devineur (horloge serveur). */
+export const CROBARD_GUESS_INTERVAL_MS = 1_000
+/**
+ * Propositions par devineur et par manche, « proche » compris. Gratuites et
+ * illimitées, elles laissaient un script parcourir la liste des mots en deux
+ * secondes, et « proche » servait d'oracle.
+ */
+export const CROBARD_MAX_GUESSES = 20
+
 export type Stroke = {
   /** [x0, y0, x1, y1, …] normalisés [0,1] — indépendants de la résolution. */
   points: number[]
@@ -102,6 +113,9 @@ export type CrobardPlayer = {
 
 export type CrobardPhase = 'countdown' | 'choosing' | 'drawing' | 'roundEnd' | 'finished'
 
+/** Essais d'un devineur dans la manche, et l'issue du dernier (faux ou proche). */
+export type CrobardGuessTally = { count: number; lastAt: number; last: 'wrong' | 'close' }
+
 export type CrobardState = TimedPhaseState & {
   version: number
   phase: CrobardPhase
@@ -118,6 +132,11 @@ export type CrobardState = TimedPhaseState & {
   strokes: Stroke[]
   /** PUBLIC — qui a déjà trouvé cette manche (ordre = rang de score), jamais LE mot. */
   correctGuessers: string[]
+  /**
+   * Essais de la manche par devineur, remis à zéro à chaque dessin : chacun
+   * ne reçoit que les siens. Absent des parties lancées avant le quota.
+   */
+  guesses?: Record<string, CrobardGuessTally>
   allWords: string[]
   remainingWords: string[]
   round: number
@@ -157,11 +176,22 @@ export function crobardActive(state: CrobardState): CrobardPlayer[] {
   return state.players.filter((p) => !p.leftAt)
 }
 
+/**
+ * Forme comparée d'une proposition et du mot. NFD ne décompose pas les
+ * ligatures : « coeur » restait à deux lettres de « Cœur », ni bon ni proche.
+ * Tirets, espaces et apostrophes typographiques sont unifiés pour la même
+ * raison (« arc en ciel », « feu d’artifice »).
+ */
 function normalize(text: string): string {
   return text
     .toLowerCase()
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .replace(/ß/g, 'ss')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’‘`´]/g, "'")
+    .replace(/[-_\s]+/g, ' ')
     .trim()
 }
 
@@ -267,10 +297,17 @@ function startDrawing(state: CrobardState, word: string, now: number): CrobardSt
     wordChoices: null,
     strokes: [],
     correctGuessers: [],
+    guesses: {},
     ...enterPhase(state.phaseSeq, 'drawing', roundDurationFor(state, state.drawerId), now),
     phase: 'drawing',
     version: state.version + 1,
   }
+}
+
+/** Tous les devineurs ACTIFS ont trouvé (un parti qui avait trouvé ne compte plus). */
+function allActiveGuessersFound(state: CrobardState): boolean {
+  const guessers = crobardActive(state).filter((p) => p.id !== state.drawerId)
+  return guessers.length > 0 && guessers.every((p) => state.correctGuessers.includes(p.id))
 }
 
 function endRound(state: CrobardState, now: number): CrobardState {
@@ -291,7 +328,7 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
     case 'CHOOSE_WORD': {
       if (state.phase !== 'choosing') throw new CrobardEngineError('NOT_CHOOSING_PHASE')
       if (action.playerId !== state.drawerId) throw new CrobardEngineError('NOT_DRAWER')
-      if (!state.wordChoices || !state.wordChoices[action.index]) {
+      if (!Number.isInteger(action.index) || !state.wordChoices || !state.wordChoices[action.index]) {
         throw new CrobardEngineError('INVALID_CHOICE')
       }
       return startDrawing(state, state.wordChoices[action.index], action.now)
@@ -331,10 +368,17 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       if (!player || player.leftAt) throw new CrobardEngineError('UNKNOWN_PLAYER')
       if (player.id === state.drawerId) throw new CrobardEngineError('DRAWER_CANNOT_GUESS')
       if (state.correctGuessers.includes(player.id)) throw new CrobardEngineError('ALREADY_GUESSED')
-
+      if (action.text.length > CROBARD_GUESS_MAX_LEN) throw new CrobardEngineError('INVALID_GUESS')
       const guess = normalize(action.text)
+      if (guess.length === 0) throw new CrobardEngineError('INVALID_GUESS')
+      const tally = state.guesses?.[player.id]
+      if (tally && tally.count >= CROBARD_MAX_GUESSES) throw new CrobardEngineError('GUESS_LIMIT_REACHED')
+      if (tally && action.now - tally.lastAt < CROBARD_GUESS_INTERVAL_MS) {
+        throw new CrobardEngineError('GUESS_TOO_FAST')
+      }
+
       const word = normalize(state.word ?? '')
-      if (guess.length > 0 && guess === word) {
+      if (guess === word) {
         const place = state.correctGuessers.length
         const points = place === 0 ? CROBARD_POINTS_FIRST : place === 1 ? CROBARD_POINTS_SECOND : CROBARD_POINTS_OTHER
         const correctGuessers = [...state.correctGuessers, player.id]
@@ -343,15 +387,20 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
           if (p.id === state.drawerId) return { ...p, score: p.score + CROBARD_DRAWER_POINTS_PER_GUESSER }
           return p
         })
-        let next: CrobardState = { ...state, correctGuessers, players, version: state.version + 1 }
-        const remainingGuessers = crobardActive(next).filter((p) => p.id !== next.drawerId)
-        if (correctGuessers.length >= remainingGuessers.length) {
-          next = endRound(next, action.now)
-        }
-        return next
+        const next: CrobardState = { ...state, correctGuessers, players, version: state.version + 1 }
+        return allActiveGuessersFound(next) ? endRound(next, action.now) : next
       }
-      if (guess.length > 0 && levenshtein(guess, word) <= 1) throw new CrobardEngineError('GUESS_CLOSE')
-      throw new CrobardEngineError('GUESS_WRONG')
+      // Un essai faux ou proche est ÉCRIT : c'est lui que compte le quota, et
+      // seul l'auteur en reçoit l'issue (vue client, `myGuesses`).
+      const last: CrobardGuessTally['last'] = levenshtein(guess, word) <= 1 ? 'close' : 'wrong'
+      return {
+        ...state,
+        guesses: {
+          ...state.guesses,
+          [player.id]: { count: (tally?.count ?? 0) + 1, lastAt: action.now, last },
+        },
+        version: state.version + 1,
+      }
     }
 
     case 'ADVANCE': {
@@ -423,13 +472,15 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new CrobardEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const left: CrobardState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le dernier devineur qui cherchait s'en va : les autres ont tous trouvé.
+      return state.phase === 'drawing' && allActiveGuessersFound(left) ? endRound(left, action.at) : left
     }
 
     case 'REJOIN': {
@@ -475,12 +526,39 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
 /**
  * En `choosing`, le dessinateur choisit son mot. En `drawing`, personne n'a
  * de « tour » unique (plusieurs devineurs agissent en parallèle) → null. En
- * `roundEnd`, le premier joueur encore en jeu mène le « continuer ».
+ * `roundEnd` non plus : n'importe qui lance la manche suivante, et le bilan
+ * n'a pas d'échéance — y désigner un joueur « au tour » laissait un autre le
+ * faire expulser pour inactivité (replace-afk) après 3 min de pause.
  */
 export function currentCrobardActorId(state: CrobardState): string | null {
   if (state.phase === 'choosing') return state.drawerId
-  if (state.phase === 'roundEnd') return crobardActive(state)[0]?.id ?? null
   return null
+}
+
+/**
+ * Meneur du bilan : le premier joueur encore en jeu. Seul usage, faire
+ * « continuer » un bot meneur (tick de service, arbitre client) — lit aussi
+ * bien l'état que la vue.
+ */
+export function crobardRoundEndLeaderId(state: {
+  phase: string
+  players: readonly { id: string; leftAt: number | null }[]
+}): string | null {
+  if (state.phase !== 'roundEnd') return null
+  return state.players.find((p) => !p.leftAt)?.id ?? null
+}
+
+/** Compteur « x/y ont trouvé » : les devineurs actifs, sur le même total que la fin anticipée. */
+export function crobardFoundTally(state: {
+  drawerId: string
+  correctGuessers: readonly string[]
+  players: readonly { id: string; leftAt: number | null }[]
+}): { found: number; total: number } {
+  const guessers = state.players.filter((p) => p.id !== state.drawerId && !p.leftAt)
+  return {
+    found: guessers.filter((p) => state.correctGuessers.includes(p.id)).length,
+    total: guessers.length,
+  }
 }
 
 // ─── Vues anti-triche ────────────────────────────────────────────────────────
@@ -495,7 +573,7 @@ export type CrobardPlayerView = {
 
 export type CrobardClientView = Omit<
   CrobardState,
-  'rngState' | 'players' | 'wordChoices' | 'word' | 'allWords' | 'remainingWords'
+  'rngState' | 'players' | 'wordChoices' | 'word' | 'allWords' | 'remainingWords' | 'guesses'
 > & {
   players: CrobardPlayerView[]
   phaseKey: string
@@ -505,6 +583,11 @@ export type CrobardClientView = Omit<
   wordChoices: string[] | null
   /** Le mot en cours — visible SEULEMENT du dessinateur, pendant `drawing`. */
   word: string | null
+  /**
+   * Les essais du viewer devineur pendant le dessin : combien il lui en reste,
+   * et l'issue du dernier (retour « faux » / « proche »). Null sinon.
+   */
+  myGuesses?: { left: number; last: CrobardGuessTally['last'] | null } | null
 }
 
 /**
@@ -513,17 +596,22 @@ export type CrobardClientView = Omit<
  * `lastRoundWord` (posé au bilan) est déjà public dans `CrobardState`.
  */
 export function toCrobardClientView(state: CrobardState, viewerId: string): CrobardClientView {
-  const { rngState: _rng, players, wordChoices, word, allWords, remainingWords, ...rest } = state
+  const { rngState: _rng, players, wordChoices, word, allWords, remainingWords, guesses, ...rest } = state
   void _rng
   void allWords
   void remainingWords
   const isDrawer = viewerId === state.drawerId
+  const mine = guesses?.[viewerId]
   return {
     ...rest,
     phaseKey: phaseKey(state),
     isDrawer,
     wordChoices: isDrawer && state.phase === 'choosing' ? wordChoices : null,
     word: isDrawer && state.phase === 'drawing' ? word : null,
+    myGuesses:
+      state.phase === 'drawing' && !isDrawer && players.some((p) => p.id === viewerId)
+        ? { left: Math.max(0, CROBARD_MAX_GUESSES - (mine?.count ?? 0)), last: mine?.last ?? null }
+        : null,
     players: players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -539,10 +627,20 @@ export function toCrobardClientView(state: CrobardState, viewerId: string): Crob
  * traits restent publics (c'est le clou du spectacle sur grand écran).
  */
 export function toCrobardSpectatorView(state: CrobardState): CrobardClientView {
-  const { rngState: _rng, players, wordChoices: _wc, word: _w, allWords, remainingWords, ...rest } = state
+  const {
+    rngState: _rng,
+    players,
+    wordChoices: _wc,
+    word: _w,
+    allWords,
+    remainingWords,
+    guesses: _g,
+    ...rest
+  } = state
   void _rng
   void _wc
   void _w
+  void _g
   void allWords
   void remainingWords
   return {
@@ -551,6 +649,7 @@ export function toCrobardSpectatorView(state: CrobardState): CrobardClientView {
     isDrawer: false,
     wordChoices: null,
     word: null,
+    myGuesses: null,
     players: players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -559,4 +658,17 @@ export function toCrobardSpectatorView(state: CrobardState): CrobardClientView {
       score: p.score,
     })),
   }
+}
+
+/**
+ * Issue d'une proposition, lue dans la vue que renvoie l'action : trouvé si
+ * le viewer est parmi les bons devineurs, sinon le dernier essai noté.
+ */
+export function crobardGuessOutcome(
+  view: Pick<CrobardClientView, 'correctGuessers' | 'myGuesses'> | null | undefined,
+  viewerId: string
+): 'found' | CrobardGuessTally['last'] | null {
+  if (!view || !Array.isArray(view.correctGuessers)) return null
+  if (view.correctGuessers.includes(viewerId)) return 'found'
+  return view.myGuesses?.last ?? null
 }

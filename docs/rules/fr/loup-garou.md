@@ -53,7 +53,7 @@ La composition est tirée à chaque partie selon le nombre de joueurs : les lou
 
 ## Le mode apéro (optionnel)
 
-En ambiance apéro, les « gorgées » rythment la partie : 3 en mourant, 2 pour tout le village quand un innocent est lynché, 3 par loup quand un complice est démasqué. En **mode soft**, les gorgées disparaissent — le jeu reste exactement le même.
+En ambiance apéro, les « gorgées » rythment la partie : 3 en mourant, 2 pour tout le village quand un innocent est lynché, 3 par loup quand un complice est démasqué, 1 pour la Sorcière à chaque potion. Le compteur d'un joueur vivant n'est visible que de lui : il s'affiche pour tous à sa mort et à la fin de la partie (sinon, les gorgées des loups et de la Sorcière trahiraient leur rôle). En **mode soft**, les gorgées disparaissent — le jeu reste exactement le même.
 
 ## Astuces
 

@@ -26,7 +26,10 @@ révélations reste entier.
 
 1. L'hôte choisit le nombre de cartes (10, 15 ou 20) et lance la table.
 2. Chaque carte : 30 secondes pour voter (la révélation arrive dès que tout
-   le monde a voté), puis on découvre les camps et on débat.
+   le monde a voté — un joueur qui quitte la table n'est plus attendu), puis
+   on découvre les camps et on débat. La révélation reste affichée quelques
+   secondes avant que quiconque puisse passer à la carte suivante : le
+   premier impatient ne l'escamote plus pour toute la table.
 3. Après la dernière carte, la partie se termine — **sans gagnant ni
    classement** : Dilemmes est fait pour les discussions qu'il déclenche,
    pas pour le score.

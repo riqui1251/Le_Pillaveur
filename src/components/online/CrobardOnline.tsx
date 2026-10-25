@@ -21,6 +21,10 @@ import {
   CROBARD_BOT_DRAWER_ROUND_MS,
   CROBARD_CHOOSING_MS,
   CROBARD_DRAWING_MS,
+  CROBARD_GUESS_MAX_LEN,
+  crobardFoundTally,
+  crobardGuessOutcome,
+  crobardRoundEndLeaderId,
   type CrobardClientView,
   type CrobardPlayerView,
 } from '@/lib/crobard/engine'
@@ -36,8 +40,8 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 /**
  * CROBARD en ligne (serveur-autoritaire). `word`/`wordChoices` ne sont
  * envoyés qu'au dessinateur ; les traits (`strokes`) restent PUBLICS —
- * c'est le principe du jeu. Une réponse fausse/proche n'est jamais
- * persistée dans l'état partagé (feedback local uniquement).
+ * c'est le principe du jeu. Une réponse fausse/proche est notée (quota
+ * d'essais par manche), mais son issue ne revient qu'à son auteur.
  *
  * Choix du mot, dessin et bilan partagent UN écran : bandeau de phase, tour,
  * contenu, et une barre fixe en bas qui porte l'action du moment (les trois
@@ -117,10 +121,11 @@ export function CrobardOnline() {
   })
 
   // Ticks « arbitre » (bot au bilan + remplacement), avec secours par rang.
-  const roundEndActor =
-    view?.phase === 'roundEnd'
-      ? view.players.find((p) => p.id === room?.currentTurnUserId)
-      : undefined
+  // Le meneur du bilan n'est pas `currentTurnUserId` (null au bilan, pour
+  // qu'aucun joueur n'y soit expulsable pour inactivité) : même calcul que
+  // le serveur.
+  const roundEndLeaderId = view ? crobardRoundEndLeaderId(view) : null
+  const roundEndActor = view?.players.find((p) => p.id === roundEndLeaderId)
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
@@ -240,16 +245,14 @@ export function CrobardOnline() {
 
   const submitGuess = async () => {
     const text = guessText.trim()
-    if (!text || busy) return
-    // Réponse fausse/proche : issue NORMALE du jeu (statut 200), le serveur
-    // renvoie le code brut et le retour reste local.
+    if (!text || busy || !user) return
+    // Réponse fausse/proche : écrite (quota), son issue revient dans NOTRE vue.
     const res = await sendAction({ action: 'guess', text })
-    const data = res?.data
-    if (data?.error === 'GUESS_WRONG') {
-      flashFeedback('wrong')
-    } else if (data?.error === 'GUESS_CLOSE') {
-      flashFeedback('close')
-    } else if (data?.ok) {
+    if (!res?.ok) return
+    const outcome = crobardGuessOutcome(res.data.view as CrobardClientView | undefined, user.id)
+    if (outcome === 'wrong' || outcome === 'close') {
+      flashFeedback(outcome)
+    } else if (outcome === 'found') {
       setGuessText('')
       setGuessFeedback(null)
     }
@@ -307,8 +310,8 @@ export function CrobardOnline() {
   const botDrawer = Boolean(drawer?.isBot)
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const iHaveGuessed = view.correctGuessers.includes(user.id)
-  const nonDrawerCount = view.players.filter((p) => p.id !== view.drawerId && !p.leftAt).length
-  const foundLine = t('foundCount', { found: view.correctGuessers.length, total: nonDrawerCount })
+  const foundLine = t('foundCount', crobardFoundTally(view))
+  const guessesLeft = view.myGuesses?.left ?? null
 
   const phaseTitle =
     phase === 'choosing' ? t('phase.choosing') : phase === 'drawing' ? t('phase.drawing') : t('roundEnd.title')
@@ -408,6 +411,8 @@ export function CrobardOnline() {
         {guessFeedback === 'wrong' && <X className="h-4 w-4" aria-hidden />}
         {guessFeedback === 'close' ? t('feedback.close') : t('feedback.wrong')}
       </span>
+    ) : !iHaveGuessed && guessesLeft !== null && guessesLeft > 0 && guessesLeft <= 5 ? (
+      t('guessesLeft', { count: guessesLeft })
     ) : (
       foundLine
     ))
@@ -415,6 +420,10 @@ export function CrobardOnline() {
       <p className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 text-base font-bold text-emerald-300">
         <Check className="h-5 w-5 shrink-0" aria-hidden />
         {t('youFoundIt')}
+      </p>
+    ) : guessesLeft === 0 ? (
+      <p className="flex min-h-[3rem] items-center justify-center rounded-2xl border border-cream/[0.25] bg-black/20 px-4 py-2 text-center text-base font-semibold text-cream/80">
+        {t('noGuessesLeft')}
       </p>
     ) : (
       <form
@@ -429,6 +438,7 @@ export function CrobardOnline() {
         <input
           value={guessText}
           onChange={(e) => setGuessText(e.target.value)}
+          maxLength={CROBARD_GUESS_MAX_LEN}
           placeholder={t('guessPlaceholder')}
           aria-label={t('guessLabel')}
           autoComplete="off"

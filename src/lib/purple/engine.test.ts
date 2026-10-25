@@ -4,7 +4,9 @@ import {
   reducePurple,
   currentPurpleActorId,
   checkPurpleBet,
+  purpleCountsForResults,
   PurpleEngineError,
+  PURPLE_MIN_BETS_FOR_RESULTS,
   toPurpleClientView,
   type PurpleState,
   type PurpleCard,
@@ -18,6 +20,14 @@ const PLAYERS = [
 
 function freshState(): PurpleState {
   return createPurpleState(PLAYERS, 'seed-purple')
+}
+
+const RED: PurpleCard = { value: '5', suit: '♥', color: 'red' }
+const BLACK: PurpleCard = { value: '5', suit: '♠', color: 'black' }
+
+/** Tour de p1 sur un paquet choisi (le tirage est mélangé, ces tests portent sur un verdict précis). */
+function rigged(deck: PurpleCard[]): PurpleState {
+  return { ...freshState(), currentPlayer: 0, deck }
 }
 
 function actor(s: PurpleState): string {
@@ -108,6 +118,15 @@ describe('pari', () => {
     expect(result.gameResults[actor(s)] ?? 0).toBeGreaterThanOrEqual(0)
   })
 
+  it('refuse un pari qui n’est pas une clé propre des paris (prototype compris)', () => {
+    const s = rigged([RED, BLACK, RED, BLACK])
+    for (const bet of ['constructor', '__proto__', 'toString', 'bleu']) {
+      expect(() =>
+        reducePurple(s, { type: 'BET', playerId: 'p1', bet: bet as unknown as 'rouge' })
+      ).toThrow('INVALID_BET')
+    }
+  })
+
   it('refuse un second pari tant qu’une décision est en attente', () => {
     let s = freshState()
     const me = actor(s)
@@ -185,6 +204,21 @@ describe('épuisement du paquet — la partie reboucle, elle ne s’arrête jama
 })
 
 describe('fin de partie', () => {
+  it('compte les paris : « Terminer » avant le minimum ne compte pas pour la progression', () => {
+    let s = freshState()
+    expect(s.betsCount).toBe(0)
+    expect(purpleCountsForResults(reducePurple(s, { type: 'END', playerId: actor(s) }))).toBe(false)
+    for (let i = 0; i < PURPLE_MIN_BETS_FOR_RESULTS; i += 1) {
+      expect(purpleCountsForResults(s)).toBe(false)
+      s = reducePurple(s, { type: 'BET', playerId: actor(s), bet: 'rouge' })
+      expect(s.betsCount).toBe(i + 1)
+      s = reducePurple(s, s.canContinue
+        ? { type: 'PASS', playerId: actor(s) }
+        : { type: 'CLOSE_REVEAL', playerId: actor(s) })
+    }
+    expect(purpleCountsForResults(reducePurple(s, { type: 'END', playerId: actor(s) }))).toBe(true)
+  })
+
   it('END termine la partie et bloque tout nouveau pari', () => {
     const s = freshState()
     const ended = reducePurple(s, { type: 'END', playerId: actor(s) })
@@ -203,6 +237,48 @@ describe('départ / retour / remplacement', () => {
     const left = reducePurple(s, { type: 'LEAVE', playerId: me, at: 100 })
     expect(left.players.find((p) => p.id === me)?.leftAt).toBe(100)
     expect(currentPurpleActorId(left)).not.toBe(me)
+  })
+
+  it('le perdant qui part pendant son verdict : ses gorgées restent, le suivant parie sans hériter du verdict', () => {
+    let s = rigged([RED, BLACK, RED])
+    s = reducePurple(s, { type: 'BET', playerId: 'p1', bet: 'noir' })
+    expect(s.pendingReveal).toBe(true)
+    expect(s.amountToDrink).toBe(1)
+    const left = reducePurple(s, { type: 'LEAVE', playerId: 'p1', at: 100 })
+    expect(currentPurpleActorId(left)).toBe('p2')
+    expect(left.pendingReveal).toBe(false)
+    expect(left.amountToDrink).toBe(0)
+    expect(left.drawnCards).toEqual([])
+    expect(left.isCorrect).toBeNull()
+    expect(left.gameResults.p1).toBe(1)
+    // p2 parie tout de suite (plus d'AWAITING_DECISION), et garde son tour.
+    const bet = reducePurple(left, { type: 'BET', playerId: 'p2', bet: 'noir' })
+    expect(bet.isCorrect).toBe(true)
+    expect(currentPurpleActorId(bet)).toBe('p2')
+  })
+
+  it('le gagnant qui part avant de décider : la cagnotte passe au suivant, comme un PASS', () => {
+    let s = rigged([RED, RED, BLACK])
+    s = reducePurple(s, { type: 'BET', playerId: 'p1', bet: 'rouge' })
+    expect(s.canContinue).toBe(true)
+    const pot = s.drinkCounter
+    const left = reducePurple(s, { type: 'LEAVE', playerId: 'p1', at: 100 })
+    expect(currentPurpleActorId(left)).toBe('p2')
+    expect(left.canContinue).toBe(false)
+    expect(left.drawnCards).toEqual([])
+    expect(left.lastBet).toBeNull()
+    expect(left.drinkCounter).toBe(pot)
+    expect(() => reducePurple(left, { type: 'CONTINUE', playerId: 'p2' })).toThrow('WRONG_PHASE')
+    expect(reducePurple(left, { type: 'BET', playerId: 'p2', bet: 'rouge' }).drinkCounter).toBe(pot + 1)
+  })
+
+  it('un départ hors de son tour laisse le verdict au joueur concerné', () => {
+    let s = rigged([RED, BLACK])
+    s = reducePurple(s, { type: 'BET', playerId: 'p1', bet: 'noir' })
+    const left = reducePurple(s, { type: 'LEAVE', playerId: 'p3', at: 100 })
+    expect(currentPurpleActorId(left)).toBe('p1')
+    expect(left.pendingReveal).toBe(true)
+    expect(left.amountToDrink).toBe(1)
   })
 
   it('REJOIN efface le départ', () => {

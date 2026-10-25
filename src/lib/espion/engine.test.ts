@@ -3,13 +3,16 @@ import {
   createEspionState,
   currentEspionActorId,
   espionActive,
+  espionRevealLeaderId,
   reduceEspion,
   toEspionClientView,
   toEspionSpectatorView,
   EspionEngineError,
   ESPION_COUNTDOWN_MS,
   ESPION_ACCUSATION_WINDOW_MS,
+  ESPION_LAST_CHANCE_MS,
   ESPION_QUESTION_TIMEOUT_MS,
+  ESPION_REVEAL_MIN_MS,
   ESPION_SPEECH_CAP,
   espionAskError,
   espionQuestionCap,
@@ -36,6 +39,11 @@ function make(n = 4, seed: string | number = 'seed', roundsToWin = 3): EspionSta
   const players = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
   const raw = createEspionState(players, LOCATIONS, seed, T0 - ESPION_COUNTDOWN_MS, DISCUSSION_MS, roundsToWin)
   return reduceEspion(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+}
+
+/** Instant où le « continuer » de la révélation passe le plancher de lecture. */
+function readAt(state: EspionState): number {
+  return (state.revealAt ?? T0) + ESPION_REVEAL_MIN_MS
 }
 
 function spyOf(state: EspionState): string {
@@ -86,7 +94,7 @@ describe('ACCUSE / SUPPORT', () => {
     ).toThrow('ACCUSATION_IN_PROGRESS')
   })
 
-  it('résout dès que la majorité des joueurs actifs soutient : espion accusé → crew gagne', () => {
+  it('résout dès que la majorité des joueurs actifs soutient : espion accusé → dernière chance, puis crew gagne', () => {
     const s = make(4)
     const spy = spyOf(s)
     const crew = crewOf(s)
@@ -95,7 +103,10 @@ describe('ACCUSE / SUPPORT', () => {
     next = reduceEspion(next, { type: 'SUPPORT', playerId: crew[1], now: T0 })
     expect(next.phase).toBe('discussion') // 2/4, toujours pas majorité
     next = reduceEspion(next, { type: 'SUPPORT', playerId: crew[2], now: T0 })
-    expect(next.phase).toBe('reveal') // 3/4 → majorité atteinte
+    expect(next.phase).toBe('lastChance') // 3/4 → majorité atteinte : l'espion humain peut encore deviner
+    expect(next.phaseEndsAt).toBe(T0 + ESPION_LAST_CHANCE_MS)
+    next = reduceEspion(next, { type: 'ADVANCE', claimedKey: phaseKey(next), now: T0 + ESPION_LAST_CHANCE_MS })
+    expect(next.phase).toBe('reveal')
     expect(next.lastReveal?.outcome).toBe('spy-caught')
     expect(next.lastReveal?.winner).toBe('crew')
     expect(next.roundWins.crew).toBe(1)
@@ -251,14 +262,14 @@ describe('CONTINUE', () => {
     let s = make(4, 'seed', 2)
     s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + DISCUSSION_MS })
     expect(s.roundWins.spy).toBe(1)
-    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: readAt(s) })
     expect(s.phase).toBe('discussion')
     expect(s.round).toBe(2)
     // Le reveal de la manche 1 reste lisible en manche 2 : les remarques des bots visent son espion.
     expect(s.lastReveal).toMatchObject({ round: 1, outcome: 'timeout' })
-    s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + DISCUSSION_MS })
+    s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
     expect(s.roundWins.spy).toBe(2)
-    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: readAt(s) })
     expect(s.phase).toBe('finished')
     expect(s.phaseEndsAt).toBeNull()
     expect(s.winnerTeam).toBe('spy')
@@ -276,7 +287,7 @@ describe('CONTINUE', () => {
       s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + DISCUSSION_MS })
       s = reduceEspion(s, { type: 'LEAVE', playerId: 'p1', at: T0 })
       s = reduceEspion(s, { type: 'LEAVE', playerId: 'p3', at: T0 })
-      s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+      s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: readAt(s) })
       const spy = s.players.filter((p) => p.role === 'spy')
       expect(spy, `graine ${seed}`).toHaveLength(1)
       expect(spy[0].leftAt, `graine ${seed}`).toBeNull()
@@ -289,7 +300,7 @@ describe('CONTINUE', () => {
     let s = make(3)
     s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + DISCUSSION_MS })
     for (const id of ['p0', 'p1', 'p2']) s = reduceEspion(s, { type: 'LEAVE', playerId: id, at: T0 })
-    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: T0 })
+    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: readAt(s) })
     expect(s.players.filter((p) => p.role === 'spy')).toHaveLength(1)
   })
 })
@@ -316,7 +327,7 @@ describe('LEAVE / REJOIN / REPLACE_LEFT', () => {
 })
 
 describe('currentEspionActorId', () => {
-  it('null pendant discussion (le vocal fait tout), premier joueur actif en reveal', () => {
+  it('null pendant la discussion (le vocal fait tout) et la révélation, que n’importe qui referme : personne n’y est expulsable', () => {
     const s = make(4)
     expect(currentEspionActorId(s)).toBeNull()
     const revealing = reduceEspion(s, {
@@ -324,7 +335,10 @@ describe('currentEspionActorId', () => {
       claimedKey: phaseKey(s),
       now: T0 + DISCUSSION_MS,
     })
-    expect(currentEspionActorId(revealing)).toBe('p0')
+    expect(currentEspionActorId(revealing)).toBeNull()
+    // Le premier joueur encore là mène le « continuer » (tick bot).
+    expect(espionRevealLeaderId(revealing)).toBe('p0')
+    expect(espionRevealLeaderId(reduceEspion(revealing, { type: 'LEAVE', playerId: 'p0', at: T0 }))).toBe('p1')
   })
 })
 
@@ -663,7 +677,7 @@ describe('fil : SPEAK (paroles libres)', () => {
 describe('fil : élagage et compatibilité', () => {
   const nextRound = (s: EspionState): EspionState => {
     const revealing = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
-    return reduceEspion(revealing, { type: 'CONTINUE', playerId: 'p0', now: s.phaseEndsAt! + 1 })
+    return reduceEspion(revealing, { type: 'CONTINUE', playerId: 'p0', now: readAt(revealing) })
   }
 
   it('au CONTINUE, on ne garde que la manche courante et la précédente', () => {
@@ -765,5 +779,149 @@ describe('fil : vues anti-triche', () => {
     expect(pendingEspionQuestion(s, T0 + 7_000)?.targetId).toBe('p0')
     const views = [...s.players.map((p) => toEspionClientView(s, p.id)), toEspionSpectatorView(s)]
     for (const view of views) expect(JSON.stringify(view)).not.toContain('"hint"')
+  })
+})
+
+/** Accusation de l'espion par l'équipe, soutenue jusqu'à la majorité des présents. */
+function catchSpy(s: EspionState, now = T0): EspionState {
+  const spy = spyOf(s)
+  const crew = espionActive(s).filter((p) => p.id !== spy).map((p) => p.id)
+  let next = reduceEspion(s, { type: 'ACCUSE', playerId: crew[0], targetId: spy, now })
+  for (const id of crew.slice(1)) {
+    if (next.phase !== 'discussion') break
+    next = reduceEspion(next, { type: 'SUPPORT', playerId: id, now })
+  }
+  return next
+}
+
+describe('dernière chance de l’espion démasqué', () => {
+  it('espion humain démasqué : la table ne joue plus, lui seul devine — juste, il gagne la manche', () => {
+    const s = make(4)
+    const spy = spyOf(s)
+    const [c0, c1] = crewOf(s)
+    const lc = catchSpy(s)
+    expect(lc.phase).toBe('lastChance')
+    expect(lc.activeAccusation).toMatchObject({ targetId: spy, endsAt: lc.phaseEndsAt })
+    expect(currentEspionActorId(lc)).toBeNull()
+    expect(() => reduceEspion(lc, { type: 'ACCUSE', playerId: c0, targetId: c1, now: T0 })).toThrow('NOT_DISCUSSION_PHASE')
+    expect(() => reduceEspion(lc, { type: 'SUPPORT', playerId: c0, now: T0 })).toThrow('NO_ACTIVE_ACCUSATION')
+    expect(() => reduceEspion(lc, { type: 'ASK', playerId: c0, targetId: c1, questionId: 'where', now: T0 })).toThrow(
+      'NOT_DISCUSSION_PHASE'
+    )
+    expect(() => reduceEspion(lc, { type: 'CONTINUE', playerId: c0, now: T0 })).toThrow('NOT_REVEAL')
+    expect(() => reduceEspion(lc, { type: 'GUESS_LOCATION', playerId: c0, location: s.location, now: T0 })).toThrow('NOT_SPY')
+    expect(() => reduceEspion(lc, { type: 'ADVANCE', claimedKey: phaseKey(lc), now: T0 + 1_000 })).toThrow('NOT_EXPIRED')
+
+    const right = reduceEspion(lc, { type: 'GUESS_LOCATION', playerId: spy, location: s.location, now: T0 + 5_000 })
+    expect(right.phase).toBe('reveal')
+    expect(right.lastReveal).toMatchObject({ outcome: 'spy-guessed-right', winner: 'spy', spyId: spy })
+    const wrong = reduceEspion(lc, {
+      type: 'GUESS_LOCATION',
+      playerId: spy,
+      location: LOCATIONS.find((l) => l !== s.location)!,
+      now: T0 + 5_000,
+    })
+    expect(wrong.lastReveal).toMatchObject({ outcome: 'spy-guessed-wrong', winner: 'crew' })
+    const timedOut = reduceEspion(lc, { type: 'ADVANCE', claimedKey: phaseKey(lc), now: lc.phaseEndsAt! })
+    expect(timedOut.lastReveal).toMatchObject({ outcome: 'spy-caught', winner: 'crew' })
+  })
+
+  it('pendant la dernière chance, ni l’espion ni la TV ne voient le lieu, et aucun rôle ne sort', () => {
+    const s = make(4)
+    const spy = spyOf(s)
+    const lc = catchSpy(s)
+    for (const view of [toEspionClientView(lc, spy), toEspionSpectatorView(lc)]) {
+      expect(view.location).toBeNull()
+      expect(view.players.every((p) => p.role === null)).toBe(true)
+      expect(JSON.stringify(view)).not.toContain(s.location)
+      expect(JSON.stringify(view)).not.toContain('rngState')
+    }
+    expect(toEspionClientView(lc, crewOf(s)[0]).location).toBe(s.location)
+  })
+
+  it('espion bot ou parti : pas de dernière chance, la révélation tombe tout de suite', () => {
+    const s = make(4)
+    const spy = spyOf(s)
+    const asBot: EspionState = { ...s, players: s.players.map((p) => (p.id === spy ? { ...p, isBot: true } : p)) }
+    expect(catchSpy(asBot)).toMatchObject({ phase: 'reveal', lastReveal: { outcome: 'spy-caught' } })
+    const gone = reduceEspion(s, { type: 'LEAVE', playerId: spy, at: T0 })
+    expect(catchSpy(gone)).toMatchObject({ phase: 'reveal', lastReveal: { outcome: 'spy-caught' } })
+  })
+})
+
+describe('départ en discussion : l’espion parti reste accusable, la grâce se cumule', () => {
+  it('un joueur parti peut être accusé : la majorité des présents tranche', () => {
+    const s = make(4)
+    const spy = spyOf(s)
+    const crew = crewOf(s)
+    let next = reduceEspion(s, { type: 'LEAVE', playerId: spy, at: T0 })
+    next = accuse(next, crew[0], spy, T0 + 1_000)
+    expect(next.activeAccusation).toMatchObject({ targetId: spy, supporters: [crew[0]] })
+    // 3 présents : majorité = 2.
+    next = support(next, crew[1], T0 + 2_000)
+    expect(next.lastReveal).toMatchObject({ outcome: 'spy-caught', winner: 'crew', spyId: spy })
+    // Un équipier parti, accusé à tort : l'espion gagne, comme pour un présent.
+    const innocent = accuse(reduceEspion(s, { type: 'LEAVE', playerId: crew[2], at: T0 }), crew[0], crew[2])
+    expect(support(innocent, crew[1]).lastReveal).toMatchObject({ outcome: 'accusation-failed', winner: 'spy' })
+  })
+
+  it('un aller-retour ne relance pas les 3 min de grâce : l’absence se cumule sur la manche', () => {
+    const GRACE = 180_000
+    const s = make(4)
+    const spy = spyOf(s)
+    let next = reduceEspion(s, { type: 'LEAVE', playerId: spy, at: T0 })
+    next = reduceEspion(next, { type: 'REJOIN', playerId: spy, now: T0 + 120_000 })
+    next = reduceEspion(next, { type: 'LEAVE', playerId: spy, at: T0 + 130_000 })
+    // Parti depuis 60 s seulement, mais 180 s d'absence au total : le bot le remplace.
+    expect(() => reduceEspion(next, { type: 'REPLACE_LEFT', now: T0 + 189_000, graceMs: GRACE })).toThrow(
+      'NOTHING_TO_REPLACE'
+    )
+    const replaced = reduceEspion(next, { type: 'REPLACE_LEFT', now: T0 + 190_000, graceMs: GRACE })
+    expect(replaced.players.find((p) => p.id === spy)).toMatchObject({ isBot: true, leftAt: null })
+  })
+
+  it('la manche suivante repart de zéro, et le cumul ne sort pas dans les vues', () => {
+    let s = make(4)
+    s = reduceEspion(s, { type: 'LEAVE', playerId: 'p1', at: T0 })
+    s = reduceEspion(s, { type: 'REJOIN', playerId: 'p1', now: T0 + 40_000 })
+    expect(s.players.find((p) => p.id === 'p1')?.awayMs).toBe(40_000)
+    expect(JSON.stringify(toEspionClientView(s, 'p0'))).not.toContain('awayMs')
+    s = reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+    s = reduceEspion(s, { type: 'CONTINUE', playerId: 'p0', now: readAt(s) })
+    expect(s.round).toBe(2)
+    expect(s.players.find((p) => p.id === 'p1')?.awayMs).toBeUndefined()
+    s = reduceEspion(s, { type: 'LEAVE', playerId: 'p1', at: T0 + 100_000 })
+    expect(s.players.find((p) => p.id === 'p1')?.leftAt).toBe(T0 + 100_000)
+  })
+})
+
+describe('révélation : plancher de lecture', () => {
+  const revealOf = (s: EspionState) => reduceEspion(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+
+  it('« Manche suivante » refusé avant ESPION_REVEAL_MIN_MS ; la vue publie l’instant où il passe', () => {
+    const r = revealOf(make(4))
+    expect(r.revealAt).toBe(T0 + DISCUSSION_MS)
+    expect(() => reduceEspion(r, { type: 'CONTINUE', playerId: 'p2', now: r.revealAt! })).toThrow('READING_TIME')
+    expect(() => reduceEspion(r, { type: 'CONTINUE', playerId: 'p2', now: readAt(r) - 1 })).toThrow('READING_TIME')
+    const next = reduceEspion(r, { type: 'CONTINUE', playerId: 'p2', now: readAt(r) })
+    expect(next).toMatchObject({ phase: 'discussion', round: 2, revealAt: null })
+    expect(toEspionClientView(r, 'p1').continueAt).toBe(readAt(r))
+    expect(toEspionSpectatorView(r).continueAt).toBe(readAt(r))
+    expect(toEspionClientView(next, 'p1').continueAt).toBeNull()
+  })
+
+  it('le bot meneur attend lui aussi tant qu’un humain est assis ; une table de bots ou un vieil état ne se figent jamais', () => {
+    const base = make(4)
+    const mostlyBots: EspionState = { ...base, players: base.players.map((p) => ({ ...p, isBot: p.id !== 'p3' })) }
+    const r = revealOf(mostlyBots)
+    expect(() => reduceEspion(r, { type: 'CONTINUE', playerId: 'p0', now: r.revealAt! })).toThrow('READING_TIME')
+    const humanGone = reduceEspion(r, { type: 'LEAVE', playerId: 'p3', at: r.revealAt! })
+    expect(reduceEspion(humanGone, { type: 'CONTINUE', playerId: 'p0', now: r.revealAt! }).phase).toBe('discussion')
+    expect(reduceEspion({ ...r, revealAt: null }, { type: 'CONTINUE', playerId: 'p3', now: r.revealAt! }).phase).toBe(
+      'discussion'
+    )
+    const { revealAt: _gone, ...legacy } = r
+    void _gone
+    expect(reduceEspion(legacy, { type: 'CONTINUE', playerId: 'p3', now: 0 }).phase).toBe('discussion')
   })
 })

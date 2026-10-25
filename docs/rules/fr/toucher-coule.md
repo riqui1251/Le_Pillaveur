@@ -8,7 +8,7 @@ Deux équipes placent leurs navires en secret sur leur grille, puis se tirent de
 
 ## Déroulement
 
-1. **Placement** : chaque équipe dispose ses navires sur sa grille (horizontal ou vertical, sans chevauchement).
+1. **Placement** : chaque équipe dispose ses navires sur sa grille (horizontal ou vertical, sans chevauchement). Trois minutes au plus : passé ce délai, les navires des retardataires sont placés au hasard.
 2. **La bataille** : les équipes tirent alternativement en désignant une case adverse.
 3. **Touché / à l'eau / coulé** : chaque tir est annoncé à tous.
 4. La première équipe qui coule TOUTE la flotte adverse gagne.

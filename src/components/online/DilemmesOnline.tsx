@@ -14,11 +14,17 @@ import { OnlineActionBar, onlineActionBarPadding } from './OnlineActionBar'
 import { TargetGrid } from './TargetGrid'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { DIL_VOTE_MS, type DilClientView } from '@/lib/dilemmes/engine'
+import {
+  DIL_REVEAL_BOT_TICK_MS,
+  DIL_VOTE_MS,
+  dilRevealLeaderId,
+  type DilClientView,
+} from '@/lib/dilemmes/engine'
 import { dilMinorityChoice, dilWhoTally } from '@/lib/dilemmes/reveal'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useDeadline } from '@/hooks/useDeadline'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, useMemberCosmetics } from './OnlinePlayerTag'
@@ -185,6 +191,9 @@ export function DilemmesOnline() {
   const tutorial = useGameTutorial('dilemmes', inGame)
   const cosmetics = useMemberCosmetics(room)
   const isSoft = user?.ambianceMode === 'soft'
+  // Le serveur refuse « carte suivante » avant le temps de lecture
+  // (READING_TIME) : le bouton reste grisé, décompte affiché, jusque-là.
+  const continueUnlocked = useDeadline(view?.continueAt ?? null)
 
   // Tick « advance » à l'échéance, arbitré par rang (cf. useAdvanceTick).
   useAdvanceTick({
@@ -202,10 +211,8 @@ export function DilemmesOnline() {
     view?.phase === 'vote'
       ? view.players.find((p) => p.isBot && !p.hasVoted && !p.leftAt)
       : undefined
-  const revealActor =
-    view?.phase === 'reveal'
-      ? view.players.find((p) => p.id === room?.currentTurnUserId)
-      : undefined
+  const revealLeaderId = view?.phase === 'reveal' ? dilRevealLeaderId(view) : null
+  const revealActor = view?.players.find((p) => p.id === revealLeaderId)
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
@@ -217,7 +224,7 @@ export function DilemmesOnline() {
         { body: { action: 'bot' }, delayMs: botTickDelayMs(pendingBot.name) }
       : revealActor?.isBot
         ? // Le bot meneur enchaîne à son tempo, mais laisse le temps de lire la révélation.
-          { body: { action: 'bot' }, delayMs: Math.max(3500, botTickDelayMs(revealActor.name)) }
+          { body: { action: 'bot' }, delayMs: Math.max(DIL_REVEAL_BOT_TICK_MS, botTickDelayMs(revealActor.name)) }
         : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
@@ -295,6 +302,8 @@ export function DilemmesOnline() {
   // « Carte suivante » : le moteur l'accepte de tout joueur de la partie, pas
   // d'un membre arrivé après le lancement (UNKNOWN_PLAYER).
   const canContinue = isReveal && view.players.some((p) => p.id === user.id)
+  const continueLocked = view.continueAt != null && !continueUnlocked
+  const isLastCard = view.round + 1 >= view.totalRounds
   const whoTargets = view.players.filter((p) => !p.leftAt && p.id !== user.id)
 
   // Choix soulevé encore valable : même manche, vote pas encore parti, cible
@@ -619,11 +628,19 @@ export function DilemmesOnline() {
             variant="primary"
             size="gameLg"
             className="w-full"
-            disabled={busy}
+            disabled={busy || continueLocked}
             onClick={() => void sendAction({ action: 'continue' })}
           >
             {busy && <Loader2 className="mr-2 h-5 w-5 shrink-0 motion-safe:animate-spin" aria-hidden />}
-            {view.round + 1 >= view.totalRounds ? t('seeEnd') : t('nextCard')}
+            {continueLocked ? (
+              <PhaseCountdown endsAt={view.continueAt}>
+                {({ seconds }) => (isLastCard ? t('seeEndIn', { seconds }) : t('nextCardIn', { seconds }))}
+              </PhaseCountdown>
+            ) : isLastCard ? (
+              t('seeEnd')
+            ) : (
+              t('nextCard')
+            )}
           </Button>
         )}
       </OnlineActionBar>

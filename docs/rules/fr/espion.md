@@ -11,7 +11,7 @@ Un lieu secret est distribué à tous les joueurs — sauf à l'espion, qui reç
 1. **La donne** : chacun voit le lieu sur son téléphone (ou son statut d'espion).
 2. **Les questions** : à l'oral (chat vocal) ou par écrit, on s'interroge : « Tu y vas souvent ? », « On y mange bien ? » — assez précis pour tester, assez flou pour ne pas vendre le lieu.
 3. **L'accusation publique** : quand un joueur est convaincu, il accuse. Le groupe tranche.
-4. **La révélation** : l'espion démasqué peut encore gagner en devinant le lieu.
+4. **La dernière chance** : démasqué par la majorité, l'espion a encore 20 secondes pour deviner le lieu — s'il tombe juste, il remporte quand même la manche (un espion bot, lui, tente sa chance juste avant le verdict). Puis vient la révélation.
 
 ## Victoire
 
@@ -28,7 +28,7 @@ Un lieu secret est distribué à tous les joueurs — sauf à l'espion, qui reç
 
 ### Peut-on jouer sans meneur ?
 
-Oui. Le jeu tire le lieu, désigne l'espion en secret, tient le chrono et gère l'accusation : 15 secondes pour rallier la table, majorité atteinte → révélation. Rien à arbitrer.
+Oui. Le jeu tire le lieu, désigne l'espion en secret, tient le chrono et gère l'accusation : 15 secondes pour rallier la table, majorité atteinte → dernière chance de l'espion, puis révélation. Rien à arbitrer.
 
 ### Peut-on jouer à distance ?
 
@@ -44,7 +44,7 @@ Oui. « Essayer avec des bots » ouvre une table privée de cinq : toi et qua
 
 ### Combien de temps dure une partie ?
 
-L'hôte règle la discussion (3, 5 ou 7 minutes par manche) et le nombre de manches à gagner (3, 5 ou 7). Une partie standard — 5 minutes, 3 manches gagnantes — dure 15 à 25 minutes. Seul face aux bots, la manche dure 3 minutes, sauf si tu choisis une autre durée. Chrono écoulé sans accusation ? L'espion remporte la manche.
+L'hôte règle la discussion (3, 5 ou 7 minutes par manche) et le nombre de manches à gagner (3, 5 ou 7). Une partie standard — 5 minutes, 3 manches gagnantes — dure 15 à 25 minutes. Seul face aux bots, la manche dure 3 minutes, sauf si tu choisis une autre durée. Chrono écoulé sans accusation ? L'espion remporte la manche. Quitter la table ne le sauve pas : un absent reste accusable, et passé 3 minutes d'absence sur la manche, retours compris, un bot prend sa place.
 
 ### À 3 joueurs, ça tourne ?
 

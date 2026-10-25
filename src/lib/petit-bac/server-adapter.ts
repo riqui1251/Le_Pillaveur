@@ -1,6 +1,6 @@
 import {
   createPbcState,
-  currentPbcActorId,
+  pbcRevealLeaderId,
   reducePbc,
   toPbcClientView,
   toPbcSpectatorView,
@@ -197,8 +197,8 @@ export function pbcSpectatorViewJson(state: PbcState): string {
 export function applyPbcBotAction(state: PbcState): PbcRoomActionResult {
   try {
     if (state.phase === 'reveal') {
-      const actorId = currentPbcActorId(state)
-      const actor = state.players.find((p) => p.id === actorId)
+      const leaderId = pbcRevealLeaderId(state)
+      const actor = state.players.find((p) => p.id === leaderId)
       if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
       return {
         ok: true,

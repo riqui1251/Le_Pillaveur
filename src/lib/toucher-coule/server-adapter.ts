@@ -101,7 +101,9 @@ export function parseTCState(json: string | null): TCState | null {
   try {
     const parsed = JSON.parse(json) as TCState
     if (!parsed || !Array.isArray(parsed.players) || !parsed.shotsAt) return null
-    return parsed
+    // Rétro-compat : les états d'avant l'horloge de placement n'en ont pas
+    // (placement sans échéance, comme avant).
+    return { ...parsed, phaseSeq: parsed.phaseSeq ?? 0, phaseEndsAt: parsed.phaseEndsAt ?? null }
   } catch {
     return null
   }
@@ -114,6 +116,8 @@ export type TCRoomActionInput =
   | { type: 'bot' }
   /** Tick client : remplace par des bots les joueurs partis depuis plus de 3 min (horloge SERVEUR). */
   | { type: 'replace-left' }
+  /** Échéance du placement (horloge SERVEUR) : flotte au hasard pour les retardataires. */
+  | { type: 'advance'; phaseKey: string }
 
 export type TCRoomActionResult = { ok: true; state: TCState } | { ok: false; error: string }
 
@@ -133,6 +137,12 @@ export function applyTCRoomAction(
       if (next === state) return { ok: false, error: 'NOTHING_TO_REPLACE' }
       // Un remplacé en phase placement doit poser ses navires immédiatement.
       return { ok: true, state: placeTCBots(next) }
+    }
+    if (input.type === 'advance') {
+      return {
+        ok: true,
+        state: reduceTC(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now: Date.now() }),
+      }
     }
     if (input.type === 'bot') {
       const activeId = currentTCPlayerId(state)

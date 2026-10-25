@@ -11,8 +11,8 @@ import { createRng, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 import {
   countMatches,
   createMenteurState,
-  currentMenteurActorId,
   isLegalRaise,
+  menteurBotSeatId,
   menteurHumanSeated,
   menteurTotalDice,
   toMenteurClientView,
@@ -318,7 +318,7 @@ function playGame(
   let prudentSures: MenteurBid[] = []
   for (let steps = 0; s.phase !== 'finished'; steps += 1) {
     if (steps > STEP_CAP) throw new Error(`partie sans fin : ${key}`)
-    const actorId = currentMenteurActorId(s)!
+    const actorId = menteurBotSeatId(s)!
     const actor = s.players.find((p) => p.id === actorId)!
     let next: MenteurState
     if (actor.isBot) {

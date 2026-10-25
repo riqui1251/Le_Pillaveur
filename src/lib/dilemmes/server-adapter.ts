@@ -1,8 +1,9 @@
 import {
   createDilState,
-  currentDilActorId,
   dilActive,
   dilCurrentCard,
+  dilReadingTimeOk,
+  dilRevealLeaderId,
   reduceDil,
   toDilClientView,
   toDilSpectatorView,
@@ -66,7 +67,12 @@ export function parseDilState(json: string | null): DilState | null {
   try {
     const raw = JSON.parse(json) as DilState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
-    return { ...raw, votes: raw.votes ?? {}, rematchVotes: raw.rematchVotes ?? [] }
+    return {
+      ...raw,
+      votes: raw.votes ?? {},
+      rematchVotes: raw.rematchVotes ?? [],
+      revealAt: raw.revealAt ?? null,
+    }
   } catch {
     return null
   }
@@ -103,11 +109,11 @@ export function applyDilRoomAction(
           ok: true,
           state: reduceDil(state, { type: 'ADVANCE', claimedKey: input.phaseKey, now: Date.now() }),
         }
-      case 'continue':
-        return {
-          ok: true,
-          state: reduceDil(state, { type: 'CONTINUE', playerId: userId, now: Date.now() }),
-        }
+      case 'continue': {
+        const now = Date.now()
+        if (!dilReadingTimeOk(state, userId, now)) return { ok: false, error: 'READING_TIME' }
+        return { ok: true, state: reduceDil(state, { type: 'CONTINUE', playerId: userId, now }) }
+      }
       case 'bot':
         return applyDilBotAction(state)
       case 'replace-left':
@@ -253,12 +259,12 @@ export function applyDilBotAction(
       }
     }
     if (state.phase === 'reveal') {
-      const actor = state.players.find((p) => p.id === currentDilActorId(state))
-      if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
-      return {
-        ok: true,
-        state: reduceDil(state, { type: 'CONTINUE', playerId: actor.id, now: Date.now() }),
-      }
+      const leaderId = dilRevealLeaderId(state)
+      const leader = state.players.find((p) => p.id === leaderId)
+      if (!leader?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+      const now = Date.now()
+      if (!dilReadingTimeOk(state, leader.id, now)) return { ok: false, error: 'READING_TIME' }
+      return { ok: true, state: reduceDil(state, { type: 'CONTINUE', playerId: leader.id, now }) }
     }
     return { ok: false, error: 'NOT_BOT_TURN' }
   } catch (e) {

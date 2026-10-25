@@ -1,14 +1,18 @@
 import { evaluatePlayerRoll1220, type Choices1220 } from '@/lib/game-1220'
 import { createRng, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { defaultChoices1220, parseChoices1220, parseChoicesPatch1220, playableChoices1220 } from './choices'
+
+export { defaultChoices1220 }
 
 /**
  * Moteur pur du 1220 en ligne — SERVEUR-AUTORITAIRE.
  *
  * Contrairement aux autres jeux, il n'y a pas de tour : chaque joueur règle
- * ses propres paris une fois en phase `setup` (parité/plage/chiffres), puis
- * en phase `play` N'IMPORTE QUEL joueur peut déclencher un lancer partagé
- * (d12+d20) évalué contre les paris de TOUT LE MONDE. Rien à cacher entre
+ * ses propres paris en phase `setup` (parité/plage/chiffres), puis en phase
+ * `play` N'IMPORTE QUEL joueur peut déclencher un lancer partagé (d12+d20)
+ * évalué contre les paris de TOUT LE MONDE. Entre deux lancers, chacun peut
+ * modifier ses paris (`SET_BETS`), comme en local. Rien à cacher entre
  * joueurs : une seule vue sert joueur et spectateur, sans la graine des dés
  * (elle prédirait le prochain lancer — voir toGame1220ClientView).
  *
@@ -57,7 +61,10 @@ export type Game1220State = TimedPhaseState & {
 }
 
 export type Game1220Action =
-  | { type: 'SET_DRAFT'; playerId: string; choices: Partial<Choices1220> }
+  /** `choices` vient du client tel quel : le moteur le valide champ par champ. */
+  | { type: 'SET_DRAFT'; playerId: string; choices: unknown }
+  /** Phase `play` : paris complets qui remplacent ceux du joueur dès le lancer suivant. */
+  | { type: 'SET_BETS'; playerId: string; choices: unknown }
   | { type: 'READY'; playerId: string }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'ROLL'; playerId: string }
@@ -73,10 +80,6 @@ export const GAME_1220_MAX_PLAYERS = 16
 /** Durée max de la mise en place — même délai de grâce que l'anti-AFK commun. */
 export const GAME_1220_SETUP_MS = 3 * 60 * 1000
 const HISTORY_LIMIT = 15
-
-export function defaultChoices1220(): Choices1220 {
-  return { parity: 'pair', band: '11-20', drinkNumber: 7, giveNumber: 13 }
-}
 
 export function createGame1220State(
   players: { id: string; name: string; isBot?: boolean }[],
@@ -118,7 +121,7 @@ export function lockConfigsIfAllReady(state: Game1220State, setupReady: string[]
   }
   const configs: Config1220[] = state.players
     .filter((p) => !p.leftAt)
-    .map((p) => ({ playerId: p.id, name: p.name, ...(state.draft[p.id] ?? defaultChoices1220()) }))
+    .map((p) => ({ playerId: p.id, name: p.name, ...playableChoices1220(state.draft[p.id]) }))
   return {
     ...state,
     version: state.version + 1,
@@ -137,11 +140,34 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       if (!player || player.leftAt) throw new Game1220EngineError('UNKNOWN_PLAYER')
       if (state.phase !== 'setup') throw new Game1220EngineError('WRONG_PHASE')
       if (state.setupReady.includes(action.playerId)) throw new Game1220EngineError('ALREADY_READY')
+      // Un conflit boire/donner reste permis ici (étape d'une modification en
+      // deux touchers) : READY le refuse.
+      const patch = parseChoicesPatch1220(action.choices)
+      if (!patch) throw new Game1220EngineError('INVALID_CHOICE')
       const current = state.draft[action.playerId] ?? defaultChoices1220()
       return {
         ...state,
         version: state.version + 1,
-        draft: { ...state.draft, [action.playerId]: { ...current, ...action.choices } },
+        draft: { ...state.draft, [action.playerId]: { ...current, ...patch } },
+      }
+    }
+
+    case 'SET_BETS': {
+      const player = state.players.find((p) => p.id === action.playerId)
+      if (!player || player.leftAt) throw new Game1220EngineError('UNKNOWN_PLAYER')
+      if (state.phase !== 'play' || !state.configs) throw new Game1220EngineError('WRONG_PHASE')
+      const choices = parseChoices1220(action.choices)
+      if (!choices) throw new Game1220EngineError('INVALID_CHOICE')
+      if (choices.drinkNumber === choices.giveNumber) throw new Game1220EngineError('CLASH')
+      const config: Config1220 = { playerId: player.id, name: player.name, ...choices }
+      // Un joueur revenu après le verrouillage n'avait aucun pari : il en pose.
+      const known = state.configs.some((c) => c.playerId === player.id)
+      return {
+        ...state,
+        version: state.version + 1,
+        configs: known
+          ? state.configs.map((c) => (c.playerId === player.id ? config : c))
+          : [...state.configs, config],
       }
     }
 
@@ -149,8 +175,10 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new Game1220EngineError('UNKNOWN_PLAYER')
       if (state.phase !== 'setup') throw new Game1220EngineError('WRONG_PHASE')
-      const choices = state.draft[action.playerId]
-      if (!choices) throw new Game1220EngineError('NO_DRAFT')
+      const draft = state.draft[action.playerId]
+      if (!draft) throw new Game1220EngineError('NO_DRAFT')
+      const choices = parseChoices1220(draft)
+      if (!choices) throw new Game1220EngineError('INVALID_CHOICE')
       if (choices.drinkNumber === choices.giveNumber) throw new Game1220EngineError('CLASH')
       if (state.setupReady.includes(action.playerId)) return state
       return lockConfigsIfAllReady(state, [...state.setupReady, action.playerId])
@@ -162,17 +190,14 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       if (state.phase !== 'setup') throw new Game1220EngineError('NOTHING_TO_ADVANCE')
       // Échéance de mise en place : les retardataires partent avec les choix
       // affichés à l'écran. Un brouillon en conflit (même chiffre boire/donner)
-      // n'aurait jamais passé le bouton « prêt » → retour aux choix par défaut
-      // plutôt que de verrouiller une config illégale.
+      // ou invalide n'aurait jamais passé le bouton « prêt » → retour aux choix
+      // par défaut plutôt que de verrouiller une config illégale.
       const active = activePlayerIds(state)
       // Table vide (tout le monde parti) : rien à verrouiller — sans ce garde,
       // le tick resterait éligible et réécrirait l'état en boucle.
       if (active.length === 0) throw new Game1220EngineError('NOTHING_TO_ADVANCE')
       const draft = { ...state.draft }
-      for (const id of active) {
-        const choices = draft[id] ?? defaultChoices1220()
-        draft[id] = choices.drinkNumber === choices.giveNumber ? defaultChoices1220() : choices
-      }
+      for (const id of active) draft[id] = playableChoices1220(draft[id])
       return lockConfigsIfAllReady(
         { ...state, draft },
         Array.from(new Set([...state.setupReady, ...active]))

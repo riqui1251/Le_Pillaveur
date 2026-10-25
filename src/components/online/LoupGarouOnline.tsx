@@ -522,16 +522,19 @@ export function LoupGarouOnline() {
 
   // Ticks « arbitre » (bots + remplacement), avec secours par rang : tout
   // humain RESTANT arbitre — vivant OU fantôme (un mort pilote les ticks).
-  // Tick bot « au cas où » : NOT_BOT_TURN (409) si aucun bot concerné.
+  // Tick bot « au cas où » le jour : NOT_BOT_TURN (409) si aucun bot concerné.
+  // La nuit, le serveur fait seul jouer les bots (instant secret) et refuse
+  // le tick des clients : inutile de l'envoyer.
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
     userId: user?.id,
     players: view?.players,
     enabled: Boolean(view && user && room && view.phase !== 'finished'),
-    botTick: view?.players.some((p) => p.isBot)
-      ? { body: { action: 'bot' }, delayMs: 2500 + Math.random() * 3000 }
-      : null,
+    botTick:
+      view && !NIGHT_PHASES.has(view.phase) && view.players.some((p) => p.isBot)
+        ? { body: { action: 'bot' }, delayMs: 2500 + Math.random() * 3000 }
+        : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
 
@@ -1158,7 +1161,9 @@ export function LoupGarouOnline() {
       </AnimatePresence>
 
       {/* Chat privé des loups (loups uniquement, repliable). Monté replié la
-          nuit des loups : la pastille du bandeau signale la meute qui parle. */}
+          nuit des loups : la pastille du bandeau signale la meute qui parle.
+          Loup mort : lecture seule (fantôme omniscient — le serveur refuse
+          aussi son envoi). */}
       {myRole === 'loup' && (
         <GameChatPanel
           open={showWolfChat}
@@ -1166,6 +1171,7 @@ export function LoupGarouOnline() {
           scope="wolves"
           title={t('wolfChatTitle')}
           tone="red"
+          canWrite={Boolean(me?.alive)}
           onUnreadChange={setWolfUnread}
         />
       )}

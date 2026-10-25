@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError, withApiRoute } from '@/lib/api-route'
+import { isOnlineErrorCode } from '@/lib/online-errors'
 import { getCurrentUser } from '@/lib/auth-server'
 import { parseOnlinePreferences } from '@/lib/online-preferences'
 import { censorChatMessage } from '@/lib/chat-moderation'
@@ -177,7 +179,7 @@ async function markChannelRead(
   })
 }
 
-export async function POST(request: Request) {
+export const POST = withApiRoute('chat messages POST', async (request: Request) => {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'Non connecté' }, { status: 401 })
 
@@ -205,8 +207,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'chat-banned' }, { status: 403 })
   }
 
-  const resolved = await resolveChatChannel(user, scope, friendUserId)
+  // Droits d'ÉCRITURE : en pleine partie de Loup-Garou, un mort lit mais
+  // n'écrit plus (chat-access.ts).
+  const resolved = await resolveChatChannel(user, scope, friendUserId, 'write')
   if (!resolved.ok) {
+    if (isOnlineErrorCode(resolved.error)) return apiError(resolved.error, resolved.status)
     return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
 
@@ -221,4 +226,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({ message: toDto(created, user.id) })
-}
+})

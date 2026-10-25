@@ -544,19 +544,22 @@ function startNextManche(state: PreState, now: number): PreState {
 }
 
 /**
- * « Ou rien » vient d'être déclenché : fait tourner le tour en SAUTANT
- * d'office les joueurs incapables d'égaler le rang verrouillé (leur tour
- * saute, ils comptent comme ayant passé). Si personne ne peut égaler, le pli
- * revient au poseur qui remène.
+ * « Ou rien » actif (pose égale, ou passe pendant le verrou) : fait tourner
+ * le tour à partir de `fromId` en SAUTANT d'office les joueurs incapables
+ * d'égaler le rang verrouillé (leur tour saute, ils comptent comme ayant
+ * passé). Si personne ne peut égaler, le pli revient au poseur qui remène.
  */
-function advanceOuRien(state: PreState, ownerId: string, now: number): PreState {
+function advanceOuRien(state: PreState, ownerId: string, now: number, fromId: string = ownerId): PreState {
   const size = state.lastPlay!.cards.length
   const rank = state.trickRun!.rank
   const skipped: string[] = []
-  let cursor = ownerId
+  let cursor = fromId
   for (let step = 0; step < state.players.length; step += 1) {
     const cid = nextInRace(state, cursor)
     if (!cid || cid === ownerId) break
+    cursor = cid
+    // Qui a déjà passé (ou sauté) ce pli ne reprend pas la main.
+    if (state.passedIds.includes(cid) || skipped.includes(cid)) continue
     const cand = playerById(state, cid)!
     // Un joker remplace n'importe quelle carte : il permet d'égaler.
     const matching = cand.hand.filter((c) => preRankOf(c) === rank || preIsJoker(c)).length
@@ -564,7 +567,6 @@ function advanceOuRien(state: PreState, ownerId: string, now: number): PreState 
       return nextTurn({ ...state, passedIds: [...state.passedIds, ...skipped] }, cid, now)
     }
     skipped.push(cid)
-    cursor = cid
   }
   // Personne ne peut égaler → pli gagné par le poseur (ou le suivant s'il est sorti).
   const owner = playerById(state, ownerId)
@@ -660,6 +662,10 @@ function applyPass(state: PreState, playerId: string, now: number): PreState {
         : nextInRace(next, owner ?? playerId)
     return nextTurn(archiveTrick(next, owner), leader, now)
   }
+
+  // Verrou « ou rien » toujours actif : un passe ne le lève pas, les suivants
+  // incapables d'égaler sautent aussi.
+  if (owner && preOuRien(next) !== null) return advanceOuRien(next, owner, now, playerId)
 
   return nextTurn(next, nextInRace(next, playerId), now)
 }
@@ -821,10 +827,22 @@ export function reducePre(state: PreState, action: PreAction): PreState {
 
 // ─── Acteur courant / bot ────────────────────────────────────────────────────
 
+/**
+ * Le joueur au tour en jeu. L'interlude n'en a pas : son « continuer » est
+ * ouvert à tous (plancher de lecture puis échéance), son meneur
+ * (preInterludeLeaderId) le lance s'il est bot, sans que personne y soit
+ * expulsable pour inactivité.
+ */
 export function currentPreActorId(state: PreState): string | null {
   if (state.phase === 'playing') return state.currentTurnId
-  if (state.phase === 'interlude') return preActive(state)[0]?.id ?? null
   return null
+}
+
+/** Le premier joueur encore à table mène le « continuer » de l'interlude. */
+export function preInterludeLeaderId(state: {
+  players: ReadonlyArray<Pick<PrePlayer, 'id' | 'leftAt'>>
+}): string | null {
+  return state.players.find((p) => !p.leftAt)?.id ?? null
 }
 
 /** Rang « haut » (dame et plus) : seuil des passes volontaires du prudent. */

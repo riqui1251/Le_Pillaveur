@@ -327,7 +327,7 @@ describe('défi, Calza et pique d’ouverture', () => {
     expect(menteurGrudgeTarget(toMenteurClientView(opening('Raoul', { ...lost, round: 0 }), 'me'), 'me', 0.9)).toBeNull()
   })
 
-  it('face à sa propre enchère (le répondant est parti), le bot se tait plutôt que de se viser : le coup passe', () => {
+  it('face à sa propre enchère (état d’avant OWN_BID), le bot se tait plutôt que de se viser ; le répondant parti garde la main', () => {
     const own = raised('Kéké', { currentBid: { qty: 3, face: 4, by: 'me' }, bids: [{ qty: 3, face: 4, by: 'me' }] })
     const rand = createRng('soi').next
     for (let i = 0; i < 200; i += 1) {
@@ -335,7 +335,8 @@ describe('défi, Calza et pique d’ouverture', () => {
       expect(sayOf({ ...own, ruleCalza: true }, { type: 'CALZA' }, why(null), rand)).toBeNull()
       expect(sayOf(raised('Mauricette', { currentBid: own.currentBid, bids: own.bids }), BID(4, 4), why(0.6), rand)).toBeNull()
     }
-    // De bout en bout : Riqui part au moment de répondre, la main revient au bot.
+    // De bout en bout : Riqui part au moment de répondre ; la main lui reste,
+    // le cerveau du bot la joue pour lui, sans parole en son nom.
     for (let g = 0; g < 300; g += 1) {
       let s: MenteurState = {
         ...createMenteurState([{ id: 'b', name: 'Kéké', isBot: true }, { id: 'h', name: 'Riqui' }], `soi-${g}`),
@@ -346,9 +347,13 @@ describe('défi, Calza et pique d’ouverture', () => {
       if (!first.ok) throw new Error(first.error)
       s = reduceMenteur(first.state, { type: 'LEAVE', playerId: 'h', at: T0 + 1_000 })
       expect(s.currentBid?.by).toBe('b')
-      expect(currentMenteurActorId(s)).toBe('b')
+      expect(currentMenteurActorId(s)).toBe('h')
       const r = applyMenteurBotAction(s, coups, T0 + 3_000)
       expect(r, `partie ${g}`).toMatchObject({ ok: true })
+      if (!r.ok) continue
+      const answeredBy = r.state.phase === 'reveal' ? r.state.lastReveal?.challengerId : r.state.currentBid?.by
+      expect(answeredBy, `partie ${g}`).toBe('h')
+      expect((r.state.speech ?? []).some((sp) => sp.playerId === 'h'), `partie ${g}`).toBe(false)
     }
   })
 

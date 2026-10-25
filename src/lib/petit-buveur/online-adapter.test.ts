@@ -126,3 +126,24 @@ describe('#38 départ du joueur au tour', () => {
     if (r.ok) expect(adapter.currentActorId(r.state)).toBe('u2')
   })
 })
+
+describe('vues : l’état du générateur ne sort jamais du serveur', () => {
+  it('ni la vue joueur, ni la vue TV, ni la réponse d’action ne portent rngState', () => {
+    let state = table(1)
+    const r = adapter.applyAction(state, 'u1', { action: 'roll' })
+    if (r.ok) state = r.state as EngineState
+    const rng = String(state.rngState)
+    const response = adapter.actionResponse(state, 'u1')
+    for (const json of [
+      adapter.clientViewJson(state, 'u1'),
+      adapter.clientViewJson(state, 'u2'),
+      adapter.spectatorViewJson(state),
+      JSON.stringify(response.view),
+      response.viewJson as string,
+    ]) {
+      expect(json).not.toContain('rngState')
+      expect(json).not.toContain(rng)
+      expect('rngState' in (JSON.parse(json) as object)).toBe(false)
+    }
+  })
+})

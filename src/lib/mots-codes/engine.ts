@@ -68,6 +68,7 @@ export type MCAction =
   | { type: 'GUESS'; playerId: string; tile: number; now: number }
   | { type: 'PASS'; playerId: string; now: number }
   | { type: 'SKIP_TURN'; playerId: string; now: number }
+  | { type: 'SKIP_GUESS'; now: number }
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
@@ -243,7 +244,12 @@ export function reduceMC(state: MCState, action: MCAction): MCState {
       if (!actor || actor.leftAt) throw new MCEngineError('UNKNOWN_PLAYER')
       if (actor.team !== state.activeTeam) throw new MCEngineError('NOT_YOUR_TURN')
       if (actor.isSpymaster) throw new MCEngineError('SPYMASTER_CANNOT_GUESS')
-      if (action.tile < 0 || action.tile >= MC_GRID || state.revealed[action.tile]) {
+      if (
+        !Number.isInteger(action.tile) ||
+        action.tile < 0 ||
+        action.tile >= MC_GRID ||
+        state.revealed[action.tile]
+      ) {
         throw new MCEngineError('INVALID_TILE')
       }
 
@@ -285,6 +291,17 @@ export function reduceMC(state: MCState, action: MCAction): MCState {
       if (!actor || actor.team !== state.activeTeam || !actor.isSpymaster) {
         throw new MCEngineError('NOT_THE_SPYMASTER')
       }
+      return enterCluePhase(state, otherTeam(state.activeTeam), action.now)
+    }
+
+    case 'SKIP_GUESS': {
+      // Plus aucun devineur présent dans l'équipe active (tous partis, pas
+      // encore remplacés) : la main passe, au lieu d'attendre l'échéance.
+      if (state.phase !== 'guess') throw new MCEngineError('NOT_GUESS_PHASE')
+      const present = state.players.some(
+        (p) => p.team === state.activeTeam && !p.isSpymaster && !p.leftAt
+      )
+      if (present) throw new MCEngineError('GUESSERS_PRESENT')
       return enterCluePhase(state, otherTeam(state.activeTeam), action.now)
     }
 

@@ -1,4 +1,5 @@
 import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { checkAdvance, enterPhase, phaseKey } from '@/lib/online/phase-clock'
 
 /**
  * Moteur pur Toucher-Coulé (bataille navale par équipes) — SERVEUR-AUTORITAIRE.
@@ -48,6 +49,14 @@ export type TCPlayer = {
 /** Délai de grâce avant qu'un joueur parti soit remplacé par un bot. */
 export const TC_REJOIN_GRACE_MS = 3 * 60 * 1000
 
+/**
+ * Durée max du placement. Le placement est SIMULTANÉ (aucun joueur « au
+ * tour », donc pas d'anti-AFK) : sans échéance, un seul joueur qui ne valide
+ * jamais figeait la table. À l'échéance, `advance` place au hasard les
+ * navires des retardataires.
+ */
+export const TC_PLACEMENT_MS = 3 * 60 * 1000
+
 export type TCShip = {
   id: string
   ownerId: string
@@ -92,6 +101,9 @@ export type TCState = {
   rngState: RngState
   /** Power-up "Bombe" activé pour la partie (choix hôte, figé au lancement). */
   rulePowerups: boolean
+  /** Horloge de phase (phase-clock.ts) : seul le placement a une échéance. États d'avant : 0 / null au parse. */
+  phaseSeq: number
+  phaseEndsAt: number | null
 }
 
 export type TCAction =
@@ -101,6 +113,7 @@ export type TCAction =
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number }
+  | { type: 'ADVANCE'; claimedKey: string; now: number }
 
 export class TCEngineError extends Error {
   constructor(code: string) {
@@ -118,12 +131,17 @@ export function currentTCPlayerId(state: TCState): string | null {
   return state.turnOrder[state.currentTurnIndex] ?? null
 }
 
+/** Case de la grille : un entier dans les bornes (une case à virgule ne serait jamais touchée). */
+function isGridCell(cell: unknown, gridSize: number): cell is number {
+  return Number.isInteger(cell) && (cell as number) >= 0 && (cell as number) < gridSize * gridSize
+}
+
 /** Vrai si les cellules forment une ligne droite contiguë (horizontale ou verticale). */
 function isStraightLine(cells: number[], gridSize: number): boolean {
   if (cells.length === 0) return false
+  if (!cells.every((c) => isGridCell(c, gridSize))) return false
   const sorted = [...cells].sort((a, b) => a - b)
   if (new Set(sorted).size !== sorted.length) return false
-  if (sorted.some((c) => c < 0 || c >= gridSize * gridSize)) return false
   const rows = sorted.map((c) => Math.floor(c / gridSize))
   const cols = sorted.map((c) => c % gridSize)
   const sameRow = rows.every((r) => r === rows[0])
@@ -189,7 +207,8 @@ export function createInitialTCState(
   players: TCInitialPlayer[],
   mode: TCMode,
   seed: string | number,
-  rules: { powerups?: boolean } = {}
+  rules: { powerups?: boolean } = {},
+  now: number = Date.now()
 ): TCState {
   const config = TC_MODES[mode]
   const teamA = players.filter((p) => p.team === 'A')
@@ -209,6 +228,7 @@ export function createInitialTCState(
   return {
     mode,
     gridSize: config.gridSize,
+    ...enterPhase(0, 'placement', TC_PLACEMENT_MS, now),
     phase: 'placement',
     players: players.map((p) => ({
       ...p,
@@ -239,6 +259,9 @@ function applyPlacement(state: TCState, playerId: string, shipsCells: number[][]
   if (player.placed) throw new TCEngineError('ALREADY_PLACED')
 
   const config = TC_MODES[state.mode]
+  if (!Array.isArray(shipsCells) || !shipsCells.every((cells) => Array.isArray(cells))) {
+    throw new TCEngineError('INVALID_SHIP_SHAPE')
+  }
   if (!sizesMatchConfig(shipsCells, config.shipSizesPerPlayer)) {
     throw new TCEngineError('INVALID_SHIP_SIZES')
   }
@@ -267,7 +290,8 @@ function applyPlacement(state: TCState, playerId: string, shipsCells: number[][]
     ...state,
     players,
     ships: [...state.ships, ...newShips],
-    phase: allPlaced ? 'battle' : 'placement',
+    // La bataille n'a pas d'échéance : l'anti-AFK vise le tireur au tour.
+    ...(allPlaced ? { ...enterPhase(state.phaseSeq, 'battle', null), phase: 'battle' as const } : {}),
     version: state.version + 1,
   }
 }
@@ -279,7 +303,7 @@ function applyFire(state: TCState, playerId: string, cell: number, bomb = false)
   if (!shooter) throw new TCEngineError('UNKNOWN_PLAYER')
 
   const targetTeam = otherTeam(shooter.team)
-  if (cell < 0 || cell >= state.gridSize * state.gridSize) throw new TCEngineError('CELL_OUT_OF_BOUNDS')
+  if (!isGridCell(cell, state.gridSize)) throw new TCEngineError('CELL_OUT_OF_BOUNDS')
 
   let cellsToResolve = [cell]
   if (bomb) {
@@ -432,6 +456,18 @@ export function reduceTC(state: TCState, action: TCAction): TCState {
         version: state.version + 1,
       }
     }
+    case 'ADVANCE': {
+      const check = checkAdvance(state, action.claimedKey, action.now)
+      if (!check.ok) throw new TCEngineError(check.error)
+      if (state.phase !== 'placement') throw new TCEngineError('NOTHING_TO_ADVANCE')
+      // Échéance du placement : chaque retardataire (parti compris) reçoit une
+      // flotte au hasard ; le dernier placé fait passer en bataille.
+      let next = state
+      for (const p of state.players) {
+        if (!p.placed) next = reduceTC(next, { type: 'AUTO_PLACE', playerId: p.id })
+      }
+      return next
+    }
     default:
       throw new TCEngineError('UNKNOWN_ACTION')
   }
@@ -561,50 +597,46 @@ export function advanceTCBots(state: TCState): TCState {
   return current
 }
 
-/** Vue client par navire : navires ennemis réduits à leurs cellules touchées tant qu'ils flottent. */
+/**
+ * Navire envoyé au client : seuls ceux de sa propre équipe et les coulés.
+ * `revealed` reste pour la compatibilité des vues déjà en cache (toujours vrai).
+ */
 export type TCShipView = TCShip & { revealed: boolean }
 
 export type TCClientView = Omit<TCState, 'rngState' | 'ships'> & {
   ships: TCShipView[]
   viewerTeam: TeamId | null
+  /** Clé de l'horloge de phase, renvoyée par le tick `advance` (cf. phase-clock.ts). */
+  phaseKey: string
+}
+
+/**
+ * Un navire ennemi encore à flot n'est PAS envoyé, même réduit à ses touches :
+ * son identifiant (`<joueur>-ship-<i>`, i dans l'ordre des tailles du mode) et
+ * ses `hits` disaient quel navire une touche avait atteint, donc sa taille.
+ * `shotsAt` suffit à dessiner les touches.
+ */
+function visibleShips(state: TCState, viewerTeam: TeamId | null): TCShipView[] {
+  return state.ships
+    .filter((ship) => ship.team === viewerTeam || ship.sunk)
+    .map((ship) => ({ ...ship, revealed: true }))
+}
+
+function toView(state: TCState, viewerTeam: TeamId | null): TCClientView {
+  const { rngState: _rngState, ...visible } = state
+  return { ...visible, ships: visibleShips(state, viewerTeam), viewerTeam, phaseKey: phaseKey(state) }
 }
 
 export function toTCClientView(state: TCState, viewerUserId: string): TCClientView {
   const viewer = state.players.find((p) => p.id === viewerUserId)
-  const viewerTeam = viewer?.team ?? null
-
-  const ships: TCShipView[] = state.ships.map((ship) => {
-    const visible = ship.team === viewerTeam || ship.sunk
-    if (visible) return { ...ship, revealed: true }
-    return { ...ship, cells: [...ship.hits], revealed: false }
-  })
-
-  const view: Omit<TCState, 'rngState'> & { viewerTeam: TeamId | null } = {
-    ...state,
-    ships,
-    viewerTeam,
-  }
-  delete (view as Partial<TCState>).rngState
-  return view as TCClientView
+  return toView(state, viewer?.team ?? null)
 }
 
 /**
  * Vue SPECTATEUR NEUTRE (écran TV partagé) : n'appartient à AUCUNE équipe, donc
- * seuls les navires COULÉS sont révélés ; les navires intacts sont réduits à
- * leurs cases déjà touchées (comme pour un adversaire). Empêche de spoiler les
- * placements des deux équipes sur un écran vu par tout le monde.
+ * seuls les navires COULÉS sont envoyés (comme pour un adversaire). Empêche de
+ * spoiler les placements des deux équipes sur un écran vu par tout le monde.
  */
 export function toTCSpectatorView(state: TCState): TCClientView {
-  const ships: TCShipView[] = state.ships.map((ship) => {
-    if (ship.sunk) return { ...ship, revealed: true }
-    return { ...ship, cells: [...ship.hits], revealed: false }
-  })
-
-  const view: Omit<TCState, 'rngState'> & { viewerTeam: TeamId | null } = {
-    ...state,
-    ships,
-    viewerTeam: null,
-  }
-  delete (view as Partial<TCState>).rngState
-  return view as TCClientView
+  return toView(state, null)
 }

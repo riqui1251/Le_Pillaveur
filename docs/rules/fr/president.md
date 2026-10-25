@@ -23,7 +23,8 @@ vraiment secrètes.
   valeur que celle du dessus. Mais attention…
 - **« Dame ou rien »** : après une pose égale, le rang du pli est verrouillé —
   le joueur suivant égale à son tour ou **son tour saute**. Tant que ça égale,
-  la règle continue.
+  la règle continue. Passer ne lève pas le verrou : après un passe, les
+  suivants qui n'ont pas le rang (ni joker) sautent aussi.
 - **Fermeture de carré** : si 3 cartes de même valeur sortent à la suite,
   celui qui détient la 4e peut la claquer **même hors de son tour** : le pli
   est fermé et il remène. Pareil avec les paires — un double 5 posé, l'autre

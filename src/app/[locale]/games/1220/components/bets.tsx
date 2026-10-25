@@ -17,6 +17,7 @@ import {
   type Choices1220,
   type Parity1220,
 } from "@/lib/game-1220"
+import { sanitizeChoices1220 } from "@/lib/1220/choices"
 import { cn } from "@/lib/utils"
 
 /**
@@ -155,9 +156,14 @@ export function BetsEditor({ value, onChange, disabled = false }: BetsEditorProp
   )
 }
 
-/** Rappel compact des quatre paris d'un joueur. */
-export function BetChips({ choices }: { choices: Choices1220 }) {
+/**
+ * Rappel compact des quatre paris d'un joueur. En ligne, ce sont les paris
+ * d'un AUTRE téléphone : assainis avant le rendu, un champ inattendu (objet)
+ * faisait planter l'écran de toute la table.
+ */
+export function BetChips({ choices: raw }: { choices: Choices1220 }) {
   const t = useTranslations("games.1220")
+  const choices = sanitizeChoices1220(raw)
   const chip = "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-bold"
   return (
     <div className="flex flex-wrap gap-1">

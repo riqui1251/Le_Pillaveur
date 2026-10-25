@@ -6,6 +6,7 @@ import { Check, Dices, Hourglass } from 'lucide-react'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import type { Band1220 } from '@/lib/game-1220'
+import { sanitizeChoices1220 } from '@/lib/1220/choices'
 import { cn } from '@/lib/utils'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
@@ -176,7 +177,8 @@ export function TvGame1220({ room, state }: { room: TvRoomDto; state: Game1220Tv
     )
   }
 
-  const configs = state.configs ?? []
+  // Paris assainis avant le rendu : un champ inattendu (objet) faisait planter l'écran.
+  const configs: Config[] = (state.configs ?? []).map((cfg) => ({ ...cfg, ...sanitizeChoices1220(cfg) }))
   const tier = playTier(configs.length)
   const rows = Math.max(1, Math.ceil(configs.length / tier.cols))
   const total = lastRoll ? lastRoll.d12 + lastRoll.d20 : null

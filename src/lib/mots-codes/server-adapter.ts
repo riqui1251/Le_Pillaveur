@@ -207,7 +207,8 @@ export function mcSpectatorViewJson(state: MCState): string {
 
 /**
  * Un maître-mot bot rend la main sans indice ; une équipe de devineurs 100 %
- * bots passe son tour. Aucun bot ne « devine » (il saboterait sa table).
+ * bots — ou sans aucun devineur présent — passe son tour. Aucun bot ne
+ * « devine » (il saboterait sa table).
  */
 export function applyMCBotAction(state: MCState): MCRoomActionResult {
   try {
@@ -223,9 +224,10 @@ export function applyMCBotAction(state: MCState): MCRoomActionResult {
       const guessers = state.players.filter(
         (p) => p.team === state.activeTeam && !p.isSpymaster && !p.leftAt
       )
-      if (guessers.length === 0 || guessers.some((p) => !p.isBot)) {
-        return { ok: false, error: 'NOT_BOT_TURN' }
+      if (guessers.length === 0) {
+        return { ok: true, state: reduceMC(state, { type: 'SKIP_GUESS', now: Date.now() }) }
       }
+      if (guessers.some((p) => !p.isBot)) return { ok: false, error: 'NOT_BOT_TURN' }
       return {
         ok: true,
         state: reduceMC(state, { type: 'PASS', playerId: guessers[0].id, now: Date.now() }),

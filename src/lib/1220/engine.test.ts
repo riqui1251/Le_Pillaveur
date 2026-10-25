@@ -236,3 +236,119 @@ describe('toGame1220ClientView', () => {
     expect(view.phaseKey).toBe(phaseKey(freshState()))
   })
 })
+
+describe('validation des paris (set-draft piégé)', () => {
+  const draftOf = (choices: unknown) => (s: Game1220State) =>
+    reduceGame1220(s, { type: 'SET_DRAFT', playerId: 'p1', choices })
+
+  it('refuse un chiffre objet, chaîne ou hors bornes (INVALID_CHOICE), le brouillon ne bouge pas', () => {
+    const s = freshState()
+    for (const choices of [
+      { drinkNumber: { boom: 1 }, giveNumber: 13 },
+      { drinkNumber: '7' },
+      { drinkNumber: 99 },
+      { giveNumber: 4.5 },
+      { parity: 'les deux' },
+      { band: '31-32' },
+      [7, 13],
+      null,
+    ]) {
+      expect(() => draftOf(choices)(s), JSON.stringify(choices)).toThrow('INVALID_CHOICE')
+    }
+    expect(s.draft.p1).toEqual(defaultChoices1220())
+  })
+
+  it('refuse les clés inconnues : l’état ne gonfle plus, même après 200 envois', () => {
+    let s = freshState()
+    const before = JSON.stringify(s).length
+    for (let i = 0; i < 200; i += 1) {
+      expect(() => draftOf({ [`k${i}`]: 'x'.repeat(7000) })(s)).toThrow('INVALID_CHOICE')
+      s = draftOf({ drinkNumber: 2 + (i % 30) })(s)
+    }
+    expect(Object.keys(s.draft.p1).sort()).toEqual(['band', 'drinkNumber', 'giveNumber', 'parity'])
+    expect(JSON.stringify(s).length).toBeLessThan(before + 200)
+  })
+
+  it('un conflit passager reste permis en brouillon, READY le refuse', () => {
+    const s = draftOf({ drinkNumber: 13 })(freshState())
+    expect(s.draft.p1.drinkNumber).toBe(13)
+    expect(() => reduceGame1220(s, { type: 'READY', playerId: 'p1' })).toThrow('CLASH')
+  })
+
+  it('READY revalide un brouillon stocké invalide, le verrouillage n’en copie que les quatre paris', () => {
+    const corrupt: Game1220State = {
+      ...freshState(),
+      draft: { ...freshState().draft, p1: { ...defaultChoices1220(), drinkNumber: '7' as unknown as number } },
+    }
+    expect(() => reduceGame1220(corrupt, { type: 'READY', playerId: 'p1' })).toThrow('INVALID_CHOICE')
+
+    const bloated: Game1220State = {
+      ...freshState(),
+      draft: { ...freshState().draft, p2: { ...defaultChoices1220(), extra: 'x'.repeat(100) } as never },
+    }
+    const s = reduceGame1220(bloated, { type: 'ADVANCE', claimedKey: phaseKey(bloated), now: T0 + GAME_1220_SETUP_MS })
+    expect(s.phase).toBe('play')
+    expect(JSON.stringify(s.configs)).not.toContain('extra')
+  })
+
+  it('à l’échéance, un brouillon piégé est verrouillé avec les choix par défaut', () => {
+    const corrupt: Game1220State = {
+      ...freshState(),
+      draft: { ...freshState().draft, p3: { ...defaultChoices1220(), drinkNumber: { boom: 1 } as unknown as number } },
+    }
+    const s = reduceGame1220(corrupt, { type: 'ADVANCE', claimedKey: phaseKey(corrupt), now: T0 + GAME_1220_SETUP_MS })
+    expect(s.configs?.find((c) => c.playerId === 'p3')).toMatchObject(defaultChoices1220())
+  })
+})
+
+describe('modifier ses paris entre deux lancers (SET_BETS)', () => {
+  const NEW_BETS = { parity: 'impair', band: '2-10', drinkNumber: 5, giveNumber: 16 } as const
+
+  it('remplace les paris du joueur dès le lancer suivant, sans toucher aux autres', () => {
+    let s = reduceGame1220(readyAll(freshState()), { type: 'ROLL', playerId: 'p2' })
+    s = reduceGame1220(s, { type: 'SET_BETS', playerId: 'p1', choices: NEW_BETS })
+    expect(s.phase).toBe('play')
+    expect(s.history).toHaveLength(1)
+    expect(s.configs?.find((c) => c.playerId === 'p1')).toEqual({ playerId: 'p1', name: 'Alice', ...NEW_BETS })
+    expect(s.configs?.find((c) => c.playerId === 'p2')).toMatchObject(defaultChoices1220())
+    s = reduceGame1220(s, { type: 'ROLL', playerId: 'p3' })
+    const total = s.lastRoll!.d12 + s.lastRoll!.d20
+    const p1 = s.lastRoll!.results.find((r) => r.playerId === 'p1')!
+    expect(p1.drinkSips).toBe(total === NEW_BETS.drinkNumber ? 1 : 0)
+  })
+
+  it('refuse des paris incomplets, piégés ou en conflit', () => {
+    const s = readyAll(freshState())
+    expect(() => reduceGame1220(s, { type: 'SET_BETS', playerId: 'p1', choices: { drinkNumber: 5 } })).toThrow('INVALID_CHOICE')
+    expect(() =>
+      reduceGame1220(s, { type: 'SET_BETS', playerId: 'p1', choices: { ...NEW_BETS, drinkNumber: { boom: 1 } } })
+    ).toThrow('INVALID_CHOICE')
+    expect(() =>
+      reduceGame1220(s, { type: 'SET_BETS', playerId: 'p1', choices: { ...NEW_BETS, extra: 1 } })
+    ).toThrow('INVALID_CHOICE')
+    expect(() =>
+      reduceGame1220(s, { type: 'SET_BETS', playerId: 'p1', choices: { ...NEW_BETS, giveNumber: 5 } })
+    ).toThrow('CLASH')
+  })
+
+  it('refuse hors de la phase play et pour un joueur parti', () => {
+    expect(() => reduceGame1220(freshState(), { type: 'SET_BETS', playerId: 'p1', choices: NEW_BETS })).toThrow(
+      'WRONG_PHASE'
+    )
+    const left = reduceGame1220(readyAll(freshState()), { type: 'LEAVE', playerId: 'p1', at: T0 })
+    expect(() => reduceGame1220(left, { type: 'SET_BETS', playerId: 'p1', choices: NEW_BETS })).toThrow(
+      'UNKNOWN_PLAYER'
+    )
+  })
+
+  it('un joueur revenu après le verrouillage pose enfin ses paris et joue', () => {
+    let s = reduceGame1220(freshState(), { type: 'LEAVE', playerId: 'p3', at: T0 })
+    s = reduceGame1220(s, { type: 'READY', playerId: 'p1' })
+    s = reduceGame1220(s, { type: 'READY', playerId: 'p2' })
+    expect(s.configs?.map((c) => c.playerId)).toEqual(['p1', 'p2'])
+    s = reduceGame1220(s, { type: 'REJOIN', playerId: 'p3' })
+    s = reduceGame1220(s, { type: 'SET_BETS', playerId: 'p3', choices: NEW_BETS })
+    s = reduceGame1220(s, { type: 'ROLL', playerId: 'p1' })
+    expect(s.lastRoll?.results.map((r) => r.playerId)).toEqual(['p1', 'p2', 'p3'])
+  })
+})

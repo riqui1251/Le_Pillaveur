@@ -296,3 +296,45 @@ describe('contrat remplacement', () => {
     expect(bot.players[0].isBot).toBe(true)
   })
 })
+
+describe('id de la question : opaque pendant la partie', () => {
+  /**
+   * La banque (src/lib/quiz/data) est publiée avec ses réponses : l'id réel
+   * d'une question désignait sa fiche, donc le texte de la bonne réponse,
+   * avant le reveal.
+   */
+  it('aucune vue ne porte l’id de la banque, à aucune question', async () => {
+    const { buildQuizState } = await import('./server-adapter')
+    const { getQuizQuestions } = await import('./data')
+    const bankIds = new Set(getQuizQuestions('fr').map((q) => q.id))
+    const members = DUO.map((p) => ({ userId: p.id, user: { displayName: p.name } }))
+    const raw = buildQuizState(members, 'fr', 10, 0, 42)
+    let s = reduceQuiz(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: raw.phaseEndsAt! })
+    const seen = new Set<string>()
+    while (s.phase === 'question') {
+      for (const view of [toQuizClientView(s, 'a'), toQuizSpectatorView(s)]) {
+        const id = view.currentQuestion!.id
+        expect(bankIds.has(id), id).toBe(false)
+        expect(JSON.stringify(view)).not.toContain(`"${s.questions[s.qIdx].id}"`)
+        seen.add(id)
+      }
+      s = reduceQuiz(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+      s = reduceQuiz(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt! })
+    }
+    // Un id distinct par question : il reste une clé utilisable côté client.
+    expect(seen.size).toBe(10)
+  })
+
+  it('réponse non entière : refusée comme action invalide (400), sans toucher au moteur', async () => {
+    const { getGameAdapter } = await import('@/lib/online/game-adapters')
+    const adapter = getGameAdapter('quiz')!
+    for (const choice of [1.5, -0.5, '1', null]) {
+      expect(adapter.applyAction(make(), 'a', { action: 'answer', choice })).toEqual({
+        ok: false,
+        error: 'invalid_action',
+        status: 400,
+      })
+    }
+    expect(adapter.applyAction(make(), 'a', { action: 'answer', choice: 1 }).ok).toBe(true)
+  })
+})

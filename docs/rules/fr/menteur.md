@@ -67,7 +67,9 @@ rejoindre en cours de route.
 ### Combien de temps dure une partie ?
 
 Pas de chrono par tour, mais un joueur qui n'agit plus pendant 3 minutes est
-remplacé par un bot : la table ne se bloque jamais. Une partie à 4 joueurs
+remplacé par un bot : la table ne se bloque jamais. Quitter la table pendant
+son tour ne le saute pas : un bot le joue avec vos dés, en quelques secondes,
+si vous n'êtes pas revenu. Une partie à 4 joueurs
 (20 dés) dure 10 à 15 minutes ; à 2, c'est un duel de 5 minutes.
 
 ### À 2 joueurs, ça marche ?

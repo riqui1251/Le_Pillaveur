@@ -1,11 +1,13 @@
 import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
-import { sanitizeStrokes, type Stroke } from '@/lib/crobard/engine'
+import { CANVAS_MAX_STROKES, sanitizeStroke, sanitizeStrokes, type Stroke } from '@/lib/crobard/engine'
 
 /**
  * TÉLÉPHONE DESSINÉ (cadavre exquis phrase/dessin) — moteur PUR,
- * serveur-autoritaire. Réutilise tel quel le canvas et l'action
- * `DRAW_STROKE` de Crobard.
+ * serveur-autoritaire. Réutilise tel quel le canvas de Crobard et ses
+ * plafonds de dessin. Le dessin complet arrive avec `SUBMIT` : l'API ne
+ * transmet plus `DRAW_STROKE` ni `CLEAR` (le client ne les envoie plus) ; le
+ * moteur les garde, assainis et plafonnés comme au Crobard.
  *
  * N joueurs = N manches = longueur de chaque chaîne. Manche 0 : chacun
  * écrit une phrase de départ (sa propre chaîne). Manches suivantes
@@ -118,6 +120,11 @@ export type TelephoneInitialPlayer = { id: string; name: string; isBot?: boolean
 
 export function telephoneActive(state: TelephoneState): TelephonePlayer[] {
   return state.players.filter((p) => !p.leftAt)
+}
+
+/** Maillons rendus par les joueurs ACTIFS : le compteur affiché, sur le même total que la clôture. */
+function telephoneActiveSubmittedCount(state: TelephoneState): number {
+  return telephoneActive(state).filter((p) => state.submittedIds.includes(p.id)).length
 }
 
 /** Type d'action attendu à une manche donnée : écriture (pair) ou dessin (impair). */
@@ -298,10 +305,14 @@ function revealBack(state: TelephoneState, now: number): TelephoneState {
   }
 }
 
-/** Résout la manche dès que tous les joueurs actifs ont soumis. */
+/**
+ * Résout la manche dès que tous les joueurs ACTIFS ont soumis. `submittedIds`
+ * garde aussi les partis : comparer les longueurs closait la manche sur le
+ * maillon d'un joueur parti, avant celui d'un actif encore en train de dessiner.
+ */
 function maybeResolveRound(state: TelephoneState, now: number): TelephoneState {
   const active = telephoneActive(state)
-  if (state.submittedIds.length < active.length) return state
+  if (active.length === 0 || !active.every((p) => state.submittedIds.includes(p.id))) return state
   return resolveRound(state, now)
 }
 
@@ -336,11 +347,14 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new TelephoneEngineError('UNKNOWN_PLAYER')
       if (state.submittedIds.includes(player.id)) throw new TelephoneEngineError('ALREADY_SUBMITTED')
+      const stroke = sanitizeStroke(action.stroke)
+      if (!stroke) throw new TelephoneEngineError('INVALID_STROKE')
       const current = state.pendingSubmissions[player.id]
       const strokes = current?.type === 'draw' ? current.strokes : []
+      if (strokes.length >= CANVAS_MAX_STROKES) throw new TelephoneEngineError('TOO_MANY_STROKES')
       const pendingSubmissions = {
         ...state.pendingSubmissions,
-        [player.id]: { type: 'draw' as const, strokes: [...strokes, action.stroke] },
+        [player.id]: { type: 'draw' as const, strokes: [...strokes, stroke] },
       }
       return { ...state, pendingSubmissions, version: state.version + 1 }
     }
@@ -371,13 +385,15 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       // Le dessin COMPLET arrive avec le SUBMIT (dessin local, une seule
       // requête — le streaming trait par trait perdait des traits sous
       // concurrence). Filet : sans `strokes`, on garde l'accumulé serveur
-      // (compat parties en cours / vieux clients).
+      // (compat parties en cours / vieux clients), assaini lui aussi : il a pu
+      // être empilé brut avant que DRAW_STROKE ne passe par sanitizeStroke.
       const current = state.pendingSubmissions[player.id]
-      const contribution: TelephoneContribution = Array.isArray(action.strokes)
-        ? { type: 'draw', strokes: sanitizeStrokes(action.strokes) }
+      const raw = Array.isArray(action.strokes)
+        ? action.strokes
         : current?.type === 'draw'
-          ? current
-          : { type: 'draw', strokes: [] }
+          ? current.strokes
+          : []
+      const contribution: TelephoneContribution = { type: 'draw', strokes: sanitizeStrokes(raw) }
       const pendingSubmissions = { ...state.pendingSubmissions, [player.id]: contribution }
       const submittedIds = [...state.submittedIds, player.id]
       return maybeResolveRound(
@@ -434,13 +450,15 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new TelephoneEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const left: TelephoneState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le dernier retardataire qui part ne fait plus attendre l'échéance aux autres.
+      return state.phase === 'contributing' ? maybeResolveRound(left, action.at) : left
     }
 
     case 'REJOIN': {
@@ -563,7 +581,7 @@ export function toTelephoneClientView(state: TelephoneState, viewerId: string): 
   return {
     ...rest,
     phaseKey: phaseKey(state),
-    submittedCount: state.submittedIds.length,
+    submittedCount: telephoneActiveSubmittedCount(state),
     totalToSubmit: active.length,
     haveISubmitted: state.submittedIds.includes(viewerId),
     received,
@@ -588,7 +606,7 @@ export function toTelephoneSpectatorView(state: TelephoneState): TelephoneClient
   return {
     ...rest,
     phaseKey: phaseKey(state),
-    submittedCount: state.submittedIds.length,
+    submittedCount: telephoneActiveSubmittedCount(state),
     totalToSubmit: active.length,
     haveISubmitted: false,
     received: null,

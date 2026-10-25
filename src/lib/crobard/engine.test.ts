@@ -16,10 +16,17 @@ import {
   CROBARD_DRAWER_POINTS_PER_GUESSER,
   CANVAS_MAX_POINTS_PER_STROKE,
   CANVAS_MAX_STROKES,
+  CROBARD_GUESS_INTERVAL_MS,
+  CROBARD_GUESS_MAX_LEN,
+  CROBARD_MAX_GUESSES,
+  crobardFoundTally,
+  crobardGuessOutcome,
+  crobardRoundEndLeaderId,
   sanitizeStroke,
   sanitizeStrokes,
   type CrobardState,
 } from './engine'
+import { getCrobardWords } from './data'
 import { phaseKey } from '@/lib/online/phase-clock'
 
 const WORDS = ['Pizza', 'Chat', 'Plage', 'Vélo', 'Noël', 'Robot', 'Fantôme']
@@ -173,23 +180,23 @@ describe('GUESS', () => {
     expect(s.players.find((p) => p.id === guessers[1])!.score).toBe(CROBARD_POINTS_SECOND)
   })
 
-  it('refuse le dessinateur, une double réponse, une réponse fausse ou proche', () => {
+  it('refuse le dessinateur et une double réponse ; note une réponse fausse ou proche', () => {
     let s = makeWithKnownWord()
     const word = s.word!
     const guesser = s.players.find((p) => p.id !== s.drawerId)!.id
     expect(() =>
       reduceCrobard(s, { type: 'GUESS', playerId: s.drawerId, text: word, now: T0 })
     ).toThrow('DRAWER_CANNOT_GUESS')
-    expect(() =>
-      reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'totalement faux xyz', now: T0 })
-    ).toThrow('GUESS_WRONG')
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'totalement faux xyz', now: T0 })
+    expect(s.guesses?.[guesser]).toEqual({ count: 1, lastAt: T0, last: 'wrong' })
+    expect(s.correctGuessers).toEqual([])
     // Une lettre en trop → distance 1 → "proche"
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: `${word}x`, now: T0 + CROBARD_GUESS_INTERVAL_MS })
+    expect(s.guesses?.[guesser]?.last).toBe('close')
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: word, now: T0 + 2 * CROBARD_GUESS_INTERVAL_MS })
+    expect(s.correctGuessers).toEqual([guesser])
     expect(() =>
-      reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: `${word}x`, now: T0 })
-    ).toThrow('GUESS_CLOSE')
-    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: word, now: T0 })
-    expect(() =>
-      reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: word, now: T0 })
+      reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: word, now: T0 + 3 * CROBARD_GUESS_INTERVAL_MS })
     ).toThrow('ALREADY_GUESSED')
   })
 
@@ -203,6 +210,185 @@ describe('GUESS', () => {
     expect(s.phase).toBe('roundEnd')
     expect(s.lastRoundWord).toBe(word)
     expect(s.word).toBeNull()
+  })
+})
+
+describe('GUESS — essais comptés (anti force brute)', () => {
+  /** Manche à 3 joueurs sur la vraie liste FR, le mot imposé. */
+  function drawingWith(word: string, n = 3): CrobardState {
+    const players = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    const raw = createCrobardState(players, getCrobardWords('fr'), 'seed', T0 - CROBARD_COUNTDOWN_MS, 8)
+    const choosing = reduceCrobard(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    const forced = { ...choosing, wordChoices: [word, 'Chat', 'Plage'] }
+    return reduceCrobard(forced, { type: 'CHOOSE_WORD', playerId: forced.drawerId, index: 0, now: T0 })
+  }
+  const guesserOf = (s: CrobardState) => s.players.find((p) => p.id !== s.drawerId)!.id
+
+  it('une boucle sur toute la liste des mots s’arrête au quota, sans trouver le mot', () => {
+    let s = drawingWith('Voilier')
+    const guesser = guesserOf(s)
+    const others = getCrobardWords('fr').filter((w) => w !== 'Voilier')
+    let now = T0
+    let refused: string | null = null
+    for (const w of [...others, 'Voilier']) {
+      now += CROBARD_GUESS_INTERVAL_MS
+      try {
+        s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: w, now })
+      } catch (e) {
+        refused = (e as Error).message
+        break
+      }
+    }
+    expect(refused).toBe('GUESS_LIMIT_REACHED')
+    expect(s.guesses?.[guesser]?.count).toBe(CROBARD_MAX_GUESSES)
+    expect(s.correctGuessers).toEqual([])
+    expect(s.players.find((p) => p.id === guesser)!.score).toBe(0)
+  })
+
+  it('« proche » compte dans le quota, comme un essai faux', () => {
+    let s = drawingWith('Voilier')
+    const guesser = guesserOf(s)
+    for (let i = 0; i < CROBARD_MAX_GUESSES; i += 1) {
+      s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Voilie', now: T0 + i * CROBARD_GUESS_INTERVAL_MS })
+    }
+    expect(s.guesses?.[guesser]).toMatchObject({ count: CROBARD_MAX_GUESSES, last: 'close' })
+    expect(() =>
+      reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Voilier', now: T0 + 60_000 })
+    ).toThrow('GUESS_LIMIT_REACHED')
+  })
+
+  it('une proposition par seconde : la suivante trop tôt est refusée sans être notée', () => {
+    let s = drawingWith('Voilier')
+    const guesser = guesserOf(s)
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Bateau', now: T0 })
+    expect(() =>
+      reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Voilier', now: T0 + CROBARD_GUESS_INTERVAL_MS - 1 })
+    ).toThrow('GUESS_TOO_FAST')
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Voilier', now: T0 + CROBARD_GUESS_INTERVAL_MS })
+    expect(s.correctGuessers).toEqual([guesser])
+  })
+
+  it('refuse une proposition vide ou trop longue, sans la noter', () => {
+    const s = drawingWith('Voilier')
+    const guesser = guesserOf(s)
+    const long = 'a'.repeat(CROBARD_GUESS_MAX_LEN + 1)
+    expect(() => reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: long, now: T0 })).toThrow('INVALID_GUESS')
+    expect(() => reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: '   ', now: T0 })).toThrow('INVALID_GUESS')
+    expect(s.guesses?.[guesser]).toBeUndefined()
+  })
+
+  it('le compteur repart à zéro à la manche suivante', () => {
+    let s = drawingWith('Voilier')
+    const guesser = guesserOf(s)
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Bateau', now: T0 })
+    s = reduceCrobard(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: T0 + CROBARD_DRAWING_MS })
+    s = reduceCrobard(s, { type: 'CONTINUE', playerId: guesser, now: T0 + CROBARD_DRAWING_MS })
+    s = reduceCrobard(s, { type: 'CHOOSE_WORD', playerId: s.drawerId, index: 0, now: T0 + CROBARD_DRAWING_MS })
+    expect(s.guesses).toEqual({})
+  })
+
+  it('la vue n’envoie à chacun que ses propres essais, jamais ceux des autres ni à la TV', () => {
+    let s = drawingWith('Voilier', 4)
+    const [a, b] = s.players.filter((p) => p.id !== s.drawerId).map((p) => p.id)
+    s = reduceCrobard(s, { type: 'GUESS', playerId: a, text: 'Voilie', now: T0 })
+    expect(toCrobardClientView(s, a).myGuesses).toEqual({ left: CROBARD_MAX_GUESSES - 1, last: 'close' })
+    expect(toCrobardClientView(s, b).myGuesses).toEqual({ left: CROBARD_MAX_GUESSES, last: null })
+    expect(toCrobardClientView(s, s.drawerId).myGuesses).toBeNull()
+    for (const view of [toCrobardClientView(s, b), toCrobardClientView(s, s.drawerId), toCrobardSpectatorView(s)]) {
+      const json = JSON.stringify(view)
+      expect(json).not.toContain('"guesses"')
+      expect(json).not.toContain('close')
+    }
+    for (const view of [toCrobardClientView(s, b), toCrobardSpectatorView(s)]) {
+      expect(JSON.stringify(view)).not.toContain('Voilier')
+    }
+  })
+
+  it('crobardGuessOutcome lit l’issue dans la vue renvoyée à l’auteur', () => {
+    let s = drawingWith('Voilier')
+    const guesser = guesserOf(s)
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'Bateau', now: T0 })
+    expect(crobardGuessOutcome(toCrobardClientView(s, guesser), guesser)).toBe('wrong')
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'voiliers', now: T0 + 1_000 })
+    expect(crobardGuessOutcome(toCrobardClientView(s, guesser), guesser)).toBe('close')
+    s = reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'voilier', now: T0 + 2_000 })
+    expect(crobardGuessOutcome(toCrobardClientView(s, guesser), guesser)).toBe('found')
+    expect(crobardGuessOutcome(undefined, guesser)).toBeNull()
+  })
+})
+
+describe('GUESS — comparaison tolérante (ligatures, tirets, apostrophes)', () => {
+  function drawingWith(word: string): { s: CrobardState; guesser: string } {
+    const players = Array.from({ length: 3 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    const raw = createCrobardState(players, getCrobardWords('fr'), 'seed', T0 - CROBARD_COUNTDOWN_MS, 8)
+    const choosing = reduceCrobard(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    const forced = { ...choosing, wordChoices: [word, 'Chat', 'Plage'] }
+    const s = reduceCrobard(forced, { type: 'CHOOSE_WORD', playerId: forced.drawerId, index: 0, now: T0 })
+    return { s, guesser: s.players.find((p) => p.id !== s.drawerId)!.id }
+  }
+
+  it.each([
+    ['Cœur', 'coeur'],
+    ['Œil', 'oeil'],
+    ['Œil', 'OEIL'],
+    ['Arc-en-ciel', 'arc en ciel'],
+    ['Feu d\'artifice', 'feu d’artifice'],
+  ])('« %s » est trouvé avec « %s »', (word, text) => {
+    const { s, guesser } = drawingWith(word)
+    expect(reduceCrobard(s, { type: 'GUESS', playerId: guesser, text, now: T0 }).correctGuessers).toEqual([guesser])
+  })
+
+  it('« proche » tient compte des ligatures lui aussi', () => {
+    const { s, guesser } = drawingWith('Cœur')
+    expect(reduceCrobard(s, { type: 'GUESS', playerId: guesser, text: 'coeu', now: T0 }).guesses?.[guesser]?.last).toBe(
+      'close'
+    )
+  })
+})
+
+describe('GUESS — départs pendant le dessin', () => {
+  function fivePlayers(): { s: CrobardState; guessers: string[] } {
+    const players = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
+    const raw = createCrobardState(players, WORDS, 'seed', T0 - CROBARD_COUNTDOWN_MS, 8)
+    const choosing = reduceCrobard(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
+    const s = reduceCrobard(choosing, { type: 'CHOOSE_WORD', playerId: choosing.drawerId, index: 0, now: T0 })
+    return { s, guessers: s.players.filter((p) => p.id !== s.drawerId).map((p) => p.id) }
+  }
+
+  it('un devineur qui a trouvé puis quitte ne fait pas clore la manche avant un actif', () => {
+    const start = fivePlayers()
+    let s = start.s
+    const guessers = start.guessers
+    const [a, b, c, d] = guessers
+    const word = s.word!
+    s = reduceCrobard(s, { type: 'GUESS', playerId: a, text: word, now: T0 })
+    s = reduceCrobard(s, { type: 'LEAVE', playerId: a, at: T0 })
+    s = reduceCrobard(s, { type: 'GUESS', playerId: b, text: word, now: T0 })
+    s = reduceCrobard(s, { type: 'GUESS', playerId: c, text: word, now: T0 })
+    expect(s.phase).toBe('drawing')
+    expect(crobardFoundTally(toCrobardClientView(s, d))).toEqual({ found: 2, total: 3 })
+    s = reduceCrobard(s, { type: 'GUESS', playerId: d, text: word, now: T0 })
+    expect(s.phase).toBe('roundEnd')
+  })
+
+  it('le départ du dernier devineur qui cherchait clôt la manche', () => {
+    const start = fivePlayers()
+    let s = start.s
+    const guessers = start.guessers
+    const word = s.word!
+    for (const id of guessers.slice(0, 3)) s = reduceCrobard(s, { type: 'GUESS', playerId: id, text: word, now: T0 })
+    expect(s.phase).toBe('drawing')
+    s = reduceCrobard(s, { type: 'LEAVE', playerId: guessers[3], at: T0 + 1_000 })
+    expect(s.phase).toBe('roundEnd')
+    expect(s.lastRoundWord).toBe(word)
+  })
+
+  it('le départ d’un devineur quand personne n’a trouvé ne clôt rien', () => {
+    const start = fivePlayers()
+    let s = start.s
+    const guessers = start.guessers
+    s = reduceCrobard(s, { type: 'LEAVE', playerId: guessers[0], at: T0 })
+    expect(s.phase).toBe('drawing')
   })
 })
 
@@ -285,7 +471,7 @@ describe('LEAVE / REJOIN / REPLACE_LEFT', () => {
 })
 
 describe('currentCrobardActorId', () => {
-  it('le dessinateur en choosing, null en drawing, premier actif en roundEnd', () => {
+  it('le dessinateur en choosing, null en drawing, null au bilan (meneur à part)', () => {
     const players = Array.from({ length: 4 }, (_, i) => ({ id: `p${i}`, name: `P${i}` }))
     const raw = createCrobardState(players, WORDS, 'seed', T0 - CROBARD_COUNTDOWN_MS, 8)
     const choosing = reduceCrobard(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
@@ -302,7 +488,13 @@ describe('currentCrobardActorId', () => {
       claimedKey: phaseKey(drawing),
       now: T0 + CROBARD_DRAWING_MS,
     })
-    expect(currentCrobardActorId(ended)).toBe('p0')
+    // Le bilan est sans chrono et tout le monde peut « continuer » : aucun
+    // joueur au tour, donc personne à faire expulser pour inactivité.
+    expect(currentCrobardActorId(ended)).toBeNull()
+    expect(crobardRoundEndLeaderId(ended)).toBe('p0')
+    const p0Left = reduceCrobard(ended, { type: 'LEAVE', playerId: 'p0', at: T0 })
+    expect(crobardRoundEndLeaderId(p0Left)).toBe('p1')
+    expect(crobardRoundEndLeaderId(drawing)).toBeNull()
   })
 })
 

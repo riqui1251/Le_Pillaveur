@@ -27,6 +27,19 @@ export const SF_COUNTDOWN_MS = 5_000
 export const SF_SUBMIT_MS = 60_000
 /** Temps pour que le juge couronne (timeout → couronnement aléatoire). */
 export const SF_JUDGE_MS = 90_000
+/**
+ * TEMPS DE LECTURE MINIMAL du couronnement : « manche suivante » est ouvert à
+ * tous, et sans plancher le premier impatient escamotait la carte couronnée et
+ * son auteur pour toute la table. Un bot meneur attend aussi tant qu'un humain
+ * est assis (sfReadingTimeOk, vérifié par le serveur à chaque « continuer »).
+ */
+export const SF_REVEAL_MIN_MS = 5_000
+/**
+ * Tick du bot qui mène le reveal : le plancher + 1 s de marge, pour qu'il ne
+ * reçoive jamais READING_TIME à l'arrondi d'horloge près — le reveal n'a pas
+ * d'échéance, un tick refusé le figerait.
+ */
+export const SF_REVEAL_BOT_TICK_MS = SF_REVEAL_MIN_MS + 1_000
 /** Cartes réponse en main. */
 export const SF_HAND_SIZE = 7
 /** Options de nombre de manches proposées au lobby. */
@@ -63,6 +76,8 @@ export type SFState = TimedPhaseState & {
   submissions: Array<{ playerId: string; card: number }>
   /** Dernier couronnement (public en `reveal`). */
   crowned: { playerId: string; card: number } | null
+  /** Entrée en reveal (epoch ms serveur), null hors reveal. */
+  revealAt: number | null
   winnerId: string | null
   rematchVotes: string[]
   /** SECRET serveur. */
@@ -98,25 +113,29 @@ function humans(state: SFState): SFPlayer[] {
 }
 
 /**
- * Prochain juge : actif suivant `fromId` dans l'ordre de la table. À 2+
- * humains actifs, seuls les humains jugent ; en dessous (table solo), les
- * bots entrent dans la rotation — sinon le joueur seul serait juge à chaque
- * manche et ne jouerait jamais ses cartes.
+ * Juges possibles, dans l'ordre de la table à partir du siège qui suit
+ * `fromId` (le premier de la table sans `fromId`). À 2+ humains actifs, seuls
+ * les humains jugent ; en dessous (table solo), les bots entrent dans la
+ * rotation — sinon le joueur seul serait juge à chaque manche et ne jouerait
+ * jamais ses cartes.
  */
-function nextJudgeId(state: SFState, fromId: string | null): string | null {
+function judgeRotation(state: SFState, fromId: string | null): string[] {
   const includeBots = humans(state).length < 2
-  const pool = includeBots ? sfActive(state) : humans(state)
-  if (pool.length === 0) return null
-  if (!fromId) return pool[0].id
-  const order = state.players.map((p) => p.id)
-  const start = order.indexOf(fromId)
+  const order = state.players
+  const start = fromId ? order.findIndex((p) => p.id === fromId) : -1
+  const out: string[] = []
   for (let step = 1; step <= order.length; step++) {
-    const candidate = state.players[(start + step) % order.length]
+    const candidate = order[(start + step) % order.length]
     if (candidate.leftAt) continue
     if (candidate.isBot && !includeBots) continue
-    return candidate.id
+    out.push(candidate.id)
   }
-  return pool[0].id
+  return out
+}
+
+/** Prochain juge : actif suivant `fromId` dans la rotation. */
+function nextJudgeId(state: SFState, fromId: string | null): string | null {
+  return judgeRotation(state, fromId)[0] ?? null
 }
 
 /** Ceux qui doivent jouer une carte ce tour : actifs, hors juge. */
@@ -170,6 +189,7 @@ export function createSFState(
     judgeId: null,
     submissions: [],
     crowned: null,
+    revealAt: null,
     winnerId: null,
     rematchVotes: [],
     rngState: rng.getState(),
@@ -191,6 +211,7 @@ function startRound(state: SFState, now: number): SFState {
     judgeId,
     submissions: [],
     crowned: null,
+    revealAt: null,
     ...enterPhase(state.phaseSeq, 'submit', SF_SUBMIT_MS, now),
     phase: 'submit',
     version: state.version + 1,
@@ -199,6 +220,35 @@ function startRound(state: SFState, now: number): SFState {
   // passe directement au jugement au lieu de laisser courir le chrono.
   if (roundPlayers(next).length === 0) return enterJudging(next, now)
   return next
+}
+
+/**
+ * Le juge vient de quitter en pleine manche : le rôle passe tout de suite au
+ * suivant de la rotation, de préférence à quelqu'un qui n'a pas encore abattu.
+ * S'il avait déjà joué, sa carte lui revient en main — un juge ne couronne
+ * jamais sa propre réponse. En jugement, le nouveau juge repart d'un chrono
+ * plein pour lire. Sans personne pour reprendre le rôle, rien ne change :
+ * l'échéance couronne au hasard.
+ */
+function handOverJudge(state: SFState, now: number): SFState {
+  const played = new Set(state.submissions.map((s) => s.playerId))
+  const rotation = judgeRotation(state, state.judgeId)
+  const judgeId = rotation.find((id) => !played.has(id)) ?? rotation[0]
+  if (!judgeId) return state
+  const own = state.submissions.find((s) => s.playerId === judgeId)
+  const next: SFState = own
+    ? {
+        ...state,
+        judgeId,
+        submissions: state.submissions.filter((s) => s.playerId !== judgeId),
+        players: state.players.map((p) =>
+          p.id === judgeId ? { ...p, hand: [...p.hand, own.card] } : p
+        ),
+      }
+    : { ...state, judgeId }
+  if (next.phase !== 'judging') return next
+  if (next.submissions.length === 0) return enterReveal(next, null, now)
+  return { ...next, ...enterPhase(next.phaseSeq, 'judging', SF_JUDGE_MS, now), phase: 'judging' }
 }
 
 function enterJudging(state: SFState, now: number): SFState {
@@ -233,6 +283,7 @@ function enterReveal(
     players,
     whiteDeck,
     crowned,
+    revealAt: now,
     ...enterPhase(state.phaseSeq, 'reveal', null, now),
     phase: 'reveal',
     version: state.version + 1,
@@ -308,6 +359,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
+          revealAt: null,
           winnerId: top > 0 && leaders.length === 1 ? leaders[0].id : null,
           version: state.version + 1,
         }
@@ -320,13 +372,26 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new SFEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      let next: SFState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      if (next.judgeId === player.id && (next.phase === 'submit' || next.phase === 'judging')) {
+        next = handOverJudge(next, action.at)
+      }
+      // Le partant était peut-être le dernier attendu : jugement tout de
+      // suite, comme à la dernière carte abattue, sans attendre le chrono.
+      if (
+        next.phase === 'submit' &&
+        sfActive(next).length > 0 &&
+        roundPlayers(next).every((p) => next.submissions.some((s) => s.playerId === p.id))
+      ) {
+        return enterJudging(next, action.at)
+      }
+      return next
     }
 
     case 'REJOIN': {
@@ -373,13 +438,35 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
 // ─── Acteur courant (bots / AFK) ─────────────────────────────────────────────
 
 /**
- * `submit` est simultanée (échéance ADVANCE), `judging` attend le juge,
- * `reveal` attend un « continuer » mené par le premier joueur actif.
+ * `submit` est simultanée (échéance ADVANCE), `judging` attend le juge. Le
+ * « continuer » du reveal est ouvert à tous : pas d'acteur (null), personne
+ * n'y est expulsable pour inactivité ; son meneur (sfRevealLeaderId), s'il
+ * est bot, le lance.
  */
 export function currentSFActorId(state: SFState): string | null {
   if (state.phase === 'judging') return state.judgeId
-  if (state.phase === 'reveal') return sfActive(state)[0]?.id ?? null
   return null
+}
+
+/** Le premier joueur encore en jeu mène le « continuer » du reveal. */
+export function sfRevealLeaderId(state: {
+  players: ReadonlyArray<Pick<SFPlayer, 'id' | 'leftAt'>>
+}): string | null {
+  return state.players.find((p) => !p.leftAt)?.id ?? null
+}
+
+/**
+ * « Manche suivante » de `askerId` recevable à `now` ? Hors reveal, ou pour un
+ * état sérialisé avant l'horodatage (revealAt absent), rien ne l'interdit : le
+ * réducteur tranche. Un bot meneur lit aussi pour la table : sans humain
+ * assis, personne à faire attendre.
+ */
+export function sfReadingTimeOk(state: SFState, askerId: string, now: number): boolean {
+  if (state.phase !== 'reveal' || state.revealAt == null) return true
+  const asker = state.players.find((p) => p.id === askerId)
+  if (!asker) return true
+  const mustRead = !asker.isBot || humans(state).length > 0
+  return !mustRead || now - state.revealAt >= SF_REVEAL_MIN_MS
 }
 
 // ─── Vues anti-triche ────────────────────────────────────────────────────────
@@ -405,6 +492,8 @@ export type SFClientView = Omit<
   /** Réponses abattues, ANONYMES, triées par index de carte (pas d'ordre d'arrivée). */
   submissions: Array<{ card: number; text: string }> | null
   crowned: { card: number; text: string; playerId: string; playerName: string } | null
+  /** Reveal : instant (epoch ms serveur) où « manche suivante » est accepté. */
+  continueAt: number | null
 }
 
 /**
@@ -454,6 +543,8 @@ export function toSFClientView(state: SFState, viewerId: string): SFClientView {
             playerName: crownedAuthor?.name ?? '—',
           }
         : null,
+    continueAt:
+      state.phase === 'reveal' && state.revealAt != null ? state.revealAt + SF_REVEAL_MIN_MS : null,
     players: players.map((p) => ({
       id: p.id,
       name: p.name,

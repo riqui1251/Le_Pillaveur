@@ -1,7 +1,9 @@
 import {
   createMenteurState,
-  currentMenteurActorId,
   isMenteurAlive,
+  menteurBotSeatId,
+  menteurSeatPlayedByBot,
+  menteurSkipOwnBidTurn,
   reduceMenteur,
   toMenteurClientView,
   toMenteurSpectatorView,
@@ -65,14 +67,14 @@ export function parseMenteurState(json: string | null): MenteurState | null {
     const raw = JSON.parse(json) as MenteurState
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
     // Champs arrivés après coup : un état sérialisé avant eux se joue tel quel.
-    return {
+    return menteurSkipOwnBidTurn({
       ...raw,
       rematchVotes: raw.rematchVotes ?? [],
       revealAt: raw.revealAt ?? null,
       bids: raw.bids ?? [],
       duels: raw.duels ?? [],
       speech: raw.speech ?? [],
-    }
+    })
   } catch {
     return null
   }
@@ -171,7 +173,9 @@ export function menteurSpectatorViewJson(state: MenteurState): string {
  * Un coup du bot au tour : « manche suivante » s'il mène la révélation, sinon
  * le coup que son cerveau (bot-brain.ts) décide sur SA vue, selon les traits
  * de son persona — retrouvé par le nom, un converti joue en DEFAULT_BOT_TRAITS
- * —, avec la parole qu'il y joint (bot-speech.ts), dans UNE réduction.
+ * —, avec la parole qu'il y joint (bot-speech.ts), dans UNE réduction. Le
+ * tour d'un humain parti se joue de même, comme celui d'un converti, mais
+ * sans parole : il n'a rien dit.
  * `rand` et `now` sont injectés (simulation, tests) : avec la même suite
  * `rand`, le même coup. Le pourquoi du coup ne sort pas d'ici.
  *
@@ -185,9 +189,9 @@ export function applyMenteurBotAction(
   now: number = Date.now(),
   sayRand: () => number = rand
 ): MenteurRoomActionResult {
-  const actorId = currentMenteurActorId(state)
+  const actorId = menteurBotSeatId(state)
   const actor = state.players.find((p) => p.id === actorId)
-  if (!actor?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+  if (!actor || !menteurSeatPlayedByBot(actor)) return { ok: false, error: 'NOT_BOT_TURN' }
 
   try {
     if (state.phase === 'reveal') {
@@ -198,7 +202,7 @@ export function applyMenteurBotAction(
     const view = toMenteurClientView(state, actor.id)
     const traits = botTraitsFor(actor.name)
     const { action: move, why } = menteurBotDecide(view, actor.id, traits, rand)
-    const said = menteurBotSay(view, actor.id, move, why, traits, sayRand)
+    const said = actor.isBot ? menteurBotSay(view, actor.id, move, why, traits, sayRand) : null
     const say = said?.targetId ? { kind: said.kind, targetId: said.targetId } : undefined
     const action: MenteurAction =
       move.type === 'BID'

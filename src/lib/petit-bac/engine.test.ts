@@ -5,8 +5,10 @@ import {
   currentPbcActorId,
   pbcIsValid,
   pbcNormalize,
+  pbcRevealLeaderId,
   reducePbc,
   toPbcClientView,
+  toPbcSpectatorView,
   PBC_CATEGORY_COUNT,
   pbcContestThreshold,
   PBC_CONTEST_MIN_VOTES,
@@ -435,7 +437,9 @@ describe('petit-bac — continue et fin', () => {
       now: NOW + 31_000,
     })
     expect(state.phase).toBe('reveal')
-    expect(currentPbcActorId(state)).toBe('p1')
+    // Personne « au tour » au reveal (pas d'expulsion AFK) ; p1 mène les bots.
+    expect(currentPbcActorId(state)).toBeNull()
+    expect(pbcRevealLeaderId(state)).toBe('p1')
     // Toutes uniques et valides → 10 pts chacun.
     state = reducePbc(state, { type: 'CONTINUE', playerId: 'p1', now: NOW + 45_000 })
     expect(state.phase).toBe('write')
@@ -514,5 +518,71 @@ describe('petit-bac — départs', () => {
     expect(state.phase).toBe('flush')
     state = reducePbc(state, { type: 'LEAVE', playerId: 'p3', at: NOW + 32_000 })
     expect(state.phase).toBe('reveal')
+  })
+})
+
+describe('petit-bac — quitter pendant la révélation', () => {
+  /** Table de 4 : p1 crie STOP (5 réponses uniques, 10 pts), les autres déposent. */
+  function revealOf4(): PbcState {
+    let state = inWrite(4)
+    state = reducePbc(state, { type: 'STOP', playerId: 'p1', answers: validAnswers(state, 'a'), now: NOW + 30_000 })
+    for (const [id, suffix] of [['p2', 'b'], ['p3', 'c'], ['p4', 'd']]) {
+      state = reducePbc(state, { type: 'SUBMIT', playerId: id, answers: validAnswers(state, suffix), now: NOW + 31_000 })
+    }
+    expect(state.phase).toBe('reveal')
+    return state
+  }
+
+  const cellsOf = (state: PbcState, id: string) =>
+    (toPbcClientView(state, 'p2').revealGrid ?? []).flat().filter((c) => c.playerId === id)
+
+  it('ses cases restent dans la grille, contestables, et la contestation aboutit', () => {
+    let state = revealOf4()
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 32_000 })
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p1', at: NOW + 33_000 })
+    const cells = cellsOf(state, 'p1')
+    expect(cells).toHaveLength(PBC_CATEGORY_COUNT)
+    expect(cells[0].contestCount).toBe(1)
+    expect(toPbcSpectatorView(state).revealGrid?.[0]?.map((c) => c.playerId)).toEqual(['p1', 'p2', 'p3', 'p4'])
+    // Le seuil d'un parti compte tous ceux qui restent (3 votants → 2 voix).
+    expect(pbcContestThreshold(state, 'p1')).toBe(2)
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 34_000 })
+    expect(state.rejected).toContain('p1:0')
+    expect(cellsOf(state, 'p1')[0].rejected).toBe(true)
+  })
+
+  it('ses points ne sont pas crédités s’il est encore parti à la clôture, même s’il revient ensuite', () => {
+    let state = revealOf4()
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 32_000 })
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p1', at: NOW + 33_000 })
+    expect(toPbcClientView(state, 'p2').roundTotals?.p1).toBe(0)
+    expect(toPbcClientView(state, 'p2').roundTotals?.p2).toBe(10)
+    state = reducePbc(state, { type: 'CONTINUE', playerId: 'p2', now: NOW + 31_000 + PBC_REVEAL_MIN_MS })
+    expect(state.players.map((p) => p.total)).toEqual([0, 10, 10, 10])
+    state = reducePbc(state, { type: 'REJOIN', playerId: 'p1' })
+    expect(state.players.find((p) => p.id === 'p1')?.total).toBe(0)
+  })
+
+  it('revenu avant la clôture, il est crédité de ce qui a survécu aux contestations', () => {
+    let state = revealOf4()
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p1', at: NOW + 32_000 })
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p2', targetId: 'p1', category: 0, now: NOW + 33_000 })
+    state = reducePbc(state, { type: 'CONTEST', playerId: 'p3', targetId: 'p1', category: 0, now: NOW + 33_500 })
+    state = reducePbc(state, { type: 'REJOIN', playerId: 'p1' })
+    expect(toPbcClientView(state, 'p2').roundTotals?.p1).toBe(8)
+    state = reducePbc(state, { type: 'CONTINUE', playerId: 'p2', now: NOW + 31_000 + PBC_REVEAL_MIN_MS })
+    expect(state.players.find((p) => p.id === 'p1')?.total).toBe(8)
+  })
+
+  it('un joueur parti AVANT le dépouillement reste hors de la grille', () => {
+    let state = inWrite(4)
+    state = reducePbc(state, { type: 'STOP', playerId: 'p1', answers: validAnswers(state, 'a'), now: NOW + 30_000 })
+    for (const [id, suffix] of [['p2', 'b'], ['p3', 'c']]) {
+      state = reducePbc(state, { type: 'SUBMIT', playerId: id, answers: validAnswers(state, suffix), now: NOW + 31_000 })
+    }
+    // p4 part sans déposer : sa feuille n'est plus attendue, le reveal s'ouvre à cet instant.
+    state = reducePbc(state, { type: 'LEAVE', playerId: 'p4', at: NOW + 32_000 })
+    expect(state.phase).toBe('reveal')
+    expect(toPbcClientView(state, 'p1').revealGrid?.[0]?.map((c) => c.playerId)).toEqual(['p1', 'p2', 'p3'])
   })
 })

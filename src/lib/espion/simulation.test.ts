@@ -16,6 +16,7 @@ import {
   EspionEngineError,
   ESPION_ACCUSATION_WINDOW_MS,
   ESPION_QUESTION_TIMEOUT_MS,
+  ESPION_REVEAL_MIN_MS,
   ESPION_SPEECH_CAP,
   type EspionAction,
   type EspionRoundOutcome,
@@ -66,7 +67,8 @@ import {
  */
 
 const MINUTE = 60_000
-const REVEAL_READ_MS = 3_000
+/** Un humain referme la révélation au plancher de lecture : avant, le moteur refuse (READING_TIME). */
+const REVEAL_READ_MS = ESPION_REVEAL_MIN_MS
 
 type Seat = { id: string; name: string; isBot: boolean }
 
@@ -379,6 +381,7 @@ function playGame(seed: string, opts: Options): Game {
   let versionAt = now
   let botTried = false
   let roundStart = now
+  let decidedAt = now
   let maxJsonBytes = 0
   let guess: RoundLog['guess'] = null
   let refusals = 0
@@ -390,7 +393,8 @@ function playGame(seed: string, opts: Options): Game {
   const noteGuess = (before: EspionState, after: EspionState) => {
     // lastReveal reste celui de la manche d'avant pendant la discussion : seul un passage au reveal compte.
     const outcome = after.phase === 'reveal' ? after.lastReveal?.outcome : undefined
-    if (before.phase !== 'discussion' || (outcome !== 'spy-guessed-right' && outcome !== 'spy-guessed-wrong')) return
+    const guessing = before.phase === 'discussion' || before.phase === 'lastChance'
+    if (!guessing || (outcome !== 'spy-guessed-right' && outcome !== 'spy-guessed-wrong')) return
     const spy = before.players.find((p) => p.role === 'spy')!
     const desperate = before.activeAccusation?.targetId === spy.id
     guess = {
@@ -424,7 +428,8 @@ function playGame(seed: string, opts: Options): Game {
         })
       }
     }
-    if (s.phase === 'discussion' && s.phaseEndsAt !== null) {
+    // La dernière chance de l'espion humain démasqué a son échéance, comme la discussion.
+    if ((s.phase === 'discussion' || s.phase === 'lastChance') && s.phaseEndsAt !== null) {
       const deadline = s.activeAccusation ? Math.min(s.activeAccusation.endsAt, s.phaseEndsAt) : s.phaseEndsAt
       candidates.push({
         at: Math.max(deadline, now),
@@ -461,13 +466,15 @@ function playGame(seed: string, opts: Options): Game {
     const roundBefore = s.round
     const accBefore = s.activeAccusation
     next.run()
+    // L'issue se décide en quittant la discussion ; la dernière chance ne fait qu'attendre la devinette.
+    if (phaseBefore === 'discussion' && s.phase !== 'discussion') decidedAt = now
     if (s.version !== version) {
       versionAt = now
       botTried = false
       if (seats.length >= 16) maxJsonBytes = Math.max(maxJsonBytes, serializeEspionState(s).length)
       if (accBefore && s.activeAccusation?.supporters.includes(accBefore.targetId)) selfSupports += 1
     }
-    if (phaseBefore === 'discussion' && s.phase === 'reveal' && s.lastReveal) {
+    if ((phaseBefore === 'discussion' || phaseBefore === 'lastChance') && s.phase === 'reveal' && s.lastReveal) {
       const all = s.speech ?? []
       const speech = all.filter((sp) => sp.round === roundBefore)
       const spyId = s.lastReveal.spyId
@@ -478,7 +485,7 @@ function playGame(seed: string, opts: Options): Game {
         round: roundBefore,
         outcome: s.lastReveal.outcome,
         winner: s.lastReveal.winner,
-        t: (now - roundStart) / discussionMs,
+        t: (decidedAt - roundStart) / discussionMs,
         spyId,
         spyIsBot: isBot(spyId),
         location: espionLocationIdOf(s.lastReveal.location),

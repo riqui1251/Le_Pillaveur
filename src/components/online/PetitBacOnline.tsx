@@ -25,7 +25,9 @@ import { ConfirmActionDialog } from '@/components/game/ConfirmActionDialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
+  pbcContestThreshold,
   pbcIsValid,
+  pbcRevealLeaderId,
   PBC_REVEAL_MS,
   PBC_WRITE_MS,
   type PbcClientView,
@@ -239,7 +241,7 @@ export function PetitBacOnline() {
   // en bot « copie blanche » — il reste écarté (le moteur l'exclut de tous
   // les décomptes) et peut revenir à tout moment.
   const revealActorIsBot = Boolean(
-    view?.phase === 'reveal' && view.players.find((p) => p.id === room?.currentTurnUserId)?.isBot
+    view?.phase === 'reveal' && view.players.find((p) => p.id === pbcRevealLeaderId(view))?.isBot
   )
   useBotReferee({
     roomId: room?.id,
@@ -559,9 +561,11 @@ export function PetitBacOnline() {
                   const cellPlayer = view.players.find((p) => p.id === cell.playerId)
                   const answer = cell.answer.trim()
                   const mine = cell.playerId === user.id
-                  const threshold = view.contestThreshold
                   // Une seule voix ne raye plus une case sur une petite table :
-                  // le seuil vient du moteur (null = table trop petite).
+                  // le seuil vient du moteur (null = table trop petite). Calculé
+                  // par case, comme la TV : celui d'un joueur parti pendant le
+                  // reveal compte tous ceux qui restent.
+                  const threshold = pbcContestThreshold(view, cell.playerId)
                   const canContest =
                     threshold !== null &&
                     !mine &&

@@ -45,7 +45,8 @@ c'est l'adversaire qui révèle son dernier mot par erreur.
   automatiquement.
 - Pas de bots au lancement : un bot ne sait pas donner d'indice. Un joueur
   qui quitte est remplacé après 3 minutes (un Maître-mot parti passe son
-  rôle à un coéquipier).
+  rôle à un coéquipier). D'ici là, une équipe dont tous les devineurs sont
+  partis passe aussitôt son tour, sans attendre la fin du chrono.
 - Le mode TV affiche la grille en grand — sans jamais montrer la solution.
 
 ## Variantes et effectifs

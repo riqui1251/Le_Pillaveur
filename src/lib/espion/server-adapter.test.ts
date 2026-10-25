@@ -3,7 +3,9 @@ import {
   applyEspionBotAction,
   applyEspionRoomAction,
   buildEspionState,
+  markEspionPlayerLeft,
   parseEspionState,
+  rejoinEspionPlayer,
   serializeEspionState,
 } from './server-adapter'
 import { reduceEspion, ESPION_ACCUSATION_WINDOW_MS, type EspionState } from './engine'
@@ -183,5 +185,47 @@ describe('fil de questions : actions de la salle', () => {
     expect(calm.speech).toEqual([])
     expect(calm.activeAccusation).toBeNull()
     expect(parseEspionState(serializeEspionState(parsed))).toEqual(parsed)
+  })
+})
+
+describe('départs : grâce cumulée et parties d’avant le plancher de lecture', () => {
+  it('rejoindre puis repartir garde l’absence déjà faite : le bot remplace au bout de 3 min cumulées', () => {
+    const table = inDiscussion(3, 0, 'aller-retour')
+    const t = table.now
+    let s = markEspionPlayerLeft(table.state, 'u2', t)!
+    s = rejoinEspionPlayer(s, 'u2', t + 150_000)!
+    s = markEspionPlayerLeft(s, 'u2', t + 160_000)!
+    // Le compte à rebours affiché (leftAt + 3 min) ne laisse que 30 s.
+    expect(s.players.find((p) => p.id === 'u2')?.leftAt).toBe(t + 10_000)
+    expect(() => reduceEspion(s, { type: 'REPLACE_LEFT', now: t + 189_999, graceMs: 180_000 })).toThrow('NOTHING_TO_REPLACE')
+    const replaced = reduceEspion(s, { type: 'REPLACE_LEFT', now: t + 190_000, graceMs: 180_000 })
+    expect(replaced.players.find((p) => p.id === 'u2')?.isBot).toBe(true)
+  })
+
+  it('état sérialisé sans revealAt (révélation en cours au déploiement) : jamais bloqué au « continuer »', () => {
+    const table = inDiscussion(3, 0, 'vieux-reveal')
+    const reveal = reduceEspion(table.state, {
+      type: 'ADVANCE',
+      claimedKey: phaseKey(table.state),
+      now: table.state.phaseEndsAt!,
+    })
+    const { revealAt: _r, ...legacy } = reveal
+    void _r
+    const parsed = parseEspionState(JSON.stringify(legacy))!
+    expect(parsed.revealAt).toBeNull()
+    expect(applyEspionRoomAction(parsed, 'u1', { type: 'continue' })).toMatchObject({ ok: true })
+  })
+
+  it('l’espion humain démasqué devine par la route pendant sa dernière chance', () => {
+    const table = inDiscussion(4, 0, 'derniere-chance-route')
+    const spy = table.state.players.find((p) => p.role === 'spy')!.id
+    const crew = table.state.players.filter((p) => p.id !== spy).map((p) => p.id)
+    let s = reduceEspion(table.state, { type: 'ACCUSE', playerId: crew[0], targetId: spy, now: table.now })
+    for (const id of crew.slice(1)) s = reduceEspion(s, { type: 'SUPPORT', playerId: id, now: table.now })
+    expect(s.phase).toBe('lastChance')
+    const locationId = espionLocationIdOf(s.location)!
+    const guessed = applyEspionRoomAction(s, spy, { type: 'guess-location', locationId })
+    expect(guessed.ok && guessed.state.lastReveal).toMatchObject({ outcome: 'spy-guessed-right', winner: 'spy' })
+    expect(applyEspionRoomAction(s, crew[0], { type: 'guess-location', locationId })).toEqual({ ok: false, error: 'NOT_SPY' })
   })
 })

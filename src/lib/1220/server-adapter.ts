@@ -6,8 +6,10 @@ import {
   GAME_1220_MIN_PLAYERS,
   GAME_1220_MAX_PLAYERS,
   toGame1220ClientView,
+  type Config1220,
   type Game1220State,
 } from './engine'
+import { playableChoices1220, sanitizeChoices1220 } from './choices'
 import type { Choices1220 } from '@/lib/game-1220'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -60,10 +62,20 @@ export function parseGame1220State(json: string | null): Game1220State | null {
   try {
     const raw = JSON.parse(json) as Game1220State
     if (!raw || !Array.isArray(raw.players) || typeof raw.phase !== 'string') return null
+    // Paris assainis à la lecture : un état écrit avant la validation de
+    // set-draft peut porter un pari piégé (objet, chaîne, clés en surnombre)
+    // qui plantait l'écran de la table ou gonflait l'état à chaque action.
+    const draft: Record<string, Choices1220> = {}
+    for (const [id, choices] of Object.entries(raw.draft ?? {})) draft[id] = sanitizeChoices1220(choices)
+    const configs: Config1220[] | null = Array.isArray(raw.configs)
+      ? raw.configs.map((c) => ({ playerId: c.playerId, name: c.name, ...playableChoices1220(c) }))
+      : null
     // Rétro-compat : les états sérialisés avant l'horloge de phase n'ont ni
     // `phaseSeq` ni `phaseEndsAt` (mise en place sans échéance, comme avant).
     return {
       ...raw,
+      draft,
+      configs,
       rematchVotes: raw.rematchVotes ?? [],
       phaseSeq: raw.phaseSeq ?? 0,
       phaseEndsAt: raw.phaseEndsAt ?? null,
@@ -74,7 +86,9 @@ export function parseGame1220State(json: string | null): Game1220State | null {
 }
 
 export type Game1220RoomActionInput =
-  | { type: 'set-draft'; choices: Partial<Choices1220> }
+  | { type: 'set-draft'; choices: unknown }
+  /** Phase `play` : nouveaux paris complets, comptés dès le lancer suivant. */
+  | { type: 'set-bets'; choices: unknown }
   | { type: 'ready' }
   | { type: 'advance'; phaseKey: string }
   | { type: 'roll' }
@@ -95,6 +109,8 @@ export function applyGame1220RoomAction(
     switch (input.type) {
       case 'set-draft':
         return { ok: true, state: reduceGame1220(state, { type: 'SET_DRAFT', playerId: userId, choices: input.choices }) }
+      case 'set-bets':
+        return { ok: true, state: reduceGame1220(state, { type: 'SET_BETS', playerId: userId, choices: input.choices }) }
       case 'ready':
         return { ok: true, state: reduceGame1220(state, { type: 'READY', playerId: userId }) }
       case 'advance':

@@ -15,8 +15,8 @@ import { TurnBanner } from '@/components/game/TurnBanner'
 import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { isLegalRaise, menteurHumanSeated, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
-import { menteurBotTickDelayMs } from '@/lib/menteur/bot-tick'
+import { currentMenteurActorId, isLegalRaise, type MenteurBid, type MenteurClientView } from '@/lib/menteur/engine'
+import { menteurTableBotTickDelayMs } from '@/lib/menteur/bot-tick'
 import { CssDie } from '@/components/games/CssDie'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
@@ -147,22 +147,11 @@ export function MenteurOnline() {
   }, [stateVersion])
 
   // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) : tour d'un
-  // bot → un coup ; joueur parti depuis 3 min → remplacement. expectedVersion
-  // rend les ticks concurrents inoffensifs (le serveur revalide tout). Délai
-  // calculé comme le filet serveur (bot-tick.ts) : la révélation que mène un
-  // bot reste 5 s à l'écran dès qu'un humain est assis.
-  const activeActor = view?.players.find((p) => p.id === room?.currentTurnUserId)
-  const botDelayMs = view
-    ? menteurBotTickDelayMs(
-        {
-          phase: view.phase,
-          actorIsBot: Boolean(activeActor?.isBot),
-          actorName: activeActor?.name,
-          humanSeated: menteurHumanSeated(view.players),
-        },
-        Math.random
-      )
-    : null
+  // bot ou d'un parti → un coup ; joueur parti depuis 3 min → remplacement.
+  // expectedVersion rend les ticks concurrents inoffensifs (le serveur
+  // revalide tout). Délai calculé comme le filet serveur (bot-tick.ts) : la
+  // révélation que mène un bot reste 5 s à l'écran dès qu'un humain est assis.
+  const botDelayMs = view ? menteurTableBotTickDelayMs(view, Math.random) : null
   useBotReferee({
     roomId: room?.id,
     stateVersion: room?.stateVersion,
@@ -173,10 +162,11 @@ export function MenteurOnline() {
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
   })
 
-  const afkTarget = activeActor
+  // Les enchères seulement : la révélation, n'importe qui la referme.
+  const afkTarget = view?.players.find((p) => p.id === room?.currentTurnUserId)
   const afkWatchable = Boolean(
     view &&
-      view.phase !== 'finished' &&
+      view.phase === 'bidding' &&
       afkTarget &&
       !afkTarget.isBot &&
       !afkTarget.leftAt &&
@@ -217,7 +207,7 @@ export function MenteurOnline() {
 
   const me = view.players.find((p) => p.id === user.id)
   const meAlive = Boolean(me && aliveInView(me))
-  const activeId = room.currentTurnUserId
+  const activeId = currentMenteurActorId(view)
   const activePlayer = view.players.find((p) => p.id === activeId)
   const bidding = view.phase === 'bidding'
   const isMyTurn = bidding && activeId === user.id

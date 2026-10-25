@@ -181,6 +181,18 @@ describe('DilemmesOnline — révélation d’un « Tu préfères »', () => {
     expect(html.slice(html.indexOf('Option chat'), html.indexOf('Option chien'))).not.toContain('border-suit-red')
   })
 
+  it('« Terminer » reste grisé, décompte affiché, pendant le temps de lecture', () => {
+    const fresh = render({ ...revealed(), revealAt: Date.now() })
+    const bar = fresh.slice(fresh.indexOf('fixed inset-x-0 bottom-0'))
+    expect(bar).toContain('Terminer dans')
+    expect(bar).toMatch(/<button[^>]*disabled=""/)
+
+    const read = render(revealed())
+    const readBar = read.slice(read.indexOf('fixed inset-x-0 bottom-0'))
+    expect(readBar).not.toContain('Terminer dans')
+    expect(readBar).not.toMatch(/<button[^>]*disabled=""/)
+  })
+
   it('un membre arrivé après le lancement ne voit pas « Carte suivante » (le moteur le refuserait)', () => {
     const html = render(revealed(), 'spectateur')
     expect(html).toContain('75 %')

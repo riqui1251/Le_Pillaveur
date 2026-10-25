@@ -17,6 +17,7 @@ Une question de quiz s'affiche, sans ses choix de réponse. Souvent, personne n'
 
 - Trouver la vraie réponse rapporte.
 - Chaque joueur piégé par VOTRE fausse réponse vous rapporte aussi.
+- Votre « fausse » réponse est en fait la vraie ? Le jeu l'accepte sans rien dire, mais au vote elle est marquée comme la vôtre : vous ne pouvez pas voter pour elle. Taper sa supposition comme bluff ne rapporte donc rien.
 
 ## Victoire
 

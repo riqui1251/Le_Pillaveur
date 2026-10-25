@@ -1277,3 +1277,109 @@ describe('score de soupçon public (lot 3) : une seule logique pour accuser, vot
     expect(lgBotHunterTarget(s, 'cha')).toBe('loup1')
   })
 })
+
+describe('gorgées : le compteur public ne trahit aucun rôle', () => {
+  /** Champs d'un joueur tels que la vue les publie, sans ce qui le nomme. */
+  const publicOf = (view: ReturnType<typeof toLGClientView>, id: string) => {
+    const p = view.players.find((q) => q.id === id)!
+    return { alive: p.alive, isBot: p.isBot, leftAt: p.leftAt, role: p.role, sips: p.sips }
+  }
+
+  it('loup lynché : son complice vivant boit en secret, sa carte publique = celle d’un villageois', () => {
+    const seven = [...SIX, P('loup2', 'loup')]
+    let s = craft(seven, 'day-vote', { phaseEndsAt: T0 + LG_VOTE_MS })
+    for (const voter of ['voy', 'sor', 'cha', 'vil1', 'vil2', 'loup2']) {
+      s = reduceLG(s, { type: 'DAY_VOTE', playerId: voter, targetId: 'loup1', now: T0 })
+    }
+    s = reduceLG(s, { type: 'DAY_VOTE', playerId: 'loup1', targetId: 'vil1', now: T0 })
+    expect(s.phase).toBe('night-seer')
+    expect(s.players.find((p) => p.id === 'loup2')?.sips).toBe(LG_SIPS_WOLF_LYNCHED)
+
+    for (const view of [toLGClientView(s, 'vil1'), toLGClientView(s, 'voy'), toLGSpectatorView(s)]) {
+      expect(publicOf(view, 'loup2')).toEqual(publicOf(view, 'vil2'))
+      // Le mort, lui, est public : rôle révélé, gorgées comprises.
+      expect(publicOf(view, 'loup1')).toMatchObject({ role: 'loup', sips: LG_SIPS_DEATH })
+    }
+    // Le loup voit ses propres gorgées ; le fantôme voit tout.
+    expect(publicOf(toLGClientView(s, 'loup2'), 'loup2').sips).toBe(LG_SIPS_WOLF_LYNCHED)
+    expect(publicOf(toLGClientView(s, 'loup1'), 'loup2').sips).toBe(LG_SIPS_WOLF_LYNCHED)
+  })
+
+  it('potion de la Sorcière : +1 gorgée qu’elle seule voit tant qu’elle vit', () => {
+    let s = craft(SIX, 'night-witch', { nightVictimId: 'vil1', phaseEndsAt: T0 + LG_WITCH_MS })
+    s = reduceLG(s, { type: 'WITCH_ACTION', playerId: 'sor', action: 'save', now: T0 })
+    expect(s.players.find((p) => p.id === 'sor')?.sips).toBe(LG_SIPS_POTION)
+    s = advance(s, s.phaseEndsAt!) // aube : personne ne meurt
+    expect(s.phase).toBe('dawn')
+
+    for (const view of [toLGClientView(s, 'loup1'), toLGClientView(s, 'vil2'), toLGSpectatorView(s)]) {
+      expect(publicOf(view, 'sor')).toEqual(publicOf(view, 'vil1'))
+      expect(JSON.stringify(view.players)).not.toContain(`"sips":${LG_SIPS_POTION}`)
+    }
+    expect(publicOf(toLGClientView(s, 'sor'), 'sor').sips).toBe(LG_SIPS_POTION)
+  })
+
+  it('fin de partie : toutes les gorgées s’affichent (écran de fin, TV)', () => {
+    const s = craft(SIX, 'finished', {
+      winnerTeam: 'village',
+      players: SIX.map((p) => (p.id === 'sor' ? { ...p, sips: 4 } : p)),
+    })
+    expect(publicOf(toLGSpectatorView(s), 'sor').sips).toBe(4)
+    expect(publicOf(toLGClientView(s, 'vil1'), 'sor').sips).toBe(4)
+  })
+})
+
+describe('tempo secret de la nuit (botActAt, earlyFinishMs)', () => {
+  it('l’échéance resserrée suit earlyFinishMs tiré par le serveur, jamais allongée', () => {
+    const s = craft(SIX, 'night-seer', { phaseEndsAt: T0 + LG_SEER_MS, earlyFinishMs: 17_000 })
+    const next = reduceLG(s, { type: 'SEER_PEEK', playerId: 'voy', targetId: 'loup1', now: T0 })
+    expect(next.phaseEndsAt).toBe(T0 + 17_000)
+    expect(phaseKey(next)).toBe(phaseKey(s))
+    const short = craft(SIX, 'night-seer', { phaseEndsAt: T0 + 12_000, earlyFinishMs: 17_000 })
+    expect(
+      reduceLG(short, { type: 'SEER_PEEK', playerId: 'voy', targetId: 'loup1', now: T0 }).phaseEndsAt
+    ).toBe(T0 + 12_000)
+  })
+
+  it('ni la vue joueur ni la vue TV ne portent le tempo de la nuit', () => {
+    const s = craft(SIX, 'night-seer', { botActAt: T0 + 9_876, earlyFinishMs: 13_579 })
+    for (const view of [toLGClientView(s, 'voy'), toLGClientView(s, 'loup1'), toLGSpectatorView(s)]) {
+      const json = JSON.stringify(view)
+      expect(json).not.toContain('botActAt')
+      expect(json).not.toContain('earlyFinishMs')
+      expect(json).not.toContain(String(T0 + 9_876))
+      expect(json).not.toContain('13579')
+    }
+  })
+})
+
+describe('départs : un vivant parti ne retient pas l’unanimité', () => {
+  const left = (id: string) => SIX.map((p) => (p.id === id ? { ...p, leftAt: T0 - 1 } : p))
+
+  it('élection du maire : dépouillée dès que tous les présents ont voté', () => {
+    let s = craft(left('vil2'), 'mayor-election', { phaseEndsAt: T0 + LG_MAYOR_MS })
+    for (const voter of ['loup1', 'voy', 'sor', 'cha', 'vil1']) {
+      s = reduceLG(s, { type: 'MAYOR_VOTE', playerId: voter, targetId: 'vil1', now: T0 })
+    }
+    expect(s.mayorId).toBe('vil1')
+    expect(s.phase).toBe('day-debate')
+  })
+
+  it('vote du jour : dépouillé dès que tous les présents ont voté', () => {
+    let s = craft(left('vil2'), 'day-vote', { phaseEndsAt: T0 + LG_VOTE_MS })
+    for (const voter of ['voy', 'sor', 'cha', 'vil1']) {
+      s = reduceLG(s, { type: 'DAY_VOTE', playerId: voter, targetId: 'loup1', now: T0 })
+    }
+    expect(s.phase).toBe('day-vote')
+    s = reduceLG(s, { type: 'DAY_VOTE', playerId: 'loup1', targetId: 'vil1', now: T0 })
+    expect(s.lastVoteResult).toMatchObject({ eliminatedId: 'loup1' })
+  })
+
+  it('débat : l’unanimité des présents passe au vote', () => {
+    let s = craft(left('vil2'), 'day-debate', { phaseEndsAt: T0 + LG_DEBATE_DEFAULT_MS })
+    for (const id of ['loup1', 'voy', 'sor', 'cha', 'vil1']) {
+      s = reduceLG(s, { type: 'DEBATE_SKIP', playerId: id, now: T0 })
+    }
+    expect(s.phase).toBe('day-vote')
+  })
+})

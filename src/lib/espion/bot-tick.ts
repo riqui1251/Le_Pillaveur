@@ -4,6 +4,7 @@ import { readSpeechTable, remarkOf, type SpeechTable } from '@/lib/online/bot-sp
 import {
   espionAskBlock,
   espionFreeSpeechLeft,
+  espionHumanSeated,
   espionMajority,
   espionQuestionCap,
   espionRoundSpeech,
@@ -14,6 +15,7 @@ import {
   ESPION_HUMAN_ASK_PRIORITY_MS,
   ESPION_QUESTION_TIMEOUT_MS,
   ESPION_REMARK_KINDS,
+  ESPION_REVEAL_MIN_MS,
   ESPION_SPEECH_CAP,
   type EspionAccusation,
   type EspionPhase,
@@ -59,8 +61,14 @@ export const ESPION_BOT_EARLY_SLACK_MS = 1_500
 export const ESPION_BOT_TICK_FLOOR_MS = 250
 /** Tirage ajouté au délai : le serveur (rand = 1) passe toujours après un client éveillé. */
 export const ESPION_BOT_TICK_JITTER_MS = 400
-/** Lecture de la révélation menée par un bot. */
+/** Lecture de la révélation menée par un bot, table sans humain assis. */
 export const ESPION_REVEAL_BOT_TICK_MS = 2_500
+/**
+ * Avec un humain assis : le plancher de lecture du moteur + 1 s de marge, pour
+ * qu'il n'oppose jamais READING_TIME au tick (la révélation n'a pas
+ * d'échéance, un tick refusé la figerait).
+ */
+export const ESPION_REVEAL_READ_BOT_TICK_MS = ESPION_REVEAL_MIN_MS + 1_000
 /** Première question de la manche, après la lecture du lieu. */
 export const ESPION_OPENING_MS = 4_000
 /** Pause entre une réponse et la question suivante quand la main revient à un bot. */
@@ -493,12 +501,15 @@ export function espionAccusedOnTheBrink(input: EspionBotTickInput): boolean {
 
 /**
  * Délai du tick « bot » depuis `now` : max(250 ms, prochaine échéance − now)
- * plus un tirage de 0 à 400 ms ; 2,5 s pour une révélation menée par un bot ;
- * null quand aucun bot n'a d'échéance.
+ * plus un tirage de 0 à 400 ms ; pour une révélation menée par un bot, 5 s
+ * dès qu'un humain est assis (plancher de lecture), 2,5 s sinon ; null quand
+ * aucun bot n'a d'échéance.
  */
 export function espionBotTickDelayMs(input: EspionBotTickInput, now: number, rand: () => number): number | null {
   if (input.phase === 'reveal') {
-    return activeOf(input)[0]?.isBot ? ESPION_REVEAL_BOT_TICK_MS + rand() * ESPION_BOT_TICK_JITTER_MS : null
+    if (!activeOf(input)[0]?.isBot) return null
+    const read = espionHumanSeated(input.players) ? ESPION_REVEAL_READ_BOT_TICK_MS : ESPION_REVEAL_BOT_TICK_MS
+    return read + rand() * ESPION_BOT_TICK_JITTER_MS
   }
   const next = espionBotEvents(input, now)[0]
   if (!next) return null
