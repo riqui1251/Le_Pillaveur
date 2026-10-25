@@ -5,6 +5,7 @@ import { buildRoomDto, touchMemberPresence } from '@/lib/online-room'
 import { processRematchVote } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -12,7 +13,7 @@ type Params = { params: Promise<{ roomId: string }> }
  * Vote « Rejouer » — relance automatique quand tous les membres PRÉSENTS ont
  * voté (REMATCH_PRESENCE_MS) ; les absents sont retirés de la table.
  */
-export async function POST(_request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/rematch POST', async (_request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -58,4 +59,4 @@ export async function POST(_request: Request, { params }: Params) {
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })
-}
+})

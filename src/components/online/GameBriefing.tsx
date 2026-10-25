@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight, Users } from 'lucide-react'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { GameIconById } from '@/components/hub/GameIconById'
-import { BRIEFING_TIMEOUT_MS } from '@/lib/online/briefing'
+import { BRIEFING_TIMEOUT_MS, briefingTickDelay } from '@/lib/online/briefing'
 import { TUTORIAL_VISUALS } from '@/lib/online/tutorial-visuals'
 import type { RoomDto } from '@/lib/online-room'
 import { markGameTutorialSeen, type TutorialStep } from './GameTutorialModal'
@@ -40,7 +40,6 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
   const visuals = TUTORIAL_VISUALS[gameId]
   const [idx, setIdx] = useState(0)
   const [sending, setSending] = useState(false)
-  const timeoutSentRef = useRef(false)
 
   const acks = room.briefing?.acks ?? []
   const startedAt = room.briefing?.startedAt ?? Date.now()
@@ -71,22 +70,27 @@ export function GameBriefing({ room, gameId }: { room: RoomDto; gameId: string }
   )
 
   // Tick timeout (tous les clients l'envoient, le serveur vérifie l'échéance
-  // — la partie démarre même si un joueur reste AFK). La barre et le
-  // décompte affichés vivent dans PhaseCountdown, sans horloge ici.
+  // — la partie démarre même si un joueur reste AFK), renvoyé tant que la
+  // table reste en briefing : un tick arrivé trop tôt pour l'horloge du
+  // serveur, ou perdu en route, ne fige plus la table (briefingTickDelay).
+  // La barre et le décompte affichés vivent dans PhaseCountdown.
   useEffect(() => {
-    const delay = Math.max(250, deadline - Date.now() + 300 + Math.random() * 700)
-    const timer = setTimeout(() => {
-      if (timeoutSentRef.current) return
-      timeoutSentRef.current = true
-      void fetch(`/api/online/rooms/${room.id}/briefing-ack`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ timeout: true }),
-      })
-    }, delay)
+    if (room.status !== 'briefing') return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const schedule = (retry: boolean) => {
+      timer = setTimeout(() => {
+        void fetch(`/api/online/rooms/${room.id}/briefing-ack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ timeout: true }),
+        }).catch(() => {})
+        schedule(true)
+      }, briefingTickDelay(deadline, Date.now(), Math.random(), retry))
+    }
+    schedule(false)
     return () => clearTimeout(timer)
-  }, [deadline, room.id])
+  }, [deadline, room.id, room.status])
 
   const step = steps[idx]
   const isLast = idx >= steps.length - 1

@@ -14,6 +14,7 @@ import {
   readJsonBodyLimited,
   userRateLimitKey,
 } from '@/lib/rate-limit'
+import { withApiRoute } from '@/lib/api-route'
 
 const ROOM_LANGS = new Set(['fr', 'en', 'es', 'it'])
 
@@ -32,7 +33,7 @@ const CREATE_WINDOW_MS = 60_000
 const MAX_CREATE_BODY_BYTES = 8 * 1024
 
 /** Créer un lobby pour un jeu précis */
-export async function POST(request: Request) {
+export const POST = withApiRoute('online/rooms POST', async (request: Request) => {
   try {
     const user = await getCurrentUser()
     if (!user) {
@@ -134,4 +135,4 @@ export async function POST(request: Request) {
       { status: 500 }
     )
   }
-}
+})

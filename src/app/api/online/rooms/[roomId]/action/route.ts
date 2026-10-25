@@ -4,6 +4,7 @@ import { applyActionToRoom, loadActionRoom } from '@/lib/online/room-actions'
 import { PRESENCE_WRITE_INTERVAL_MS, touchMemberPresence } from '@/lib/online-room'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -42,7 +43,7 @@ const DRAWING_GAMES = new Set(['crobard', 'telephone-dessine'])
  * minuteur de service (room-ticker.ts) ; la route n'y ajoute que ce qui est
  * propre à HTTP — la session, et le plafond du corps de la requête.
  */
-export async function POST(request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/action POST', async (request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -87,4 +88,4 @@ export async function POST(request: Request, { params }: Params) {
 
   const result = await applyActionToRoom(checked.loaded, user.id, body)
   return NextResponse.json(result.body, { status: result.status })
-}
+})

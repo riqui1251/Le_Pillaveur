@@ -126,6 +126,11 @@ export type LiveRoomRow = {
   createdAt: Date
   /** Effectif de la table — la seule chose qu'on dise de ses joueurs. */
   playerCount: number
+  /**
+   * Plus de partie en cours alors que la salle est encore 'playing' : partie
+   * terminée (écran de fin, votes « Rejouer ») ou salle figée sans partie.
+   */
+  gameOver?: boolean
 }
 
 /** Statuts d'une vraie partie en ligne. 'cast' (afficheur TV d'une partie LOCALE) n'en est pas une. */
@@ -134,7 +139,8 @@ const LIVE_STATUSES = ['playing', 'briefing'] as const
 /**
  * Met en forme les parties en cours pour le guichet.
  * Deux règles, non négociables :
- * - une salle non 'playing'/'briefing' (notamment 'cast') n'existe pas ici ;
+ * - une salle non 'playing'/'briefing' (notamment 'cast') n'existe pas ici,
+ *   ni une salle dont la partie est finie (`gameOver`) ;
  * - AUCUN pseudo ne sort d'ici, quelle que soit la visibilité : le guichet dit
  *   le jeu, l'effectif et l'âge de la table, jamais qui y joue. Une table
  *   ouverte à tous n'est pas pour autant une table dont on publie les noms.
@@ -145,7 +151,8 @@ export function summarizeLiveGames(
   now: number = Date.now()
 ): { liveGames: LiveGameItem[]; liveGamesTotal: number } {
   const live = rows.filter(
-    (row) => (LIVE_STATUSES as readonly string[]).includes(row.status) && Boolean(row.gameId)
+    (row) =>
+      (LIVE_STATUSES as readonly string[]).includes(row.status) && Boolean(row.gameId) && !row.gameOver
   )
 
   const liveGames = live
@@ -514,9 +521,10 @@ const LIVE_ROOMS_SCAN_MAX = 60
 
 /**
  * Tout ce que le guichet affiche : tables ouvertes + parties en cours.
- * Deux requêtes bornées au total : la première (buildLobbyList) sert les
- * tables ouvertes, la seconde ne lit que des scalaires et l'effectif des
- * parties en cours — aucun membre, donc aucun pseudo de partie lancée.
+ * Trois requêtes bornées au total : la première (buildLobbyList) sert les
+ * tables ouvertes, la deuxième ne lit que des scalaires et l'effectif des
+ * parties en cours — aucun membre, donc aucun pseudo de partie lancée —, la
+ * troisième les lignes ouvertes du journal des parties de ces salles.
  */
 export async function buildLobbyOverview(): Promise<LobbyOverview> {
   // Ménage des tables ouvertes seulement — déjà fait par buildLobbyList.
@@ -545,8 +553,30 @@ export async function buildLobbyOverview(): Promise<LobbyOverview> {
     take: LIVE_ROOMS_SCAN_MAX,
   })
 
+  // Une partie finie laisse sa salle 'playing' jusqu'au retour au lobby, à la
+  // relance ou à la purge — et chaque vote « Rejouer » rajeunit `updatedAt` ;
+  // une salle figée (lancement raté) aussi. Le journal des parties, lui, dit ce
+  // qui se joue : sa ligne s'ouvre au lancement et se ferme à la fin de partie
+  // (recordMatchResults), juste après le compare-and-swap qui la termine. Une
+  // salle 'playing' sans ligne ouverte n'a donc plus de partie en cours. Lu
+  // dans le journal (indexé, scalaires seuls) plutôt que dans les états :
+  // lourds pour les jeux de dessin, et porteurs de pseudos.
+  const playingIds = rooms.filter((room) => room.status === 'playing').map((room) => room.id)
+  const openSessions =
+    playingIds.length === 0
+      ? []
+      : await prisma.onlineGameSession.findMany({
+          where: { roomId: { in: playingIds }, endedAt: null },
+          select: { roomId: true },
+        })
+  const inProgress = new Set(openSessions.map((session) => session.roomId))
+
   const { liveGames, liveGamesTotal } = summarizeLiveGames(
-    rooms.map((room) => ({ ...room, playerCount: room._count.members }))
+    rooms.map((room) => ({
+      ...room,
+      playerCount: room._count.members,
+      gameOver: room.status === 'playing' && !inProgress.has(room.id),
+    }))
   )
 
   return { lobbies, liveGames, liveGamesTotal }
@@ -836,6 +866,69 @@ export async function purgeAbsentLobbyMembers(
 }
 
 /**
+ * Écritures du marquage « parti » tentées au plus par leaveOtherRooms — la
+ * même borne que DELETE /rooms/[roomId] : chaque échec veut dire qu'un coup
+ * est passé entre la lecture et l'écriture, on relit et on recommence.
+ */
+const LEAVE_MARK_ATTEMPTS = 3
+
+const LEAVING_ROOM_SELECT = {
+  id: true,
+  status: true,
+  hostUserId: true,
+  gameId: true,
+  gameStateJson: true,
+  stateVersion: true,
+} as const
+
+type LeavingRoom = {
+  id: string
+  status: string
+  hostUserId: string
+  gameId: string | null
+  gameStateJson: string | null
+  stateVersion: number
+}
+
+/**
+ * Marque le partant « parti » dans la partie en cours de la salle, par
+ * compare-and-swap sur la version comme /action, relu à chaque échec. Rend la
+ * salle telle qu'elle était au moment de l'écriture (hôte compris) et la
+ * version écrite — null quand il n'y avait rien à marquer (lobby, partie
+ * finie, salle disparue). Rend `null` tout court si le marquage était dû mais
+ * n'a pas pu s'écrire.
+ */
+async function markLeftForTableChange(
+  initial: LeavingRoom,
+  userId: string
+): Promise<{ room: LeavingRoom; stateVersion: number | null } | null> {
+  let room = initial
+  for (let attempt = 1; ; attempt += 1) {
+    const adapter = getGameAdapter(room.gameId)
+    if (!adapter || room.status !== 'playing') return { room, stateVersion: null }
+    const state = adapter.parse(room.gameStateJson)
+    const next = state ? adapter.markLeft(state, userId, Date.now()) : null
+    if (!next) return { room, stateVersion: null }
+    // Une salle disparue entre-temps ne fait pas échouer le changement de
+    // table : updateMany ne lève jamais sur zéro ligne.
+    const { count } = await prisma.onlineRoom.updateMany({
+      where: { id: room.id, stateVersion: room.stateVersion },
+      data: {
+        gameStateJson: adapter.serialize(next),
+        stateVersion: room.stateVersion + 1,
+        // Un départ peut faire TOURNER le tour : même règle que DELETE.
+        currentTurnUserId: adapter.isFinished(next) ? null : adapter.currentActorId(next),
+      },
+    })
+    if (count > 0) return { room, stateVersion: room.stateVersion + 1 }
+    if (attempt >= LEAVE_MARK_ATTEMPTS) return null
+    const fresh = await prisma.onlineRoom.findUnique({ where: { id: room.id }, select: LEAVING_ROOM_SELECT })
+    if (!fresh) return { room, stateVersion: null }
+    room = fresh
+  }
+}
+
+/**
  * Quitte toutes les AUTRES tables de l'utilisateur, avant d'en créer ou d'en
  * rejoindre une. Même contrat que DELETE /rooms/[roomId] : dans une partie en
  * cours, il est d'abord marqué « parti » dans l'état (adapter.markLeft) — la
@@ -850,44 +943,19 @@ export async function purgeAbsentLobbyMembers(
 export async function leaveOtherRooms(userId: string, exceptRoomId?: string): Promise<void> {
   const memberships = await prisma.onlineRoomMember.findMany({
     where: { userId, ...(exceptRoomId ? { roomId: { not: exceptRoomId } } : {}) },
-    select: {
-      room: {
-        select: {
-          id: true,
-          status: true,
-          hostUserId: true,
-          gameId: true,
-          gameStateJson: true,
-          stateVersion: true,
-        },
-      },
-    },
+    select: { room: { select: LEAVING_ROOM_SELECT } },
   })
 
-  for (const { room } of memberships) {
-    let stateVersion: number | null = null
-    const adapter = getGameAdapter(room.gameId)
-    if (adapter && room.status === 'playing') {
-      const state = adapter.parse(room.gameStateJson)
-      const next = state ? adapter.markLeft(state, userId, Date.now()) : null
-      if (next) {
-        // Compare-and-swap sur la version, comme /action : un coup joué entre
-        // notre lecture et cette écriture gagne, et une salle disparue
-        // entre-temps ne fait pas échouer le changement de table (updateMany
-        // ne lève jamais sur zéro ligne). Le départ non marqué est rattrapé
-        // par le remplacement AFK.
-        const { count } = await prisma.onlineRoom.updateMany({
-          where: { id: room.id, stateVersion: room.stateVersion },
-          data: {
-            gameStateJson: adapter.serialize(next),
-            stateVersion: room.stateVersion + 1,
-            // Un départ peut faire TOURNER le tour : même règle que DELETE.
-            currentTurnUserId: adapter.isFinished(next) ? null : adapter.currentActorId(next),
-          },
-        })
-        if (count > 0) stateVersion = room.stateVersion + 1
-      }
-    }
+  for (const membership of memberships) {
+    const marked = await markLeftForTableChange(membership.room, userId)
+    // Marquage impossible (des coups à chaque relecture) : on garde le siège.
+    // Le retirer quand même laissait un joueur actif dans le moteur, sans
+    // `leftAt` ni siège — ni bannière Rejoindre, ni remplacement par un bot,
+    // et la table attendait son échéance à chaque manche. Resté membre, il
+    // est un joueur inactif ordinaire : remplacement AFK, absent au
+    // « Rejouer », et son prochain changement de table retentera le départ.
+    if (!marked) continue
+    const { room, stateVersion } = marked
     await kickMember(room.id, room.hostUserId, userId)
     await deleteRoomIfEmpty(room.id)
     if (stateVersion !== null) {

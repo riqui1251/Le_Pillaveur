@@ -226,6 +226,19 @@ describe('POST /join — par identifiant, sans le code', () => {
     expect(memberMock.upsert).toHaveBeenCalled()
   })
 
+  it('table PRIVÉE rejointe sur invitation : l’invitation est consommée, comme sur une table sur invitation', async () => {
+    // Restée « en attente », elle rouvrait la table à l'invité une fois
+    // exclu et la table passée sur invitation.
+    roomMock.findUnique.mockResolvedValue(playingRoom({ status: 'waiting', gameStateJson: null, stateVersion: 0 }))
+    canJoinMock.mockResolvedValue(true)
+
+    expect((await join('friend-fred', { roomId: 'room-1' })).status).toBe(200)
+    expect(inviteMock.updateMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1', invitedUserId: 'friend-fred', status: 'pending' },
+      data: { status: 'accepted', respondedAt: expect.any(Date) },
+    })
+  })
+
   it('table PUBLIQUE : l’identifiant suffit, comme au guichet', async () => {
     roomMock.findUnique.mockResolvedValue(playingRoom({ visibility: 'public' }))
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { serverNow } from '@/hooks/server-clock'
 import { countdownSnapshot, formatCountdown, nextSecondTickMs, type CountdownSnapshot } from './phase-countdown'
 
 /**
@@ -21,7 +22,9 @@ import { countdownSnapshot, formatCountdown, nextSecondTickMs, type CountdownSna
  *  - arrêt net une fois l'échéance passée et tant que l'onglet est caché
  *    (visibilitychange), rattrapage immédiat au retour.
  * L'échéance serveur fait foi : ce composant n'envoie rien (le tick
- * « advance » vit dans useAdvanceTick et lit `dueAt`, pas une horloge).
+ * « advance » vit dans useAdvanceTick et lit `dueAt`, pas une horloge). Elle
+ * est comparée à l'heure du SERVEUR estimée (serverNow, hooks/server-clock) : un
+ * téléphone en avance de 5 s n'affiche plus 0:00 avec 5 s à jouer.
  *
  * Aucune bibliothèque d'animation ici : ce composant est monté sur le hub
  * (RejoinBanner), page ouverte entre chaque partie. Le grand chiffre animé
@@ -120,7 +123,7 @@ export function PhaseCountdown({
   // Le chiffre de la barre a besoin du réveil à la seconde, comme le texte.
   const secondTicks = !ownBar || showDigits
 
-  const snapshot = countdownSnapshot(endsAt, Date.now(), total)
+  const snapshot = countdownSnapshot(endsAt, serverNow(), total)
   const danger = dangerMs !== undefined && snapshot.leftMs < dangerMs
   // Ce que CE rendu a montré. L'effet tourne quelques millisecondes après le
   // rendu : si l'échéance — ou le seuil d'urgence — tombe dans cet intervalle
@@ -140,7 +143,7 @@ export function PhaseCountdown({
       let frame = 0
       let wasDanger = renderedRef.current.danger
       const paint = () => {
-        const snap = countdownSnapshot(endsAt, Date.now(), total)
+        const snap = countdownSnapshot(endsAt, serverNow(), total)
         if (fillRef.current) fillRef.current.style.width = `${snap.ratio * 100}%`
         const danger = dangerMs !== undefined && snap.leftMs < dangerMs
         if (danger !== wasDanger) {
@@ -167,7 +170,7 @@ export function PhaseCountdown({
       let timer: ReturnType<typeof setTimeout> | undefined
       /** Arme le prochain réveil ; faux si l'échéance est déjà passée. */
       const schedule = () => {
-        const now = Date.now()
+        const now = serverNow()
         if (now >= endsAt) return false
         timer = setTimeout(tick, tickMs ?? nextSecondTickMs(endsAt, now))
         return true

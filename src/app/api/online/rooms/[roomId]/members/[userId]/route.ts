@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { kickMember } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { withApiRoute } from '@/lib/api-route'
 
 type Params = { params: Promise<{ roomId: string; userId: string }> }
 
@@ -21,13 +22,14 @@ type Params = { params: Promise<{ roomId: string; userId: string }> }
  * Après l'expulsion : l'expulsé verra 403 à son prochain sondage
  * (handleRoomGone → « Tu n'es plus dans cette table »). Rien ne lui interdit
  * de revenir par le code (table publique ou privée) — pour une table sur
- * invitation, il lui faut une nouvelle invitation, puisque la sienne est
- * déjà « acceptée » (canJoinInviteRoom n'ouvre qu'aux invitations en attente).
+ * invitation, il lui faut une nouvelle invitation : la sienne a été acceptée
+ * en s'asseyant, et une invitation encore en attente est révoquée ici
+ * (canJoinInviteRoom n'ouvre qu'aux invitations en attente).
  * /api/online/rooms/rejoinable ne le concerne pas : cette route ne propose que
  * les parties EN COURS d'où l'on est parti (leftAt), or on n'expulse qu'au
  * lobby, sans état de jeu.
  */
-export async function DELETE(_request: Request, { params }: Params) {
+export const DELETE = withApiRoute('online/rooms/[roomId]/members/[userId] DELETE', async (_request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -63,7 +65,13 @@ export async function DELETE(_request: Request, { params }: Params) {
   // n'aura lieu ici. kickMember invalide déjà le cache du guichet. La raison
   // suit le retiré : son 403 dira que l'hôte l'a retiré (online/departures.ts).
   await kickMember(roomId, room.hostUserId, targetUserId, 'kicked')
+  // Une invitation restée « en attente » (reçue à une table privée, puis
+  // rejointe par le code) lui rouvrait la table sans l'accord de l'hôte.
+  await prisma.onlineRoomInvite.updateMany({
+    where: { roomId, invitedUserId: targetUserId, status: 'pending' },
+    data: { status: 'revoked', respondedAt: new Date() },
+  })
   publishRoomChanged(roomId, { type: 'lobby' })
 
   return NextResponse.json({ ok: true })
-}
+})

@@ -5,14 +5,11 @@ import { buildRoomDto } from '@/lib/online-room'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { serializeBriefing } from '@/lib/online/briefing'
-import { parseRoomSettings } from '@/lib/online-game-state'
-import { TC_MODES } from '@/lib/toucher-coule/engine'
-import { getGameAdapter } from '@/lib/online/game-adapters'
-import { mcTeamCounts } from '@/lib/mots-codes/server-adapter'
-import { tabouHasTwoHumansPerTeam } from '@/lib/online-tabou'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 import { recordDeparture } from '@/lib/online/departures'
+import { withApiRoute } from '@/lib/api-route'
+import { checkLaunchRoster } from '../launch-roster'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -35,7 +32,7 @@ const MAX_LAUNCH_BODY_BYTES = 1024
  * à son prochain sondage et pourra revenir par le code. Sans `force`, rien ne
  * change : tous doivent être prêts.
  */
-export async function POST(request: Request, { params }: Params) {
+export const POST = withApiRoute('online/rooms/[roomId]/launch POST', async (request: Request, { params }: Params) => {
   const user = await getCurrentUser()
   if (!user) {
     return NextResponse.json(onlineErrorBody('auth_required'), { status: 401 })
@@ -83,55 +80,15 @@ export async function POST(request: Request, { params }: Params) {
   const members =
     laggards.length > 0 ? room.members.filter((m) => m.isReady || m.userId === room.hostUserId) : room.members
 
-  // Toucher-Coulé : capacité dépendante du format d'équipes (bots de complément).
-  if (room.gameId === 'toucher-coule') {
-    const settings = parseRoomSettings(room.settingsJson)
-    const capacity = TC_MODES[settings.tcMode ?? '1v1'].playersPerTeam * 2
-    if (members.length > capacity) {
-      // Code + `count` : le client traduit lui-même (avant, la phrase française
-      // partait telle quelle chez les joueurs EN/ES/IT).
-      return NextResponse.json(onlineErrorBody('max_players', { count: capacity }), { status: 400 })
-    }
-  } else {
-    // Bornes du registre (jeux serveur-autoritaires) ; 2 joueurs par défaut.
-    // Le minimum s'applique au TOTAL humains + bots choisis par l'hôte.
-    const adapter = getGameAdapter(room.gameId)
-    const settings = parseRoomSettings(room.settingsJson)
-    const min = adapter?.minPlayers ?? 2
-    const max = adapter?.maxPlayers ?? Number.MAX_SAFE_INTEGER
-    const bots = adapter?.botsFillable ? Math.max(0, settings.botsCount ?? 0) : 0
-    const total = members.length + bots
-    if (total < min) {
-      return NextResponse.json(onlineErrorBody('min_players', { count: min }), { status: 400 })
-    }
-    if (members.length > max || total > max) {
-      return NextResponse.json(onlineErrorBody('max_players', { count: max }), { status: 400 })
-    }
-  }
-
-  // Mots Codés : 2 joueurs minimum PAR ÉQUIPE après répartition automatique.
-  if (room.gameId === 'mots-codes') {
-    const settings = parseRoomSettings(room.settingsJson)
-    const choices: Record<string, 'gold' | 'red'> = {}
-    for (const [userId, team] of Object.entries(settings.mcTeams ?? {})) {
-      choices[userId] = team === 'A' ? 'gold' : 'red'
-    }
-    const counts = mcTeamCounts(members.map((m) => m.userId), choices)
-    if (counts.gold < 2 || counts.red < 2) {
-      return NextResponse.json(onlineErrorBody('team_min_players'), { status: 400 })
-    }
-  }
-
-  // Tabou Vocal : 2 joueurs HUMAINS minimum par équipe — un bot ne décrit
-  // rien, ses manches tourneraient à vide (règle et raison dans online-tabou).
-  if (
-    room.gameId === 'tabou' &&
-    !tabouHasTwoHumansPerTeam(
-      members.map((m) => m.userId),
-      room.settingsJson
+  // Bornes du jeu, équipes de Mots Codés, 2 humains par équipe au Tabou : les
+  // mêmes contrôles que la fin du briefing (launch-roster.ts). Code + `count` :
+  // le client traduit lui-même.
+  const refusal = checkLaunchRoster(room, members.map((m) => m.userId))
+  if (refusal) {
+    return NextResponse.json(
+      onlineErrorBody(refusal.code, refusal.count === undefined ? undefined : { count: refusal.count }),
+      { status: 400 }
     )
-  ) {
-    return NextResponse.json(onlineErrorBody('team_min_players'), { status: 400 })
   }
 
   // Avec `force`, il ne reste que des membres prêts et l'hôte — qui, en
@@ -170,4 +127,4 @@ export async function POST(request: Request, { params }: Params) {
 
   const dto = await buildRoomDto(roomId, user.id)
   return NextResponse.json({ room: dto })
-}
+})

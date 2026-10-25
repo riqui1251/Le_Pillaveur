@@ -9,12 +9,17 @@ import {
   POLL_PLAYING_STREAM_OK_MS,
   POLL_PLAYING_WAIT_MS,
   STREAM_HEARTBEAT_MS,
+  STREAM_REOPEN_MAX_MS,
+  STREAM_REOPEN_MS,
   STREAM_WATCHDOG_MS,
+  isOtherRoom,
+  leavingRoomAfterEntry,
   mergePolledState,
   mergeServerView,
   pollDelayMs,
   roomEventDecision,
   roomEventVersion,
+  streamReopenDelayMs,
 } from './online-room-polling'
 
 /**
@@ -249,5 +254,59 @@ describe('mergePolledState', () => {
     const other = roomFixture({ id: 'r2' })
     expect(mergePolledState(other, 'r1', polled(6), 5)).toBe(other)
     expect(mergePolledState(null, 'r1', polled(6), 5)).toBeNull()
+  })
+})
+
+/**
+ * Changer de table (lien d'invitation, bandeau « Rejoindre ») : le serveur
+ * publie un `lobby` sur l'ancienne table AVANT de répondre au join, et son
+ * flux encore ouvert la relit. Course reproduite par l'audit : table A, join
+ * de B en vol, `lobby` sur A, join résolu (B), puis GET A → 403 — la table B
+ * était vidée et « tu n'es plus dans cette table » s'affichait.
+ */
+describe('changement de table', () => {
+  it('une réponse sur l’ancienne table ne touche pas à la nouvelle', () => {
+    // Le 403 de A arrive alors qu'on est assis à B.
+    expect(isOtherRoom('B', 'A')).toBe(true)
+  })
+
+  it('une réponse sur la table courante passe', () => {
+    expect(isOtherRoom('A', 'A')).toBe(false)
+  })
+
+  it('sans table courante, rien n’est « autre » : la raison d’un départ forcé passe encore', () => {
+    expect(isOtherRoom(null, 'A')).toBe(false)
+    expect(isOtherRoom(undefined, 'A')).toBe(false)
+  })
+
+  it('l’entrée à B met A sous verrou de départ', () => {
+    expect(leavingRoomAfterEntry('A', 'B')).toBe('A')
+  })
+
+  it('rentrer dans sa propre table, ou s’asseoir sans table d’avant, ne verrouille rien', () => {
+    expect(leavingRoomAfterEntry('A', 'A')).toBeNull()
+    expect(leavingRoomAfterEntry(null, 'B')).toBeNull()
+    expect(leavingRoomAfterEntry(undefined, 'B')).toBeNull()
+  })
+})
+
+/**
+ * Flux abandonné par le navigateur (502 du proxy au redéploiement, 429 du
+ * plafond de flux) : rouvert par nos soins, salle comme écran TV, avec un recul
+ * qui double à chaque abandon d'affilée.
+ */
+describe('streamReopenDelayMs', () => {
+  it('5 s, puis double à chaque abandon d’affilée', () => {
+    expect(streamReopenDelayMs(1)).toBe(STREAM_REOPEN_MS)
+    expect([1, 2, 3, 4].map(streamReopenDelayMs)).toEqual([5_000, 10_000, 20_000, 40_000])
+  })
+
+  it('plafonne à une minute', () => {
+    expect(streamReopenDelayMs(5)).toBe(STREAM_REOPEN_MAX_MS)
+    expect(streamReopenDelayMs(50)).toBe(STREAM_REOPEN_MAX_MS)
+  })
+
+  it('compteur remis à zéro (aucun abandon) : délai de base', () => {
+    expect(streamReopenDelayMs(0)).toBe(STREAM_REOPEN_MS)
   })
 })

@@ -23,7 +23,12 @@ vi.mock('@/lib/prisma', () => ({
 }))
 vi.mock('@/lib/online-president', () => ({ launchPresidentRoom: launchPresidentMock }))
 
-import { processRematchVote, REMATCH_PRESENCE_MS, resetRoomToWaitingLobby } from '@/lib/online-room-launch'
+import {
+  processRematchVote,
+  rematchRosterFits,
+  REMATCH_PRESENCE_MS,
+  resetRoomToWaitingLobby,
+} from '@/lib/online-room-launch'
 
 const MEMBERS = ['u1', 'u2', 'u3']
 
@@ -146,6 +151,30 @@ describe('processRematchVote', () => {
 
     await expect(processRematchVote('room-1', roomInput(snapshot), 'u1')).resolves.toBeUndefined()
     expect(launchPresidentMock).not.toHaveBeenCalled()
+  })
+
+  it('un vote déjà compté ne réécrit pas la salle : la version ne bouge pas', async () => {
+    // Avant : chaque clic du même joueur réécrivait l'état et montait la
+    // version (40 → 45 en 5 clics), faisant échouer en boucle le retour à la
+    // table et les votes des autres.
+    db = { gameStateJson: finished(['u1']), stateVersion: 40 }
+
+    for (let i = 0; i < 5; i++) await processRematchVote('room-1', roomInput(db), 'u1')
+
+    expect(roomMock.updateMany).not.toHaveBeenCalled()
+    expect(db.stateVersion).toBe(40)
+    expect(votesInDb()).toEqual(['u1'])
+    expect(launchPresidentMock).not.toHaveBeenCalled()
+  })
+
+  it('un vote déjà compté relance quand même dès que le quorum des présents est atteint', async () => {
+    db = { gameStateJson: finished(['u1', 'u2']), stateVersion: 4 }
+
+    // u3 est parti entre-temps : le nouveau clic de u1 suffit à relancer.
+    await processRematchVote('room-1', roomInput(db, ['u3']), 'u1')
+
+    expect(launchPresidentMock).toHaveBeenCalledTimes(1)
+    expect(launchedMemberIds()).toEqual(['u1', 'u2'])
   })
 
   it('refuse un vote sur une partie qui n est pas terminée', async () => {
@@ -306,6 +335,102 @@ describe('processRematchVote — Tabou Vocal', () => {
     const players = JSON.parse(write?.gameStateJson ?? '{}').players as { isBot: boolean }[]
     expect(players).toHaveLength(4)
     expect(players.some((p) => p.isBot)).toBe(false)
+  })
+})
+
+// Jeux sans bots de complément : un « Rejouer » sous l'effectif du jeu levait
+// dans le moteur (NOT_ENOUGH_PLAYERS, NEEDS_TWO_HUMANS_PER_TEAM), la relance
+// était annulée et chaque vote suivant refaisait le même échec. Comme le
+// Tabou, la table revient au lobby.
+describe('processRematchVote — effectif sous le minimum du jeu', () => {
+  const gameRoom = (
+    gameId: string,
+    userIds: string[],
+    row: Row,
+    { absent = [] as string[], settingsJson = null as string | null } = {}
+  ) => ({
+    id: 'room-1',
+    gameId,
+    hostUserId: userIds[0],
+    settingsJson,
+    members: userIds.map((userId) => ({
+      userId,
+      user: { displayName: userId },
+      lastSeenAt: absent.includes(userId) ? absentSince() : new Date(),
+    })),
+    gameStateJson: row.gameStateJson,
+    stateVersion: row.stateVersion,
+  })
+  const statusWrites = () =>
+    roomMock.update.mock.calls
+      .map((c) => (c[0] as { data: { status?: string } }).data.status)
+      .filter(Boolean)
+
+  it('Petit Bac à 2, partenaire absent : retiré, puis retour au lobby (pas d’échec en boucle)', async () => {
+    db = { gameStateJson: finished([]), stateVersion: 12 }
+
+    await expect(
+      processRematchVote('room-1', gameRoom('petit-bac', ['u1', 'u2'], db, { absent: ['u2'] }), 'u1')
+    ).resolves.toBeUndefined()
+
+    expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'room-1', userId: { in: ['u2'] } } })
+    expect(statusWrites()).toEqual(['waiting'])
+    expect(db).toMatchObject({ gameStateJson: null, stateVersion: 0 })
+  })
+
+  it('Téléphone Dessiné : 2 présents sur 3, retour au lobby', async () => {
+    db = { gameStateJson: finished(['u2']), stateVersion: 30 }
+
+    await processRematchVote('room-1', gameRoom('telephone-dessine', MEMBERS, db, { absent: ['u3'] }), 'u1')
+
+    expect(statusWrites()).toEqual(['waiting'])
+  })
+
+  it('Mots Codés : une équipe tombée sous 2 joueurs, retour au lobby', async () => {
+    db = { gameStateJson: finished(['b', 'c', 'd']), stateVersion: 20 }
+    const settingsJson = JSON.stringify({ mcTeams: { a: 'A', b: 'A', c: 'A', d: 'B', e: 'B' } })
+
+    await processRematchVote(
+      'room-1',
+      gameRoom('mots-codes', ['a', 'b', 'c', 'd', 'e'], db, { absent: ['e'], settingsJson }),
+      'a'
+    )
+
+    expect(statusWrites()).toEqual(['waiting'])
+  })
+
+  it('Petit Bac à 2 présents : relance normalement', async () => {
+    db = { gameStateJson: finished(['u2']), stateVersion: 12 }
+
+    await processRematchVote('room-1', gameRoom('petit-bac', ['u1', 'u2'], db), 'u1')
+
+    expect(statusWrites()).toEqual(['playing'])
+  })
+})
+
+describe('rematchRosterFits', () => {
+  const room = (gameId: string, userIds: string[], settingsJson: string | null = null) => ({
+    gameId,
+    settingsJson,
+    members: userIds.map((userId) => ({ userId })),
+  })
+
+  it('un jeu qui se complète avec des bots relance même seul', () => {
+    expect(rematchRosterFits(room('president', ['u1']))).toBe(true)
+    expect(rematchRosterFits(room('quiz', ['u1']))).toBe(true)
+  })
+
+  it('un jeu sans bots de complément exige son minimum', () => {
+    expect(rematchRosterFits(room('petit-bac', ['u1']))).toBe(false)
+    expect(rematchRosterFits(room('petit-bac', ['u1', 'u2']))).toBe(true)
+    expect(rematchRosterFits(room('telephone-dessine', ['u1', 'u2']))).toBe(false)
+    expect(rematchRosterFits(room('telephone-dessine', ['u1', 'u2', 'u3']))).toBe(true)
+  })
+
+  it('Mots Codés : 2 par équipe après répartition, les non-assignés comblent', () => {
+    const teams = JSON.stringify({ mcTeams: { a: 'A', b: 'A', c: 'A', d: 'B' } })
+    expect(rematchRosterFits(room('mots-codes', ['a', 'b', 'c', 'd'], teams))).toBe(false)
+    expect(rematchRosterFits(room('mots-codes', ['a', 'b', 'c', 'd', 'e'], teams))).toBe(true)
   })
 })
 

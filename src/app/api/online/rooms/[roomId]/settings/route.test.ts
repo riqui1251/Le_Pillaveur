@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { userMock, roomMock, memberMock, transactionMock, dtoMock, bus, cache } = vi.hoisted(() => ({
   userMock: vi.fn(),
-  roomMock: { findUnique: vi.fn(), update: vi.fn() },
+  roomMock: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   memberMock: { count: vi.fn(), updateMany: vi.fn() },
   transactionMock: vi.fn(),
   dtoMock: vi.fn(),
@@ -60,8 +60,8 @@ const put = (body: unknown, userId = 'host') => {
   )
 }
 
-/** Données écrites sur la salle par le changement de jeu (2e opération du lot). */
-const writtenRoomData = () => roomMock.update.mock.calls.at(-1)?.[0].data as {
+/** Données écrites sur la salle (compare-and-swap, 1re opération du lot au changement de jeu). */
+const writtenRoomData = () => roomMock.updateMany.mock.calls.at(-1)?.[0].data as {
   gameId?: string
   settingsJson: string
 }
@@ -69,7 +69,7 @@ const writtenRoomData = () => roomMock.update.mock.calls.at(-1)?.[0].data as {
 beforeEach(() => {
   vi.resetAllMocks()
   roomMock.findUnique.mockResolvedValue(waitingRoom())
-  roomMock.update.mockImplementation(async (args) => args)
+  roomMock.updateMany.mockResolvedValue({ count: 1 })
   memberMock.updateMany.mockImplementation(async (args) => args)
   memberMock.count.mockResolvedValue(2)
   transactionMock.mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops))
@@ -84,7 +84,7 @@ describe('PUT /settings — gameId validé', () => {
       expect(res.status, String(gameId)).toBe(400)
       expect((await res.json()).error).toBe('invalid_game')
     }
-    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).not.toHaveBeenCalled()
     expect(transactionMock).not.toHaveBeenCalled()
   })
 
@@ -124,7 +124,10 @@ describe('PUT /settings — réinitialisation au changement de jeu', () => {
 
     expect(res.status).toBe(200)
     expect(transactionMock).toHaveBeenCalledTimes(1)
-    expect(memberMock.updateMany).toHaveBeenCalledWith({ where: { roomId: 'room-1' }, data: { isReady: false } })
+    expect(memberMock.updateMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1', room: { gameId: 'menteur' } },
+      data: { isReady: false },
+    })
     const data = writtenRoomData()
     expect(data.gameId).toBe('menteur')
     const settings = JSON.parse(data.settingsJson)
@@ -195,12 +198,12 @@ describe('PUT /settings — cartes dans la langue de la table', () => {
       }
     }
     expect(transactionMock).not.toHaveBeenCalled()
-    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).not.toHaveBeenCalled()
   })
 
   it('accepte depuis une table française, ou sans langue (vaut le français)', async () => {
     for (const lang of ['fr', undefined]) {
-      roomMock.update.mockClear()
+      roomMock.updateMany.mockClear()
       roomMock.findUnique.mockResolvedValue(roomIn(lang))
       const res = await put({ gameId: 'sans-filtre' })
       expect(res.status, `table ${lang ?? 'sans langue'}`).toBe(200)
@@ -223,5 +226,54 @@ describe('PUT /settings — cartes dans la langue de la table', () => {
     const again = await put({ difficulty: 'difficile' })
     expect(again.status).toBe(200)
     expect(JSON.parse(writtenRoomData().settingsJson)).toMatchObject({ lang: 'en', difficulty: 'difficile' })
+  })
+})
+
+describe('PUT /settings — écriture concurrente d’un choix d’équipe', () => {
+  it('compare-and-swap sur les réglages lus : un choix d’équipe écrit entre-temps est conservé', async () => {
+    const fresh = waitingRoom({
+      settingsJson: JSON.stringify({ ...JSON.parse(waitingRoom().settingsJson), tcTeams: { host: 'A', bob: 'B', carol: 'A' } }),
+    })
+    roomMock.findUnique.mockResolvedValueOnce(waitingRoom()).mockResolvedValueOnce(fresh)
+    roomMock.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 })
+
+    const res = await put({ tcPowerups: false })
+
+    expect(res.status).toBe(200)
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(2)
+    expect(roomMock.updateMany.mock.calls[0][0].where).toEqual({
+      id: 'room-1',
+      status: 'waiting',
+      hostUserId: 'host',
+      gameId: 'toucher-coule',
+      settingsJson: waitingRoom().settingsJson,
+    })
+    expect(roomMock.updateMany.mock.calls[1][0].where.settingsJson).toBe(fresh.settingsJson)
+    expect(JSON.parse(writtenRoomData().settingsJson)).toMatchObject({
+      tcPowerups: false,
+      tcTeams: { host: 'A', bob: 'B', carol: 'A' },
+    })
+  })
+
+  it('conflits répétés : version_conflict, borné', async () => {
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+
+    const res = await put({ tcPowerups: false })
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).error).toBe('version_conflict')
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(10)
+  })
+
+  it('la table a été lancée pendant le conflit : game_already_started', async () => {
+    roomMock.findUnique.mockResolvedValueOnce(waitingRoom()).mockResolvedValueOnce(waitingRoom({ status: 'briefing' }))
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+
+    const res = await put({ tcPowerups: false })
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).error).toBe('game_already_started')
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(1)
   })
 })

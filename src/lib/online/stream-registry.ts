@@ -17,6 +17,7 @@
 
 const globalForStreams = globalThis as unknown as {
   __lpStreamCounts?: Map<string, number>
+  __lpTvStreams?: { total: number; perNetwork: Map<string, number> }
 }
 
 const counts = globalForStreams.__lpStreamCounts ?? new Map<string, number>()
@@ -41,7 +42,7 @@ if (!globalForStreams.__lpStreamCounts) {
  * toujours un plafond : il arrête la boucle d'un client cassé (ou d'un script)
  * qui empilerait les connexions jusqu'à la mémoire du conteneur, ce qui est le
  * seul but de ce compteur. Le flux TV n'y entre pas : il est public, sans
- * compte associé, et garde son propre quota par IP.
+ * compte associé, et a son propre compteur par réseau (acquireTvStream).
  */
 export const MAX_STREAMS_PER_USER = 12
 
@@ -82,7 +83,62 @@ export function streamCounts(): { total: number; accounts: number; maxPerAccount
   return { total, accounts: counts.size, maxPerAccount }
 }
 
+// ─── Flux TV publics ─────────────────────────────────────────────────────────
+
+const tvStreams = globalForStreams.__lpTvStreams ?? { total: 0, perNetwork: new Map<string, number>() }
+
+if (!globalForStreams.__lpTvStreams) {
+  globalForStreams.__lpTvStreams = tvStreams
+}
+
+/**
+ * Flux TV simultanés tolérés pour UN réseau (networkRateLimitKey : IPv4
+ * entière, IPv6 ramenée à son /64). Sans compte, le réseau est la seule
+ * identité : par adresse exacte, un script qui change d'adresse dans son /64
+ * à chaque requête n'était jamais compté. Seize couvrent un bar qui allume
+ * plusieurs écrans derrière la même box, les téléphones qui ouvrent la vue TV
+ * et les reconnexions dont l'ancien flux n'est pas encore ramassé.
+ */
+export const MAX_TV_STREAMS_PER_NETWORK = 16
+
+/**
+ * Plafond GLOBAL des flux TV : un /48 IPv6 contient 65 536 réseaux /64, le
+ * plafond par réseau ne borne donc rien à lui seul. Au-delà, une télé reçoit
+ * un 429 et retombe sur le sondage de secours : l'écran ralentit, le
+ * conteneur (1 Go) ne tombe pas.
+ */
+export const MAX_TV_STREAMS_TOTAL = 400
+
+/**
+ * Réserve une place de flux TV pour ce réseau. Même contrat qu'acquireStream :
+ * libération idempotente, ou `null` au plafond (du réseau ou global).
+ */
+export function acquireTvStream(networkKey: string): (() => void) | null {
+  if (tvStreams.total >= MAX_TV_STREAMS_TOTAL) return null
+  const current = tvStreams.perNetwork.get(networkKey) ?? 0
+  if (current >= MAX_TV_STREAMS_PER_NETWORK) return null
+  tvStreams.perNetwork.set(networkKey, current + 1)
+  tvStreams.total += 1
+
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    tvStreams.total = Math.max(0, tvStreams.total - 1)
+    const open = tvStreams.perNetwork.get(networkKey) ?? 0
+    if (open <= 1) tvStreams.perNetwork.delete(networkKey)
+    else tvStreams.perNetwork.set(networkKey, open - 1)
+  }
+}
+
+/** Photo des flux TV : des nombres, jamais une adresse. */
+export function tvStreamCounts(): { total: number; networks: number } {
+  return { total: tvStreams.total, networks: tvStreams.perNetwork.size }
+}
+
 /** Remise à zéro — réservée aux tests (le registre vit dans le processus). */
 export function resetStreamRegistry(): void {
   counts.clear()
+  tvStreams.total = 0
+  tvStreams.perNetwork.clear()
 }

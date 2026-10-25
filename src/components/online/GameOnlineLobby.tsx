@@ -35,7 +35,7 @@ import { copyText, shareLink } from '@/lib/native-share'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
 import { lgDebateMinutes } from '@/lib/loup-garou/debate'
 import { espionDiscussionMinutes } from '@/lib/espion/discussion'
-import { forceLaunchDecision, lobbyLaunchStatus, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
+import { forceLaunchDecision, isWrongGameLobby, lobbyLaunchStatus, MC_TEAM_MIN_PLAYERS, wrongGameError } from '@/components/online/lobby-launch'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
 type Visibility = (typeof VISIBILITY_OPTIONS)[number]
@@ -499,7 +499,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     // /invite/CODE : la page sert un aperçu OpenGraph qui montre LA table
     // (jeu + code) sur WhatsApp/Discord, puis redirige vers /jeux?join=.
     const url = `${window.location.origin}/invite/${room.code}`
-    const gameTitle = game?.title ?? 'Le Pillaveur'
+    const gameTitle = catalogTitle(gameId) || 'Le Pillaveur'
     const text = tOnline('share.text', { game: gameTitle, code: room.code })
     const outcome = await shareLink({ title: 'Le Pillaveur', text, url, clipboardText: `${text}\n${url}` })
     // Feuille ouverte ou refermée : elle a parlé d'elle-même, rien à ajouter.
@@ -588,11 +588,16 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
     setSwitchingTo(null)
   }
 
+  const wrongGameMessage = tOnline('errors.wrongGameRoom')
+  const wrongGame = isWrongGameLobby(room, gameId, tableMoved)
   useEffect(() => {
-    if (room && room.gameId !== gameId && room.status === 'waiting' && !tableMoved) {
-      setError(tOnline('errors.wrongGameRoom'))
-    }
-  }, [room, gameId, setError, tOnline, tableMoved])
+    setError((prev) => wrongGameError(prev, wrongGame, wrongGameMessage))
+  }, [wrongGame, wrongGameMessage, setError])
+  // Le message n'appartient qu'à cette page : il part avec elle (hub, page du bon jeu).
+  useEffect(
+    () => () => setError((prev) => wrongGameError(prev, false, wrongGameMessage)),
+    [wrongGameMessage, setError]
+  )
 
   // Badge « top 5 » : classement de CE jeu, pour repérer d'un coup d'œil les
   // meilleurs joueurs de la table avant de lancer.
@@ -717,7 +722,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
             <GameIconById id={gameId} surface="card" className="h-6 w-6" />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
+            <h1 className="truncate font-display text-base font-bold leading-tight">{catalogTitle(gameId)}</h1>
             <p className="text-xs text-[#6B6455]">
               {game?.maxPlayers && game.maxPlayers < 20
                 ? tOnline('playersRange.bounded', { min: game?.minPlayers ?? 2, max: game.maxPlayers })

@@ -37,7 +37,7 @@ vi.mock('@/lib/online/match-results', () => ({ recordMatchResults: recordMatchRe
 vi.mock('@/lib/online/room-ticker', () => ({ armRoomTickerForState: armForStateMock }))
 vi.mock('@/lib/online/game-adapters', () => ({
   getGameAdapter: (gameId: string | null) =>
-    gameId === 'fake'
+    gameId === 'fake' || gameId === 'autre-jeu'
       ? {
           parse: (json: string | null) => (json ? JSON.parse(json) : null),
           serialize: (state: unknown) => JSON.stringify(state),
@@ -205,5 +205,141 @@ describe('applyRoomAction — joueur (contrat de la route inchangé)', () => {
     expect(result).toMatchObject({ status: 409, body: { error: 'not_afk_yet' } })
     expect(updateManyMock).not.toHaveBeenCalled()
     expect(kickMemberMock).not.toHaveBeenCalled()
+  })
+})
+
+// Votes de Dilemmes, cartes de Sans Filtre, dépôts du Petit Bac au STOP, dessins
+// du Téléphone, réponse du Crobard pendant un trait : envoyés SANS version
+// attendue. Une écriture concurrente entre la lecture et le compare-and-swap
+// renvoyait un 409 muet côté client — le vote se perdait sans un mot.
+describe('applyRoomAction — intention joueur concurrente (sans expectedVersion)', () => {
+  /** Base fidèle au compare-and-swap : n'écrit que sur la version lue. */
+  function casDatabase() {
+    updateManyMock.mockImplementation(
+      async ({ where, data }: { where: { stateVersion: number }; data: Record<string, unknown> }) => {
+        if (!roomRow.current || where.stateVersion !== roomRow.current.stateVersion) return { count: 0 }
+        roomRow.current = { ...roomRow.current, ...data }
+        return { count: 1 }
+      }
+    )
+    findUniqueMock.mockImplementation(async () => (roomRow.current ? { ...roomRow.current } : null))
+    // Le moteur ajoute le vote de l'acteur à l'état qu'on lui donne.
+    applyActionMock.mockImplementation((state: { votes?: string[] }, actorId: string) => ({
+      ok: true,
+      state: { ...state, votes: [...(state.votes ?? []), actorId] },
+    }))
+  }
+  const votesInDb = () => (JSON.parse(String(roomRow.current?.gameStateJson)) as { votes?: string[] }).votes ?? []
+
+  it('deux votes simultanés sur la même version : les deux sont écrits, aucun 409', async () => {
+    casDatabase()
+
+    const results = await Promise.all([
+      applyRoomAction('r1', 'u1', { action: 'vote', choice: 'a' }),
+      applyRoomAction('r1', 'u2', { action: 'vote', choice: 'b' }),
+    ])
+
+    expect(results.map((r) => r.status)).toEqual([200, 200])
+    expect([...votesInDb()].sort()).toEqual(['u1', 'u2'])
+    expect(roomRow.current?.stateVersion).toBe(7)
+    // Le perdant a relu la salle et rejoué le moteur sur l'état frais.
+    expect(findUniqueMock).toHaveBeenCalledTimes(3)
+    expect(applyActionMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('rejoue le réducteur sur la salle relue, et répond avec la version écrite', async () => {
+    casDatabase()
+    // Un trait du dessinateur passe entre la lecture et l'écriture de la réponse.
+    updateManyMock.mockImplementationOnce(async () => {
+      roomRow.current = {
+        ...roomRow.current,
+        stateVersion: 6,
+        gameStateJson: JSON.stringify({ ...PLAYING, votes: ['trait'] }),
+      }
+      return { count: 0 }
+    })
+
+    const result = await applyRoomAction('r1', 'u1', { action: 'guess', text: 'chat' })
+
+    expect(result).toMatchObject({ status: 200, body: { ok: true, stateVersion: 7 } })
+    expect(applyActionMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ votes: ['trait'] }),
+      'u1',
+      { action: 'guess', text: 'chat' }
+    )
+    expect(updateManyMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { id: 'r1', stateVersion: 6 } })
+    )
+    expect(votesInDb()).toEqual(['trait', 'u1'])
+    expect(publishMock).toHaveBeenCalledTimes(1)
+    expect(publishMock).toHaveBeenCalledWith('r1', { type: 'changed', stateVersion: 7 })
+  })
+
+  it('le moteur revalide sur l’état relu : son refus est la réponse', async () => {
+    updateManyMock.mockResolvedValueOnce({ count: 0 })
+    applyActionMock
+      .mockReturnValueOnce({ ok: true, state: { ...PLAYING, turn: 'u1' } })
+      .mockReturnValueOnce({ ok: false, error: 'ALREADY_SUBMITTED', status: 409 })
+
+    const result = await applyRoomAction('r1', 'u1', { action: 'submit' })
+
+    expect(result).toMatchObject({ status: 409, body: { error: 'action_failed' } })
+    expect(updateManyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('abandonne après 5 écritures perdues : 409 version_conflict', async () => {
+    updateManyMock.mockResolvedValue({ count: 0 })
+
+    const result = await applyRoomAction('r1', 'u1', { action: 'vote' })
+
+    expect(result).toMatchObject({ status: 409, body: { error: 'version_conflict' } })
+    expect(updateManyMock).toHaveBeenCalledTimes(5)
+    expect(armForStateMock).not.toHaveBeenCalled()
+  })
+
+  it('avec expectedVersion, le 409 reste : le client a demandé cette version-là', async () => {
+    updateManyMock.mockResolvedValue({ count: 0 })
+
+    const result = await applyRoomAction('r1', 'u1', { action: 'bid', expectedVersion: 5 })
+
+    expect(result).toMatchObject({ status: 409, body: { error: 'version_conflict' } })
+    expect(updateManyMock).toHaveBeenCalledTimes(1)
+    expect(findUniqueMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('un tick d’arbitre n’est jamais rejoué sur un état plus récent', async () => {
+    updateManyMock.mockResolvedValue({ count: 0 })
+
+    for (const action of ['bot', 'advance', 'replace-left']) {
+      const result = await applyRoomAction('r1', 'u1', { action })
+      expect(result).toMatchObject({ status: 409, body: { error: 'version_conflict' } })
+    }
+    expect(updateManyMock).toHaveBeenCalledTimes(3)
+    expect(findUniqueMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('la salle est revenue au lobby entre-temps : la relecture le dit', async () => {
+    updateManyMock.mockImplementationOnce(async () => {
+      setRoom({ status: 'waiting' })
+      return { count: 0 }
+    })
+
+    const result = await applyRoomAction('r1', 'u1', { action: 'vote' })
+
+    expect(result).toMatchObject({ status: 400, body: { error: 'game_not_active' } })
+    expect(updateManyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('une autre partie a pris la place : rien n’est appliqué au nouveau jeu', async () => {
+    updateManyMock.mockImplementationOnce(async () => {
+      setRoom({ gameId: 'autre-jeu', stateVersion: 1 })
+      return { count: 0 }
+    })
+
+    const result = await applyRoomAction('r1', 'u1', { action: 'vote' })
+
+    expect(result).toMatchObject({ status: 409, body: { error: 'version_conflict' } })
+    expect(applyActionMock).toHaveBeenCalledTimes(1)
+    expect(updateManyMock).toHaveBeenCalledTimes(1)
   })
 })

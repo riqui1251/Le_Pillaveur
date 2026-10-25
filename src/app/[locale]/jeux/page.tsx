@@ -16,12 +16,15 @@ import { RecentGamesRow } from '@/components/online/RecentGamesRow'
 import { RecentLocalGamesRow } from '@/components/hub/RecentLocalGamesRow'
 import { OfflineBanner } from '@/components/hub/OfflineBanner'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
+import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { useRequireSelectedPlayers } from '@/hooks/useRequireSelectedPlayers'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { Link } from '@/i18n/navigation'
 import { COLLECTION_SLUGS } from '@/lib/collections'
 import { GAMES } from '@/lib/games'
+import { useLocalizedGames } from '@/lib/games-i18n'
+import { deepLinkJoinDecision } from './join-deep-link'
 
 /**
  * Le hub est rendu UNE fois au build, sans URL : tout ce qui lit
@@ -170,12 +173,28 @@ function SoloFilterFromUrl({ onChange }: { onChange: (solo: boolean) => void }) 
  * rejoint la salle et ouvre le jeu. Un visiteur pas encore connecté (ou
  * pas en mode online) garde le code sous le coude en localStorage — il est
  * consommé automatiquement dès qu'il arrive ici connecté en ligne, même
- * après le détour par l'inscription.
+ * après le détour par l'inscription. Déjà assis quelque part, il est renvoyé
+ * à sa propre table, ou on lui demande avant de quitter une partie en cours
+ * (cf. deepLinkJoinDecision).
  */
 function JoinDeepLink() {
   const router = useRouter()
   const { user, setPlayMode, loading: authLoading } = useAuth()
-  const { joinRoom } = useOnlineRoom()
+  const { joinRoom, fetchRoom } = useOnlineRoom()
+  const tOnline = useTranslations('hub.jeuxOnline')
+  const localizedGames = useLocalizedGames()
+  const [confirmDialog, confirm] = useConfirmAction()
+  // Lus au moment du lien : changer à chaque rendu ne doit pas relancer le join.
+  const latestRef = useRef({ tOnline, localizedGames, confirm })
+  latestRef.current = { tOnline, localizedGames, confirm }
+  // La confirmation se résout à `false` au démontage : on ne navigue plus alors.
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
   const isOnline = user?.playMode === 'online'
   const searchParams = useSearchParams()
   // DERNIER code tenté, pas un simple « déjà tenté » : un second lien
@@ -273,14 +292,39 @@ function JoinDeepLink() {
     } catch {
       // rien à nettoyer
     }
+    const pathOf = (gameId: string | null | undefined) => GAMES.find((g) => g.id === gameId)?.path
     void (async () => {
+      // Où est-on assis ? Sans réponse, on rejoint comme avant.
+      const current = await fetchRoom()
+      const decision = deepLinkJoinDecision(current, code)
+      if (decision === 'stay') {
+        const path = pathOf(current?.gameId)
+        if (path) router.replace(path)
+        return
+      }
+      if (decision === 'confirm') {
+        const { tOnline: t, localizedGames: games, confirm: ask } = latestRef.current
+        const game = games.find((g) => g.id === current?.gameId)?.title ?? ''
+        const ok = await ask({
+          title: t('inviteLeave.title'),
+          description: t('inviteLeave.description', { game }),
+          confirmLabel: t('inviteLeave.confirm'),
+          cancelLabel: t('inviteLeave.cancel'),
+        })
+        if (!mountedRef.current) return
+        if (!ok) {
+          const path = pathOf(current?.gameId)
+          if (path) router.replace(path)
+          return
+        }
+      }
       const joined = await joinRoom({ code })
       if (joined?.gameId) {
-        const game = GAMES.find((g) => g.id === joined.gameId)
-        if (game) router.replace(game.path)
+        const path = pathOf(joined.gameId)
+        if (path) router.replace(path)
       }
     })()
-  }, [searchParams, isOnline, user, joinRoom, router])
+  }, [searchParams, isOnline, user, joinRoom, fetchRoom, router])
 
   const dismissGate = () => {
     try {
@@ -296,6 +340,6 @@ function JoinDeepLink() {
   // vaut null pour TOUT LE MONDE, et un joueur déjà connecté se voyait
   // proposer de créer un second compte invité. Ni avant la déclaration
   // 18+ : son champ (autoFocus) ouvrait le clavier sous le portail.
-  if (!gateCode || user || authLoading || !ageVerified) return null
+  if (!gateCode || user || authLoading || !ageVerified) return <>{confirmDialog}</>
   return <JoinGate code={gateCode} onDismiss={dismissGate} />
 }

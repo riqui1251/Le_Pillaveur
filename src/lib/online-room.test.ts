@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // ce qui ne compte que, et qui perd son siège. Les effets (présence,
 // expulsion, départ d'une partie) s'observent par les écritures demandées à
 // la base et les notifications émises.
-const { memberMock, roomMock, bus, cache, sessions, adapters, ticker } = vi.hoisted(() => ({
+const { memberMock, roomMock, sessionModelMock, bus, cache, sessions, adapters, ticker } = vi.hoisted(() => ({
   memberMock: {
     updateMany: vi.fn(),
     deleteMany: vi.fn(),
@@ -14,14 +14,17 @@ const { memberMock, roomMock, bus, cache, sessions, adapters, ticker } = vi.hois
     findFirst: vi.fn(),
     count: vi.fn(),
   },
-  roomMock: { update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
+  roomMock: { update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), delete: vi.fn() },
+  sessionModelMock: { findMany: vi.fn() },
   bus: { publishRoomChanged: vi.fn() },
   cache: { invalidateLobbiesCache: vi.fn() },
   sessions: { closeGameSession: vi.fn(), closeGameSessionsOfPurgedRooms: vi.fn() },
   adapters: { getGameAdapter: vi.fn() },
   ticker: { armRoomTicker: vi.fn() },
 }))
-vi.mock('@/lib/prisma', () => ({ prisma: { onlineRoomMember: memberMock, onlineRoom: roomMock } }))
+vi.mock('@/lib/prisma', () => ({
+  prisma: { onlineRoomMember: memberMock, onlineRoom: roomMock, onlineGameSession: sessionModelMock },
+}))
 vi.mock('@/lib/online/room-bus', () => bus)
 vi.mock('@/lib/online/lobbies-cache', () => cache)
 vi.mock('@/lib/online/game-sessions', () => sessions)
@@ -29,6 +32,7 @@ vi.mock('@/lib/online/game-adapters', () => adapters)
 vi.mock('@/lib/online/room-ticker', () => ticker)
 
 import {
+  buildLobbyOverview,
   kickMember,
   leaveOtherRooms,
   planAbsentLobbyPurge,
@@ -153,6 +157,65 @@ describe('summarizeLiveGames', () => {
     const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
     expect(liveGamesTotal).toBe(2)
     expect(liveGames.map((g) => g.id).sort()).toEqual(['pleine', 'vide'])
+  })
+
+  it('n’annonce pas « en cours » une partie terminée', () => {
+    const rows = [room({ id: 'finie', gameOver: true }), room({ id: 'jeu', gameOver: false })]
+    const { liveGames, liveGamesTotal } = summarizeLiveGames(rows, NOW)
+    expect(liveGamesTotal).toBe(1)
+    expect(liveGames.map((g) => g.id)).toEqual(['jeu'])
+  })
+})
+
+// Une partie finie garde sa salle 'playing' jusqu'au retour au lobby (et les
+// votes « Rejouer » rajeunissent `updatedAt`) : le guichet la comptait « en
+// cours » 15 min de plus, comme une salle figée sans partie.
+describe('buildLobbyOverview — parties en cours', () => {
+  const liveRow = (id: string, status: string) => ({
+    id,
+    gameId: 'quiz',
+    status,
+    visibility: 'public',
+    createdAt: new Date(),
+    _count: { members: 3 },
+  })
+
+  beforeEach(() => {
+    // Purge et liste des tables ouvertes : rien ; parties en cours : les trois.
+    roomMock.findMany.mockImplementation(async (args: { where: { status: unknown } }) =>
+      args.where.status === 'waiting'
+        ? []
+        : [liveRow('en-jeu', 'playing'), liveRow('finie', 'playing'), liveRow('tuto', 'briefing')]
+    )
+    sessionModelMock.findMany.mockResolvedValue([{ roomId: 'en-jeu' }])
+  })
+
+  it('ne compte que les salles dont la partie a une ligne de journal ouverte, et le briefing', async () => {
+    const { liveGames, liveGamesTotal } = await buildLobbyOverview()
+
+    expect(liveGamesTotal).toBe(2)
+    expect(liveGames.map((g) => g.id).sort()).toEqual(['en-jeu', 'tuto'])
+    // Une lecture indexée du journal, pour les seules salles 'playing'.
+    expect(sessionModelMock.findMany).toHaveBeenCalledWith({
+      where: { roomId: { in: ['en-jeu', 'finie'] }, endedAt: null },
+      select: { roomId: true },
+    })
+    // Les états (lourds, porteurs de pseudos) ne sont jamais lus ici.
+    const liveQuery = roomMock.findMany.mock.calls
+      .map((c) => c[0] as { where: { status: unknown }; select?: Record<string, unknown> })
+      .find((q) => q.where.status !== 'waiting')
+    expect(liveQuery?.select).not.toHaveProperty('gameStateJson')
+  })
+
+  it('aucune salle en jeu : pas de lecture du journal', async () => {
+    roomMock.findMany.mockImplementation(async (args: { where: { status: unknown } }) =>
+      args.where.status === 'waiting' ? [] : [liveRow('tuto', 'briefing')]
+    )
+
+    const { liveGamesTotal } = await buildLobbyOverview()
+
+    expect(liveGamesTotal).toBe(1)
+    expect(sessionModelMock.findMany).not.toHaveBeenCalled()
   })
 })
 
@@ -528,17 +591,61 @@ describe('leaveOtherRooms', () => {
     expect(roomMock.delete).toHaveBeenCalledWith({ where: { id: 'lobby' } })
   })
 
-  it('un coup joué entre-temps gagne : le départ non marqué ne fait pas échouer le changement de table', async () => {
+  it('un coup joué entre-temps : relit la salle et marque le départ sur l’état frais', async () => {
+    memberMock.findMany.mockResolvedValue([{ room: playingRoom }])
+    roomMock.updateMany.mockResolvedValueOnce({ count: 0 }).mockResolvedValueOnce({ count: 1 })
+    // Entre-temps : un coup (version 8), et Bob est devenu l'hôte.
+    roomMock.findUnique.mockResolvedValueOnce({ ...playingRoom, stateVersion: 8, hostUserId: 'bob' })
+    memberMock.findFirst.mockResolvedValue({ userId: 'alice' })
+
+    await leaveOtherRooms('bob', 'nouvelle')
+
+    expect(roomMock.updateMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { id: 'partie', stateVersion: 8 } })
+    )
+    expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'partie', userId: 'bob' } })
+    // L'hôte relu (Bob) passe la main : la table qu'il laisse reste déblocable.
+    expect(roomMock.update).toHaveBeenCalledWith({ where: { id: 'partie' }, data: { hostUserId: 'alice' } })
+    expect(bus.publishRoomChanged).toHaveBeenCalledWith('partie', { type: 'changed', stateVersion: 9 })
+    expect(ticker.armRoomTicker).toHaveBeenCalledWith('partie')
+  })
+
+  it('marquage impossible après 3 essais : le siège est GARDÉ, pas de joueur fantôme', async () => {
+    // Avant : le siège partait quand même, le joueur restait actif dans le
+    // moteur sans `leftAt` — ni bannière Rejoindre, ni remplacement par un bot.
     memberMock.findMany.mockResolvedValue([{ room: playingRoom }])
     roomMock.updateMany.mockResolvedValue({ count: 0 })
+    roomMock.findUnique.mockImplementation(async () => ({ ...playingRoom, stateVersion: 8 }))
 
     await expect(leaveOtherRooms('bob', 'nouvelle')).resolves.toBeUndefined()
 
-    // Le siège est libéré quand même ; sans version nouvelle, on ne ment pas
-    // aux clients avec un `changed` : le remplacement AFK rattrapera le départ.
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(3)
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
+    // Rien d'écrit : ni notification, ni minuteur à recaler.
+    expect(bus.publishRoomChanged).not.toHaveBeenCalled()
+    expect(ticker.armRoomTicker).not.toHaveBeenCalled()
+  })
+
+  it('marquage impossible sur une table : les autres tables sont quand même quittées', async () => {
+    memberMock.findMany.mockResolvedValue([{ room: playingRoom }, { room: waitingRoom }])
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+    roomMock.findUnique.mockImplementation(async () => ({ ...playingRoom, stateVersion: 8 }))
+
+    await leaveOtherRooms('bob', 'nouvelle')
+
+    expect(memberMock.deleteMany).toHaveBeenCalledTimes(1)
+    expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'lobby', userId: 'bob' } })
+  })
+
+  it('salle disparue pendant la relecture : rien à marquer, le siège est libéré', async () => {
+    memberMock.findMany.mockResolvedValue([{ room: playingRoom }])
+    roomMock.updateMany.mockResolvedValue({ count: 0 })
+    roomMock.findUnique.mockResolvedValue(null)
+
+    await expect(leaveOtherRooms('bob', 'nouvelle')).resolves.toBeUndefined()
+
+    expect(roomMock.updateMany).toHaveBeenCalledTimes(1)
     expect(memberMock.deleteMany).toHaveBeenCalledWith({ where: { roomId: 'partie', userId: 'bob' } })
     expect(bus.publishRoomChanged).toHaveBeenCalledWith('partie', { type: 'lobby' })
-    // Rien d'écrit : le minuteur, s'il existe, tient déjà l'état en base.
-    expect(ticker.armRoomTicker).not.toHaveBeenCalled()
   })
 })

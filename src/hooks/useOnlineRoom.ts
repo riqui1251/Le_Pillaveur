@@ -9,53 +9,29 @@ import {
   resolveDepartureReason,
   resolveOnlineErrorCode,
   type DepartureReason,
+  type OnlineErrorCode,
 } from '@/lib/online-errors'
 import { isOnlineGameFinished, parseOnlineGameState } from '@/lib/online-game-state'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePagePresence } from '@/hooks/usePagePresence'
 import {
   DEFERRED_REFRESH_MAX_MS,
+  isOtherRoom,
+  leavingRoomAfterEntry,
   mergePolledState,
   mergeServerView,
   pollDelayMs,
   roomEventDecision,
   STREAM_WATCHDOG_MS,
+  streamReopenDelayMs,
   type ServerView,
 } from '@/hooks/online-room-polling'
 import { connectionStatus, serverReached, type ConnectionStatus } from '@/hooks/connection-status'
+import { noteServerDate } from '@/hooks/server-clock'
 
 // Cadences de sondage, tri des événements SSE et garde de version : logique
 // pure dans ./online-room-polling.ts (testée sans React ni réseau). Verdict
 // « connexion perdue » dit au joueur : ./connection-status.ts, même régime.
-
-/**
- * Délai avant de ROUVRIR un flux SSE que le navigateur a abandonné. Un
- * EventSource ne se reconnecte tout seul qu'après une coupure en cours de
- * route (readyState CONNECTING) ; s'il reçoit un statut non-200 (502 du proxy
- * pendant un redéploiement) ou une réponse qui n'est pas du text/event-stream
- * (portail captif), il passe CLOSED et n'y revient JAMAIS : tous les clients
- * de la table restaient alors au sondage serré (1,5 s) jusqu'au changement de
- * salle ou au rechargement — exactement les requêtes que la cadence longue
- * économise. Cinq secondes : le temps qu'un redéploiement finisse de
- * répondre, sans marteler un serveur qui redémarre.
- */
-const STREAM_REOPEN_MS = 5_000
-
-/**
- * Plafond de l'attente entre deux réouvertures refusées d'affilée.
- *
- * Un EventSource ne sait pas lire le STATUT qui l'a fait tomber : un 429 du
- * plafond de flux par compte (stream-registry.ts) le met CLOSED exactement
- * comme un 502 de redéploiement. À cadence fixe, l'onglet au plafond rejouait
- * donc /stream toutes les 5 s indéfiniment — douze requêtes par minute, chacune
- * avec sa lecture de session et de membre — et le refus ne peut PAS se lever
- * tout seul en cinq secondes : une place de flux ne se libère qu'à la mort
- * d'une connexion. On double l'attente à chaque échec consécutif jusqu'à une
- * minute ; le premier événement reçu (`ready`, `ping`…) remet le compteur à
- * zéro. Pendant ce temps le sondage de secours continue : la table reste à
- * jour, elle perd seulement le temps réel.
- */
-const STREAM_REOPEN_MAX_MS = 60_000
 
 /**
  * Délai de la seconde relecture de la salle après le signal `finished` : le
@@ -94,6 +70,40 @@ async function readDepartureReason(res: Response): Promise<DepartureReason | nul
     return resolveDepartureReason(data.reason)
   } catch {
     return null
+  }
+}
+
+/** Corps d'un refus de l'API salon : `error` (code, ou ancien texte), `code` à part pour certains. */
+export type ApiErrorBody = { error?: unknown; code?: unknown }
+
+/**
+ * Code d'erreur d'un refus de l'API salon, ou null. `code` d'abord : le refus
+ * de quota (rateLimitResponse) met une phrase FRANÇAISE dans `error` et le
+ * code dans `code` — la phrase s'affichait telle quelle aux joueurs EN/ES/IT.
+ * Partout ailleurs (apiError), `error` porte le même code.
+ */
+export function apiErrorCode(data: ApiErrorBody | null | undefined): OnlineErrorCode | null {
+  const resolve = (value: unknown) => (typeof value === 'string' ? resolveOnlineErrorCode(value) : null)
+  return resolve(data?.code) ?? resolve(data?.error)
+}
+
+/**
+ * Écriture du lobby (réglage, équipe, invitation) qui ne lève JAMAIS : une
+ * coupure (fetch lève) ou le 502 HTML d'un proxy pendant un redéploiement
+ * (parseApiJson lève) finissait en rejet non géré dans un onClick, sans un mot
+ * pour le joueur — qui croyait le bouton cassé. `onNetworkError` pose le
+ * message réseau, comme les autres actions du hook.
+ */
+export async function withNetworkFallback<T>(
+  write: () => Promise<T>,
+  onNetworkError: () => void,
+  fallback: T
+): Promise<T> {
+  try {
+    return await write()
+  } catch {
+    onNetworkError()
+    return fallback
   }
 }
 
@@ -182,14 +192,15 @@ export function useOnlineRoomState() {
   userIdRef.current = user?.id
   knownVersionRef.current = room?.stateVersion ?? null
 
-  /** Traduit le code d'erreur renvoyé par l'API (onlineLobby.errors) ;
-   *  texte brut si valeur inconnue, clé de secours si champ absent.
-   *  `count` accompagne les codes à trou (bornes de joueurs du lancement). */
+  /** Traduit le code d'erreur renvoyé par l'API (onlineLobby.errors, cf.
+   *  apiErrorCode) ; texte brut si valeur inconnue, clé de secours si champ
+   *  absent. `count` accompagne les codes à trou (bornes de joueurs du
+   *  lancement). */
   const apiError = useCallback(
-    (raw: string | undefined, fallbackKey: string, count?: number) => {
-      const code = resolveOnlineErrorCode(raw)
+    (data: ApiErrorBody, fallbackKey: string, count?: number) => {
+      const code = apiErrorCode(data)
       if (code) return t(code, count === undefined ? undefined : { count })
-      return raw ?? t(fallbackKey)
+      return typeof data.error === 'string' ? data.error : t(fallbackKey)
     },
     [t]
   )
@@ -265,7 +276,9 @@ export function useOnlineRoomState() {
       return null
     }
     try {
+      const sentAt = Date.now()
       const res = await fetch('/api/online/rooms/me', { credentials: 'include' })
+      noteServerDate(res, sentAt)
       notePollReach(serverReached(res.status))
       if (!res.ok) return null
       const data = await parseApiJson<{ room?: RoomDto }>(res)
@@ -312,8 +325,11 @@ export function useOnlineRoomState() {
    * annoncer « table fermée » dans ce cas-là serait faux.
    */
   const handleRoomGone = useCallback(
-    (status: number, reason: DepartureReason | null = null) => {
+    (roomId: string, status: number, reason: DepartureReason | null = null) => {
       const current = roomRef.current
+      // Réponse pour une table quittée entre-temps (lien d'invitation, bandeau
+      // « Rejoindre ») : elle ne dit rien de celle où l'on vient de s'asseoir.
+      if (isOtherRoom(current?.id, roomId)) return
       // Départ DÉJÀ annoncé : deux relectures étaient en vol (403 de /state
       // relu par le flux ET par le sondage), la seconde arrive sans raison —
       // le serveur l'a consommée à la première. Elle ne remplace pas « L'hôte
@@ -337,23 +353,26 @@ export function useOnlineRoomState() {
     /** Un refreshRoom plus récent a déjà répondu : cette réponse est périmée. */
     const superseded = () => seq < roomRefreshAppliedRef.current
     try {
+      const sentAt = Date.now()
       const res = await fetch(`/api/online/rooms/${roomId}`, { credentials: 'include' })
+      noteServerDate(res, sentAt)
       notePollReach(serverReached(res.status))
       if (leavingRoomIdRef.current === roomId) return null
-      if (superseded()) return null
+      if (superseded() || isOtherRoom(roomRef.current?.id, roomId)) return null
       if (!res.ok) {
         if (res.status === 403 || res.status === 404) {
           // Le 403 d'un départ forcé porte sa raison (lue une seule fois).
           const reason = res.status === 403 ? await readDepartureReason(res) : null
           if (leavingRoomIdRef.current === roomId || superseded()) return null
+          if (isOtherRoom(roomRef.current?.id, roomId)) return null
           roomRefreshAppliedRef.current = seq
-          handleRoomGone(res.status, reason)
+          handleRoomGone(roomId, res.status, reason)
         }
         return null
       }
       const data = await parseApiJson<{ room?: RoomDto }>(res)
       // Relu après la lecture du corps : un plus récent a pu répondre entre-temps.
-      if (superseded()) return null
+      if (superseded() || isOtherRoom(roomRef.current?.id, roomId)) return null
       roomRefreshAppliedRef.current = seq
       setRoom(data.room ?? null)
       return data.room as RoomDto | null
@@ -370,14 +389,18 @@ export function useOnlineRoomState() {
     // la réponse a pu se faire doubler (cf. mergePolledState).
     const knownAtRequest = knownVersionRef.current
     try {
+      const sentAt = Date.now()
       const res = await fetch(`/api/online/rooms/${roomId}/state`, { credentials: 'include' })
+      noteServerDate(res, sentAt)
       notePollReach(serverReached(res.status))
       if (leavingRoomIdRef.current === roomId) return null
+      // Changement de table pendant la requête : la réponse parle de l'ancienne.
+      if (isOtherRoom(roomRef.current?.id, roomId)) return null
       if (!res.ok) {
         // 403 : /state ne dit pas pourquoi — la relecture de la salle, si
         // (son 403 porte la raison d'un départ forcé, cf. refreshRoom).
         if (res.status === 403) void refreshRoom(roomId)
-        else if (res.status === 404) handleRoomGone(res.status)
+        else if (res.status === 404) handleRoomGone(roomId, res.status)
         return null
       }
       const data = await parseApiJson<{
@@ -385,6 +408,7 @@ export function useOnlineRoomState() {
         currentTurnUserId: string | null
         gameStateJson: string | null
       }>(res)
+      if (isOtherRoom(roomRef.current?.id, roomId)) return null
       // État vidé sous une partie qu'on croyait en cours : la table a changé
       // de statut (retour à la table d'attente, relance qui se distribue) —
       // /state ne porte pas le statut, seule la salle complète le dit.
@@ -507,11 +531,43 @@ export function useOnlineRoomState() {
     [applyServerView, resolveDeferredRefresh]
   )
 
+  /**
+   * Applique un DTO complet rendu par une ÉCRITURE (retour à la table,
+   * changement de jeu) : une relecture partie avant elle répondrait l'état
+   * d'avant (partie finie, ancien jeu) — elle est déclarée périmée, comme
+   * entre deux refreshRoom (dernier parti gagne).
+   */
+  const applyWrittenRoom = useCallback((next: RoomDto | null) => {
+    roomRefreshAppliedRef.current = ++roomRefreshSeqRef.current
+    setRoom(next)
+  }, [])
+
+  /**
+   * Entrée à une table (création, join) : une écriture comme les autres (cf.
+   * applyWrittenRoom), et la table d'avant — que le serveur vient de nous
+   * faire quitter (leaveOtherRooms) — passe sous verrou de départ (cf.
+   * leavingRoomAfterEntry). Son flux encore ouvert l'a relue : la réponse ne
+   * touche plus à la nouvelle table, et le « tu n'es plus dans cette table »
+   * qu'elle a pu poser pendant la requête tombe.
+   */
+  const enterRoom = useCallback(
+    (previousRoomId: string | null, next: RoomDto | null) => {
+      leavingRoomIdRef.current = leavingRoomAfterEntry(previousRoomId, next?.id)
+      // roomRef suit au rendu : posé ici pour qu'une réponse de l'ancienne
+      // table, dans la même image, se sache périmée (cf. isOtherRoom).
+      roomRef.current = next
+      applyWrittenRoom(next)
+      setError(null)
+    },
+    [applyWrittenRoom]
+  )
+
   const createRoom = useCallback(
     async (gameId: string, options?: { visibility?: 'public' | 'private' }) => {
       // Nouvelle table : le verrou de départ n'a plus lieu d'être (sinon un
       // retour dans une salle de même id resterait figé, jamais rafraîchi).
       leavingRoomIdRef.current = null
+      const previousRoomId = roomRef.current?.id ?? null
       setLoading(true)
       setError(null)
       try {
@@ -523,10 +579,10 @@ export function useOnlineRoomState() {
         })
         const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
         if (!res.ok) {
-          setError(apiError(data.error, 'createFailed'))
+          setError(apiError(data, 'createFailed'))
           return null
         }
-        setRoom(data.room ?? null)
+        enterRoom(previousRoomId, data.room ?? null)
         return data.room as RoomDto
       } catch {
         setError(t('network'))
@@ -535,11 +591,12 @@ export function useOnlineRoomState() {
         setLoading(false)
       }
     },
-    [apiError, t]
+    [apiError, t, enterRoom]
   )
 
   const joinRoom = useCallback(async (opts: { code?: string; roomId?: string }) => {
     leavingRoomIdRef.current = null
+    const previousRoomId = roomRef.current?.id ?? null
     setLoading(true)
     setError(null)
     try {
@@ -551,10 +608,10 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (!res.ok) {
-        setError(apiError(data.error, 'joinFailed'))
+        setError(apiError(data, 'joinFailed'))
         return null
       }
-      setRoom(data.room ?? null)
+      enterRoom(previousRoomId, data.room ?? null)
       return data.room as RoomDto
     } catch {
       setError(t('network'))
@@ -562,7 +619,7 @@ export function useOnlineRoomState() {
     } finally {
       setLoading(false)
     }
-  }, [apiError, t])
+  }, [apiError, t, enterRoom])
 
   const leaveRoom = useCallback(async () => {
     if (!room) return
@@ -580,7 +637,7 @@ export function useOnlineRoomState() {
         // (2 s) la faisait revenir — le joueur croyait ne pas pouvoir partir.
         leavingRoomIdRef.current = null
         const data = await parseApiJson<{ error?: string }>(res)
-        setError(apiError(data.error, 'generic'))
+        setError(apiError(data, 'generic'))
         return
       }
       setRoom(null)
@@ -605,7 +662,7 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (!res.ok) {
-        setError(apiError(data.error, 'rematchFailed'))
+        setError(apiError(data, 'rematchFailed'))
         return null
       }
       setRoom(data.room ?? null)
@@ -629,7 +686,7 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (res.ok) setRoom(data.room ?? null)
-      else setError(apiError(data.error, 'generic'))
+      else setError(apiError(data, 'generic'))
     } catch {
       // Sans ce filet, une coupure réseau remontait en rejet non capturé
       // (le clic « Prêt » ne dit rien et la case reste dans l'état d'avant).
@@ -656,7 +713,7 @@ export function useOnlineRoomState() {
       // (min_players / max_players), traduite ici avec le bon nombre.
       const data = await parseApiJson<{ room?: RoomDto; error?: string; count?: number }>(res)
       if (!res.ok) {
-        setError(apiError(data.error, 'launchFailed', data.count))
+        setError(apiError(data, 'launchFailed', data.count))
         return null
       }
       setRoom(data.room ?? null)
@@ -696,61 +753,79 @@ export function useOnlineRoomState() {
       preManches?: number
     }) => {
       if (!room) return null
-      const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(settings),
-      })
-      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
-      if (res.ok) {
-        setRoom(data.room ?? null)
-        return data.room as RoomDto
-      }
-      setError(apiError(data.error, 'generic'))
-      return null
+      return withNetworkFallback(
+        async () => {
+          const res = await fetch(`/api/online/rooms/${room.id}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(settings),
+          })
+          const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+          if (res.ok) {
+            setRoom(data.room ?? null)
+            return data.room as RoomDto
+          }
+          setError(apiError(data, 'generic'))
+          return null
+        },
+        () => setError(t('network')),
+        null
+      )
     },
-    [room, apiError]
+    [room, apiError, t]
   )
 
   const setTeam = useCallback(
     async (team: 'A' | 'B') => {
       if (!room) return null
-      const res = await fetch(`/api/online/rooms/${room.id}/team`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ team }),
-      })
-      const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
-      if (res.ok) {
-        setRoom(data.room ?? null)
-        return data.room as RoomDto
-      }
-      setError(apiError(data.error, 'generic'))
-      return null
+      return withNetworkFallback(
+        async () => {
+          const res = await fetch(`/api/online/rooms/${room.id}/team`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ team }),
+          })
+          const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
+          if (res.ok) {
+            setRoom(data.room ?? null)
+            return data.room as RoomDto
+          }
+          setError(apiError(data, 'generic'))
+          return null
+        },
+        () => setError(t('network')),
+        null
+      )
     },
-    [room, apiError]
+    [room, apiError, t]
   )
 
   const inviteFriend = useCallback(
     async (friendUserId: string) => {
       if (!room) return false
       setError(null)
-      const res = await fetch(`/api/online/rooms/${room.id}/invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ friendUserId }),
-      })
-      const data = await parseApiJson<{ error?: string }>(res)
-      if (!res.ok) {
-        setError(apiError(data.error, 'inviteFailed'))
-        return false
-      }
-      return true
+      return withNetworkFallback(
+        async () => {
+          const res = await fetch(`/api/online/rooms/${room.id}/invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ friendUserId }),
+          })
+          const data = await parseApiJson<{ error?: string }>(res)
+          if (!res.ok) {
+            setError(apiError(data, 'inviteFailed'))
+            return false
+          }
+          return true
+        },
+        () => setError(t('network')),
+        false
+      )
     },
-    [room, apiError]
+    [room, apiError, t]
   )
 
   /**
@@ -770,7 +845,7 @@ export function useOnlineRoomState() {
         })
         if (!res.ok) {
           const data = await parseApiJson<{ error?: string }>(res)
-          setError(apiError(data.error, 'kickFailed'))
+          setError(apiError(data, 'kickFailed'))
           return false
         }
         void refreshRoom(room.id)
@@ -782,17 +857,6 @@ export function useOnlineRoomState() {
     },
     [room, apiError, t, refreshRoom]
   )
-
-  /**
-   * Applique un DTO complet rendu par une ÉCRITURE (retour à la table,
-   * changement de jeu) : une relecture partie avant elle répondrait l'état
-   * d'avant (partie finie, ancien jeu) — elle est déclarée périmée, comme
-   * entre deux refreshRoom (dernier parti gagne).
-   */
-  const applyWrittenRoom = useCallback((next: RoomDto | null) => {
-    roomRefreshAppliedRef.current = ++roomRefreshSeqRef.current
-    setRoom(next)
-  }, [])
 
   /**
    * Fin de partie → retour à la table d'attente : même salle, même code (hôte,
@@ -811,7 +875,7 @@ export function useOnlineRoomState() {
       })
       const data = await parseApiJson<{ room?: RoomDto; error?: string }>(res)
       if (!res.ok) {
-        setError(apiError(data.error, 'backToTableFailed'))
+        setError(apiError(data, 'backToTableFailed'))
         return false
       }
       applyWrittenRoom(data.room ?? null)
@@ -845,7 +909,7 @@ export function useOnlineRoomState() {
         })
         const data = await parseApiJson<{ room?: RoomDto; error?: string; count?: number }>(res)
         if (!res.ok) {
-          setError(apiError(data.error, 'changeGameFailed', data.count))
+          setError(apiError(data, 'changeGameFailed', data.count))
           return false
         }
         applyWrittenRoom(data.room ?? null)
@@ -1016,7 +1080,7 @@ export function useOnlineRoomState() {
         // de flux, que le navigateur nous cache et qui ne se lèvera pas en
         // cinq secondes (cf. STREAM_REOPEN_MAX_MS).
         refusals += 1
-        reopen(Math.min(STREAM_REOPEN_MS * 2 ** (refusals - 1), STREAM_REOPEN_MAX_MS))
+        reopen(streamReopenDelayMs(refusals))
       }
     }
     const onChanged = (e: Event) => {

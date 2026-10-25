@@ -18,6 +18,9 @@ import { launchCrobardRoom } from '@/lib/online-crobard'
 import { launchTelephoneDessineRoom } from '@/lib/online-telephone-dessine'
 import { launchSansFiltreRoom } from '@/lib/online-sans-filtre'
 import { launchMotsCodesRoom } from '@/lib/online-mots-codes'
+import { mcTeamCounts } from '@/lib/mots-codes/server-adapter'
+import type { MCTeam } from '@/lib/mots-codes/engine'
+import { getGameAdapter } from '@/lib/online/game-adapters'
 import { launchDilemmesRoom } from '@/lib/online-dilemmes'
 import { launchPetitBacRoom } from '@/lib/online-petit-bac'
 import { launchPresidentRoom } from '@/lib/online-president'
@@ -300,9 +303,41 @@ async function dropAbsentMembers(
 }
 
 /**
+ * L'effectif restant (absents retirés) peut-il rejouer ? « Rejouer » ne passe
+ * pas par la route launch, qui vérifie ces règles au lobby ; sans elles, le
+ * moteur levait (NOT_ENOUGH_PLAYERS, NEEDS_TWO_HUMANS_PER_TEAM), la relance
+ * était annulée et chaque vote suivant refaisait le même échec.
+ *  - jeu qui ne se complète pas avec des bots (Téléphone Dessiné, Petit Bac,
+ *    Mots Codés, Tabou) : au moins `minPlayers` membres. Un jeu botsFillable
+ *    complète lui-même jusqu'au minimum de son moteur — rien à vérifier ;
+ *  - Mots Codés : 2 joueurs par équipe après la répartition du lancement ;
+ *  - Tabou Vocal : 2 HUMAINS par équipe (un bot ne décrit rien).
+ */
+export function rematchRosterFits(room: {
+  gameId: string | null
+  settingsJson: string | null
+  members: { userId: string }[]
+}): boolean {
+  const memberIds = room.members.map((m) => m.userId)
+  const adapter = getGameAdapter(room.gameId)
+  if (adapter && !adapter.botsFillable && memberIds.length < adapter.minPlayers) return false
+  if (room.gameId === 'mots-codes') {
+    const choices: Record<string, MCTeam> = {}
+    for (const [userId, team] of Object.entries(parseRoomSettings(room.settingsJson).mcTeams ?? {})) {
+      choices[userId] = team === 'A' ? 'gold' : 'red'
+    }
+    const counts = mcTeamCounts(memberIds, choices)
+    if (counts.gold < 2 || counts.red < 2) return false
+  }
+  if (room.gameId === 'tabou') return tabouHasTwoHumansPerTeam(memberIds, room.settingsJson)
+  return true
+}
+
+/**
  * Vote rematch : relance quand tous les membres PRÉSENTS ont voté, sinon
  * enregistre le vote. Les absents (REMATCH_PRESENCE_MS) sont retirés de la
- * table au moment de la relance.
+ * table au moment de la relance ; si l'effectif restant ne peut plus jouer
+ * (rematchRosterFits), la table revient au lobby.
  */
 export async function processRematchVote(roomId: string, room: RematchRoom, userId: string) {
   const gameId = room.gameId ?? ''
@@ -340,6 +375,7 @@ export async function processRematchVote(roomId: string, room: RematchRoom, user
 
   for (let attempt = 0; attempt < REMATCH_VOTE_ATTEMPTS; attempt++) {
     const votes = new Set(state.rematchVotes ?? [])
+    const alreadyVoted = votes.has(userId)
     votes.add(userId)
     // Seuls les présents font le quorum, et seuls leurs votes y comptent : un
     // membre qui a voté puis fermé l'onglet n'en fait plus partie — sinon son
@@ -368,17 +404,10 @@ export async function processRematchVote(roomId: string, room: RematchRoom, user
           // Les absents sortent AVANT le lancement, dans la même relance : la
           // nouvelle partie se distribue aux seuls présents.
           const relaunched = await dropAbsentMembers(roomId, room, presentMembers, absentUserIds)
-          // Tabou Vocal : la règle des 2 humains par équipe vaut aussi pour
-          // « Rejouer », qui ne passe pas par la route launch. Une table que les
-          // départs ont réduite ne repart pas avec des bots de complément (un
-          // bot ne décrit rien) : elle revient au lobby, qui affiche la règle.
-          if (
-            gameId === 'tabou' &&
-            !tabouHasTwoHumansPerTeam(
-              relaunched.members.map((m) => m.userId),
-              relaunched.settingsJson
-            )
-          ) {
+          // Une table que les départs ont réduite sous l'effectif du jeu (2 au
+          // Petit Bac, 3 au Téléphone, 2 par équipe en Mots Codés et au Tabou)
+          // ne repart pas : elle revient au lobby, qui affiche la règle.
+          if (!rematchRosterFits(relaunched)) {
             await resetRoomToWaitingLobby(roomId)
             return
           }
@@ -397,6 +426,11 @@ export async function processRematchVote(roomId: string, room: RematchRoom, user
         return
       }
     } else {
+      // Vote déjà compté et quorum pas atteint : rien à écrire. Réécrire la
+      // salle quand même faisait monter la version à chaque clic — un membre
+      // qui insistait faisait échouer en boucle le compare-and-swap des autres
+      // (retour à la table, votes concurrents).
+      if (alreadyVoted) return
       // Compare-and-swap : l'écriture inconditionnelle d'avant écrasait le
       // vote concurrent (lecture puis update sans garde), et le joueur dont
       // le vote sautait croyait pourtant avoir voté.

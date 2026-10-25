@@ -33,6 +33,27 @@ const SPEAKER_KEY = 'lp-voice-speaker'
 const SPEAKING_POLL_MS = 250
 const SPEAKING_THRESHOLD = 0.015
 
+/**
+ * Entrée en vocal PÉRIMÉE ? join() attend le micro (fenêtre d'autorisation du
+ * navigateur, sans délai) puis les identifiants ; pendant ce temps le joueur a
+ * pu quitter le vocal, la salle ou la page. leave() — appelé aussi au
+ * démontage et au changement de salle — fait avancer le jeton : la tentative
+ * qui reprend après son `await` rend alors le micro sans rien ouvrir. Sans
+ * cette garde, le flux de signalisation s'ouvrait et le « hello » partait vers
+ * la table, micro allumé, sans plus aucun dock pour le couper.
+ */
+export function isStaleVoiceJoin(
+  started: { attempt: number; roomId: string },
+  current: { attempt: number; roomId: string | null }
+): boolean {
+  return started.attempt !== current.attempt || started.roomId !== current.roomId
+}
+
+/** Rend le micro : coupe chaque piste (le voyant du navigateur s'éteint). */
+export function releaseStream(stream: { getTracks(): { stop(): void }[] } | null | undefined): void {
+  stream?.getTracks().forEach((t) => t.stop())
+}
+
 function loadMutedPeers(): Set<string> {
   if (typeof window === 'undefined') return new Set()
   try {
@@ -91,6 +112,10 @@ export function useVoiceChat(
   // du rendu précédent — sinon `join()` se croirait déjà connecté et ne ferait rien.
   const joinedRef = useRef(false)
   const joiningRef = useRef(false)
+  /** Jeton des tentatives d'entrée (et de reprise du micro), cf. isStaleVoiceJoin. */
+  const joinAttemptRef = useRef(0)
+  const roomIdRef = useRef(roomId)
+  roomIdRef.current = roomId
   deafenedRef.current = deafened
   mutedPeersRef.current = mutedPeers
   micMutedRef.current = micMuted
@@ -339,6 +364,7 @@ export function useVoiceChat(
   onSignalRef.current = onSignal
 
   const leave = useCallback(() => {
+    joinAttemptRef.current += 1
     for (const peerId of peersRef.current.keys()) {
       void sendSignal(peerId, 'bye')
     }
@@ -382,18 +408,31 @@ export function useVoiceChat(
     setError(null)
     setMicLost(false)
     setSignalingLost(false)
+    const started = { attempt: joinAttemptRef.current, roomId }
+    const stale = () =>
+      isStaleVoiceJoin(started, { attempt: joinAttemptRef.current, roomId: roomIdRef.current })
     try {
       // ⚠️ iOS Safari (et d'autres navigateurs mobiles) CONSOMMENT l'activation
       // utilisateur dès le premier `await`. Si on récupérait les identifiants
       // (fetch) AVANT `getUserMedia`, le micro échouerait « alors que la
       // permission est accordée ». On demande donc le micro EN PREMIER, dans le
       // geste, en parallèle des identifiants.
+      const media = navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
       const [stream, credsRes] = await Promise.all([
-        navigator.mediaDevices.getUserMedia({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        }),
+        media,
         fetch('/api/rtc/credentials', { credentials: 'include' }),
-      ])
+      ]).catch((e: unknown) => {
+        // Identifiants en échec : le micro, accordé entre-temps, ne doit pas
+        // rester pris sans personne pour le couper.
+        void media.then(releaseStream, () => {})
+        throw e
+      })
+      if (stale()) {
+        releaseStream(stream)
+        return
+      }
 
       // Droit d'accès : vocal coupé (site) ou joueur banni → on relâche le micro.
       if (credsRes.status === 403) {
@@ -404,6 +443,10 @@ export function useVoiceChat(
         return
       }
       const creds = credsRes.ok ? await credsRes.json().catch(() => null) : null
+      if (stale()) {
+        releaseStream(stream)
+        return
+      }
       iceServersRef.current = creds?.iceServers ?? [
         { urls: 'stun:stun.l.google.com:19302' },
       ]
@@ -437,6 +480,8 @@ export function useVoiceChat(
         .filter((m) => m.userId !== selfId)
         .forEach((m) => void sendSignal(m.userId, 'hello', { reply: false }))
     } catch (e) {
+      // Tentative abandonnée (vocal quitté, page fermée) : rien à annoncer.
+      if (stale()) return
       const name = (e as { name?: string })?.name
       setError(name === 'NotAllowedError' || name === 'NotFoundError' ? 'mic-denied' : 'network')
       localStreamRef.current?.getTracks().forEach((t) => t.stop())
@@ -454,10 +499,16 @@ export function useVoiceChat(
    */
   const resumeMic = useCallback(async () => {
     if (!joinedRef.current || !selfId) return
+    const attempt = joinAttemptRef.current
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
+      // Vocal quitté pendant la fenêtre d'autorisation : même règle qu'à l'entrée.
+      if (joinAttemptRef.current !== attempt) {
+        releaseStream(stream)
+        return
+      }
       const track = stream.getAudioTracks()[0]
       if (!track) throw new Error('no-audio-track')
 

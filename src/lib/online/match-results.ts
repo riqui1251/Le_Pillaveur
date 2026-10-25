@@ -41,8 +41,11 @@ import type { TelephoneState } from '@/lib/telephone-dessine/engine'
  * Règles de comptage :
  *  - seuls les COMPTES humains sont enregistrés (les bots de complément
  *    `bot-N` n'existent pas en base) ;
- *  - une partie ne compte que si AU MOINS DEUX comptes y participaient —
- *    sinon on farme des victoires contre des bots ;
+ *  - une partie ne compte que si AU MOINS DEUX comptes l'ont jouée jusqu'au
+ *    bout, sans être remplacés par un bot — sinon on farme des victoires
+ *    contre des bots : un second compte (invité ouvert en navigation privée)
+ *    qui rejoint puis quitte la table faisait le quorum, et son siège passé
+ *    bot devenait un adversaire de plus à battre. Partie solo, alors ;
  *  - un déserteur (humain remplacé par un bot en cours de partie) prend
  *    une DÉFAITE, même si son remplaçant a « gagné » (anti rage-quit).
  */
@@ -90,7 +93,7 @@ const PARTICIPATION_ONLY_GAMES = new Set([
 /** Applique les règles de comptage. Retourne [] si la partie ne compte pas. */
 export function computeMatchResults(outcomes: MatchOutcome[]): MatchResultRow[] {
   const accounts = outcomes.filter((o) => !FILLER_BOT_RE.test(o.playerId))
-  if (accounts.length < 2) return []
+  if (accounts.filter((o) => !o.isBot).length < 2) return []
   const playerCount = outcomes.length
   const humanCount = accounts.length
   return accounts.map((o) => ({
@@ -167,8 +170,9 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
     }
     case 'sans-filtre': {
       const s = state as SFState
-      // Rang « compétition » par couronnes (comme le Quiz) ; victoire = rang 1
-      // avec au moins une couronne (une partie sans couronnement ne sacre personne).
+      // Rang « compétition » par couronnes (comme le Quiz). La victoire, elle,
+      // est celle du moteur : un SEUL leader couronné (winnerId) — des ex æquo
+      // en tête, c'est l'« Égalité » de l'écran de fin, pas une victoire.
       const sorted = [...s.players].sort((a, b) => b.crowns - a.crowns)
       const rankOf = new Map<string, number>()
       sorted.forEach((p, i) => {
@@ -179,7 +183,7 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
       return s.players.map((p) => ({
         playerId: p.id,
         isBot: p.isBot,
-        won: p.crowns > 0 && rankOf.get(p.id) === 1,
+        won: p.id === s.winnerId,
         rank: rankOf.get(p.id),
       }))
     }
@@ -187,7 +191,12 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
       const s = state as PbcState
       // Rang « compétition » par score cumulé (comme le Quiz) ; victoire = rang 1
       // avec au moins un point (une partie à 0 partout ne sacre personne).
-      const sorted = [...s.players].sort((a, b) => b.total - a.total)
+      // Classés : les joueurs encore à table. Un déserteur n'est PAS converti
+      // en bot au Petit Bac (il reste leftAt, score gelé) : classé, son total
+      // d'avant le départ privait de victoire ceux qui ont fini la partie.
+      // Hors classement, il prend sa défaite anti rage-quit.
+      const seated = s.players.filter((p) => !p.leftAt)
+      const sorted = [...seated].sort((a, b) => b.total - a.total)
       const rankOf = new Map<string, number>()
       sorted.forEach((p, i) => {
         const prev = sorted[i - 1]
@@ -196,8 +205,6 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
       })
       return s.players.map((p) => ({
         playerId: p.id,
-        // Au Petit Bac, un déserteur n'est PAS converti en bot (il reste
-        // leftAt) : on le traite comme tel ici — défaite anti rage-quit.
         isBot: p.isBot || Boolean(p.leftAt),
         won: p.total > 0 && rankOf.get(p.id) === 1,
         rank: rankOf.get(p.id),
@@ -429,9 +436,10 @@ export async function recordMatchResults(
   const rows = computeMatchResults(outcomes)
 
   if (rows.length === 0) {
-    // Un seul compte humain (solo contre bots) : XP d'entraînement réduite,
-    // plafonnée aux premiers niveaux, sans ligne de classement ni streak au
-    // plafond — la première partie du funnel paie, le farm ne rapporte rien.
+    // Un seul compte encore humain à la fin (solo contre bots, ou adversaires
+    // tous remplacés par un bot) : XP d'entraînement réduite, plafonnée aux
+    // premiers niveaux, sans ligne de classement ni streak au plafond — la
+    // première partie du funnel paie, le farm ne rapporte rien.
     const solo = outcomes.filter((o) => !FILLER_BOT_RE.test(o.playerId) && !o.isBot)
     if (solo.length === 1) {
       const userId = solo[0].playerId

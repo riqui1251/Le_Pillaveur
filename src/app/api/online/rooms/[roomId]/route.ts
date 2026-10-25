@@ -9,6 +9,8 @@ import { onlineErrorBody } from '@/lib/online-errors'
 import { takeDeparture } from '@/lib/online/departures'
 import { armRoomTicker } from '@/lib/online/room-ticker'
 import { withApiRoute } from '@/lib/api-route'
+import { isBriefingExpired } from '@/lib/online/briefing'
+import { startBriefedGame } from './briefing-start'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -98,9 +100,20 @@ export const GET = withApiRoute('online/rooms/[roomId] GET', async (_request: Re
   // présence n'écrit en base qu'au plus toutes les 30 s
   // (PRESENCE_WRITE_INTERVAL_MS), le reste du temps l'UPDATE ne touche rien.
   await touchMemberPresence(roomId, user.id)
-  const dto = await buildRoomDto(roomId, user.id)
+  let dto = await buildRoomDto(roomId, user.id)
   if (!dto) {
     return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
+  }
+
+  // Filet serveur du briefing : échéance passée sans qu'aucun tick de timeout
+  // ne l'ait fait aboutir (horloges en avance, requêtes perdues) — le sondage
+  // lance la partie lui-même. Même code que /briefing-ack, idempotent.
+  if (dto.status === 'briefing' && dto.briefing && isBriefingExpired(dto.briefing, Date.now())) {
+    await startBriefedGame(roomId)
+    dto = await buildRoomDto(roomId, user.id)
+    if (!dto) {
+      return NextResponse.json(onlineErrorBody('room_not_found'), { status: 404 })
+    }
   }
 
   return NextResponse.json({ room: dto })
@@ -119,9 +132,16 @@ export const DELETE = withApiRoute('online/rooms/[roomId] DELETE', async (_reque
     return NextResponse.json({ ok: true })
   }
 
-  await prisma.onlineRoomMember.deleteMany({
+  // Pas membre (ou déjà sorti) : rien à faire, et surtout rien à diffuser.
+  // Sans ce garde, n'importe quel compte muni de l'identifiant d'une table
+  // publique (le guichet le montre) faisait relire la salle à tous ses
+  // joueurs, appel après appel.
+  const left = await prisma.onlineRoomMember.deleteMany({
     where: { roomId, userId: user.id },
   })
+  if (left.count === 0) {
+    return NextResponse.json({ ok: true })
+  }
 
   const remaining = await prisma.onlineRoomMember.count({ where: { roomId } })
 

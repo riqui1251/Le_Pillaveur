@@ -42,6 +42,37 @@ export const SERVICE_ACTOR_ID = '__service__'
  */
 const SERVICE_ACTIONS: ReadonlySet<unknown> = new Set(['bot', 'advance'])
 
+/**
+ * Ticks d'arbitre : décidés sur UNE version précise (le bot au tour, la phase
+ * échue, le délai de grâce lu sur `updatedAt`), jamais rejoués sur un état
+ * plus récent — un `bot` rejoué ferait jouer le bot SUIVANT sans son délai.
+ */
+const TICK_ACTIONS: ReadonlySet<unknown> = new Set(['bot', 'advance', 'replace-left', 'replace-afk'])
+
+/**
+ * Écritures tentées au plus pour une intention joueur envoyée SANS
+ * `expectedVersion` (vote de Dilemmes, carte de Sans Filtre, dépôt du Petit
+ * Bac au STOP, dessin du Téléphone, réponse du Crobard pendant un trait) : le
+ * joueur agit sur l'état tel qu'il sera à l'arrivée, un compare-and-swap
+ * perdu ne dit donc rien de son intention — une autre écriture est passée
+ * entre la lecture et l'écriture. On relit et on rejoue le réducteur, qui
+ * revalide tout (phase, tour, double dépôt). Le 409 restait muet côté client
+ * (useGameAction) : le vote ou la carte se perdaient sans un mot.
+ */
+const PLAYER_ACTION_ATTEMPTS = 5
+
+/**
+ * Attente de base (ms) avant de relire : les perdants d'une même vague se
+ * percutaient à nouveau sur la version suivante (même règle que le vote
+ * « Rejouer », online-room-launch.ts). Le grain aléatoire les désynchronise.
+ */
+const PLAYER_ACTION_RETRY_BASE_MS = 8
+
+/** Compare-and-swap perdu : une autre écriture est passée entre lecture et écriture. */
+const CAS_LOST = Symbol('cas-lost')
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 type ActionRoom = {
   id: string
   hostUserId: string
@@ -105,12 +136,41 @@ export async function loadActionRoom(
 /**
  * Seconde moitié : applique l'action à la salle chargée — version attendue,
  * moteur, compare-and-swap, expulsion AFK, fin de partie, diffusion.
+ * Une intention joueur sans `expectedVersion` qui perd le compare-and-swap
+ * est rejouée sur la salle relue (PLAYER_ACTION_ATTEMPTS) ; avec une version
+ * attendue, ou pour un tick, le 409 reste la réponse.
  */
 export async function applyActionToRoom(
   loaded: LoadedActionRoom,
   actorUserId: string | null,
   body: Record<string, unknown>
 ): Promise<RoomActionResult> {
+  const retryable =
+    actorUserId !== null && typeof body.expectedVersion !== 'number' && !TICK_ACTIONS.has(body.action)
+  let current = loaded
+  for (let attempt = 1; ; attempt += 1) {
+    const result = await applyActionOnce(current, actorUserId, body)
+    if (result !== CAS_LOST) return result
+    if (!retryable || attempt >= PLAYER_ACTION_ATTEMPTS) {
+      return { status: 409, body: onlineErrorBody('version_conflict') }
+    }
+    await sleep(PLAYER_ACTION_RETRY_BASE_MS * attempt + Math.random() * PLAYER_ACTION_RETRY_BASE_MS)
+    const reloaded = await loadActionRoom(loaded.roomId, actorUserId)
+    if (!reloaded.ok) return reloaded.result
+    // Une autre partie a pris la place (relance vers un autre jeu) : le corps
+    // a été lu et borné pour l'ancien, il ne s'applique pas au nouveau.
+    if (reloaded.loaded.room.gameId !== loaded.room.gameId) {
+      return { status: 409, body: onlineErrorBody('version_conflict') }
+    }
+    current = reloaded.loaded
+  }
+}
+
+async function applyActionOnce(
+  loaded: LoadedActionRoom,
+  actorUserId: string | null,
+  body: Record<string, unknown>
+): Promise<RoomActionResult | typeof CAS_LOST> {
   const { roomId, room, adapter } = loaded
 
   if (actorUserId === null && !SERVICE_ACTIONS.has(body.action)) {
@@ -173,7 +233,8 @@ export async function applyActionToRoom(
 
   // Compare-and-swap sur stateVersion : si deux actions concurrentes ont lu
   // la même version (ex. ticks « advance » d'un client et du serveur), une
-  // seule écrit — l'autre reçoit un 409 inoffensif. Garantit aussi que la
+  // seule écrit — l'autre reçoit un 409 inoffensif, ou est rejouée sur l'état
+  // relu (intention joueur, voir applyActionToRoom). Garantit aussi que la
   // transition vers `finished` (et donc l'enregistrement du classement) ne se
   // produit qu'UNE fois.
   const updated = await prisma.onlineRoom.updateMany({
@@ -184,9 +245,7 @@ export async function applyActionToRoom(
       currentTurnUserId,
     },
   })
-  if (updated.count === 0) {
-    return { status: 409, body: onlineErrorBody('version_conflict') }
-  }
+  if (updated.count === 0) return CAS_LOST
   // Minuteur de service réarmé DANS LA FOULÉE de l'écriture, avant tout autre
   // `await` : deux écritures successives réarment ainsi dans l'ordre de leurs
   // versions. Partie finie → le minuteur est coupé.

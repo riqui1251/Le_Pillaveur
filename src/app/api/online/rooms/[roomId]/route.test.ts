@@ -29,8 +29,12 @@ vi.mock('@/lib/online/room-bus', () => bus)
 vi.mock('@/lib/online/lobbies-cache', () => ({ invalidateLobbiesCache: vi.fn() }))
 vi.mock('@/lib/online/game-adapters', () => ({ getGameAdapter: adapterMock }))
 vi.mock('@/lib/online/room-ticker', () => ({ armRoomTicker: tickerMock }))
+vi.mock('./briefing-start', () => ({ startBriefedGame: vi.fn() }))
 
 import { DELETE, GET } from './route'
+import { buildRoomDto } from '@/lib/online-room'
+import { startBriefedGame } from './briefing-start'
+import { BRIEFING_TIMEOUT_MS } from '@/lib/online/briefing'
 import { recordDeparture } from '@/lib/online/departures'
 import { buildPetitBuveurEngineState } from '@/lib/petit-buveur/server-adapter'
 import type { GameAdapter } from '@/lib/online/game-adapters'
@@ -74,6 +78,56 @@ describe('GET /rooms/[roomId] — raison du 403', () => {
 
     expect(res.status).toBe(403)
     expect(await res.json()).toEqual({ error: 'forbidden', message: expect.any(String) })
+  })
+})
+
+describe('GET /rooms/[roomId] — filet serveur du briefing', () => {
+  const dtoMock = vi.mocked(buildRoomDto)
+  const startMock = vi.mocked(startBriefedGame)
+  const dto = (status: string, startedAt: number | null) =>
+    ({ id: 'room-1', status, briefing: startedAt === null ? null : { startedAt, acks: [] } }) as never
+
+  beforeEach(() => {
+    memberMock.findUnique.mockResolvedValue({ roomId: 'room-1', userId: 'alice' })
+  })
+
+  it('échéance passée sans tick reçu : le sondage lance la partie et rend la salle relue', async () => {
+    dtoMock
+      .mockResolvedValueOnce(dto('briefing', Date.now() - BRIEFING_TIMEOUT_MS - 1))
+      .mockResolvedValueOnce(dto('playing', null))
+
+    const res = await get('alice')
+
+    expect(res.status).toBe(200)
+    expect(startMock).toHaveBeenCalledTimes(1)
+    expect(startMock).toHaveBeenCalledWith('room-1')
+    expect((await res.json()).room.status).toBe('playing')
+  })
+
+  it('briefing en cours, ou partie déjà lancée : rien', async () => {
+    dtoMock.mockResolvedValueOnce(dto('briefing', Date.now() - 1_000))
+    await get('alice')
+    dtoMock.mockResolvedValueOnce(dto('playing', null))
+    await get('alice')
+
+    expect(startMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /rooms/[roomId] — hors de la table', () => {
+  it('un non-membre ne déclenche ni écriture ni diffusion', async () => {
+    roomMock.findUnique.mockResolvedValue(playingRoom())
+    memberMock.deleteMany.mockResolvedValue({ count: 0 })
+
+    const res = await leave('stranger')
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(memberMock.count).not.toHaveBeenCalled()
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(roomMock.updateMany).not.toHaveBeenCalled()
+    expect(roomMock.delete).not.toHaveBeenCalled()
+    expect(bus.publishRoomChanged).not.toHaveBeenCalled()
   })
 })
 
