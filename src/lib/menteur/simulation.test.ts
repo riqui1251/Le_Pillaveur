@@ -7,7 +7,7 @@ import {
   pickBotPersonas,
   type BotTrait,
 } from '@/lib/online/bot-personas'
-import { createRng, rngFromState } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 import {
   countMatches,
   createMenteurState,
@@ -239,7 +239,7 @@ function recordBot(
   name: string,
   d: MenteurBotDecision,
   after: MenteurState,
-  rngState: number
+  rngState: RngState
 ) {
   const traits = botTraitsFor(name)
   const tt = t.byTrait[traits.trait]

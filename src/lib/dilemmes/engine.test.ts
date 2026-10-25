@@ -29,8 +29,14 @@ function fourPlayers(botLast = false) {
   }))
 }
 
+/** Graine choisie pour que le mélange rende les cartes dans l'ordre de CARDS, que les tests supposent. */
+const SEED = 'seed-1'
+
 function make(botLast = false, rounds = 3): DilState {
-  const raw = createDilState(fourPlayers(botLast), CARDS, 'seed', T0 - DIL_COUNTDOWN_MS, rounds)
+  const raw = createDilState(fourPlayers(botLast), CARDS, SEED, T0 - DIL_COUNTDOWN_MS, rounds)
+  if (raw.cards.some((card, i) => card !== CARDS[i])) {
+    throw new Error('SEED à changer : les cartes ne sortent plus dans l’ordre de CARDS')
+  }
   return reduceDil(raw, { type: 'ADVANCE', claimedKey: phaseKey(raw), now: T0 })
 }
 

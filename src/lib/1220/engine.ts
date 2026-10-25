@@ -1,5 +1,5 @@
 import { evaluatePlayerRoll1220, type Choices1220 } from '@/lib/game-1220'
-import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -92,7 +92,7 @@ export function createGame1220State(
   }
   return {
     version: 1,
-    rngState: hashSeed(seed),
+    rngState: createRng(seed).getState(),
     players: players.map((p) => ({ id: p.id, name: p.name, isBot: Boolean(p.isBot), leftAt: null })),
     ...enterPhase(0, 'setup', GAME_1220_SETUP_MS, now),
     phase: 'setup',

@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { personaForBotName } from '@/lib/online/bot-personas'
 
@@ -140,7 +140,7 @@ export type PreState = TimedPhaseState & {
   /** Échange automatique appliqué au début de la manche courante. */
   lastExchange: PreExchange | null
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type PreAction =

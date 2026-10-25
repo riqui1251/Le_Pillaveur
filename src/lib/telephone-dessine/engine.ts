@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { sanitizeStrokes, type Stroke } from '@/lib/crobard/engine'
 
@@ -86,7 +86,7 @@ export type TelephoneState = TimedPhaseState & {
   revealLinkIdx: number
   rematchVotes: string[]
   /** SECRET serveur — sert UNIQUEMENT à l'ordre de reveal, aucun tirage de contenu. */
-  rngState: number
+  rngState: RngState
 }
 
 export type TelephoneAction =

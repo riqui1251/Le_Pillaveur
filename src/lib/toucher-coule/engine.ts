@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 
 /**
  * Moteur pur Toucher-Coulé (bataille navale par équipes) — SERVEUR-AUTORITAIRE.
@@ -89,7 +89,7 @@ export type TCState = {
   lastShot: TCLastShot | null
   rematchVotes: string[]
   version: number
-  rngState: number
+  rngState: RngState
   /** Power-up "Bombe" activé pour la partie (choix hôte, figé au lancement). */
   rulePowerups: boolean
 }

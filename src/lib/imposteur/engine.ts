@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 
@@ -197,7 +197,7 @@ export type ImposteurState = TimedPhaseState & {
    */
   speech?: ImposteurSpeech[]
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
 }
 
 export type ImposteurAction =

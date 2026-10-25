@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 
 /**
@@ -182,7 +182,7 @@ export type MenteurState = {
   winnerId: string | null
   rematchVotes: string[]
   /** SECRET serveur — jamais dans une vue client. */
-  rngState: number
+  rngState: RngState
   /** Règle Palifico activée pour la partie (choix hôte, figé au lancement). */
   rulePalifico: boolean
   /** Règle Calza activée pour la partie (choix hôte, figé au lancement). */

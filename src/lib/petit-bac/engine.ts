@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -106,7 +106,7 @@ export type PbcState = TimedPhaseState & {
   /** Cases invalidées par la majorité (clés `${playerId}:${catIndex}`). */
   rejected: string[]
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type PbcAction =

@@ -423,7 +423,7 @@ describe('plafond, sobriété et anti-triche', () => {
       const rng = createRng(`brouille-${i}`)
       const other: MenteurState = {
         ...s,
-        rngState: (s.rngState ^ 0x5bd1e995) >>> 0,
+        rngState: createRng(`brouille-rng-${i}`).getState(),
         players: s.players.map((p) => (p.id === botId ? p : { ...p, dice: p.dice.map(() => rng.int(1, 6)) })),
       }
       const a = applyMenteurBotAction(s, createRng(`c-${i}`).next, T0, createRng(`d-${i}`).next)

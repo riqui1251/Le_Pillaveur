@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotSpeech } from '@/lib/online/bot-speech'
 import { espionLocationIdOf, normalizeEspionLocationName } from './data'
@@ -148,7 +148,7 @@ export type EspionState = TimedPhaseState & {
   rematchVotes: string[]
   winnerTeam: EspionRole | null
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
   /**
    * PUBLIC — le fil de la manche courante et de la précédente. Absent des
    * parties lancées avant le fil : elles se reparsent avec un fil vide.

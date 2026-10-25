@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import type { BotTrait } from '@/lib/online/bot-personas'
 import { mostSuspect, speechSuspicion, type BotSpeech, type SpeechMood } from '@/lib/online/bot-speech'
@@ -186,7 +186,7 @@ export type LGState = TimedPhaseState & {
   winnerTeam: LGTeam | null
   rematchVotes: string[]
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
 }
 
 export type LGAction =

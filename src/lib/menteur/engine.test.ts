@@ -795,7 +795,7 @@ describe('IA du bot : décision sur sa seule vue, rejouable par graine', () => {
     const rng = createRng(seed)
     return {
       ...s,
-      rngState: (s.rngState ^ 0x5bd1e995) >>> 0,
+      rngState: createRng(`${seed}-rng`).getState(),
       players: s.players.map((p) => (p.id === keepId ? p : { ...p, dice: p.dice.map(() => rng.int(1, 6)) })),
     }
   }
@@ -1127,7 +1127,7 @@ describe('mémoire de la table : la chaîne des enchères et les duels', () => {
           const rng = createRng(`brouille-${g}-${i}-${viewer.id}`)
           const other: MenteurState = {
             ...s,
-            rngState: (s.rngState ^ 0x2545f491) >>> 0,
+            rngState: createRng(`brouille-rng-${g}-${i}-${viewer.id}`).getState(),
             players: s.players.map((p) =>
               p.id === viewer.id ? p : { ...p, dice: p.dice.map(() => rng.int(1, 6)) }
             ),

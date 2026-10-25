@@ -259,7 +259,7 @@ describe('imposteurClueBookFor — le carnet des mots publics', () => {
 })
 
 describe('applyImposteurBotAction — vote et révélation', () => {
-  it('vote raisonné : chaque bot vote sur SA vue — tous (farceur à part) visent l’humain resté muet', () => {
+  it('vote raisonné : chaque bot vote sur SA vue — tous (farceur et imposteur à part) visent l’humain resté muet', () => {
     for (let seed = 0; seed < 10; seed += 1) {
       const rand = createRng(`mute-${seed}`).next
       let s = make(seed)
@@ -279,8 +279,9 @@ describe('applyImposteurBotAction — vote et révélation', () => {
       const r = applyImposteurBotAction(s, rand, s.phaseEndsAt! - IMPOSTEUR_BOT_VOTE_MARGIN_MS, deps)
       expect(r.ok).toBe(true)
       if (!r.ok) return
-      for (const bot of s.players.filter((p) => p.isBot && p.name !== 'Gépéto')) {
-        expect(r.state.pendingVotes[bot.id]).toBe('h1')
+      // Le bot imposteur vote en bluffeur (imposteurBotVote) : lui seul peut viser ailleurs.
+      for (const bot of s.players.filter((p) => p.isBot && p.name !== 'Gépéto' && p.team !== 'imposteur')) {
+        expect(r.state.pendingVotes[bot.id], `graine ${seed} : ${bot.id}`).toBe('h1')
       }
     }
   })

@@ -1,4 +1,4 @@
-import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -66,7 +66,7 @@ export type SFState = TimedPhaseState & {
   winnerId: string | null
   rematchVotes: string[]
   /** SECRET serveur. */
-  rngState: number
+  rngState: RngState
 }
 
 export type SFAction =

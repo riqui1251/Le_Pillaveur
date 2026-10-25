@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -60,7 +60,7 @@ export type MCState = TimedPhaseState & {
   /** 'assassin' si la partie s'est finie sur la tuile noire. */
   loseReason: 'assassin' | null
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type MCAction =

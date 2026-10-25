@@ -10,7 +10,7 @@ import {
   type Difficulty,
   type EngineCase,
 } from './types'
-import { rngFromState, hashSeed, type RngState, type SeededRng } from './rng'
+import { createRng, rngFromState, type RngState, type SeededRng } from './rng'
 import { generateCase } from './case-generator'
 
 /**
@@ -260,7 +260,7 @@ export function createInitialState(
 ): EngineState {
   return {
     version: 0,
-    rngState: hashSeed(seed),
+    rngState: createRng(seed).getState(),
     settings,
     players: players.map((p) => ({
       id: p.id,

@@ -1,4 +1,4 @@
-import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
+import { createRng, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 
 /**
  * Moteur pur du Purple en ligne — SERVEUR-AUTORITAIRE.
@@ -101,7 +101,7 @@ export function createPurpleState(
   players: { id: string; name: string; isBot?: boolean }[],
   seed: string | number
 ): PurpleState {
-  const rng = rngFromState(hashSeed(seed))
+  const rng = createRng(seed)
   const deck = rng.shuffle(freshDeck())
   return {
     version: 1,

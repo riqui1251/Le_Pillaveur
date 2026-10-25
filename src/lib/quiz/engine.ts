@@ -1,4 +1,4 @@
-import { createRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -89,7 +89,7 @@ export type QuizState = TimedPhaseState & {
   answers: Record<string, QuizAnswer>
   lastResult: QuizQuestionResult | null
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type QuizAction =

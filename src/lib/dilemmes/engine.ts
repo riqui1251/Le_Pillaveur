@@ -1,4 +1,4 @@
-import { createRng, type SeededRng } from '@/lib/petit-buveur/rng'
+import { createRng, type RngState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
 /**
@@ -46,7 +46,7 @@ export type DilState = TimedPhaseState & {
   /** Public en `reveal` : votes de la manche close. */
   lastReveal: DilRevealEntry[] | null
   rematchVotes: string[]
-  rngState: number
+  rngState: RngState
 }
 
 export type DilAction =
