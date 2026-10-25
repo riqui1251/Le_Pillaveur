@@ -5,13 +5,12 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # postinstall lance prisma generate : le schema n'est pas encore copié ici.
-# --legacy-peer-deps reste : `npm ls --depth=0` est propre en local, mais
-# `npm install --dry-run` (21/09/2026) signale encore un conflit de pairs que
-# npm 11 contourne en avertissant (vite@7 exige @types/node >= 20.19, le
-# projet est en 20.17) et que le npm 10 de node:22-alpine peut refuser. Le
-# retirer ne se vérifie qu'en construisant l'image, c'est-à-dire ici, sur le
-# VPS, où un refus coûterait un déploiement. Le jour où il saute, ce sera
-# après un `npm ci` sans le drapeau réussi dans un dossier vierge.
+# --legacy-peer-deps reste par prudence, mais ne change plus rien : depuis le
+# 25/10/2026, `npm ci` installe le même arbre avec ou sans lui (vérifié dans
+# un dossier vierge, npm 10.9), et src/lib/package-lock.test.ts refuse un lock
+# dont une dépendance paire n'est pas satisfaite. Le retirer ne se vérifie
+# qu'en construisant l'image, donc ici, sur le VPS, où un refus coûterait un
+# déploiement.
 RUN npm ci --legacy-peer-deps --ignore-scripts
 
 FROM node:22-alpine AS builder

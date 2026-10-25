@@ -365,3 +365,35 @@ describe("onglet Surveillance : écriture des fichiers d'état", () => {
     expect(detailPathLeaks(clean)).toEqual([])
   })
 })
+
+// ---------------------------------------------------------------------------
+// Image de prod : sans --pull, docker reconstruit indéfiniment sur le
+// node:22-alpine tiré au premier build du VPS, et les correctifs de Node et
+// d'Alpine n'arrivent jamais en prod.
+// ---------------------------------------------------------------------------
+
+/** Tags construits par les `docker build` de l'image applicative, avec ou sans --pull. */
+function appImageBuilds(source: string): { tag: string; pull: boolean }[] {
+  return source
+    .split('\n')
+    .filter((l) => /^\s*docker build\b/.test(l))
+    .flatMap((l) => {
+      const tag = l.match(/ -t (le-pillaveur:[\w.-]+)/)?.[1]
+      return tag ? [{ tag, pull: /\s--pull(?=\s)/.test(l) }] : []
+    })
+}
+
+describe("image de prod : base Node rafraîchie à chaque déploiement", () => {
+  const builds = appImageBuilds(readScript('prod-deploy.sh'))
+
+  it('repère les deux builds de prod-deploy.sh (garde du test lui-même)', () => {
+    expect(builds.map((b) => b.tag)).toEqual(['le-pillaveur:latest', 'le-pillaveur:builder'])
+    expect(
+      appImageBuilds('docker build -q -t "$SQLITE_IMAGE" -f x .\ndocker build --build-arg A=1 -t le-pillaveur:latest .'),
+    ).toEqual([{ tag: 'le-pillaveur:latest', pull: false }])
+  })
+
+  it.each(builds)('$tag : construit avec --pull', ({ pull }) => {
+    expect(pull).toBe(true)
+  })
+})
