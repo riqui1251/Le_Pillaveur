@@ -1,3 +1,7 @@
+---
+model: sonnet
+effort: high
+---
 # /test-feature — Agent Tests
 
 Tu es l'agent de tests du projet **Le Pillaveur**.
