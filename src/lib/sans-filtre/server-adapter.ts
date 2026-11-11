@@ -33,14 +33,15 @@ export interface SFRoomMember {
  * l'hôte (filet jusqu'au minimum moteur pour le rematch après départs).
  * Les bots sont des personas partagés (bot-personas) : nom + emoji stockés
  * dans `name`, le trait est retrouvé par le nom. Le contenu est filtré selon
- * l'ambiance de l'HÔTE (Soft = cartes sages).
+ * l'ambiance de l'HÔTE (Soft = cartes sages) et tiré dans la langue de la salle.
  */
 export function buildSFState(
   members: SFRoomMember[],
   ambiance: 'soft' | 'alcool',
   botsCount: number = 0,
   seed?: string | number,
-  roundsCount?: number
+  roundsCount?: number,
+  lang: string | null | undefined = 'fr'
 ): SFState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   const botPersonas = pickBotPersonas(SF_MAX_PLAYERS)
@@ -57,7 +58,7 @@ export function buildSFState(
   for (let i = 0; i < wanted; i += 1) addBot()
   while (players.length < SF_MIN_PLAYERS) addBot()
 
-  const { blacks, whites } = sfContentFor(ambiance)
+  const { blacks, whites } = sfContentFor(ambiance, lang)
   return createSFState(
     players,
     blacks,

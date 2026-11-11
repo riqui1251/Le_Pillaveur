@@ -14,8 +14,9 @@ type LaunchRoom = {
 
 /**
  * Lance (ou relance) une partie de Sans Filtre — SERVEUR-AUTORITAIRE.
- * Le contenu suit l'ambiance de l'HÔTE : en Soft, seules les cartes sages
- * (contenu FR-only, voir la charte dans src/lib/sans-filtre/data/cards.fr.ts).
+ * Le contenu suit l'ambiance de l'HÔTE (en Soft, seules les cartes sages) et
+ * la LANGUE de la salle, posée à sa création (charte dans
+ * src/lib/sans-filtre/data/cards.fr.ts).
  */
 export async function launchSansFiltreRoom(roomId: string, room: LaunchRoom) {
   const settings = parseRoomSettings(room.settingsJson)
@@ -29,7 +30,8 @@ export async function launchSansFiltreRoom(roomId: string, room: LaunchRoom) {
     ambiance,
     settings.botsCount ?? 0,
     undefined,
-    settings.sfRounds
+    settings.sfRounds,
+    settings.lang
   )
 
   await prisma.onlineRoom.update({

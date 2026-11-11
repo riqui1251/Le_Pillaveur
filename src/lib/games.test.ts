@@ -85,20 +85,20 @@ describe('langues du contenu (contentLangs)', () => {
     for (const locale of locales) expect(hasContentIn(loupGarou, locale), locale).toBe(true)
   })
 
-  it('Sans Filtre et Dilemmes : cartes en français seulement', () => {
+  it('Sans Filtre et Dilemmes : cartes dans les quatre langues', () => {
     for (const id of ['sans-filtre', 'dilemmes']) {
       const game = getGameById(id)!
-      expect(game.contentLangs, id).toEqual(['fr'])
-      expect(hasContentIn(game, 'fr'), `${id} en fr`).toBe(true)
-      for (const locale of ['en', 'es', 'it']) expect(hasContentIn(game, locale), `${id} en ${locale}`).toBe(false)
+      expect(game.contentLangs, id).toBeUndefined()
+      for (const locale of locales) expect(hasContentIn(game, locale), `${id} en ${locale}`).toBe(true)
     }
   })
 
   it('une langue absente vaut le français (table ouverte sans cookie de langue)', () => {
-    const sansFiltre = getGameById('sans-filtre')!
-    expect(hasContentIn(sansFiltre, undefined)).toBe(true)
-    expect(hasContentIn(sansFiltre, null)).toBe(true)
-    expect(hasContentIn(sansFiltre, '')).toBe(true)
+    const frOnly = { contentLangs: ['fr'] }
+    expect(hasContentIn(frOnly, undefined)).toBe(true)
+    expect(hasContentIn(frOnly, null)).toBe(true)
+    expect(hasContentIn(frOnly, '')).toBe(true)
+    expect(hasContentIn(frOnly, 'en')).toBe(false)
   })
 
   it('ne déclare que des langues du site, jamais une liste vide', () => {

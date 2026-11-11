@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * PUT /api/online/rooms/[roomId]/settings — changement de JEU (`gameId`).
@@ -180,10 +180,34 @@ describe('PUT /settings — réinitialisation au changement de jeu', () => {
   })
 })
 
+/** Table ouverte sur Toucher-Coulé, dans la langue donnée (absente : table d'avant la langue). */
+const roomIn = (lang?: string, over: Record<string, unknown> = {}) =>
+  waitingRoom({ settingsJson: JSON.stringify(lang ? { difficulty: 'normal', lang } : { difficulty: 'normal' }), ...over })
+
+describe('PUT /settings — Sans Filtre et Dilemmes ont leurs cartes ×4', () => {
+  it('accepte de passer à Sans Filtre ou Dilemmes depuis une table en/es/it', async () => {
+    for (const lang of ['en', 'es', 'it']) {
+      for (const gameId of ['sans-filtre', 'dilemmes']) {
+        roomMock.update.mockClear()
+        roomMock.findUnique.mockResolvedValue(roomIn(lang))
+        const res = await put({ gameId })
+        expect(res.status, `${gameId} depuis une table ${lang}`).toBe(200)
+        expect(writtenRoomData().gameId).toBe(gameId)
+      }
+    }
+  })
+})
+
 describe('PUT /settings — cartes dans la langue de la table', () => {
-  /** Table ouverte sur Toucher-Coulé, dans la langue donnée (absente : table d'avant la langue). */
-  const roomIn = (lang?: string, over: Record<string, unknown> = {}) =>
-    waitingRoom({ settingsJson: JSON.stringify(lang ? { difficulty: 'normal', lang } : { difficulty: 'normal' }), ...over })
+  // Plus aucun jeu n'est limité au français : le garde-fou est vérifié en
+  // posant temporairement contentLangs sur Sans Filtre et Dilemmes.
+  const flagged = GAMES.filter((g) => g.id === 'sans-filtre' || g.id === 'dilemmes')
+  beforeEach(() => {
+    for (const g of flagged) g.contentLangs = ['fr']
+  })
+  afterEach(() => {
+    for (const g of flagged) delete g.contentLangs
+  })
 
   it('refuse de passer à un jeu aux cartes françaises seules depuis une table en/it (409, rien écrit)', async () => {
     for (const lang of ['en', 'it']) {

@@ -35,7 +35,8 @@ export function buildDilState(
   botsCount: number = 0,
   seed?: string | number,
   roundsCount?: number,
-  coquin: boolean = false
+  coquin: boolean = false,
+  lang: string | null | undefined = 'fr'
 ): DilState {
   const players = members.map((m) => ({ id: m.userId, name: m.user.displayName, isBot: false }))
   const wanted = Math.max(0, Math.min(botsCount, DIL_MAX_PLAYERS - players.length))
@@ -50,7 +51,7 @@ export function buildDilState(
 
   return createDilState(
     players,
-    dilContentFor(ambiance, coquin),
+    dilContentFor(ambiance, coquin, lang),
     resolvedSeed,
     Date.now(),
     roundsCount ?? DIL_DEFAULT_ROUNDS

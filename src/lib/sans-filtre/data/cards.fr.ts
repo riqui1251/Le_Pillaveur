@@ -1,6 +1,8 @@
 /**
- * SANS FILTRE — contenu FRANÇAIS UNIQUEMENT (l'humour ne se traduit pas ;
- * même précédent que les pages règles). L'UI, elle, reste traduite ×4.
+ * SANS FILTRE — cartes FRANÇAISES, la référence. Les paquets en/es/it
+ * (cards.en.ts, cards.es.ts, cards.it.ts) les ADAPTENT carte pour carte : même
+ * ordre, même ton à chaque index (vérifié par data.test.ts). Toute carte
+ * ajoutée ici s'ajoute au même rang dans les trois autres langues.
  *
  * ── CHARTE DE TON (à respecter pour TOUTE nouvelle carte) ──────────────────
  * OUI : l'absurde, la mauvaise foi, la honte sociale, les soirées qui dérapent,

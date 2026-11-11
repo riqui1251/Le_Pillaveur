@@ -14,7 +14,8 @@ type LaunchRoom = {
 
 /**
  * Lance (ou relance) une partie de Dilemmes — SERVEUR-AUTORITAIRE. Le contenu
- * suit l'ambiance de l'HÔTE (Soft = cartes sages, contenu FR-only).
+ * suit l'ambiance de l'HÔTE (Soft = cartes sages) et la LANGUE de la salle,
+ * posée à sa création.
  */
 export async function launchDilemmesRoom(roomId: string, room: LaunchRoom) {
   const settings = parseRoomSettings(room.settingsJson)
@@ -29,7 +30,8 @@ export async function launchDilemmesRoom(roomId: string, room: LaunchRoom) {
     settings.botsCount ?? 0,
     undefined,
     settings.dilRounds,
-    Boolean(settings.dilCoquin)
+    Boolean(settings.dilCoquin),
+    settings.lang
   )
 
   await prisma.onlineRoom.update({
