@@ -1350,6 +1350,10 @@
         "title": "Jouer au Purple en ligne gratuit — rouge, noir ou purple ?",
         "description": "Le pari de cartes le plus traître du comptoir : 2 à 16 joueurs, chat vocal, sans installation. Entre amis — ou seul, les bots complètent la table."
       },
+      "blackjack": {
+        "title": "Jouer au Black Jack en ligne gratuit — 21 contre le croupier",
+        "description": "Approche 21 sans le dépasser : tirer, rester, doubler, séparer. 1 à 7 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots complètent."
+      },
       "monsieur-3": {
         "title": "Jouer à Monsieur 3 gratuit — évite le 3 ou trinque",
         "description": "Le jeu de dés d'apéro : évite les 3 et les combos piégés, ou bois. Gratuit, sans installation, sur un téléphone qui tourne autour de la table."
@@ -1497,6 +1501,10 @@
       "purple": {
         "title": "Purple",
         "description": "Rouge, noir… ou Purple ? Le pari le plus traître du comptoir."
+      },
+      "blackjack": {
+        "title": "Black Jack",
+        "description": "Chacun contre le croupier : approche 21 sans le dépasser, ou bois ta mise."
       },
       "pyramide": {
         "title": "Pyramide",
@@ -1656,6 +1664,104 @@
         "waiting": "{name} hésite : continuer ou passer ?",
         "hint": "Bien vu ! Parie encore ou passe la main.",
         "continueSelf": "Parier encore"
+      }
+    },
+    "blackjack": {
+      "title": "Black Jack",
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Mise tes gorgées",
+            "body": "Chaque manche, mise 1, 2 ou 3 gorgées. Tu joues contre le croupier, pas contre la table."
+          },
+          {
+            "title": "Approche 21",
+            "body": "Tire des cartes pour t'approcher de 21 sans le dépasser. Figures = 10, as = 1 ou 11. Tu peux doubler ta mise ou séparer une paire."
+          },
+          {
+            "title": "Le croupier tranche",
+            "body": "Le croupier tire jusqu’à 17. Battu ou sauté : tu bois ta mise. Gagné : tu la distribues. Black Jack : une fois et demie !"
+          }
+        ]
+      },
+      "minPlayers": "Au moins 1 joueur requis.",
+      "dealer": "Croupier",
+      "dealerBlackjack": "Black Jack du croupier !",
+      "dealerBust": "Le croupier saute !",
+      "drink": "{count, plural, one {bois # gorgée} other {bois # gorgées}}",
+      "give": "{count, plural, one {distribue # gorgée} other {distribue # gorgées}}",
+      "outcome": {
+        "blackjack": "Black Jack !",
+        "win": "Gagné",
+        "push": "Égalité",
+        "lose": "Perdu",
+        "bust": "Sauté"
+      },
+      "phase": {
+        "betting": "Faites vos mises",
+        "playing": "À vous de jouer",
+        "results": "Résultats de la manche",
+        "finished": "Partie terminée"
+      },
+      "stakeFor": "{name}, ta mise ?",
+      "stakeSelf": "Ta mise pour cette manche ?",
+      "stakeLabel": "Choisis ta mise",
+      "betPlaced": "Misé",
+      "betWaiting": "Réfléchit…",
+      "actions": {
+        "hit": "Tirer",
+        "stand": "Rester",
+        "double": "Doubler",
+        "split": "Séparer"
+      },
+      "turnOf": "Au tour de {name}",
+      "turnHand": "Au tour de {name} · main {index}/{count}",
+      "nextRound": "Manche suivante",
+      "round": "Manche {count}",
+      "roundsPlayed": "{count, plural, =0 {Aucune manche jouée} one {# manche jouée} other {# manches jouées}}",
+      "shoe": "{count, plural, one {# carte dans le sabot} other {# cartes dans le sabot}}",
+      "finishedTitle": "Partie terminée",
+      "tallyTitle": "Le bilan",
+      "tallyLine": "{wins, plural, one {# main gagnée} other {# mains gagnées}} sur {hands} · {given, plural, one {# gorgée donnée} other {# gorgées données}}",
+      "drunk": "{count, plural, one {# bue} other {# bues}}",
+      "table": {
+        "pays": "Le Black Jack paie 3 pour 2",
+        "rule": "La banque tire à 16, reste à 17",
+        "me": "Toi"
+      },
+      "landscape": {
+        "enter": "Passer en paysage",
+        "exit": "Portrait",
+        "hint": "Tourne ton téléphone à l’horizontale : la table passe en paysage."
+      },
+      "tableLabel": "La table",
+      "endConfirm": {
+        "title": "Terminer la partie ?",
+        "description": "Place au bilan : qui a bu et qui a distribué combien.",
+        "confirm": "Voir le bilan",
+        "cancel": "Continuer à jouer"
+      },
+      "online": {
+        "waitingBets": "En attente des mises…",
+        "yourHand": "À toi : tire, reste, double ou sépare",
+        "yourHandHint": "Approche 21 sans le dépasser.",
+        "left": "A quitté",
+        "endGame": "Terminer la partie",
+        "waitingReturn": "{name} est parti — remplacement dans {seconds}s si pas de retour",
+        "afkWarning": "{name} est inactif — expulsion et remplacement par un bot dans {seconds}s",
+        "afkWarningSelf": "À toi de jouer ! Joue dans les {seconds}s ou tu seras expulsé et remplacé par un bot",
+        "rematchWaiting": "En attente ({count}/{total})",
+        "endConfirm": {
+          "title": "Terminer pour toute la table ?",
+          "description": "La partie s'arrête sur tous les téléphones et le bilan des gorgées s'affiche.",
+          "confirm": "Terminer pour tous",
+          "cancel": "Continuer à jouer"
+        }
+      },
+      "about": {
+        "p1": "Chacun joue contre le croupier. Au début de chaque manche, tu mises 1, 2 ou 3 gorgées, puis tout le monde reçoit deux cartes ; le croupier en montre une et garde l’autre face cachée. Les figures valent 10, l’as 1 ou 11, les autres cartes leur valeur.",
+        "p2": "À ton tour, tu tires pour t’approcher de 21, tu restes, tu doubles ta mise contre une seule carte, ou tu sépares une paire en deux mains. Au-delà de 21, tu sautes. Le croupier retourne ensuite sa carte et tire jusqu’à 17. Main perdue : tu bois ta mise. Main gagnée : tu la distribues. Black Jack (as + figure d’entrée) : tu distribues une fois et demie ta mise.",
+        "p3": "Reste sur 12 à 16 quand le croupier montre une petite carte, double sur 11, sépare toujours les as et les 8. Seul, les bots complètent la table et jouent la stratégie de base. La partie dure autant de manches que vous voulez."
       }
     },
     "roue-des-gorgees": {

@@ -74,6 +74,11 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Rouge, noir ou purple : les paris, les gorgées et l’alternance expliqués. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots.',
   },
+  blackjack: {
+    title: 'Règles du Black Jack — apprendre et jouer en ligne gratuit',
+    description:
+      'Tirer, rester, doubler, séparer, le croupier à 17 : les règles en 2 minutes. Puis joues-y gratuitement : 1 à 7 joueurs, chat vocal — ou seul avec des bots.',
+  },
   '1220': {
     title: 'Règles du 1220 — apprendre les paris puis jouer gratuit',
     description:

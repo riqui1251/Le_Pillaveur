@@ -128,6 +128,7 @@ describe('tenue en solo (soloFit)', () => {
     'loup-garou': 'great',
     'petit-buveur': 'great',
     purple: 'great',
+    blackjack: 'great',
     '1220': 'great',
     dilemmes: 'group',
     'sans-filtre': 'group',

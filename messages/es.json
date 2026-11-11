@@ -1350,6 +1350,10 @@
         "title": "Juega a Purple online gratis — ¿rojo, negro o purple?",
         "description": "La apuesta de cartas más traicionera del bar: de 2 a 16 jugadores, chat de voz, sin instalación. Con amigos — o solo, los bots completan la mesa."
       },
+      "blackjack": {
+        "title": "Jugar al Blackjack online gratis — 21 contra la banca",
+        "description": "Acércate a 21 sin pasarte: pedir, plantarse, doblar, separar. De 1 a 7 jugadores, chat de voz, gratis, sin instalar — o solo, los bots completan la mesa."
+      },
       "monsieur-3": {
         "title": "Juega a Monsieur 3 gratis — esquiva el 3 o bebe",
         "description": "El juego de dados del aperitivo: esquiva los 3 y los combos trampa, o bebe. Gratis, sin instalación, en un móvil que gira alrededor de la mesa."
@@ -1497,6 +1501,10 @@
       "purple": {
         "title": "Purple",
         "description": "¿Rojo, negro… o Purple? La apuesta más traicionera de la barra."
+      },
+      "blackjack": {
+        "title": "Blackjack",
+        "description": "Cada uno contra la banca: acércate a 21 sin pasarte, o bébete tu apuesta."
       },
       "pyramide": {
         "title": "Pirámide",
@@ -1656,6 +1664,104 @@
         "waiting": "{name} duda: ¿seguir o pasar?",
         "hint": "¡Bien visto! Apuesta otra vez o pasa el turno.",
         "continueSelf": "Apostar otra vez"
+      }
+    },
+    "blackjack": {
+      "title": "Blackjack",
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Apuesta tus tragos",
+            "body": "Cada ronda, apuesta 1, 2 o 3 tragos. Juegas contra la banca, no contra la mesa."
+          },
+          {
+            "title": "Acércate a 21",
+            "body": "Pide cartas para acercarte a 21 sin pasarte. Figuras = 10, as = 1 u 11. Puedes doblar tu apuesta o separar una pareja."
+          },
+          {
+            "title": "La banca decide",
+            "body": "La banca pide hasta 17. Superado o pasado: bebes tu apuesta. Ganas: la repartes. Blackjack: ¡vez y media!"
+          }
+        ]
+      },
+      "minPlayers": "Se necesita al menos 1 jugador.",
+      "dealer": "Banca",
+      "dealerBlackjack": "¡Blackjack de la banca!",
+      "dealerBust": "¡La banca se pasa!",
+      "drink": "{count, plural, one {bebe # trago} other {bebe # tragos}}",
+      "give": "{count, plural, one {reparte # trago} other {reparte # tragos}}",
+      "outcome": {
+        "blackjack": "¡Blackjack!",
+        "win": "Ganada",
+        "push": "Empate",
+        "lose": "Perdida",
+        "bust": "Pasado"
+      },
+      "phase": {
+        "betting": "Hagan sus apuestas",
+        "playing": "Os toca",
+        "results": "Resultados de la ronda",
+        "finished": "Partida terminada"
+      },
+      "stakeFor": "{name}, ¿tu apuesta?",
+      "stakeSelf": "¿Tu apuesta para esta ronda?",
+      "stakeLabel": "Elige tu apuesta",
+      "betPlaced": "Apostado",
+      "betWaiting": "Pensando…",
+      "actions": {
+        "hit": "Pedir",
+        "stand": "Plantarse",
+        "double": "Doblar",
+        "split": "Separar"
+      },
+      "turnOf": "Turno de {name}",
+      "turnHand": "Turno de {name} · mano {index}/{count}",
+      "nextRound": "Siguiente ronda",
+      "round": "Ronda {count}",
+      "roundsPlayed": "{count, plural, =0 {Ninguna ronda jugada} one {# ronda jugada} other {# rondas jugadas}}",
+      "shoe": "{count, plural, one {# carta en el sabot} other {# cartas en el sabot}}",
+      "finishedTitle": "Partida terminada",
+      "tallyTitle": "El balance",
+      "tallyLine": "{wins, plural, one {# mano ganada} other {# manos ganadas}} de {hands} · {given, plural, one {# trago repartido} other {# tragos repartidos}}",
+      "drunk": "{count, plural, one {# bebido} other {# bebidos}}",
+      "table": {
+        "pays": "El Blackjack paga 3 a 2",
+        "rule": "La banca pide con 16, se planta con 17",
+        "me": "Tú"
+      },
+      "landscape": {
+        "enter": "Pasar a horizontal",
+        "exit": "Vertical",
+        "hint": "Gira el móvil en horizontal: la mesa pasa a apaisado."
+      },
+      "tableLabel": "La mesa",
+      "endConfirm": {
+        "title": "¿Terminar la partida?",
+        "description": "Hora del balance: quién ha bebido y quién ha repartido cuánto.",
+        "confirm": "Ver el balance",
+        "cancel": "Seguir jugando"
+      },
+      "online": {
+        "waitingBets": "Esperando las apuestas…",
+        "yourHand": "Te toca: pide, plántate, dobla o separa",
+        "yourHandHint": "Acércate a 21 sin pasarte.",
+        "left": "Se ha ido",
+        "endGame": "Terminar la partida",
+        "waitingReturn": "{name} se ha ido — reemplazo en {seconds}s si no vuelve",
+        "afkWarning": "{name} está inactivo — expulsión y reemplazo por un bot en {seconds}s",
+        "afkWarningSelf": "¡Te toca! Juega en {seconds}s o serás expulsado y reemplazado por un bot",
+        "rematchWaiting": "Esperando ({count}/{total})",
+        "endConfirm": {
+          "title": "¿Terminar para toda la mesa?",
+          "description": "La partida se detiene en todos los móviles y se muestra el balance de tragos.",
+          "confirm": "Terminar para todos",
+          "cancel": "Seguir jugando"
+        }
+      },
+      "about": {
+        "p1": "Cada uno juega contra la banca. Al principio de cada ronda apuestas 1, 2 o 3 tragos y todos reciben dos cartas; la banca enseña una y deja la otra boca abajo. Las figuras valen 10, el as 1 u 11, las demás cartas su valor.",
+        "p2": "En tu turno pides para acercarte a 21, te plantas, doblas tu apuesta a cambio de una sola carta o separas una pareja en dos manos. Por encima de 21, te pasas. Luego la banca destapa su carta y pide hasta 17. Mano perdida: bebes tu apuesta. Mano ganada: la repartes. Blackjack (as + figura de entrada): repartes vez y media tu apuesta.",
+        "p3": "Plántate con 12 a 16 cuando la banca enseña una carta baja, dobla con 11, separa siempre ases y ochos. Si juegas solo, los bots completan la mesa con la estrategia básica. La partida dura tantas rondas como queráis."
       }
     },
     "roue-des-gorgees": {

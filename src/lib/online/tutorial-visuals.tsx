@@ -189,6 +189,52 @@ export function CardBetPreview({ colors }: { colors: [string, string] }) {
   )
 }
 
+/** Une main de Black Jack : cartes crème en éventail et total en pastille or. */
+export function BlackjackHandPreview({ cards, total }: { cards: { rank: string; suit: 'spade' | 'heart' | 'diamond' | 'club' }[]; total: string }) {
+  return (
+    <div className={BOX}>
+      <div className="flex items-center gap-3">
+        <div className="flex">
+          {cards.map((c, i) => (
+            <PlayingCard
+              key={i}
+              suit={c.suit}
+              rank={c.rank}
+              className={cn('flex h-16 w-11 items-center justify-center', i > 0 && '-ml-4 rotate-6')}
+            >
+              <span className={cn('font-display text-lg font-bold', c.suit === 'heart' || c.suit === 'diamond' ? 'text-suit-red' : 'text-[#24201A]')}>
+                {c.rank}
+              </span>
+            </PlayingCard>
+          ))}
+        </div>
+        <span className="rounded-full bg-amber-500 px-2 py-0.5 font-display text-sm font-bold text-[#24201A]">{total}</span>
+      </div>
+    </div>
+  )
+}
+
+/** Trois jetons de mise, façon plaques de casino. */
+export function StakeChipsPreview() {
+  return (
+    <div className={BOX}>
+      <div className="flex gap-2">
+        {[1, 2, 3].map((n) => (
+          <span
+            key={n}
+            className={cn(
+              'flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-dashed border-[#24201A]/40 bg-amber-500 font-display text-lg font-bold text-[#24201A]',
+              n === 2 && 'ring-2 ring-cream'
+            )}
+          >
+            {n}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /** Classement final — réutilise les mêmes plaques or/argent/bronze que le classement en ligne. */
 export function PodiumPreview() {
   return (
@@ -332,6 +378,11 @@ export const TUTORIAL_VISUALS: Record<string, ReactNode[]> = {
     <CardBetPreview key={0} colors={['#c23b34', '#24201A']} />,
     <CardBetPreview key={1} colors={['#9b3fd9', '#9b3fd9']} />,
     <CardBetPreview key={2} colors={['#24201A', '#24201A']} />,
+  ],
+  blackjack: [
+    <StakeChipsPreview key={0} />,
+    <BlackjackHandPreview key={1} cards={[{ rank: 'A', suit: 'spade' }, { rank: 'R', suit: 'heart' }]} total="21" />,
+    <BlackjackHandPreview key={2} cards={[{ rank: '10', suit: 'club' }, { rank: '7', suit: 'diamond' }]} total="17" />,
   ],
   '1220': [
     <DicePreview key={0} faces={[5, 6]} />,

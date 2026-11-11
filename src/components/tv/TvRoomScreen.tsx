@@ -25,7 +25,8 @@ import { TvPmu } from './TvPmu'
 import { TvGame1220 } from './TvGame1220'
 import type { Game1220SyncedState } from '@/lib/online-game-state'
 import { TvPurple } from './TvPurple'
-import type { PurpleSyncedState } from '@/lib/online-game-state'
+import { TvBlackjack } from './TvBlackjack'
+import type { BlackjackSyncedState, PurpleSyncedState } from '@/lib/online-game-state'
 import { TvBluff } from './TvBluff'
 import type { BluffClientView } from '@/lib/bluff/engine'
 import { TvEspion } from './TvEspion'
@@ -234,6 +235,8 @@ export function TvRoomScreen({
     content = <TvGame1220 room={room} state={state as unknown as Game1220SyncedState} />
   } else if (room.gameId === 'purple') {
     content = <TvPurple room={room} state={state as unknown as PurpleSyncedState} />
+  } else if (room.gameId === 'blackjack') {
+    content = <TvBlackjack room={room} state={state as unknown as BlackjackSyncedState} />
   } else if (room.gameId === 'bluff') {
     content = <TvBluff room={room} state={state as unknown as BluffClientView} />
   } else if (room.gameId === 'espion') {

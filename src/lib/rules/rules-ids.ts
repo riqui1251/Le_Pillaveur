@@ -15,6 +15,7 @@ export const RULES_GAME_IDS = [
   'crobard',
   'telephone-dessine',
   'purple',
+  'blackjack',
   '1220',
   'sans-filtre',
   'mots-codes',

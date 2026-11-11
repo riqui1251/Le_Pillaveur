@@ -1,3 +1,5 @@
+import type { BjClientView } from '@/lib/blackjack/engine'
+
 /** Paramètres du lobby (choisis par l'hôte avant le lancement) */
 
 export type RoomSettings = {
@@ -847,6 +849,19 @@ export function parseTelephoneSyncedState(json: string | null | undefined): Tele
 
 // ─── Sans Filtre / Mots Codés / Dilemmes / Petit Bac / Président ─────────────
 
+// ─── Black Jack ──────────────────────────────────────────────────────────────
+// Import de TYPE seulement (effacé au build) : la vue client du moteur.
+
+export type BlackjackSyncedState = BjClientView
+
+export function parseBlackjackState(json: string | null | undefined): BlackjackSyncedState | null {
+  // BlackjackOnline dessine joueurs, croupier et phase : ils sont exigés.
+  const raw = readSyncedState(json, { ...PHASED_STATE, players: 'array', dealer: 'array' })
+  return raw ? ({ ...raw, rematchVotes: rematchVotesOf(raw) } as unknown as BlackjackSyncedState) : null
+}
+
+
+
 /** État minimal partagé par les 5 jeux du lot 2026-07 (moteurs à phases). */
 export type SimplePhaseSyncedState = {
   version: number
@@ -866,6 +881,7 @@ export type AnyOnlineGameState =
   | SimplePhaseSyncedState
   | PetitBuveurSyncedState
   | PurpleSyncedState
+  | BlackjackSyncedState
   | Game1220SyncedState
   | HiLoSyncedState
   | Monsieur3SyncedState
@@ -891,6 +907,8 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
       return parsePetitBuveurState(json) as T | null
     case 'purple':
       return parsePurpleState(json) as T | null
+    case 'blackjack':
+      return parseBlackjackState(json) as T | null
     case '1220':
       return parse1220State(json) as T | null
     case 'hi-lo':
@@ -941,6 +959,8 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
       return Boolean((state as PetitBuveurSyncedState).winner)
     case 'purple':
       return (state as PurpleSyncedState).phase === 'finished'
+    case 'blackjack':
+      return (state as BlackjackSyncedState).phase === 'finished'
     case '1220':
       return (state as Game1220SyncedState).phase === 'finished'
     case 'hi-lo':

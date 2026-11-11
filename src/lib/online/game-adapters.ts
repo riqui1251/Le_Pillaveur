@@ -325,6 +325,23 @@ import {
   PRE_MAX_PLAYERS,
   type PreState,
 } from '@/lib/president/engine'
+import {
+  applyBjRoomAction,
+  bjViewJson,
+  convertBjPlayerToBot,
+  markBjPlayerLeft,
+  parseBjState,
+  rejoinBjPlayer,
+  serializeBjState,
+} from '@/lib/blackjack/server-adapter'
+import {
+  BJ_MAX_PLAYERS,
+  BJ_MIN_PLAYERS,
+  currentBjActorId,
+  currentBjHand,
+  toBjClientView,
+  type BjState,
+} from '@/lib/blackjack/engine'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { botTickDelayMs } from '@/lib/online/bot-personas'
@@ -1049,6 +1066,44 @@ const purpleAdapter: GameAdapter = {
           : state.pendingReveal || state.canContinue
             ? 1600
             : botTickDelayMs(actor.name, rand),
+    })
+  },
+}
+
+// ─── Black Jack ──────────────────────────────────────────────────────────────
+
+const blackjackAdapter: GameAdapter = {
+  // Chacun contre le croupier : un joueur seul a déjà une partie.
+  minPlayers: BJ_MIN_PLAYERS,
+  maxPlayers: BJ_MAX_PLAYERS,
+  botsFillable: true,
+  parse: (json) => parseBjState(json),
+  serialize: (state) => serializeBjState(state as BjState),
+  applyAction(rawState, userId, body) {
+    const result = applyBjRoomAction(rawState as BjState, userId, body, ONLINE_REPLACE_GRACE_MS)
+    if (!result.ok) {
+      const status = result.error === 'invalid_action' ? 400 : result.error === 'NOTHING_TO_REPLACE' ? 409 : 403
+      return { ok: false, error: result.error, status }
+    }
+    return { ok: true, state: result.state }
+  },
+  convertToBot: (state, userId) => convertBjPlayerToBot(state as BjState, userId),
+  isFinished: (state) => (state as BjState).phase === 'finished',
+  currentActorId: (state) => currentBjActorId(state as BjState),
+  clientViewJson: (state) => bjViewJson(state as BjState),
+  spectatorViewJson: (state) => bjViewJson(state as BjState),
+  actionResponse: (state) => ({
+    view: toBjClientView(state as BjState),
+    viewJson: bjViewJson(state as BjState),
+  }),
+  markLeft: (state, userId, at) => markBjPlayerLeft(state as BjState, userId, at),
+  rejoin: (state, userId) => rejoinBjPlayer(state as BjState, userId),
+  // BlackjackOnline : main d'un bot au tour, au rythme de sa persona.
+  serviceTick(rawState, now, options) {
+    const state = rawState as BjState
+    const actor = currentBjHand(state)?.player
+    return serviceTickOf(state.players, now, options, {
+      botDelayMs: (rand) => (actor?.isBot ? botTickDelayMs(actor.name, rand) : null),
     })
   },
 }
@@ -1850,6 +1905,7 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   'loup-garou': loupGarouAdapter,
   '1220': game1220Adapter,
   purple: purpleAdapter,
+  blackjack: blackjackAdapter,
   bluff: bluffAdapter,
   espion: espionAdapter,
   tabou: tabouAdapter,

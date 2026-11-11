@@ -1350,6 +1350,10 @@
         "title": "Gioca a Purple online gratis — rosso, nero o purple?",
         "description": "La scommessa di carte più infida del bancone: da 2 a 16 giocatori, chat vocale, senza installazione. Con gli amici — o da solo, i bot completano."
       },
+      "blackjack": {
+        "title": "Gioca a Blackjack online gratis — 21 contro il banco",
+        "description": "Avvicinati a 21 senza sballare: carta, stai, raddoppia, dividi. Da 1 a 7 giocatori, chat vocale, gratis, senza installare — o da solo con i bot."
+      },
       "monsieur-3": {
         "title": "Gioca a Monsieur 3 gratis — schiva il 3 o bevi",
         "description": "Il gioco di dadi dell'aperitivo: schiva i 3 e le combo trappola, o bevi. Gratis, senza installazione, su un telefono che gira attorno al tavolo."
@@ -1497,6 +1501,10 @@
       "purple": {
         "title": "Purple",
         "description": "Rosso, nero… o Purple? La scommessa più infida del bancone."
+      },
+      "blackjack": {
+        "title": "Blackjack",
+        "description": "Ognuno contro il banco: avvicinati a 21 senza sballare, o bevi la tua puntata."
       },
       "pyramide": {
         "title": "Piramide",
@@ -1656,6 +1664,104 @@
         "waiting": "{name} ci pensa: continuare o passare?",
         "hint": "Ben fatto! Scommetti ancora o passa la mano.",
         "continueSelf": "Scommetti ancora"
+      }
+    },
+    "blackjack": {
+      "title": "Blackjack",
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Punta i tuoi sorsi",
+            "body": "A ogni mano punta 1, 2 o 3 sorsi. Giochi contro il banco, non contro il tavolo."
+          },
+          {
+            "title": "Avvicinati a 21",
+            "body": "Chiedi carte per avvicinarti a 21 senza sballare. Figure = 10, asso = 1 o 11. Puoi raddoppiare la puntata o dividere una coppia."
+          },
+          {
+            "title": "Decide il banco",
+            "body": "Il banco tira fino a 17. Battuto o sballato: bevi la puntata. Vinto: la distribuisci. Blackjack: una volta e mezza!"
+          }
+        ]
+      },
+      "minPlayers": "Serve almeno 1 giocatore.",
+      "dealer": "Banco",
+      "dealerBlackjack": "Blackjack del banco!",
+      "dealerBust": "Il banco sballa!",
+      "drink": "{count, plural, one {bevi # sorso} other {bevi # sorsi}}",
+      "give": "{count, plural, one {distribuisci # sorso} other {distribuisci # sorsi}}",
+      "outcome": {
+        "blackjack": "Blackjack!",
+        "win": "Vinta",
+        "push": "Pareggio",
+        "lose": "Persa",
+        "bust": "Sballato"
+      },
+      "phase": {
+        "betting": "Fate le vostre puntate",
+        "playing": "Tocca a voi",
+        "results": "Risultati della mano",
+        "finished": "Partita finita"
+      },
+      "stakeFor": "{name}, la tua puntata?",
+      "stakeSelf": "La tua puntata per questa mano?",
+      "stakeLabel": "Scegli la puntata",
+      "betPlaced": "Puntato",
+      "betWaiting": "Ci pensa…",
+      "actions": {
+        "hit": "Carta",
+        "stand": "Stai",
+        "double": "Raddoppia",
+        "split": "Dividi"
+      },
+      "turnOf": "Tocca a {name}",
+      "turnHand": "Tocca a {name} · mano {index}/{count}",
+      "nextRound": "Mano successiva",
+      "round": "Mano {count}",
+      "roundsPlayed": "{count, plural, =0 {Nessuna mano giocata} one {# mano giocata} other {# mani giocate}}",
+      "shoe": "{count, plural, one {# carta nel sabot} other {# carte nel sabot}}",
+      "finishedTitle": "Partita finita",
+      "tallyTitle": "Il bilancio",
+      "tallyLine": "{wins, plural, one {# mano vinta} other {# mani vinte}} su {hands} · {given, plural, one {# sorso distribuito} other {# sorsi distribuiti}}",
+      "drunk": "{count, plural, one {# bevuto} other {# bevuti}}",
+      "table": {
+        "pays": "Il Blackjack paga 3 a 2",
+        "rule": "Il banco tira a 16, sta a 17",
+        "me": "Tu"
+      },
+      "landscape": {
+        "enter": "Passa in orizzontale",
+        "exit": "Verticale",
+        "hint": "Ruota il telefono in orizzontale: il tavolo passa in modalità panorama."
+      },
+      "tableLabel": "Il tavolo",
+      "endConfirm": {
+        "title": "Finire la partita?",
+        "description": "Ecco il bilancio: chi ha bevuto e chi ha distribuito quanto.",
+        "confirm": "Vedi il bilancio",
+        "cancel": "Continua a giocare"
+      },
+      "online": {
+        "waitingBets": "In attesa delle puntate…",
+        "yourHand": "Tocca a te: carta, stai, raddoppia o dividi",
+        "yourHandHint": "Avvicinati a 21 senza sballare.",
+        "left": "Ha lasciato",
+        "endGame": "Termina la partita",
+        "waitingReturn": "{name} è uscito — sostituito tra {seconds}s se non torna",
+        "afkWarning": "{name} è inattivo — espulso e sostituito da un bot tra {seconds}s",
+        "afkWarningSelf": "Tocca a te! Gioca entro {seconds}s o sarai espulso e sostituito da un bot",
+        "rematchWaiting": "In attesa ({count}/{total})",
+        "endConfirm": {
+          "title": "Terminare per tutto il tavolo?",
+          "description": "La partita si ferma su tutti i telefoni e compare il bilancio dei sorsi.",
+          "confirm": "Termina per tutti",
+          "cancel": "Continua a giocare"
+        }
+      },
+      "about": {
+        "p1": "Ognuno gioca contro il banco. All’inizio di ogni mano punti 1, 2 o 3 sorsi, poi tutti ricevono due carte; il banco ne mostra una e tiene l’altra coperta. Le figure valgono 10, l’asso 1 o 11, le altre carte il loro valore.",
+        "p2": "Al tuo turno chiedi carta per avvicinarti a 21, stai, raddoppi la puntata per una sola carta o dividi una coppia in due mani. Oltre 21, sballi. Poi il banco scopre la sua carta e tira fino a 17. Mano persa: bevi la puntata. Mano vinta: la distribuisci. Blackjack (asso + figura servito): distribuisci una volta e mezza la puntata.",
+        "p3": "Stai da 12 a 16 quando il banco mostra una carta bassa, raddoppia con 11, dividi sempre assi e otto. Da solo, i bot completano il tavolo e giocano la strategia di base. La partita dura quante mani volete."
       }
     },
     "roue-des-gorgees": {

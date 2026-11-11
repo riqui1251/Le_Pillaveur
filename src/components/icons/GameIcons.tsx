@@ -87,6 +87,17 @@ export function PurpleIcon(props: IconProps) {
   )
 }
 
+// Black Jack
+export function BlackjackIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path d="M4.3 5.5H7.4V20.5H4.3A1.8 1.8 0 0 1 2.5 18.7V7.3A1.8 1.8 0 0 1 4.3 5.5Z" />
+      <path fillRule="evenodd" d="M10.3 2.5H18.7A1.8 1.8 0 0 1 20.5 4.3V15.3A1.8 1.8 0 0 1 18.7 17.1H10.3A1.8 1.8 0 0 1 8.5 15.3V4.3A1.8 1.8 0 0 1 10.3 2.5ZM14.5 5.6C12.9 7.1 11.7 8.2 11.7 9.7C11.7 10.8 12.5 11.5 13.4 11.5C13.8 11.5 14.1 11.4 14.3 11.2L13.6 13.6H15.4L14.7 11.2C14.9 11.4 15.2 11.5 15.6 11.5C16.5 11.5 17.3 10.8 17.3 9.7C17.3 8.2 16.1 7.1 14.5 5.6Z" />
+      <path fill={ACCENT} fillRule="evenodd" d="M16.6 18.6a2.9 2.9 0 1 1 5.8 0a2.9 2.9 0 1 1 -5.8 0ZM18.3 18.6a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0 -2.4 0Z" />
+    </IconSvg>
+  )
+}
+
 // Pyramide
 export function PyramidIcon(props: IconProps) {
   return (

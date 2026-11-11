@@ -16,7 +16,7 @@ import {
 describe('jeux jouables hors ligne', () => {
   it('retient les jeux publiés jouables en local, et seulement eux', () => {
     const ids = offlinePlayableGames().map((g) => g.id)
-    expect(ids).toEqual(['monsieur-3', 'pmu', 'petit-buveur', 'hi-lo', 'purple', 'pyramide', 'plinko', '1220'])
+    expect(ids).toEqual(['monsieur-3', 'pmu', 'petit-buveur', 'hi-lo', 'purple', 'blackjack', 'pyramide', 'plinko', '1220'])
   })
 
   it('écarte les jeux masqués et les jeux en ligne uniquement', () => {
