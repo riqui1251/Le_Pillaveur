@@ -1504,7 +1504,8 @@
       },
       "blackjack": {
         "title": "Black Jack",
-        "description": "Chacun contre le croupier : approche 21 sans le dépasser, ou bois ta mise."
+        "description": "Chacun contre le croupier : approche 21 sans le dépasser, ou bois ta mise.",
+        "softDescription": "Chacun contre le croupier : approche 21 sans le dépasser et marque des points."
       },
       "pyramide": {
         "title": "Pyramide",
@@ -1671,8 +1672,8 @@
       "tutorial": {
         "steps": [
           {
-            "title": "Mise tes gorgées",
-            "body": "Chaque manche, mise 1, 2 ou 3 gorgées. Tu joues contre le croupier, pas contre la table."
+            "title": "Mise tes jetons",
+            "body": "Chaque manche, mise 1, 2 ou 3 jetons : des gorgées, ou des points en mode Sans alcool. Tu joues contre le croupier, pas contre la table."
           },
           {
             "title": "Approche 21",
@@ -1680,7 +1681,7 @@
           },
           {
             "title": "Le croupier tranche",
-            "body": "Le croupier tire jusqu’à 17. Battu ou sauté : tu bois ta mise. Gagné : tu la distribues. Black Jack : une fois et demie !"
+            "body": "Le croupier tire jusqu’à 17. Battu ou sauté : tu perds ta mise (tu la bois, ou tu perds les points). Gagné : tu la distribues, ou tu marques les points. Black Jack : une fois et demie !"
           }
         ]
       },
@@ -1733,6 +1734,16 @@
         "enter": "Passer en paysage",
         "exit": "Portrait",
         "hint": "Tourne ton téléphone à l’horizontale : la table passe en paysage."
+      },
+      "soft": {
+        "points": "{count, plural, one {# point} other {# points}}",
+        "lose": "{count, plural, one {perd # point} other {perd # points}}",
+        "win": "{count, plural, one {gagne # point} other {gagne # points}}",
+        "tallyTitle": "Le classement",
+        "tallyLine": "{wins, plural, one {# main gagnée} other {# mains gagnées}} sur {hands}",
+        "net": "{value} pts",
+        "endDescription": "Place au classement : qui a gagné le plus de points.",
+        "onlineEndDescription": "La partie s'arrête sur tous les téléphones et le classement aux points s'affiche."
       },
       "tableLabel": "La table",
       "endConfirm": {

@@ -4,6 +4,8 @@ import { useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { PlayingCard as PlayingCardFace, PlayingCardBack } from '@/components/ui/PlayingCard'
+import { CasinoChip, CasinoChipStack, type CasinoChipSize } from '@/components/games/CasinoChip'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import type { GameSuit } from '@/lib/games'
 import {
   BJ_STAKES,
@@ -125,16 +127,34 @@ export function BjTotalChip({
   )
 }
 
-/** Jeton de mise, façon plaque de casino. */
-export function BjStakeChip({ count, doubled = false }: { count: number; doubled?: boolean }) {
-  return (
-    <span
-      className="inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-full border-2 border-dashed border-[#24201A]/40 bg-amber-500 px-1.5 font-display text-sm font-bold tabular-nums text-[#24201A]"
-      aria-hidden
-    >
-      {doubled ? count * 2 : count}
-    </span>
-  )
+/**
+ * Unités du jeu selon l'ambiance : gorgées (bues, distribuées) ou, en mode
+ * Sans alcool, points (perdus, gagnés). Le moteur ne compte que des mises ;
+ * seul l'habillage change.
+ */
+export function useBjUnits() {
+  const t = useTranslations('games.blackjack')
+  const tCommon = useTranslations('common')
+  const soft = useAmbianceMode().mode === 'soft'
+  return {
+    soft,
+    amount: (count: number) => (soft ? t('soft.points', { count }) : tCommon('sipsCount', { count })),
+    lose: (count: number) => (soft ? t('soft.lose', { count }) : t('drink', { count })),
+    win: (count: number) => (soft ? t('soft.win', { count }) : t('give', { count })),
+  }
+}
+
+/** Mise posée sur la case : un jeton de la valeur misée, deux s'il a doublé. */
+export function BjStakeChip({
+  count,
+  doubled = false,
+  size = 'sm',
+}: {
+  count: number
+  doubled?: boolean
+  size?: CasinoChipSize
+}) {
+  return <CasinoChipStack value={count} count={doubled ? 2 : 1} size={size} />
 }
 
 const OUTCOME_STYLE: Record<BjOutcome, string> = {
@@ -148,7 +168,8 @@ const OUTCOME_STYLE: Record<BjOutcome, string> = {
 /** Verdict d'une main : l'issue et ce qu'elle coûte ou rapporte. */
 export function BjOutcomeBadge({ result, className }: { result: BjHandResult; className?: string }) {
   const t = useTranslations('games.blackjack')
-  const detail = result.drink > 0 ? t('drink', { count: result.drink }) : result.give > 0 ? t('give', { count: result.give }) : null
+  const units = useBjUnits()
+  const detail = result.drink > 0 ? units.lose(result.drink) : result.give > 0 ? units.win(result.give) : null
   return (
     <span
       className={cn(
@@ -163,7 +184,7 @@ export function BjOutcomeBadge({ result, className }: { result: BjHandResult; cl
   )
 }
 
-/** Choix de la mise : trois jetons, 1 à 3 gorgées. */
+/** Choix de la mise : trois jetons de casino, 1 à 3 gorgées (ou points). */
 export function BjStakePicker({
   onPick,
   disabled,
@@ -175,10 +196,10 @@ export function BjStakePicker({
   disabled?: boolean
   pendingStake?: number | null
   label: string
-  /** Colonne étroite (paysage) : les jetons seuls, le nombre de gorgées en aria-label. */
+  /** Colonne étroite (paysage) : les jetons seuls, la mise en aria-label. */
   chipsOnly?: boolean
 }) {
-  const tCommon = useTranslations('common')
+  const units = useBjUnits()
   return (
     <div role="group" aria-label={label} className="grid grid-cols-3 gap-2">
       {BJ_STAKES.map((stake) => (
@@ -188,21 +209,20 @@ export function BjStakePicker({
           disabled={disabled}
           onClick={() => onPick(stake)}
           aria-busy={pendingStake === stake || undefined}
-          aria-label={chipsOnly ? tCommon('sipsCount', { count: stake }) : undefined}
+          aria-label={chipsOnly ? units.amount(stake) : undefined}
           className={cn(
-            'relative flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold/30 bg-black/20 px-2 py-2 text-cream transition-[transform,box-shadow] enabled:hover:ring-2 enabled:hover:ring-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep motion-safe:active:scale-95 disabled:opacity-40',
-            chipsOnly ? 'min-h-[52px]' : 'min-h-[64px]',
+            'group relative flex flex-col items-center justify-center gap-1 rounded-2xl border border-gold/30 bg-black/20 px-1 py-2 text-cream transition-[transform,box-shadow] enabled:hover:ring-2 enabled:hover:ring-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-felt-deep motion-safe:active:scale-95 disabled:opacity-40',
+            chipsOnly ? 'min-h-[52px]' : 'min-h-[76px]',
             pendingStake === stake && 'disabled:opacity-100'
           )}
         >
-          <span
-            aria-hidden
-            className="flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-dashed border-[#24201A]/40 bg-amber-500 font-display text-lg font-bold text-[#24201A] shadow-[0_8px_18px_-10px_rgba(217,164,65,0.8)]"
-          >
-            {stake}
-          </span>
-          {!chipsOnly && <span className="text-sm font-semibold">{tCommon('sipsCount', { count: stake })}</span>}
-          {pendingStake === stake && <Loader2 aria-hidden className="absolute right-2 top-2 h-5 w-5 motion-safe:animate-spin" />}
+          <CasinoChip
+            value={stake}
+            size={chipsOnly ? 'md' : 'lg'}
+            className="transition-transform motion-safe:group-enabled:group-hover:-translate-y-0.5"
+          />
+          {!chipsOnly && <span className="text-xs font-semibold">{units.amount(stake)}</span>}
+          {pendingStake === stake && <Loader2 aria-hidden className="absolute right-1.5 top-1.5 h-4 w-4 motion-safe:animate-spin" />}
         </button>
       ))}
     </div>

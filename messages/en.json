@@ -1504,7 +1504,8 @@
       },
       "blackjack": {
         "title": "Blackjack",
-        "description": "Everyone against the dealer: get close to 21 without going over, or drink your bet."
+        "description": "Everyone against the dealer: get close to 21 without going over, or drink your bet.",
+        "softDescription": "Everyone against the dealer: get close to 21 without going over and score points."
       },
       "pyramide": {
         "title": "Pyramid",
@@ -1671,8 +1672,8 @@
       "tutorial": {
         "steps": [
           {
-            "title": "Bet your sips",
-            "body": "Each round, bet 1, 2 or 3 sips. You play against the dealer, not the table."
+            "title": "Bet your chips",
+            "body": "Each round, bet 1, 2 or 3 chips: sips, or points in alcohol-free mode. You play against the dealer, not the table."
           },
           {
             "title": "Get close to 21",
@@ -1680,7 +1681,7 @@
           },
           {
             "title": "The dealer decides",
-            "body": "The dealer draws to 17. Beaten or bust: drink your bet. Win: hand it out. Blackjack: one and a half times!"
+            "body": "The dealer draws to 17. Beaten or bust: you lose your bet (drink it, or lose the points). Win: hand it out, or score the points. Blackjack: one and a half times!"
           }
         ]
       },
@@ -1733,6 +1734,16 @@
         "enter": "Switch to landscape",
         "exit": "Portrait",
         "hint": "Turn your phone sideways: the table switches to landscape."
+      },
+      "soft": {
+        "points": "{count, plural, one {# point} other {# points}}",
+        "lose": "{count, plural, one {lose # point} other {lose # points}}",
+        "win": "{count, plural, one {win # point} other {win # points}}",
+        "tallyTitle": "The standings",
+        "tallyLine": "{wins, plural, one {# hand won} other {# hands won}} out of {hands}",
+        "net": "{value} pts",
+        "endDescription": "Time for the standings: who scored the most points.",
+        "onlineEndDescription": "The game stops on every phone and the points standings are shown."
       },
       "tableLabel": "The table",
       "endConfirm": {

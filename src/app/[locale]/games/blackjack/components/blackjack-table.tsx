@@ -154,8 +154,10 @@ function Seat({
             initial={reduced ? false : { y: 24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.25 }}
+            // En flex : en ligne, la hauteur de ligne poussait le jeton hors de sa case.
+            className="flex"
           >
-            <BjStakeChip count={seat.stake} doubled={seat.hands.length === 1 && seat.hands[0].doubled} />
+            <BjStakeChip count={seat.stake} doubled={seat.hands.length === 1 && seat.hands[0].doubled} size={tv ? 'md' : 'sm'} />
           </motion.span>
         )}
         {result && (

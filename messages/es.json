@@ -1504,7 +1504,8 @@
       },
       "blackjack": {
         "title": "Blackjack",
-        "description": "Cada uno contra la banca: acércate a 21 sin pasarte, o bébete tu apuesta."
+        "description": "Cada uno contra la banca: acércate a 21 sin pasarte, o bébete tu apuesta.",
+        "softDescription": "Cada uno contra la banca: acércate a 21 sin pasarte y suma puntos."
       },
       "pyramide": {
         "title": "Pirámide",
@@ -1671,8 +1672,8 @@
       "tutorial": {
         "steps": [
           {
-            "title": "Apuesta tus tragos",
-            "body": "Cada ronda, apuesta 1, 2 o 3 tragos. Juegas contra la banca, no contra la mesa."
+            "title": "Apuesta tus fichas",
+            "body": "Cada ronda, apuesta 1, 2 o 3 fichas: tragos, o puntos en el modo sin alcohol. Juegas contra la banca, no contra la mesa."
           },
           {
             "title": "Acércate a 21",
@@ -1680,7 +1681,7 @@
           },
           {
             "title": "La banca decide",
-            "body": "La banca pide hasta 17. Superado o pasado: bebes tu apuesta. Ganas: la repartes. Blackjack: ¡vez y media!"
+            "body": "La banca pide hasta 17. Superado o pasado: pierdes tu apuesta (te la bebes, o pierdes los puntos). Ganas: la repartes, o sumas los puntos. Blackjack: ¡vez y media!"
           }
         ]
       },
@@ -1733,6 +1734,16 @@
         "enter": "Pasar a horizontal",
         "exit": "Vertical",
         "hint": "Gira el móvil en horizontal: la mesa pasa a apaisado."
+      },
+      "soft": {
+        "points": "{count, plural, one {# punto} other {# puntos}}",
+        "lose": "{count, plural, one {pierde # punto} other {pierde # puntos}}",
+        "win": "{count, plural, one {gana # punto} other {gana # puntos}}",
+        "tallyTitle": "La clasificación",
+        "tallyLine": "{wins, plural, one {# mano ganada} other {# manos ganadas}} de {hands}",
+        "net": "{value} pts",
+        "endDescription": "Hora de la clasificación: quién ha ganado más puntos.",
+        "onlineEndDescription": "La partida se detiene en todos los móviles y se muestra la clasificación por puntos."
       },
       "tableLabel": "La mesa",
       "endConfirm": {

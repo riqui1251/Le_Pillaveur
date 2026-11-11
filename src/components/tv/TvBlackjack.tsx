@@ -9,6 +9,10 @@ import { rematchCounter } from '@/components/online/end-screen'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { BjTable } from '@/app/[locale]/games/blackjack/components/blackjack-table'
+import { useBjUnits } from '@/app/[locale]/games/blackjack/components/blackjack-ui'
+import { bjNetPoints } from '@/app/[locale]/games/blackjack/components/blackjack-tally'
+
+const netLabel = (net: number) => (net > 0 ? `+${net}` : net < 0 ? `−${-net}` : '0')
 
 /**
  * Black Jack sur grand écran : le croupier en haut, la table en dessous. La
@@ -17,6 +21,7 @@ import { BjTable } from '@/app/[locale]/games/blackjack/components/blackjack-tab
 export function TvBlackjack({ room, state }: { room: TvRoomDto; state: BlackjackSyncedState }) {
   const t = useTranslations('games.blackjack')
   const tv = useTranslations('tv')
+  const { soft } = useBjUnits()
 
   const iconOf = (userId: string) => {
     const player = state.players.find((p) => p.id === userId)
@@ -25,7 +30,11 @@ export function TvBlackjack({ room, state }: { room: TvRoomDto; state: Blackjack
   }
 
   if (state.phase === 'finished') {
-    const ranking = [...state.players].sort((a, b) => (state.totals[b.id]?.drunk ?? 0) - (state.totals[a.id]?.drunk ?? 0))
+    const ranking = [...state.players].sort((a, b) =>
+      soft
+        ? bjNetPoints(state.totals[b.id]) - bjNetPoints(state.totals[a.id])
+        : (state.totals[b.id]?.drunk ?? 0) - (state.totals[a.id]?.drunk ?? 0)
+    )
     const counter = rematchCounter(room.members, state.rematchVotes ?? [], null)
     return (
       <div className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-6 px-10 py-6">
@@ -41,9 +50,15 @@ export function TvBlackjack({ room, state }: { room: TvRoomDto; state: Blackjack
                 </span>
                 <span className="min-w-0 flex-1 truncate text-2xl font-bold text-white">{p.name}</span>
                 <span className="text-xl text-white/70">
-                  {t('tallyLine', { wins: tally?.wins ?? 0, hands: tally?.hands ?? 0, given: tally?.given ?? 0 })}
+                  {soft
+                    ? t('soft.tallyLine', { wins: tally?.wins ?? 0, hands: tally?.hands ?? 0 })
+                    : t('tallyLine', { wins: tally?.wins ?? 0, hands: tally?.hands ?? 0, given: tally?.given ?? 0 })}
                 </span>
-                <span className="text-3xl font-black tabular-nums text-amber-300">{t('drunk', { count: tally?.drunk ?? 0 })}</span>
+                <span className="text-3xl font-black tabular-nums text-amber-300">
+                  {soft
+                    ? t('soft.net', { value: netLabel(bjNetPoints(tally)) })
+                    : t('drunk', { count: tally?.drunk ?? 0 })}
+                </span>
               </div>
             )
           })}

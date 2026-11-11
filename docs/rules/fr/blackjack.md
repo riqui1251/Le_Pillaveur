@@ -40,9 +40,11 @@ Pas de vainqueur entre joueurs : chacun joue contre la banque. La partie dure au
 - Double sur 11, et sur 10 face à une petite carte.
 - Sépare toujours les as et les 8, jamais les 10.
 
-## Le mode apéro
+## Le mode apéro… ou sans alcool
 
-La gorgée n'est qu'une unité de mise : chacun met ce qu'il veut dans son verre. Le Black Jack n'est pas proposé dans le mode sans alcool du site — sans mise à boire ou à distribuer, il ne reste que le duel contre le croupier.
+Avec alcool, la gorgée est l'unité de mise : on boit sa mise perdue, on distribue sa mise gagnée, chacun met ce qu'il veut dans son verre.
+
+En mode **sans alcool**, les mêmes jetons valent des **points** : main gagnée, tu marques ta mise ; main perdue, tu la perds. Le bilan devient un classement, et le meilleur solde gagne la partie.
 
 ## Questions fréquentes
 
@@ -64,6 +66,6 @@ Une manche prend une à deux minutes. La table enchaîne les manches et arrête 
 
 ### Peut-on jouer sans alcool ?
 
-Pas en ligne : le jeu n'apparaît pas dans le catalogue sans alcool du site. Rien n'empêche de remplir les verres d'eau ou de soda — la gorgée n'est qu'une unité.
+Oui : en mode sans alcool, les mises se comptent en points et la partie se termine sur un classement. Le jeu apparaît dans le catalogue sans alcool, en local comme en ligne.
 
 [▶ Jouer au Black Jack](/games/blackjack)

@@ -25,7 +25,7 @@ import {
   type BjAction,
   type BjState,
 } from '@/lib/blackjack/engine'
-import { BjStakePicker } from './blackjack-ui'
+import { BjStakePicker, useBjUnits } from './blackjack-ui'
 import { BjResultsList, BjTable } from './blackjack-table'
 import { BjLandscapeButton, BjLandscapeHint, BjLandscapeShell, useLandscapeSwitch, usePhoneLandscape } from './landscape'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -63,6 +63,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   )
   const countedRef = useRef(false)
   const landscape = usePhoneLandscape()
+  const units = useBjUnits()
   const switcher = useLandscapeSwitch()
 
   // Tant qu'une reprise est proposée, on ne distribue rien.
@@ -123,7 +124,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     }
     const ok = await confirm({
       title: t('endConfirm.title'),
-      description: t('endConfirm.description'),
+      description: units.soft ? t('soft.endDescription') : t('endConfirm.description'),
       confirmLabel: t('endConfirm.confirm'),
       cancelLabel: t('endConfirm.cancel'),
       tone: 'primary',

@@ -319,6 +319,8 @@ export const GAMES: GameMeta[] = [
     // Mais seul face au croupier, la table semblait vide (minPlayers − 1 = 0
     // bot) : trois voisins qui misent et tirent la rendent vivante.
     soloBots: 3,
+    // Sans alcool, les mises deviennent des points et le bilan un classement.
+    softModeReady: true,
   },
   {
     id: 'pyramide',

@@ -26,7 +26,7 @@ import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
-import { BjStakePicker } from '@/app/[locale]/games/blackjack/components/blackjack-ui'
+import { BjStakePicker, useBjUnits } from '@/app/[locale]/games/blackjack/components/blackjack-ui'
 import { BjResultsList, BjTable } from '@/app/[locale]/games/blackjack/components/blackjack-table'
 import {
   BjLandscapeButton,
@@ -66,6 +66,7 @@ export function BlackjackOnline() {
 
   const inGame = room?.gameId === 'blackjack' && room.status === 'playing'
   const landscape = usePhoneLandscape()
+  const units = useBjUnits()
   const switcher = useLandscapeSwitch()
   const tutorial = useGameTutorial('blackjack', inGame)
   const cosmetics = useMemberCosmetics(room)
@@ -181,7 +182,7 @@ export function BlackjackOnline() {
   const askEnd = async () => {
     const ok = await confirm({
       title: t('online.endConfirm.title'),
-      description: t('online.endConfirm.description'),
+      description: units.soft ? t('soft.onlineEndDescription') : t('online.endConfirm.description'),
       confirmLabel: t('online.endConfirm.confirm'),
       cancelLabel: t('online.endConfirm.cancel'),
       tone: 'danger',

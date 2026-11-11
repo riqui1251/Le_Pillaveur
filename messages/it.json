@@ -1504,7 +1504,8 @@
       },
       "blackjack": {
         "title": "Blackjack",
-        "description": "Ognuno contro il banco: avvicinati a 21 senza sballare, o bevi la tua puntata."
+        "description": "Ognuno contro il banco: avvicinati a 21 senza sballare, o bevi la tua puntata.",
+        "softDescription": "Ognuno contro il banco: avvicinati a 21 senza sballare e fai punti."
       },
       "pyramide": {
         "title": "Piramide",
@@ -1671,8 +1672,8 @@
       "tutorial": {
         "steps": [
           {
-            "title": "Punta i tuoi sorsi",
-            "body": "A ogni mano punta 1, 2 o 3 sorsi. Giochi contro il banco, non contro il tavolo."
+            "title": "Punta le tue fiche",
+            "body": "A ogni mano punta 1, 2 o 3 fiche: sorsi, o punti in modalità analcolica. Giochi contro il banco, non contro il tavolo."
           },
           {
             "title": "Avvicinati a 21",
@@ -1680,7 +1681,7 @@
           },
           {
             "title": "Decide il banco",
-            "body": "Il banco tira fino a 17. Battuto o sballato: bevi la puntata. Vinto: la distribuisci. Blackjack: una volta e mezza!"
+            "body": "Il banco tira fino a 17. Battuto o sballato: perdi la puntata (la bevi, o perdi i punti). Vinto: la distribuisci, o segni i punti. Blackjack: una volta e mezza!"
           }
         ]
       },
@@ -1733,6 +1734,16 @@
         "enter": "Passa in orizzontale",
         "exit": "Verticale",
         "hint": "Ruota il telefono in orizzontale: il tavolo passa in modalità panorama."
+      },
+      "soft": {
+        "points": "{count, plural, one {# punto} other {# punti}}",
+        "lose": "{count, plural, one {perde # punto} other {perde # punti}}",
+        "win": "{count, plural, one {vince # punto} other {vince # punti}}",
+        "tallyTitle": "La classifica",
+        "tallyLine": "{wins, plural, one {# mano vinta} other {# mani vinte}} su {hands}",
+        "net": "{value} pt",
+        "endDescription": "Ecco la classifica: chi ha fatto più punti.",
+        "onlineEndDescription": "La partita si ferma su tutti i telefoni e compare la classifica a punti."
       },
       "tableLabel": "Il tavolo",
       "endConfirm": {

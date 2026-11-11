@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pencil, Crown } from 'lucide-react'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { CssDie } from '@/components/games/CssDie'
+import { CasinoChip } from '@/components/games/CasinoChip'
 import { MedalDot } from '@/components/online/MedalDot'
 import { cn } from '@/lib/utils'
 
@@ -214,21 +215,13 @@ export function BlackjackHandPreview({ cards, total }: { cards: { rank: string; 
   )
 }
 
-/** Trois jetons de mise, façon plaques de casino. */
+/** Trois jetons de mise, les mêmes qu'à la table de Black Jack. */
 export function StakeChipsPreview() {
   return (
     <div className={BOX}>
-      <div className="flex gap-2">
+      <div className="flex items-end gap-2">
         {[1, 2, 3].map((n) => (
-          <span
-            key={n}
-            className={cn(
-              'flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-dashed border-[#24201A]/40 bg-amber-500 font-display text-lg font-bold text-[#24201A]',
-              n === 2 && 'ring-2 ring-cream'
-            )}
-          >
-            {n}
-          </span>
+          <CasinoChip key={n} value={n} size={n === 2 ? 'lg' : 'md'} />
         ))}
       </div>
     </div>
