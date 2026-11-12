@@ -480,7 +480,7 @@
     },
     "botsFill": {
       "title": "Aggiungi bot",
-      "hint": "Contano nel minimo di {min} giocatori e prendono i posti vuoti.",
+      "hint": "Contano nel minimo di {min, plural, one {# giocatore} other {# giocatori}} e prendono i posti vuoti.",
       "on": "Attivo",
       "off": "Disattivo"
     },

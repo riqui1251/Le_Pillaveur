@@ -480,7 +480,7 @@
     },
     "botsFill": {
       "title": "Añadir bots",
-      "hint": "Cuentan para el mínimo de {min} jugadores y ocupan los asientos vacíos.",
+      "hint": "Cuentan para el mínimo de {min, plural, one {# jugador} other {# jugadores}} y ocupan los asientos vacíos.",
       "on": "Activado",
       "off": "Desactivado"
     },
