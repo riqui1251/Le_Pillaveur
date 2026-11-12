@@ -350,6 +350,8 @@ function ruleG5ClientReach(): { offenders: string[]; reached: string[] } {
 
 // ─── Un describe par lot, puis le carnet entier ──────────────────────────────
 
+const SRC_SCAN_TIMEOUT_MS = 30_000
+
 describe('attributes : structure', () => {
   it(`${LOT_COUNT} lots de ${ESPION_ATTRIBUTE_LOT_SIZE} lieux couvrent exactement ESPION_LOCATION_IDS`, () => {
     expect(ESPION_ATTRIBUTE_LOTS).toHaveLength(LOT_COUNT)
@@ -408,13 +410,16 @@ describe('attributes/global', () => {
     expect(codes.filter((code) => LOCATION_SET.has(code))).toEqual([])
   })
 
+  // G5 et G5 bis lisent tout src/ : 0,6 s seuls, mais au-delà des 5 s par
+  // défaut quand la suite complète charge la machine (deux déploiements
+  // refusés le 12/11/2026 sur ce seul délai). Les règles vérifiées sont inchangées.
   it('G5 : hors tests, seuls server-adapter.ts et data/attributes/ importent le carnet ; bot-tick.ts aucune donnée', () => {
     const { offenders, readers } = ruleG5Imports()
     expect(offenders, offenders.join('\n')).toEqual([])
     // Le relevé a bien résolu les chemins : ce fichier-ci importe le carnet.
     expect(readers).toContain('lib/espion/data/attributes.test.ts')
     expect(existsSync(join(SRC_DIR, CARNET, 'index.ts'))).toBe(true)
-  })
+  }, SRC_SCAN_TIMEOUT_MS)
 
   it('G5 bis : aucun module client n’atteint le carnet ni server-adapter.ts, même par rebond', () => {
     const { offenders, reached } = ruleG5ClientReach()
@@ -423,7 +428,7 @@ describe('attributes/global', () => {
     expect(reached).toEqual(
       expect.arrayContaining(['components/online/EspionOnline.tsx', 'lib/espion/engine.ts', 'lib/espion/data/questions.ts'])
     )
-  })
+  }, SRC_SCAN_TIMEOUT_MS)
 })
 
 // ─── Le validateur lui-même : chaque règle se déclenche sur un carnet fautif ─
