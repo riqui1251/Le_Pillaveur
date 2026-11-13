@@ -48,6 +48,9 @@ import { buildMCState } from '@/lib/mots-codes/server-adapter'
 import { buildDilState } from '@/lib/dilemmes/server-adapter'
 import { buildPbcState } from '@/lib/petit-bac/server-adapter'
 import { buildPreState } from '@/lib/president/server-adapter'
+import { buildChiffrePiegeState } from '@/lib/chiffre-piege/server-adapter'
+import { buildVdnOnlineState } from '@/lib/vue-de-nez/server-adapter'
+import { buildPcState } from '@/lib/patate-chaude/server-adapter'
 
 type Plain = Record<string, unknown>
 type Parser = (json: string | null | undefined) => unknown
@@ -83,6 +86,9 @@ const ENGINE_STATES: Record<string, () => unknown> = {
   dilemmes: () => buildDilState(table(4), 'alcool', 0, SEED),
   'petit-bac': () => buildPbcState(table(4), SEED),
   president: () => buildPreState(table(4), 0, SEED),
+  'chiffre-piege': () => buildChiffrePiegeState(table(3), 0, SEED),
+  'vue-de-nez': () => buildVdnOnlineState(table(3), { seed: SEED }),
+  'patate-chaude': () => buildPcState(table(3), {}, 'fr', SEED),
 }
 
 /** État complet + vue du joueur u1 + vue spectateur, en JSON simple. */
@@ -287,6 +293,9 @@ const CASES: ParserCase[] = [
     'dilemmes',
     'petit-bac',
     'president',
+    'chiffre-piege',
+    'vue-de-nez',
+    'patate-chaude',
   ]),
 ]
 

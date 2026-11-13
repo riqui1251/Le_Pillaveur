@@ -21,6 +21,9 @@ export const RULES_GAME_IDS = [
   'dilemmes',
   'petit-bac',
   'president',
+  'chiffre-piege',
+  'vue-de-nez',
+  'patate-chaude',
 ] as const
 
 export type RulesGameId = (typeof RULES_GAME_IDS)[number]

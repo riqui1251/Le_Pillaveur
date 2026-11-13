@@ -309,6 +309,52 @@ describe('processRematchVote — Tabou Vocal', () => {
   })
 })
 
+// Patate Chaude se joue sans bots : « Rejouer » ne relance pas une table
+// réduite à un seul présent (une partie à un joueur), elle revient au lobby.
+describe('processRematchVote — Patate Chaude', () => {
+  const pcRoom = (row: Row, absent: string[] = []) => ({
+    id: 'room-1',
+    gameId: 'patate-chaude',
+    hostUserId: 'u1',
+    settingsJson: JSON.stringify({ lang: 'fr' }),
+    members: ['u1', 'u2'].map((userId) => ({
+      userId,
+      user: { displayName: userId },
+      lastSeenAt: absent.includes(userId) ? absentSince() : new Date(),
+    })),
+    gameStateJson: row.gameStateJson,
+    stateVersion: row.stateVersion,
+  })
+  const pcFinished = (votes: string[]) => JSON.stringify({ version: 7, phase: 'finished', rematchVotes: votes })
+  const roomWrites = () =>
+    roomMock.update.mock.calls.map((c) => c[0].data as { status?: string; gameStateJson?: string | null })
+
+  it('renvoie au lobby quand un seul joueur reste présent', async () => {
+    db = { gameStateJson: pcFinished([]), stateVersion: 7 }
+
+    // u2 a fermé l'onglet sans quitter : u1 vote seul, la relance le retire.
+    await processRematchVote('room-1', pcRoom(db, ['u2']), 'u1')
+
+    expect(memberMock.deleteMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1', userId: { in: ['u2'] } },
+    })
+    expect(roomWrites().at(-1)).toMatchObject({ status: 'waiting', gameStateJson: null, stateVersion: 0 })
+    expect(roomWrites().some((d) => d.status === 'playing')).toBe(false)
+  })
+
+  it('relance à deux présents, sans bot', async () => {
+    db = { gameStateJson: pcFinished(['u2']), stateVersion: 7 }
+
+    await processRematchVote('room-1', pcRoom(db), 'u1')
+
+    const write = roomWrites().find((d) => d.status === 'playing')
+    expect(write).toBeDefined()
+    const players = JSON.parse(write?.gameStateJson ?? '{}').players as { id: string; isBot: boolean }[]
+    expect(players.map((p) => p.id)).toEqual(['u1', 'u2'])
+    expect(players.some((p) => p.isBot)).toBe(false)
+  })
+})
+
 describe('resetRoomToWaitingLobby', () => {
   it('rend à chacun le délai de grâce du lobby : présence remise à maintenant, tous « pas prêts »', async () => {
     // En partie, la trace d'un onglet caché date de son dernier coup : sans

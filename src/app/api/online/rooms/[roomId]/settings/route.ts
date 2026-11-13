@@ -9,6 +9,8 @@ import { onlineErrorBody } from '@/lib/online-errors'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 import { GAMES, hasContentIn } from '@/lib/games'
 import { getGameAdapter } from '@/lib/online/game-adapters'
+import { readVdnThemesSetting } from '@/lib/vue-de-nez/themes'
+import { PC_CHALLENGE_MODES, PC_FUSES, PC_ROUNDS_OPTIONS } from '@/lib/patate-chaude/engine'
 
 type Params = { params: Promise<{ roomId: string }> }
 
@@ -31,6 +33,13 @@ const VALID_VISIBILITIES = new Set(['public', 'private', 'invite'])
 // Non typée sur RoomSettings['tcMode'] : l'union du type a pris du retard sur
 // le jeu, qui gère bien le 4v4 (TC_MODES dans toucher-coule/engine.ts).
 const VALID_TC_MODES = new Set(['1v1', '2v2', '3v3', '4v4'])
+// Patate Chaude : listes du moteur, adossées à l'union de RoomSettings (une valeur hors du type
+// ne compile pas).
+const VALID_PC_CHALLENGES = new Set<string>(
+  PC_CHALLENGE_MODES satisfies readonly NonNullable<RoomSettings['pcChallenge']>[]
+)
+const VALID_PC_FUSES = new Set<string>(PC_FUSES satisfies readonly NonNullable<RoomSettings['pcFuse']>[])
+const VALID_PC_ROUNDS: readonly number[] = PC_ROUNDS_OPTIONS
 
 /**
  * Réglages de la table quand elle change de jeu : ceux du jeu précédent
@@ -216,6 +225,30 @@ export async function PUT(request: Request, { params }: Params) {
   }
   if (typeof body.preManches === 'number' && [1, 3, 5].includes(body.preManches)) {
     next.preManches = body.preManches
+  }
+  if (typeof body.cpMax === 'number' && [50, 100, 200].includes(body.cpMax)) {
+    next.cpMax = body.cpMax
+  }
+  if (typeof body.cpRounds === 'number' && [3, 5, 10].includes(body.cpRounds)) {
+    next.cpRounds = body.cpRounds
+  }
+  if (typeof body.vdnCount === 'number' && [5, 10, 15].includes(body.vdnCount)) {
+    next.vdnCount = body.vdnCount
+  }
+  // À Vue de Nez : thèmes connus seulement, sans doublon ; [] (ou les sept) = « tout mélanger ».
+  if (body.vdnThemes !== undefined) {
+    const themes = readVdnThemesSetting(body.vdnThemes)
+    if (themes && themes.length > 0) next.vdnThemes = themes
+    else if (themes) delete next.vdnThemes
+  }
+  if (typeof body.pcChallenge === 'string' && VALID_PC_CHALLENGES.has(body.pcChallenge)) {
+    next.pcChallenge = body.pcChallenge as NonNullable<RoomSettings['pcChallenge']>
+  }
+  if (typeof body.pcFuse === 'string' && VALID_PC_FUSES.has(body.pcFuse)) {
+    next.pcFuse = body.pcFuse as NonNullable<RoomSettings['pcFuse']>
+  }
+  if (typeof body.pcRounds === 'number' && VALID_PC_ROUNDS.includes(body.pcRounds)) {
+    next.pcRounds = body.pcRounds
   }
 
   const visibilityUpdate =

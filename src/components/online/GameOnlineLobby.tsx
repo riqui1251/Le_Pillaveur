@@ -35,6 +35,15 @@ import { copyText, shareLink } from '@/lib/native-share'
 import { imposteurCountFor, maxImposteurCount, IMPOSTEUR_MIN_PLAYERS } from '@/lib/imposteur/engine'
 import { lgDebateMinutes } from '@/lib/loup-garou/debate'
 import { espionDiscussionMinutes } from '@/lib/espion/discussion'
+import { VDN_LOBBY_COUNTS, VDN_LOBBY_DEFAULT_COUNT, VDN_THEMES } from '@/lib/vue-de-nez/themes'
+import {
+  PC_CHALLENGE_MODES,
+  PC_DEFAULT_SETTINGS,
+  PC_FUSE_RANGES_S,
+  PC_FUSES,
+  PC_ROUNDS_OPTIONS,
+  PC_UNLIMITED_ROUNDS,
+} from '@/lib/patate-chaude/engine'
 import { forceLaunchDecision, lobbyLaunchStatus, MC_TEAM_MIN_PLAYERS } from '@/components/online/lobby-launch'
 
 const VISIBILITY_OPTIONS = ['public', 'private', 'invite'] as const
@@ -524,6 +533,19 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
   const tEspion = useTranslations('games.espion.lobby')
   const tTabou = useTranslations('games.tabou.lobby')
   const tCrobard = useTranslations('games.crobard.lobby')
+  const tCp = useTranslations('games.chiffre-piege.lobby')
+  const tVdn = useTranslations('games.vue-de-nez.lobby')
+  // À Vue de Nez : chaque toucher de thème envoie la liste ENTIÈRE, calculée sur la salle affichée,
+  // et la route la remplace en bloc. updateSettings n’a ni mise à jour optimiste ni verrou d’envoi :
+  // un second toucher parti avant le retour du premier effaçait son thème. Un envoi à la fois.
+  const [vdnThemesSaving, setVdnThemesSaving] = useState(false)
+  const saveVdnThemes = (vdnThemes: string[]) => {
+    setVdnThemesSaving(true)
+    void updateSettings({ vdnThemes })
+      .catch(() => null)
+      .finally(() => setVdnThemesSaving(false))
+  }
+  const tPc = useTranslations('games.patate-chaude.lobby')
   const tFriends = useTranslations('account.friends')
   // Titres traduits des jeux (sélecteur « Changer de jeu », bascule de table,
   // bandeau « tu es dans le lobby X ») : `games.catalog` est au socle, lisible
@@ -1677,6 +1699,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       disabled={!isHost}
                       onClick={() => updateSettings({ tcMode: value })}
                       title={tTc(`modes.${value}.desc`)}
+                      aria-pressed={active}
                       className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
                     >
                       <span className="block text-sm font-bold">{tTc(`modes.${value}.label`)}</span>
@@ -1822,6 +1845,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 disabled={!isHost}
                 onClick={() => updateSettings({ visibility: value })}
                 title={tOnline(`visibility.${value}Desc`)}
+                aria-pressed={active}
                 className={cn('flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
               >
                 <Icon className="h-4 w-4" />
@@ -1846,6 +1870,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ difficulty: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-left', optionTone(active, isHost))}
                 >
                   <span className="flex items-center gap-1.5 text-sm font-bold">
@@ -1920,6 +1945,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ quizCount: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -1947,6 +1973,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ bluffRounds: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -1974,6 +2001,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ sfRounds: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -2001,6 +2029,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ dilRounds: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -2054,6 +2083,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ pbcRounds: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -2081,6 +2111,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ preManches: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -2090,6 +2121,193 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {gameId === 'chiffre-piege' && (
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
+            {tCp('range')}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[50, 100, 200].map((value) => {
+              const active = (room.settings.cpMax ?? 100) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ cpMax: value })}
+                  aria-pressed={active}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
+                    {tCp('rangeUnit')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="mb-3 mt-4 text-xs font-semibold uppercase tracking-widest text-gold/80">
+            {tCp('rounds')}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[3, 5, 10].map((value) => {
+              const active = (room.settings.cpRounds ?? 5) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ cpRounds: value })}
+                  aria-pressed={active}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
+                    {tCp('roundsUnit', { count: value })}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {gameId === 'vue-de-nez' && (
+        <div className="mb-4 rounded-2xl border border-gold/10 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">
+            {tVdn('questionCount')}
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {VDN_LOBBY_COUNTS.map((value) => {
+              const active = (room.settings.vdnCount ?? VDN_LOBBY_DEFAULT_COUNT) === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!isHost}
+                  onClick={() => updateSettings({ vdnCount: value })}
+                  aria-pressed={active}
+                  className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
+                >
+                  <span className="block text-lg font-black">{value}</span>
+                  <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
+                    {tVdn('questions')}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="mb-3 mt-4 text-xs font-semibold uppercase tracking-widest text-gold/80">
+            {tVdn('themes')}
+          </p>
+          {/* Aucun thème retenu = tout mélanger ; décocher le dernier y revient aussi. */}
+          <button
+            type="button"
+            disabled={!isHost || vdnThemesSaving}
+            aria-pressed={!room.settings.vdnThemes?.length}
+            onClick={() => saveVdnThemes([])}
+            className={cn('w-full rounded-xl border px-3 py-3 text-left', optionTone(!room.settings.vdnThemes?.length, isHost))}
+          >
+            <span className="block text-sm font-black">{tVdn('themesAll')}</span>
+            <span className={cn('mt-0.5 block text-xs', optionHint(!room.settings.vdnThemes?.length))}>
+              {tVdn('themesAllHint')}
+            </span>
+          </button>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {VDN_THEMES.map((theme) => {
+              const picked = room.settings.vdnThemes ?? []
+              const active = picked.includes(theme)
+              return (
+                <button
+                  key={theme}
+                  type="button"
+                  disabled={!isHost || vdnThemesSaving}
+                  aria-pressed={active}
+                  onClick={() => saveVdnThemes(active ? picked.filter((id) => id !== theme) : [...picked, theme])}
+                  className={cn('min-h-[44px] rounded-xl border px-3 py-2 text-left text-sm font-bold', optionTone(active, isHost))}
+                >
+                  {tVdn(`themeNames.${theme}`)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {gameId === 'patate-chaude' && (
+        <div className="mb-4 space-y-4 rounded-2xl border border-gold/10 p-4">
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">{tPc('challenge')}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {PC_CHALLENGE_MODES.map((value) => {
+                const active = (room.settings.pcChallenge ?? PC_DEFAULT_SETTINGS.challenge) === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ pcChallenge: value })}
+                    aria-pressed={active}
+                    className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
+                  >
+                    <span className="block text-sm font-black">{tPc(`challenges.${value}`)}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">{tPc('fuse')}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {PC_FUSES.map((value) => {
+                const active = (room.settings.pcFuse ?? PC_DEFAULT_SETTINGS.fuse) === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ pcFuse: value })}
+                    aria-pressed={active}
+                    className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
+                  >
+                    <span className="block text-sm font-black">{tPc(`fuses.${value}`)}</span>
+                    <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
+                      {tPc('fuseRange', { min: PC_FUSE_RANGES_S[value].min, max: PC_FUSE_RANGES_S[value].max })}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gold/80">{tPc('rounds')}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {PC_ROUNDS_OPTIONS.map((value) => {
+                const active = (room.settings.pcRounds ?? PC_DEFAULT_SETTINGS.rounds) === value
+                const unlimited = value === PC_UNLIMITED_ROUNDS
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={!isHost}
+                    onClick={() => updateSettings({ pcRounds: value })}
+                    aria-pressed={active}
+                    className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
+                  >
+                    <span className={cn('block font-black', unlimited ? 'text-sm leading-7' : 'text-lg')}>
+                      {unlimited ? tPc('unlimited') : value}
+                    </span>
+                    <span className={cn('mt-0.5 block truncate text-xs', optionHint(active))}>
+                      {unlimited ? tPc('unlimitedHint') : tPc('roundsUnit', { count: value })}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -2112,6 +2330,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     type="button"
                     disabled={!isHost}
                     onClick={() => updateSettings({ espionDiscussionMin: value })}
+                    aria-pressed={active}
                     className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                   >
                     <span className="block text-lg font-black">{value}</span>
@@ -2136,6 +2355,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     type="button"
                     disabled={!isHost}
                     onClick={() => updateSettings({ espionRoundsToWin: value })}
+                    aria-pressed={active}
                     className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                   >
                     <span className="block text-lg font-black">{value}</span>
@@ -2282,6 +2502,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                       type="button"
                       disabled={!isHost}
                       onClick={() => updateSettings({ tabouTargetScore: value })}
+                      aria-pressed={active}
                       className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                     >
                       <span className="block text-lg font-black">{value}</span>
@@ -2311,6 +2532,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ crobardRounds: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-3 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -2341,6 +2563,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   type="button"
                   disabled={!isHost}
                   onClick={() => updateSettings({ lgDebateMin: value })}
+                  aria-pressed={active}
                   className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
                 >
                   <span className="block text-lg font-black">{value}</span>
@@ -2422,6 +2645,7 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                     type="button"
                     disabled={!isHost}
                     onClick={() => updateSettings({ imposteurCount: value })}
+                    aria-pressed={active}
                     className={cn('rounded-xl border px-2 py-3 text-center', optionTone(active, isHost))}
                   >
                     <span className="block text-lg font-black">{value}</span>

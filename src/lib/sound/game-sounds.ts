@@ -17,6 +17,11 @@ export type GameSound =
   | 'victory'
   | 'wheel'
   | 'hunter'
+  | 'tick'
+  | 'boom'
+  | 'shot'
+  | 'correct'
+  | 'skip'
 
 const MUTE_KEY = 'lp-sound-muted'
 
@@ -140,6 +145,25 @@ const PLAYERS: Record<GameSound, (ac: AudioContext) => void> = {
     tone(ac, { freq: 220, at: 0.45, dur: 0.28, type: 'triangle', gain: 0.09 })
     tone(ac, { freq: 261.63, at: 0.78, dur: 0.45, type: 'triangle', gain: 0.12 })
   },
+  // Tic sec de la mèche (Patate Chaude) : joué en boucle, il doit rester discret.
+  tick: (ac) => tone(ac, { freq: 1500, dur: 0.025, type: 'square', gain: 0.05 }),
+  // Explosion : souffle grave + basse qui s'effondre.
+  boom: (ac) => {
+    noiseBurst(ac, { dur: 0.6, gain: 0.22, freq: 180 })
+    tone(ac, { freq: 80, dur: 0.7, type: 'sawtooth', gain: 0.22, slideTo: 30 })
+  },
+  // Coup de feu du duel : claquement bref, sans traîne qui masquerait le signal suivant.
+  shot: (ac) => {
+    noiseBurst(ac, { dur: 0.12, gain: 0.2, freq: 2500 })
+    tone(ac, { freq: 160, dur: 0.18, type: 'triangle', gain: 0.15, slideTo: 60 })
+  },
+  // Mot trouvé : deux notes montantes.
+  correct: (ac) => {
+    tone(ac, { freq: 784, dur: 0.12, type: 'sine', gain: 0.1 })
+    tone(ac, { freq: 1175, at: 0.09, dur: 0.18, type: 'sine', gain: 0.09 })
+  },
+  // Mot passé : bourdon descendant.
+  skip: (ac) => tone(ac, { freq: 300, dur: 0.2, type: 'square', gain: 0.06, slideTo: 180 }),
 }
 
 export function playGameSound(name: GameSound) {

@@ -281,6 +281,108 @@ export function PhoneSketchIcon(props: IconProps) {
   )
 }
 
+// Le Chiffre Piégé
+export function TrapNumberIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path d="M3 4.5H8.5V7H5.6V17H8.5V19.5H3Z" />
+      <path d="M21 4.5H15.5V7H18.4V17H15.5V19.5H21Z" />
+      <path fill={ACCENT} d="M12 6.8L13.45 10.55L17.2 12L13.45 13.45L12 17.2L10.55 13.45L6.8 12L10.55 10.55Z" />
+    </IconSvg>
+  )
+}
+
+// Cap ou Pas Cap ?
+export function TruthDareIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M3.4 5.5H9.6A1.6 1.6 0 0 1 11.2 7.1V18.9A1.6 1.6 0 0 1 9.6 20.5H3.4A1.6 1.6 0 0 1 1.8 18.9V7.1A1.6 1.6 0 0 1 3.4 5.5ZM4 10.9A2.5 2.5 0 1 1 8.42 12.51L7.15 13.5V14.7H5.85V13.1L7.42 11.67A1.2 1.2 0 1 0 5.3 10.9ZM5.65 16.9a0.85 0.85 0 1 1 1.7 0a0.85 0.85 0 1 1 -1.7 0Z" />
+      <path fill={ACCENT} fillRule="evenodd" d="M14.4 3.5H20.6A1.6 1.6 0 0 1 22.2 5.1V16.9A1.6 1.6 0 0 1 20.6 18.5H14.4A1.6 1.6 0 0 1 12.8 16.9V5.1A1.6 1.6 0 0 1 14.4 3.5ZM16.75 6.95A0.75 0.75 0 0 1 18.25 6.95V11.75A0.75 0.75 0 0 1 16.75 11.75ZM16.55 14.95a0.95 0.95 0 1 1 1.9 0a0.95 0.95 0 1 1 -1.9 0Z" />
+    </IconSvg>
+  )
+}
+
+// À Vue de Nez
+export function EstimateRulerIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M3.6 14H20.4A1.6 1.6 0 0 1 22 15.6V18.4A1.6 1.6 0 0 1 20.4 20H3.6A1.6 1.6 0 0 1 2 18.4V15.6A1.6 1.6 0 0 1 3.6 14ZM4.9 15H6.1V18H4.9ZM8.15 15H9.35V16.8H8.15ZM11.4 15H12.6V18H11.4ZM14.65 15H15.85V16.8H14.65ZM17.9 15H19.1V18H17.9Z" />
+      <path d="M6.5 12.4L4.6 9.9A2.4 2.4 0 1 1 8.4 9.9Z" />
+      <path fill={ACCENT} fillRule="evenodd" d="M14.5 12.6L11.6 8.7A3.6 3.6 0 1 1 17.4 8.7ZM13.1 6.6A1.4 1.4 0 1 0 15.9 6.6A1.4 1.4 0 1 0 13.1 6.6Z" />
+    </IconSvg>
+  )
+}
+
+// Front Collé
+export function ForeheadPhoneIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M5.31 10.6A7.6 7.6 0 1 0 18.69 10.6ZM8.3 15.4a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0ZM13.5 15.4a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0Z" />
+      <path fill={ACCENT} fillRule="evenodd" d="M5.3 2.4H18.7A1.8 1.8 0 0 1 20.5 4.2V7.8A1.8 1.8 0 0 1 18.7 9.6H5.3A1.8 1.8 0 0 1 3.5 7.8V4.2A1.8 1.8 0 0 1 5.3 2.4ZM8.4 5.1H15.6A0.9 0.9 0 0 1 16.5 6V6A0.9 0.9 0 0 1 15.6 6.9H8.4A0.9 0.9 0 0 1 7.5 6V6A0.9 0.9 0 0 1 8.4 5.1Z" />
+    </IconSvg>
+  )
+}
+
+// La Coupe du Roi
+export function KingsCupIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M5.5 8.6H18.5A0.9 0.9 0 0 1 19.4 9.5C19.4 13 16.6 15.4 13.1 15.8V18.4H15.8A1.2 1.2 0 0 1 17 19.6V20.4A1.2 1.2 0 0 1 15.8 21.6H8.2A1.2 1.2 0 0 1 7 20.4V19.6A1.2 1.2 0 0 1 8.2 18.4H10.9V15.8C7.4 15.4 4.6 13 4.6 9.5A0.9 0.9 0 0 1 5.5 8.6ZM12 14C10.1 12.7 9.5 11.8 9.5 10.9C9.5 10.2 10 9.7 10.7 9.7C11.25 9.7 11.7 10 12 10.45C12.3 10 12.75 9.7 13.3 9.7C14 9.7 14.5 10.2 14.5 10.9C14.5 11.8 13.9 12.7 12 14Z" />
+      <path fill={ACCENT} d="M7.7 7.3L7.15 3.4Q7.05 2.75 7.6 3.1L9.9 4.75L11.5 2.25Q12 1.55 12.5 2.25L14.1 4.75L16.4 3.1Q16.95 2.75 16.85 3.4L16.3 7.3Z" />
+    </IconSvg>
+  )
+}
+
+// Patate Chaude
+export function FuseBombIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M10 7a7.5 7.5 0 1 1 0 15a7.5 7.5 0 1 1 0 -15ZM4.4 13A5.8 5.8 0 0 1 8.5 8.9L8.97 10.64A4 4 0 0 0 6.14 13.47Z" />
+      <rect x="13.7" y="7.1" width="4.4" height="3" rx="0.8" transform="rotate(45 15.9 8.6)" />
+      <path {...LINE} d="M17 7.5C17.4 6.1 18.3 5 19.7 4.6" />
+      <path fill={ACCENT} d="M20.7 0.9L21.35 2.65L23.1 3.3L21.35 3.95L20.7 5.7L20.05 3.95L18.3 3.3L20.05 2.65Z" />
+    </IconSvg>
+  )
+}
+
+// Pile Poil
+export function PilePoilIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M12 5a8.5 8.5 0 1 1 0 17a8.5 8.5 0 1 1 0 -17ZM12 7a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0 -13Z" />
+      <path d="M11 1.5H13A1 1 0 0 1 13 3.5H12.9V5.6H11.1V3.5H11A1 1 0 0 1 11 1.5Z" />
+      <rect x="17.3" y="6.1" width="2.6" height="1.6" rx="0.6" transform="rotate(45 18.6 6.9)" />
+      <path fill={ACCENT} d="M12 13.5V8.9A4.6 4.6 0 0 1 15.98 15.8Z" />
+    </IconSvg>
+  )
+}
+
+// Dégaine !
+export function QuickDrawIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fillRule="evenodd" d="M5.6 6.2H19.3V5.8A0.45 0.45 0 0 1 20.2 5.8V6.2A0.6 0.6 0 0 1 20.8 6.8V8.4A0.6 0.6 0 0 1 20.2 9H12.6V12.4H6.4A0.8 0.8 0 0 1 5.6 11.6ZM8.3 9.2a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0Z" />
+      <path d="M5.8 6.4L4.4 4.9A0.5 0.5 0 0 1 4.8 4.1H6.3A0.6 0.6 0 0 1 6.9 4.6L7.3 6.4Z" />
+      <path d="M5.6 10.6L9.6 12.2L8.1 19A1 1 0 0 1 7.1 19.8H4.6A1 1 0 0 1 3.6 18.6Z" />
+      <path fillRule="evenodd" d="M9.2 12.4H13.4V13.6A2.2 2.2 0 0 1 11.2 15.8A2 2 0 0 1 9.2 13.8ZM10.4 12.4H12.2V13.4A0.9 0.9 0 0 1 11.3 14.3A0.9 0.9 0 0 1 10.4 13.4Z" />
+      <path fill={ACCENT} d="M22.6 4.9L23.05 7.15L23.8 7.6L23.05 8.05L22.6 10.3L22.15 8.05L21.4 7.6L22.15 7.15Z" />
+    </IconSvg>
+  )
+}
+
+// Le Doigt du Destin
+export function DestinyFingerIcon(props: IconProps) {
+  return (
+    <IconSvg {...props}>
+      <path fill={ACCENT} d="M5.381 10.32A6.2 6.2 0 1 1 16.619 10.32A0.9 0.9 0 0 1 14.988 9.559A4.4 4.4 0 1 0 7.012 9.559A0.9 0.9 0 0 1 5.381 10.32Z" />
+      <rect x="9.3" y="6" width="3.4" height="9.5" rx="1.7" />
+      <rect x="9.3" y="12" width="9.2" height="10" rx="3" />
+      <path d="M13.4 12.9a1.5 1.5 0 1 1 3 0a1.5 1.5 0 1 1 -3 0ZM15.8 13.6a1.4 1.4 0 1 1 2.8 0a1.4 1.4 0 1 1 -2.8 0Z" />
+      <rect x="4.6" y="13.8" width="7" height="3" rx="1.5" transform="rotate(41.8 8.1 15.3)" />
+    </IconSvg>
+  )
+}
+
 // Jeu (générique)
 export function GenericGameIcon(props: IconProps) {
   return (

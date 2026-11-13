@@ -106,6 +106,21 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Combos, coupe au 2, Président et Trou, échange automatique : règles éclair. Puis joues-y gratuitement : 4 à 8 joueurs, chat vocal — ou seul avec des bots.',
   },
+  'chiffre-piege': {
+    title: 'Règles du Chiffre Piégé — apprendre puis jouer gratuit',
+    description:
+      'Un nombre piège, un intervalle qui fond, un joker : les règles en 2 minutes. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots.',
+  },
+  'vue-de-nez': {
+    title: 'Règles d’À Vue de Nez — le jeu d’estimation en ligne',
+    description:
+      'Une question chiffrée, des estimations secrètes, la règle tranche. Puis joues-y gratuitement : 2 à 16 joueurs, chat vocal — ou seul avec des bots.',
+  },
+  'patate-chaude': {
+    title: 'Règles de Patate Chaude — apprendre et jouer gratuit',
+    description:
+      'Un défi, une bombe à mèche secrète, un mot à trouver avant le BOUM : les règles. Puis joues-y gratuitement : 2 à 12 joueurs, chat vocal, sans installation.',
+  },
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')

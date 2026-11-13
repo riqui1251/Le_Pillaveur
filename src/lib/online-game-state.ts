@@ -77,6 +77,27 @@ export type RoomSettings = {
   /** Crobard : nombre de manches choisi par l'hôte (6/8/10). */
   crobardRounds?: number
 
+  /** Le Chiffre Piégé : plage du piège, de 1 à 50, 100 ou 200 (défaut 100, comme en local). */
+  cpMax?: number
+
+  /** Le Chiffre Piégé : nombre de manches, 3, 5 ou 10 (défaut 5, comme en local). */
+  cpRounds?: number
+
+  /** À Vue de Nez : nombre de questions (5/10/15, défaut 10 comme en local). */
+  vdnCount?: number
+
+  /** À Vue de Nez : thèmes retenus (ids de VDN_THEMES) ; absent = tout mélanger. */
+  vdnThemes?: string[]
+
+  /** Patate Chaude : sorte de défis (mix = thèmes, lettres et syllabes au hasard). */
+  pcChallenge?: 'mix' | 'theme' | 'letter' | 'syllable'
+
+  /** Patate Chaude : plage de la mèche (courte 10-25 s, normale 15-45 s, longue 30-75 s). */
+  pcFuse?: 'short' | 'normal' | 'long'
+
+  /** Patate Chaude : nombre de manches (5 ou 10 ; 0 = illimité, un joueur actif termine). */
+  pcRounds?: number
+
 }
 
 
@@ -926,6 +947,9 @@ export function parseOnlineGameState<T = AnyOnlineGameState>(
     case 'dilemmes':
     case 'petit-bac':
     case 'president':
+    case 'chiffre-piege':
+    case 'vue-de-nez':
+    case 'patate-chaude':
       return parseSimplePhaseSyncedState(json) as T | null
     // ⚠️ Fichier importé côté CLIENT (useOnlineRoom) : ne PAS déléguer au
     // registre d'adaptateurs ici (il embarquerait les moteurs serveur dans
@@ -976,6 +1000,9 @@ export function isOnlineGameFinished(gameId: string, state: AnyOnlineGameState):
     case 'dilemmes':
     case 'petit-bac':
     case 'president':
+    case 'chiffre-piege':
+    case 'vue-de-nez':
+    case 'patate-chaude':
       return (state as SimplePhaseSyncedState).phase === 'finished'
     default:
       return false

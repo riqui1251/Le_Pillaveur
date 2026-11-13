@@ -21,6 +21,9 @@ import { launchMotsCodesRoom } from '@/lib/online-mots-codes'
 import { launchDilemmesRoom } from '@/lib/online-dilemmes'
 import { launchPetitBacRoom } from '@/lib/online-petit-bac'
 import { launchPresidentRoom } from '@/lib/online-president'
+import { launchChiffrePiegeRoom } from '@/lib/chiffre-piege/online-launch'
+import { launchVueDeNezRoom } from '@/lib/vue-de-nez/online-launch'
+import { launchPatateChaudeRoom } from '@/lib/patate-chaude/online-launch'
 import { isOnlineGameFinished, parseOnlineGameState, parseRoomSettings } from '@/lib/online-game-state'
 import { recordGameSessionStart } from '@/lib/online/game-sessions'
 import { armRoomTicker, cancelRoomTicker } from '@/lib/online/room-ticker'
@@ -171,6 +174,15 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'president':
       await launchPresidentRoom(roomId, room)
+      break
+    case 'chiffre-piege':
+      await launchChiffrePiegeRoom(roomId, room)
+      break
+    case 'vue-de-nez':
+      await launchVueDeNezRoom(roomId, room)
+      break
+    case 'patate-chaude':
+      await launchPatateChaudeRoom(roomId, room)
       break
     default: {
       // Aucun lanceur pour ce jeu : la salle part « playing » sans état, et
@@ -373,11 +385,13 @@ export async function processRematchVote(roomId: string, room: RematchRoom, user
           // départs ont réduite ne repart pas avec des bots de complément (un
           // bot ne décrit rien) : elle revient au lobby, qui affiche la règle.
           if (
-            gameId === 'tabou' &&
-            !tabouHasTwoHumansPerTeam(
-              relaunched.members.map((m) => m.userId),
-              relaunched.settingsJson
-            )
+            (gameId === 'tabou' &&
+              !tabouHasTwoHumansPerTeam(
+                relaunched.members.map((m) => m.userId),
+                relaunched.settingsJson
+              )) ||
+            // Patate Chaude se joue sans bots : moins de deux présents, retour au lobby.
+            (gameId === 'patate-chaude' && relaunched.members.length < 2)
           ) {
             await resetRoomToWaitingLobby(roomId)
             return

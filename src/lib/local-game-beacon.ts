@@ -42,7 +42,7 @@ export type LocalGameReport = { gameId: string; event: LocalGameEvent }
  * d'afficher un « 0 terminée » qui passerait pour un abandon. À tenir à jour
  * si un de ces jeux gagne un écran de fin (et y monte FirstGameFeedbackCard).
  */
-export const LOCAL_GAMES_WITHOUT_END_SCREEN: readonly string[] = ['roue-des-gorgees']
+export const LOCAL_GAMES_WITHOUT_END_SCREEN: readonly string[] = ['roue-des-gorgees', 'doigt-du-destin']
 
 /**
  * Un jeu que l'on mesure : connu du catalogue et jouable sur un seul

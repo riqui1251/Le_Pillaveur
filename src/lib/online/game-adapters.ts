@@ -325,6 +325,9 @@ import {
   PRE_MAX_PLAYERS,
   type PreState,
 } from '@/lib/president/engine'
+import { chiffrePiegeAdapter } from '@/lib/chiffre-piege/online-adapter'
+import { vueDeNezAdapter } from '@/lib/vue-de-nez/online-adapter'
+import { patateChaudeAdapter } from '@/lib/patate-chaude/online-adapter'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { botTickDelayMs } from '@/lib/online/bot-personas'
@@ -1860,6 +1863,9 @@ export const GAME_ADAPTERS: Record<string, GameAdapter> = {
   dilemmes: dilemmesAdapter,
   'petit-bac': petitBacAdapter,
   president: presidentAdapter,
+  'chiffre-piege': chiffrePiegeAdapter,
+  'vue-de-nez': vueDeNezAdapter,
+  'patate-chaude': patateChaudeAdapter,
 }
 
 export function getGameAdapter(gameId: string | null | undefined): GameAdapter | null {

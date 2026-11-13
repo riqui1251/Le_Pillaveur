@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth-server'
 import { buildRoomDto } from '@/lib/online-room'
-import { launchOnlineRoom } from '@/lib/online-room-launch'
+import { launchOnlineRoom, resetRoomToWaitingLobby } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { BRIEFING_TIMEOUT_MS, parseBriefing, serializeBriefing } from '@/lib/online/briefing'
 import { onlineErrorBody } from '@/lib/online-errors'
@@ -60,6 +60,20 @@ export async function POST(request: Request, { params }: Params) {
   const timedOut = isTimeoutTick && Date.now() - briefing.startedAt >= BRIEFING_TIMEOUT_MS
 
   if (allAcked || timedOut) {
+    // Patate Chaude se joue sans bots : un départ pendant le briefing qui laisse moins de deux
+    // joueurs renvoie la table au lobby, au lieu de lancer une partie impossible.
+    if (room.gameId === 'patate-chaude' && room.members.length < 2) {
+      const reset = await prisma.onlineRoom.updateMany({
+        where: { id: roomId, status: 'briefing' },
+        data: { status: 'waiting', briefingJson: null },
+      })
+      if (reset.count === 1) {
+        await resetRoomToWaitingLobby(roomId)
+        publishRoomChanged(roomId, { type: 'lobby' })
+      }
+      const dto = await buildRoomDto(roomId, user.id)
+      return NextResponse.json({ room: dto })
+    }
     // Garde atomique anti-double-lancement : seul le PREMIER passage
     // briefing → playing initialise l'état (les concurrents font no-op).
     const claimed = await prisma.onlineRoom.updateMany({

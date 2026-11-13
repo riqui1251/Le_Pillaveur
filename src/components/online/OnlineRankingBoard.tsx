@@ -38,6 +38,7 @@ const RANKED_GAME_IDS = [
   'mots-codes',
   'petit-bac',
   'tabou',
+  'vue-de-nez',
 ] as const
 
 /**

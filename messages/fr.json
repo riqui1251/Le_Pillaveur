@@ -715,7 +715,15 @@
       "request_not_found": "Demande introuvable.",
       "request_already_handled": "Cette demande a déjà été traitée.",
       "request_already_declined": "Demande déjà refusée.",
-      "fake_taken": "Cette réponse est déjà prise : invente autre chose."
+      "fake_taken": "Cette réponse est déjà prise : invente autre chose.",
+      "out_of_range": "Hors de l’intervalle : choisis un nombre encore possible.",
+      "joker_used": "Ton joker est déjà grillé pour cette partie.",
+      "word_too_short": "Mot trop court : deux lettres au moins.",
+      "word_too_long": "Mot trop long : trente caractères au plus.",
+      "word_already_said": "Déjà dit dans cette manche : trouve autre chose !",
+      "word_wrong_letter": "Ce mot ne commence pas par la bonne lettre.",
+      "word_missing_syllable": "Ce mot ne contient pas la syllabe demandée.",
+      "contest_unavailable": "Ce mot ne peut pas être contesté."
     },
     "showcase": {
       "players": "{min} à {max} joueurs",
@@ -1437,6 +1445,42 @@
       "tabou": {
         "title": "Jouer au Tabou Vocal en ligne gratuit — fais deviner",
         "description": "Décris un mot au chat vocal sans dire ses 4 mots tabous, ton équipe devine contre la montre. 4 à 16 joueurs, 2 par équipe, gratuit, sans installation."
+      },
+      "chiffre-piege": {
+        "title": "Jouer au Chiffre Piégé gratuit — évite le nombre piège",
+        "description": "Un nombre piège se cache entre 1 et 100 : resserre l’étau sans tomber dessus. De 2 à 16 joueurs en ligne, chat vocal, ou sur un seul téléphone. Gratuit."
+      },
+      "cap-ou-pas-cap": {
+        "title": "Jouer à Cap ou Pas Cap gratuit — action ou vérité",
+        "description": "Action ou vérité avec un prix sur chaque carte : relève le défi et distribue, ou bois. Quatre niveaux, six thèmes, gratuit, sur un téléphone qui tourne."
+      },
+      "vue-de-nez": {
+        "title": "À Vue de Nez : le jeu d’estimation gratuit en ligne",
+        "description": "Combien d’os dans un squelette ? Chacun estime en secret, le plus proche distribue. De 2 à 16 joueurs en ligne, chat vocal, ou sur un seul téléphone. Gratuit."
+      },
+      "front-colle": {
+        "title": "Jouer à Front Collé gratuit — devine le mot sur ton front",
+        "description": "Le téléphone collé au front, devine le mot que la table te décrit, te mime ou te fredonne. Incline pour valider. Gratuit, sans installation."
+      },
+      "coupe-du-roi": {
+        "title": "Jouer à la Coupe du Roi gratuit — 13 cartes, 13 règles",
+        "description": "Le jeu de cartes culte des soirées : chaque carte tirée lance une règle, l’appli retient les rôles et le 4e roi boit la coupe. Gratuit, sans installation."
+      },
+      "patate-chaude": {
+        "title": "Jouer à Patate Chaude gratuit — la bombe à mèche secrète",
+        "description": "Une bombe à mèche secrète : dis un mot du thème et passe-la avant le boum. De 2 à 12 joueurs en ligne, chat vocal, ou sur un seul téléphone. Gratuit."
+      },
+      "pile-poil": {
+        "title": "Jouer à Pile Poil gratuit — 10 secondes à l’aveugle",
+        "description": "Lance le chrono et arrête-le pile à 10 secondes sans voir les chiffres : le plus loin boit. Gratuit, sans installation, sur un téléphone qui tourne."
+      },
+      "degaine": {
+        "title": "Jouer à Dégaine ! gratuit — le duel de réflexes",
+        "description": "Un téléphone posé entre deux duellistes : au « FEU ! », le plus rapide gagne, qui tire trop tôt boit. Tournoi pour toute la table, gratuit."
+      },
+      "doigt-du-destin": {
+        "title": "Jouer au Doigt du Destin gratuit — qui sera choisi ?",
+        "description": "Chacun pose un doigt sur l’écran et le destin tranche : victime, deux camps, ordre de jeu ou survie. Gratuit, sans installation, sur un seul téléphone."
       }
     },
     "catalog": {
@@ -1556,6 +1600,47 @@
       "president": {
         "title": "Président",
         "description": "Videz votre main, coupez au 2, faites porter le Trou. Échange automatique entre les manches — 4 à 8 joueurs."
+      },
+      "chiffre-piege": {
+        "title": "Le Chiffre Piégé",
+        "description": "Un nombre piège se cache entre 1 et 100 : à chaque essai l’étau se resserre, celui qui tombe dessus boit.",
+        "softDescription": "Un nombre piège se cache entre 1 et 100 : à chaque essai l’étau se resserre, celui qui tombe dessus perd des points."
+      },
+      "cap-ou-pas-cap": {
+        "title": "Cap ou Pas Cap ?",
+        "description": "Action ou vérité version comptoir : chaque carte affiche son prix. Tu relèves, ou tu bois.",
+        "softDescription": "Action ou vérité version comptoir : chaque carte affiche son prix. Tu relèves, ou tu perds des points."
+      },
+      "vue-de-nez": {
+        "title": "À Vue de Nez",
+        "description": "Une question à réponse chiffrée, chacun estime en secret : le plus proche distribue, le plus loin boit.",
+        "softDescription": "Une question à réponse chiffrée, chacun estime en secret : le plus proche marque, le plus loin perd un point."
+      },
+      "front-colle": {
+        "title": "Front Collé",
+        "description": "Le téléphone sur ton front, la table te fait deviner le mot : en le décrivant, en le mimant ou en le fredonnant."
+      },
+      "coupe-du-roi": {
+        "title": "La Coupe du Roi",
+        "description": "Le grand classique des cartes à boire : chaque carte tirée déclenche une règle, et le quatrième roi boit la coupe.",
+        "softDescription": "Le grand classique des cartes à règles : chaque carte tirée déclenche une règle, et le quatrième roi fait un gage."
+      },
+      "patate-chaude": {
+        "title": "Patate Chaude",
+        "description": "Une bombe à mèche secrète fait le tour de la table : dis un mot du thème et passe-la vite avant qu’elle explose."
+      },
+      "pile-poil": {
+        "title": "Pile Poil",
+        "description": "Arrête le chrono pile à 10 secondes… sans voir les chiffres."
+      },
+      "degaine": {
+        "title": "Dégaine !",
+        "description": "Duel de western sur un seul écran : au signal, le plus rapide gagne ; tire trop tôt et tu bois.",
+        "softDescription": "Duel de western sur un seul écran : au signal, le plus rapide gagne ; tire trop tôt et tu perds la manche."
+      },
+      "doigt-du-destin": {
+        "title": "Le Doigt du Destin",
+        "description": "Tout le monde pose un doigt sur l’écran. Le destin en choisit un."
       }
     },
     "ballon-surprise": {
@@ -5369,6 +5454,1376 @@
         "p1": "Les 54 cartes, jokers compris, sont distribuées, et chacun ne voit que sa main, sur son téléphone. Le premier pose une carte seule, une paire, un brelan ou un carré ; les suivants posent autant de cartes, d'un rang supérieur ou égal, ou passent. L'ordre va du 3, la plus faible, à l'As, puis au 2, la carte suprême : il remporte le pli sur-le-champ.",
         "p2": "Le premier à vider sa main devient Président, le dernier Trou, avec le Vice-Président et le Vice-Trou entre les deux. Avant la manche suivante, les échanges se font tout seuls : le Trou donne ses deux meilleures cartes au Président, qui lui rend ses deux pires. Les règles de la maison sont actives : « … ou rien » après une pose égale, fermeture de carré hors de son tour, jokers caméléons. L'hôte choisit 1, 3 ou 5 manches, avec 30 secondes par tour.",
         "p3": "Garde tes 2 pour couper au bon moment, et ne casse pas un brelan pour une carte seule. À quatre, les mains sont longues et les échanges pèsent lourd ; à sept ou huit, les manches filent et un joker bien gardé décide de la couronne. Il faut quatre joueurs : les bots complètent la table, chacun avec son tempérament. En mode apéro, le Trou boit ; en mode sans alcool, il ne perd que son honneur."
+      }
+    },
+    "chiffre-piege": {
+      "title": "Le Chiffre Piégé",
+      "page": {
+        "range": "Plage du piège",
+        "rangeOption": "1 à {max}",
+        "rounds": "Nombre de manches",
+        "roundsOption": "{count, plural, one {# manche} other {# manches}}",
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "trap": "Le téléphone cache en secret un nombre piège entre 1 et le maximum choisi.",
+          "guess": "À ton tour, propose un nombre dans l’intervalle affiché.",
+          "narrow": "Raté : l’intervalle se resserre du côté du piège et tu passes le téléphone à ton voisin.",
+          "boom": "Pile sur le piège : BOUM ! Tu bois une gorgée par essai de la manche, le tien compris, {cap} au plus.",
+          "last": "Quand il ne reste qu’un nombre, c’est forcément le piège : il faut le jouer.",
+          "joker": "Joker « Je passe », un par joueur et par partie : tu sautes ton tour contre {cost, plural, one {# gorgée} other {# gorgées}}.",
+          "next": "La manche suivante commence par le voisin du perdant. À la fin, celui qui a le moins bu gagne."
+        }
+      },
+      "game": {
+        "progress": "Manche {round}/{total} · essai {attempt}",
+        "yourTurn": "À toi de jouer",
+        "rangeLead": "Le piège se cache entre",
+        "rangeAnd": "et",
+        "lastLead": "Il ne reste que",
+        "rangeSummary": "Le piège se cache entre {low} et {high}, sur une plage de 1 à {max}.",
+        "stake": "Enjeu",
+        "stakeValue": "{count, plural, one {# gorgée} other {# gorgées}}",
+        "risk": "Risque",
+        "riskValue": "{count, plural, =1 {Certain} other {1 sur #}}",
+        "historyTitle": "Déjà tentés",
+        "historyLegend": "↓ plus bas · ↑ plus haut",
+        "historyEmpty": "Aucun essai dans cette manche pour l’instant.",
+        "higher": "le piège est plus haut",
+        "lower": "le piège est plus bas",
+        "jokerChip": "joker",
+        "inputHint": "Propose un nombre entre {low} et {high}",
+        "outOfRange": "Hors de l’intervalle : choisis entre {low} et {high}",
+        "inputLabel": "Ton nombre, entre {low} et {high}",
+        "inputPlaceholder": "{low} à {high}",
+        "try": "Tenter",
+        "tryValue": "Tenter {value}",
+        "jokerButton": "Je passe (joker) · {count, plural, one {# gorgée} other {# gorgées}}",
+        "forcedTitle": "Il ne reste que le {value} : c’est le piège !",
+        "forcedWithJoker": "Joue-le… ou grille ton joker.",
+        "forcedNoJoker": "Plus de joker : il faut le jouer.",
+        "forcedPlay": "Jouer le {value}",
+        "liveRound": "Manche {round} : le piège se cache entre 1 et {max}.",
+        "liveRoundStarter": "Manche {round} : {mine, select, yes {à toi d’ouvrir} other {{name} ouvre}}. Le piège se cache entre 1 et {max}.",
+        "liveMiss": "{name} tente {value} : {dir, select, higher {le piège est plus haut} other {le piège est plus bas}}.",
+        "livePass": "{name} passe son tour avec son joker."
+      },
+      "boom": {
+        "title": "BOUM !",
+        "who": "{name} tombe sur le {value}",
+        "penalty": "{name} boit {count, plural, one {# gorgée} other {# gorgées}}",
+        "attempts": "{count, plural, one {# essai} other {# essais}}",
+        "round": "Manche {round}/{total}",
+        "nextStarter": "Ensuite : {name}",
+        "nextRound": "Manche suivante",
+        "seeRanking": "Voir le classement",
+        "live": "BOUM ! {name} tombe sur le {value} et boit {count, plural, one {# gorgée} other {# gorgées}}."
+      },
+      "end": {
+        "title": "Classement final",
+        "winner": "{name} s’en tire le mieux",
+        "tie": "{count, plural, other {# joueurs ex æquo en tête}}",
+        "results": "Du moins pénalisé au plus pénalisé",
+        "details": "{booms, plural, =0 {Jamais piégé} one {Piégé # fois} other {Piégé # fois}}{joker, select, used { · joker grillé} other {}}",
+        "penalty": "{count, plural, =0 {0 gorgée} one {# gorgée} other {# gorgées}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "boom": "Pile sur le piège : BOUM ! Tu perds un point par essai de la manche, le tien compris, {cap} au plus.",
+            "joker": "Joker « Je passe », un par joueur et par partie : tu sautes ton tour contre {cost, plural, one {# point} other {# points}}.",
+            "next": "La manche suivante commence par le voisin du perdant. À la fin, celui qui a perdu le moins de points gagne."
+          }
+        },
+        "game": {
+          "stakeValue": "{count, plural, one {−# point} other {−# points}}",
+          "jokerButton": "Je passe (joker) · {count, plural, one {−# point} other {−# points}}"
+        },
+        "boom": {
+          "penalty": "{name} perd {count, plural, one {# point} other {# points}}",
+          "live": "BOUM ! {name} tombe sur le {value} et perd {count, plural, one {# point} other {# points}}."
+        },
+        "end": {
+          "penalty": "{count, plural, =0 {0 point} one {−# point} other {−# points}}"
+        },
+        "tv": {
+          "tally": "Points perdus"
+        }
+      },
+      "about": {
+        "p1": "Le serveur cache un nombre piège entre 1 et 100, ou entre 1 et 50, ou 1 et 200 au choix de l’hôte. À ton tour, tu proposes un nombre de l’intervalle encore ouvert. Raté : l’étau se resserre, et tout le monde voit si le piège est plus haut ou plus bas. Pile dessus : BOUM ! Tu prends une gorgée par essai de la manche, le tien compris, cinq au plus. En mode sans alcool, ce sont des points de pénalité.",
+        "p2": "Chacun joue sur son téléphone, à son tour : l’intervalle, l’enjeu et les essais déjà tentés s’affichent chez tout le monde, et en grand sur la télé. Quand il ne reste qu’un nombre, c’est forcément le piège : il faut le jouer, sauf à griller son joker « Je passe », un par partie, qui coûte une gorgée. Après chaque BOUM, la manche suivante démarre chez le voisin du perdant. L’hôte choisit 3, 5 ou 10 manches, et le moins pénalisé s’en tire le mieux.",
+        "p3": "Le danger grimpe à mesure que l’intervalle fond : à « 1 sur 3 », un nombre bien placé refile le risque au suivant. Garde ton joker pour la fin de manche, quand l’enjeu est au plus haut. Les bots tentent un nombre au hasard dans l’intervalle et gardent leur joker pour le dernier nombre : seul face à eux, la partie file. Comptez cinq à quinze minutes."
+      },
+      "lobby": {
+        "range": "Plage du piège",
+        "rangeUnit": "nombres",
+        "rounds": "Nombre de manches",
+        "roundsUnit": "{count, plural, one {manche} other {manches}}"
+      },
+      "online": {
+        "waitingTurn": "{name} choisit son nombre…",
+        "autoTurn": "{name} est parti — son tour se joue automatiquement…",
+        "tableTitle": "La table",
+        "jokerReady": "joker en main",
+        "nextRoundIn": "Manche suivante dans {seconds} s",
+        "rankingIn": "Classement dans {seconds} s",
+        "waitingReturn": "{name} est parti — un bot prend sa place dans {seconds} s s’il ne revient pas",
+        "afkWarning": "{name} ne joue plus — un bot prend sa place dans {seconds} s",
+        "afkWarningSelf": "À toi de jouer ! Joue dans les {seconds} s, sinon un bot prend ta place"
+      },
+      "tv": {
+        "tally": "Gorgées bues"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un nombre piège",
+            "body": "Le serveur cache un nombre entre 1 et le maximum choisi. À ton tour, propose un nombre de l’intervalle affiché."
+          },
+          {
+            "title": "L’étau se resserre",
+            "body": "Raté : tout le monde voit si le piège est plus haut ou plus bas, et la main passe. Pile dessus : BOUM ! Une pénalité par essai de la manche, le tien compris, cinq au plus."
+          },
+          {
+            "title": "Le joker « Je passe »",
+            "body": "Quand il ne reste qu’un nombre, c’est le piège : joue-le, ou grille ton joker (un par partie, il coûte 1). Le moins pénalisé s’en tire le mieux."
+          }
+        ]
+      }
+    },
+    "cap-ou-pas-cap": {
+      "title": "Cap ou Pas Cap ?",
+      "levels": {
+        "apero": "Apéro",
+        "soiree": "Soirée",
+        "apres-minuit": "Après minuit",
+        "progressif": "Progressif"
+      },
+      "themes": {
+        "souvenirs": "Souvenirs",
+        "coeur": "Cœur et séduction",
+        "defis": "Défis physiques",
+        "comedie": "Comédie",
+        "telephone": "Téléphone",
+        "table": "La table"
+      },
+      "kinds": {
+        "truth": "Vérité",
+        "dare": "Action"
+      },
+      "page": {
+        "level": "Niveau",
+        "levelDescs": {
+          "apero": "Léger, pour chauffer la table",
+          "soiree": "Le bon dosage",
+          "apres-minuit": "Plus osé, jamais déplacé",
+          "progressif": "Apéro, puis Soirée au 2e tour de table, Après minuit au 4e"
+        },
+        "themes": "Thèmes",
+        "themesCount": "{count} sur {total}",
+        "mixAll": "Tout mélanger",
+        "mixAllDesc": "Les six thèmes dans la même pioche",
+        "themeDescs": {
+          "souvenirs": "Premières fois, hontes d’enfance",
+          "coeur": "Crushs, ex, rencards",
+          "defis": "Équilibre, grimaces, pompes",
+          "comedie": "Imitations, accents, sketchs",
+          "telephone": "Photos, messages, recherches",
+          "table": "Avec un autre joueur"
+        },
+        "noTheme": "Choisis au moins un thème pour commencer.",
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "turn": "À ton tour, choisis Vérité ou Action : la carte se retourne avec son prix, de 1 à 5.",
+          "cap": "Cap ! Tu réponds ou tu relèves le défi, puis tu distribues le prix.",
+          "refuse": "Pas cap ? Tu bois le prix.",
+          "joker": "Une fois par partie, « Retour à l’envoyeur » : tu renvoies la carte à un autre joueur, au double du prix. S’il refuse, il boit le double.",
+          "table": "Les cartes « La table » font participer un autre joueur, tiré au sort. Personne n’est jamais obligé : refuser coûte le prix, c’est tout.",
+          "end": "Pas de fin imposée : « Terminer la partie » affiche le bilan quand la table le décide."
+        }
+      },
+      "load": {
+        "loading": "Mélange du paquet…",
+        "error": "Les cartes n’ont pas pu être chargées. Vérifie ta connexion, puis réessaie.",
+        "retry": "Réessayer"
+      },
+      "game": {
+        "round": "Tour de table {round}",
+        "turnOf": "Au tour de",
+        "levelPill": "Niveau {level}",
+        "levelProgressive": "Progressif : {level}",
+        "levelUp": "Ça monte d’un cran : niveau {level} !",
+        "choose": "Vérité ou action ?",
+        "hints": {
+          "truth": "Une question",
+          "dare": "Un défi"
+        },
+        "noCards": "Aucune carte pour ce niveau et ces thèmes.",
+        "price": "Prix : {count, plural, one {# gorgée} other {# gorgées}}",
+        "doubled": "Prix doublé",
+        "cap": "Cap !",
+        "capSub": "je distribue {count}",
+        "refuse": "Pas cap",
+        "refuseSub": "je bois {count}",
+        "joker": "Retour à l’envoyeur",
+        "jokerReady": "Joker « Retour à l’envoyeur » : disponible",
+        "jokerUsed": "Joker « Retour à l’envoyeur » : déjà joué",
+        "returned": "{sender} te renvoie la carte : prix doublé !",
+        "lastDone": "Cap ! {name} distribue {count, plural, one {# gorgée} other {# gorgées}}.",
+        "lastRefused": "Pas cap : {name} boit {count, plural, one {# gorgée} other {# gorgées}}.",
+        "finish": "Terminer la partie"
+      },
+      "joker": {
+        "title": "Retour à l’envoyeur",
+        "body": "Qui reçoit la carte ? Prix doublé : {count, plural, one {# gorgée} other {# gorgées}}. Ton tour est joué.",
+        "cancel": "Garder la carte"
+      },
+      "endConfirm": {
+        "title": "Terminer la partie ?",
+        "description": "Place au bilan : qui a relevé, qui a calé, et combien de gorgées.",
+        "confirm": "Voir le bilan",
+        "cancel": "Continuer à jouer"
+      },
+      "end": {
+        "title": "Bilan de la partie",
+        "cardsPlayed": "{count, plural, one {# carte jouée} other {# cartes jouées}}",
+        "boldest": "Palme de l’audace : {names}",
+        "results": "Résultats",
+        "rankedBy": "Classement à l’audace (gorgées distribuées moins gorgées bues).",
+        "done": "{count, plural, one {# relevée} other {# relevées}}",
+        "refused": "{count, plural, one {# refusée} other {# refusées}}",
+        "given": "{count, plural, one {# gorgée distribuée} other {# gorgées distribuées}}",
+        "drunkUnit": "{count, plural, one {gorgée bue} other {gorgées bues}}",
+        "boldness": "audace {score}",
+        "pointsUnit": "{count, plural, one {point} other {points}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "cap": "Cap ! Tu réponds ou tu relèves le défi, et tu gagnes le prix en points.",
+            "refuse": "Pas cap ? Tu perds le prix en points.",
+            "joker": "Une fois par partie, « Retour à l’envoyeur » : tu renvoies la carte à un autre joueur, au double du prix. Il gagne ou perd le double en points."
+          }
+        },
+        "game": {
+          "price": "Prix : {count, plural, one {# point} other {# points}}",
+          "capSub": "+{count, plural, one {# point} other {# points}}",
+          "refuseSub": "−{count, plural, one {# point} other {# points}}",
+          "lastDone": "Cap ! {name} gagne {count, plural, one {# point} other {# points}}.",
+          "lastRefused": "Pas cap : {name} perd {count, plural, one {# point} other {# points}}."
+        },
+        "joker": {
+          "body": "Qui reçoit la carte ? Prix doublé : {count, plural, one {# point} other {# points}} en jeu. Ton tour est joué."
+        },
+        "endConfirm": {
+          "description": "Place au bilan : qui a relevé, qui a calé, et les points de chacun."
+        }
+      }
+    },
+    "vue-de-nez": {
+      "title": "À Vue de Nez",
+      "loading": "Chargement des questions…",
+      "loadFailed": "Les questions n’ont pas pu être chargées. Vérifie la connexion, puis réessaie.",
+      "retry": "Réessayer",
+      "noQuestions": "Aucune question disponible pour ces thèmes.",
+      "themes": {
+        "corps": "Corps humain",
+        "geographie": "Géographie",
+        "histoire": "Histoire",
+        "sciences": "Sciences",
+        "sport": "Sport",
+        "societe": "Société et quotidien",
+        "culture": "Culture et loisirs"
+      },
+      "page": {
+        "questions": "Nombre de questions",
+        "themes": "Thèmes",
+        "themesAll": "Tout mélanger",
+        "themesAllHint": "Les 7 thèmes, en alternance",
+        "themesPicked": "{count, plural, one {# thème choisi} other {# thèmes choisis}}",
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "ask": "Le téléphone pose une question dont la réponse est un nombre.",
+          "secret": "Chacun tape son estimation à l’abri des regards, puis passe le téléphone.",
+          "reveal": "Révélation : les estimations se posent sur une règle graduée, puis la vraie réponse tombe.",
+          "closest": "Le plus proche distribue 3 gorgées, 6 s’il tombe dans le mille (2 % d’écart au plus, un an pour une date).",
+          "farthest": "Le plus loin boit 3 gorgées. Ex æquo, tous sont concernés ; tous à égalité, personne.",
+          "score": "Classement final : +3 au plus proche, +6 dans le mille, −1 au plus loin."
+        }
+      },
+      "game": {
+        "progress": "Question {current}/{total}",
+        "valueUnit": "{value} {unit}",
+        "answered": "Réponses : {count}/{total}",
+        "chipDone": "a répondu",
+        "chipPick": "Faire estimer {name} maintenant",
+        "handoff": {
+          "validated": "Estimation de {name} enregistrée.",
+          "hint": "Les autres, on détourne les yeux !",
+          "cta": "Je suis {name}, j’estime"
+        },
+        "input": {
+          "label": "{name}, ton estimation",
+          "placeholder": "?",
+          "hint": "Personne ne verra ton nombre avant la révélation.",
+          "preview": "Soit {value}",
+          "sign": "Changer le signe",
+          "submit": "Valider",
+          "notMe": "Ce n’est pas moi",
+          "errors": {
+            "notANumber": "Ce n’est pas un nombre.",
+            "belowMin": "Au moins {min}.",
+            "tooLarge": "Ce nombre est trop grand.",
+            "generic": "Cette estimation n’a pas pu être enregistrée."
+          }
+        },
+        "ready": {
+          "title": "Tout le monde a répondu !",
+          "body": "Téléphone au milieu de la table : place à la révélation.",
+          "cta": "Révéler"
+        },
+        "reveal": {
+          "answer": "Réponse",
+          "source": "Source : {source}",
+          "logScale": "Échelle logarithmique",
+          "row": "{estimate} · écart {gap}",
+          "bullseye": "Dans le mille !",
+          "next": "Question suivante",
+          "toRanking": "Voir le classement",
+          "live": "Réponse : {answer}.",
+          "liveRow": "{name} : {verdict}."
+        }
+      },
+      "verdict": {
+        "closest": "distribue {count}",
+        "bullseye": "distribue {count}",
+        "farthest": "boit {count}",
+        "allEqual": "Tous à égalité : personne ne boit."
+      },
+      "end": {
+        "winner": "{name} a le nez le plus fin !",
+        "tie": "Ex æquo en tête : {names}",
+        "noWinner": "Personne n’a eu le nez creux !",
+        "subtitle": "{count, plural, one {# question jouée} other {# questions jouées}}",
+        "ranking": "Classement",
+        "points": "{count, plural, one {{score} pt} other {{score} pts}}",
+        "tally": "Proche : {closest} · Dans le mille : {bullseye} · Loin : {farthest}",
+        "sips": "{given, plural, one {# gorgée distribuée} other {# gorgées distribuées}} · {drunk, plural, one {# bue} other {# bues}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "closest": "Le plus proche marque 3 points, 6 s’il tombe dans le mille (2 % d’écart au plus, un an pour une date).",
+            "farthest": "Le plus loin perd 1 point. Ex æquo, tous sont concernés ; tous à égalité, personne."
+          }
+        },
+        "verdict": {
+          "closest": "{count, plural, one {+# point} other {+# points}}",
+          "bullseye": "{count, plural, one {+# point} other {+# points}}",
+          "farthest": "{count, plural, one {−# point} other {−# points}}",
+          "allEqual": "Tous à égalité : personne ne marque."
+        }
+      },
+      "about": {
+        "p1": "Combien d’os compte le squelette d’un adulte ? Quelle est la hauteur de l’Everest ? En quelle année est tombé le mur de Berlin ? À Vue de Nez pose à toute la table une question dont la réponse est un nombre, et chacun tape son estimation en secret sur son téléphone : soixante secondes pour se faire un avis, et le droit de corriger tant que tout le monde n’a pas répondu. 150 questions sourcées par langue, sept thèmes, du corps humain à la culture pop.",
+        "p2": "Puis vient la révélation : chaque estimation se pose sur une règle graduée, logarithmique quand les ordres de grandeur s’envolent, et la vraie réponse tombe avec son unité et sa source. Le plus proche marque 3 points, 6 s’il tombe dans le mille, à 2 % près (à un an près pour une date) ; le plus loin en perd un. Le serveur tient les comptes, l’hôte choisit 5, 10 ou 15 questions et les thèmes de la partie.",
+        "p3": "En mode apéro, le plus proche distribue autant de gorgées et le plus loin en boit trois ; en mode sans alcool, seuls les points comptent. Ça marche dès deux joueurs et jusqu’à seize, et les bots complètent une petite table avec un flair très humain. Le jeu existe aussi en local, sur un seul téléphone qui passe de main en main."
+      },
+      "lobby": {
+        "questionCount": "Nombre de questions",
+        "questions": "questions",
+        "themes": "Thèmes",
+        "themesAll": "Tout mélanger",
+        "themesAllHint": "Les 7 thèmes, en alternance",
+        "themeNames": {
+          "corps": "Corps humain",
+          "geographie": "Géographie",
+          "histoire": "Histoire",
+          "sciences": "Sciences",
+          "sport": "Sport",
+          "societe": "Société et quotidien",
+          "culture": "Culture et loisirs"
+        }
+      },
+      "online": {
+        "phaseAnswer": "Estimation secrète",
+        "phaseReveal": "Révélation",
+        "yourEstimate": "Ton estimation",
+        "sealedTitle": "Estimation envoyée",
+        "sealedHint": "Personne ne la voit. Tu peux la corriger jusqu’à la révélation : elle tombe dès que tout le monde a répondu, au plus tard à la fin du chrono.",
+        "edit": "Corriger mon estimation",
+        "spectating": "Tu regardes cette question : tu joueras à la prochaine partie.",
+        "noAnswer": "Sans réponse",
+        "nobodyAnswered": "Personne n’a répondu : la question passe.",
+        "singleAnswer": "Une seule estimation : rien ne se joue sur cette question.",
+        "you": "(toi)",
+        "awayTag": "absent",
+        "waitingReturn": "En attente du retour de {name} — bot dans {seconds} s",
+        "autoNext": "La suite arrive toute seule à la fin du chrono.",
+        "leaderNext": "{name} lance la suite, sinon elle arrive toute seule à la fin du chrono."
+      },
+      "tv": {
+        "unit": "Unité : {unit}",
+        "estimates": "Estimations"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Une question, un nombre",
+            "body": "La même question pour toute la table : tape ton estimation en secret sur ton téléphone. 60 secondes au plus, et tu peux corriger tant que tout le monde n’a pas répondu."
+          },
+          {
+            "title": "La règle tranche",
+            "body": "Les estimations se posent sur une règle graduée, puis la vraie réponse tombe, avec son unité et sa source."
+          },
+          {
+            "title": "Proche ou loin",
+            "body": "Le plus proche marque 3 points, 6 dans le mille (2 % d’écart au plus, un an pour une date) ; le plus loin en perd 1."
+          }
+        ]
+      }
+    },
+    "front-colle": {
+      "title": "Front Collé",
+      "progress": "Tour {current}/{total}",
+      "themes": {
+        "cinema": "Cinéma et séries",
+        "personnalites": "Personnalités",
+        "objets": "Objets",
+        "animaux": "Animaux",
+        "metiers": "Métiers",
+        "lieux": "Lieux",
+        "cuisine": "Cuisine",
+        "sport": "Sport",
+        "musique": "Chansons et musique"
+      },
+      "modes": {
+        "describe": "Décris",
+        "mime": "Mime",
+        "hum": "Fredonne"
+      },
+      "teams": {
+        "A": "Équipe A",
+        "B": "Équipe B"
+      },
+      "page": {
+        "mode": "Mode de jeu",
+        "modes": {
+          "solo": {
+            "label": "Chacun pour soi",
+            "desc": "Chaque joueur a son score"
+          },
+          "teams": {
+            "label": "Deux équipes",
+            "desc": "A, B, A, B… dans l’ordre de la table"
+          }
+        },
+        "teamLine": "{team} : {names}",
+        "teamExtra": "{players, plural, one {{names} devine {count} fois : son équipe a un joueur de moins.} other {{names} devinent {count} fois chacun : leur équipe a un joueur de moins.}}",
+        "duration": "Durée d’un tour",
+        "seconds": "{count} s",
+        "rounds": "Manches",
+        "roundsCount": "{count, plural, one {# manche} other {# manches}}",
+        "roundsDesc": "{count, plural, one {Chacun devine une fois} other {Chacun devine # fois}}",
+        "roundsDescTeams": "{count, plural, one {Chaque équipe devine une fois} other {Chaque équipe devine # fois}}",
+        "instructions": "Consignes",
+        "instructionModes": {
+          "mix": {
+            "label": "Mélange",
+            "desc": "Décris, mime ou fredonne selon le mot"
+          },
+          "describe": {
+            "label": "Décris seulement",
+            "desc": "Des mots, rien que des mots"
+          }
+        },
+        "themes": "Thèmes",
+        "allThemes": "Tout mélanger",
+        "wordsCount": "{count, plural, one {# mot} other {# mots}}",
+        "loading": "Chargement des mots…",
+        "loadError": "Impossible de charger les mots. Vérifie la connexion, puis réessaie.",
+        "retry": "Réessayer",
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "phone": "Le devineur colle le téléphone sur son front, en paysage, écran tourné vers la table.",
+          "clues": "Un mot s’affiche avec sa consigne : la table le fait deviner en le décrivant, en le mimant ou en le fredonnant.",
+          "forbidden": "Interdit de prononcer le mot ou sa racine.",
+          "tilt": "Téléphone incliné vers le sol : trouvé. Vers le plafond : on passe. On revient bien droit avant le mot suivant.",
+          "touch": "Sans capteur, on touche l’écran : en haut on passe, en bas c’est trouvé.",
+          "end": "Au bout du chrono, on récapitule les mots, puis le téléphone change de front."
+        },
+        "drinksTitle": "Qui boit ?",
+        "drinks": {
+          "passed": "Mot passé : le devineur boit 1 gorgée.",
+          "said": "Mot prononcé en le décrivant : le fautif boit {count} gorgées.",
+          "best": "Meilleur score de la partie : il distribue {count} gorgées."
+        }
+      },
+      "ready": {
+        "turnOf": "Au tour de {name}",
+        "lead": "Colle le téléphone sur ton front, en paysage, écran vers la table.",
+        "gesturesTitle": "Les gestes",
+        "down": "Incline vers le bas : trouvé",
+        "up": "Incline vers le haut : je passe",
+        "touchHint": "Ou touche l’écran : en haut je passe, en bas trouvé.",
+        "noSensor": "Pas de capteur d’inclinaison ici : on joue en touchant l’écran, en haut je passe, en bas trouvé.",
+        "sensorDenied": "Accès au capteur refusé : on joue en touchant l’écran, en haut je passe, en bas trouvé.",
+        "forbidden": "La table n’a pas le droit de prononcer le mot ni sa racine.",
+        "flip": "Retourner l’affichage",
+        "flipHint": "Si le mot s’affiche à l’envers pour la table.",
+        "go": "Prêt",
+        "scoresTitle": "Scores",
+        "soundOn": "Activer le son",
+        "soundOff": "Couper le son"
+      },
+      "arena": {
+        "up": "Vers le haut : je passe",
+        "down": "Vers le bas : trouvé",
+        "touchUp": "Touche en haut : je passe",
+        "touchDown": "Touche en bas : trouvé",
+        "passZone": "Je passe",
+        "foundZone": "Trouvé",
+        "getReady": "Colle le téléphone sur ton front",
+        "secondsLeft": "{count, plural, one {seconde} other {secondes}}",
+        "foundLabel": "{count, plural, one {trouvé} other {trouvés}}",
+        "passedCount": "{count, plural, one {# passé} other {# passés}}",
+        "flashFound": "Trouvé !",
+        "flashPassed": "Passé",
+        "liveFound": "Trouvé ! {count, plural, one {# mot trouvé} other {# mots trouvés}}",
+        "livePassed": "Passé. {count, plural, one {# mot passé} other {# mots passés}}",
+        "noWords": "Plus aucun mot dans ces thèmes.",
+        "stop": "Arrêter le tour",
+        "stopConfirm": {
+          "title": "Arrêter ce tour ?",
+          "description": "Le tour reprendra depuis le début, rien n’est compté.",
+          "confirm": "Arrêter",
+          "cancel": "Continuer"
+        }
+      },
+      "recap": {
+        "title": "Temps écoulé !",
+        "summary": "{name} : {found, plural, one {# trouvé} other {# trouvés}}, {passed, plural, one {# passé} other {# passés}}",
+        "words": "Les mots du tour",
+        "noWords": "Aucun mot joué ce tour-ci.",
+        "unknownWord": "Mot indisponible",
+        "found": "Trouvé",
+        "passed": "Passé",
+        "tallyTitle": "Gorgées du tour",
+        "guesserDrinks": "{name} boit {count, plural, one {# gorgée} other {# gorgées}}",
+        "guesserDry": "{name} ne boit rien : aucun mot passé",
+        "saidLine": "{name} boit {count, plural, one {# gorgée} other {# gorgées}} (mot prononcé)",
+        "saidTitle": "Mot prononcé ?",
+        "saidHint": "Quelqu’un a dit le mot ou sa racine en le décrivant ? Touche le fautif : il boit {count} gorgées.",
+        "flag": "Signaler que {name} a dit le mot ({count, plural, =0 {aucune faute ce tour-ci} one {# faute ce tour-ci} other {# fautes ce tour-ci}})",
+        "flagCount": "×{count}",
+        "undo": "Annuler",
+        "next": "Au tour de {name}",
+        "toRanking": "Voir le classement"
+      },
+      "end": {
+        "title": "Classement",
+        "results": "Résultats",
+        "foundCount": "{count, plural, one {# trouvé} other {# trouvés}}",
+        "detail": "{found, plural, one {# trouvé} other {# trouvés}} · {passed, plural, one {# passé} other {# passés}}",
+        "saidCount": "{count, plural, one {# mot prononcé} other {# mots prononcés}}",
+        "drinks": "{count, plural, one {# gorgée bue} other {# gorgées bues}}",
+        "bestLine": "{winners, plural, one {Meilleur score : {names} distribue {count} gorgées !} other {Meilleurs scores : {names} distribuent {count} gorgées chacun !}}",
+        "noBest": "Égalité parfaite : personne ne distribue."
+      },
+      "soft": {
+        "page": {
+          "drinksTitle": "Comment on compte ?",
+          "drinks": {
+            "found": "Mot trouvé : +1 point.",
+            "passed": "Mot passé : −1 point.",
+            "said": "Mot prononcé en le décrivant : −{count} points pour le fautif.",
+            "best": "Meilleur score de la partie : +{count} points."
+          }
+        },
+        "recap": {
+          "tallyTitle": "Points du tour",
+          "guesserGain": "{name} gagne {count, plural, one {# point} other {# points}}",
+          "guesserLoss": "{name} perd {count, plural, one {# point} other {# points}}",
+          "guesserZero": "{name} ne marque aucun point ce tour-ci",
+          "saidLine": "{name} perd {count, plural, one {# point} other {# points}} (mot prononcé)",
+          "saidHint": "Quelqu’un a dit le mot ou sa racine en le décrivant ? Touche le fautif : −{count} points."
+        },
+        "end": {
+          "points": "{count, plural, one {# point} other {# points}}",
+          "bestLine": "{winners, plural, one {Meilleur score : +{count} points pour {names} !} other {Meilleurs scores : +{count} points pour {names} !}}",
+          "noBest": "Égalité parfaite : pas de bonus."
+        }
+      }
+    },
+    "coupe-du-roi": {
+      "title": "La Coupe du Roi",
+      "page": {
+        "cup": "La coupe",
+        "cupModes": {
+          "solo": {
+            "label": "Sans verre commun",
+            "desc": "Le quatrième roi boit 5 gorgées."
+          },
+          "shared": {
+            "label": "Coupe commune",
+            "desc": "Chaque roi verse un peu de son verre au centre ; le quatrième boit tout."
+          }
+        },
+        "softCup": "Sans alcool : les pénalités se comptent en points, et le quatrième roi fait un gage choisi par la table.",
+        "howTo": "Comment jouer",
+        "steps": {
+          "deck": "Pose le téléphone au centre de la table : il mélange un paquet de 52 cartes.",
+          "draw": "À ton tour, tire une carte : sa règle s’affiche et s’applique tout de suite.",
+          "roles": "Certaines cartes donnent un rôle qui dure (pouce, questions, binôme) ou une règle pour toute la partie : l’appli tient la liste « En vigueur ».",
+          "kings": "Quatre rois dans le paquet : à chacun, un peu de ton verre dans la coupe (rien sans verre commun). Le quatrième roi boit la coupe — ou 5 gorgées — et la partie s’arrête.",
+          "kingsSoft": "Quatre rois dans le paquet : celui qui tire le quatrième fait un gage choisi par la table, et la partie s’arrête."
+        },
+        "customize": "Personnaliser les règles",
+        "customizeCount": "{count, plural, one {Personnaliser les règles · # modifiée} other {Personnaliser les règles · # modifiées}}",
+        "customizeHint": "Chaque table a sa version : écris la tienne, elle remplace la règle d’origine et le rôle qui va avec. Tout reste sur cet appareil.",
+        "rankRule": "{rank} · {title}",
+        "customPlaceholder": "Ta version (facultatif)",
+        "reset": "Règles d’origine",
+        "resetConfirm": {
+          "title": "Revenir aux règles d’origine ?",
+          "description": "{count, plural, one {Ta règle maison sera effacée de cet appareil.} other {Tes # règles maison seront effacées de cet appareil.}}",
+          "confirm": "Effacer",
+          "cancel": "Garder mes règles"
+        }
+      },
+      "ranks": {
+        "A": "As",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6",
+        "7": "7",
+        "8": "8",
+        "9": "9",
+        "10": "10",
+        "J": "Valet",
+        "Q": "Dame",
+        "K": "Roi"
+      },
+      "suits": {
+        "spade": "pique",
+        "heart": "cœur",
+        "diamond": "carreau",
+        "club": "trèfle"
+      },
+      "rules": {
+        "A": {
+          "title": "Cascade",
+          "text": "Tout le monde boit en même temps. Tu t’arrêtes quand tu veux, et les autres ne s’arrêtent qu’après leur voisin de gauche.",
+          "soft": "Tout le monde se lève : le dernier encore assis prend 1 point."
+        },
+        "2": {
+          "title": "Toi",
+          "text": "Tu désignes qui boit 2 gorgées.",
+          "soft": "Tu désignes qui prend 2 points."
+        },
+        "3": {
+          "title": "Moi",
+          "text": "Tu bois 3 gorgées.",
+          "soft": "Tu prends 3 points."
+        },
+        "4": {
+          "title": "Sol",
+          "text": "Tout le monde touche le sol : le dernier boit 2 gorgées.",
+          "soft": "Tout le monde touche le sol : le dernier prend 2 points."
+        },
+        "5": {
+          "title": "Pouce",
+          "text": "Tu deviens maître du pouce : quand tu poses ton pouce sur le bord de la table, tout le monde t’imite. Le dernier boit 2 gorgées.",
+          "soft": "Tu deviens maître du pouce : quand tu poses ton pouce sur le bord de la table, tout le monde t’imite. Le dernier prend 2 points."
+        },
+        "6": {
+          "title": "Ciel",
+          "text": "Tout le monde lève la main : le dernier boit 2 gorgées.",
+          "soft": "Tout le monde lève la main : le dernier prend 2 points."
+        },
+        "7": {
+          "title": "Catégorie",
+          "text": "Tu choisis un thème, puis tour de table : le premier qui sèche ou se répète boit 2 gorgées.",
+          "soft": "Tu choisis un thème, puis tour de table : le premier qui sèche ou se répète prend 2 points."
+        },
+        "8": {
+          "title": "Binôme",
+          "text": "Tu choisis un binôme : il boit chaque fois que tu bois, jusqu’à ton prochain 8.",
+          "soft": "Tu choisis un binôme : il prend un point chaque fois que tu en prends un, jusqu’à ton prochain 8."
+        },
+        "9": {
+          "title": "Rime",
+          "text": "Tu dis un mot, puis tour de table en rimes : le premier qui sèche boit 2 gorgées.",
+          "soft": "Tu dis un mot, puis tour de table en rimes : le premier qui sèche prend 2 points."
+        },
+        "10": {
+          "title": "Questions",
+          "text": "Tu deviens maître des questions : qui répond à l’une de tes questions boit 1 gorgée.",
+          "soft": "Tu deviens maître des questions : qui répond à l’une de tes questions prend 1 point."
+        },
+        "J": {
+          "title": "Règle",
+          "text": "Tu inventes une règle pour toute la partie ; qui l’oublie boit 1 gorgée.",
+          "soft": "Tu inventes une règle pour toute la partie ; qui l’oublie prend 1 point."
+        },
+        "Q": {
+          "title": "Je n’ai jamais",
+          "text": "Tour de table « Je n’ai jamais… » : ceux qui l’ont déjà fait boivent 1 gorgée.",
+          "soft": "Tour de table « Je n’ai jamais… » : ceux qui l’ont déjà fait prennent 1 point."
+        },
+        "K": {
+          "title": "Coupe",
+          "text": "Du premier au troisième roi, tu verses un peu de ton verre dans la coupe. Le quatrième roi la boit, et la partie s’arrête.",
+          "solo": "Sans verre commun, rien à verser : le quatrième roi boit 5 gorgées, et la partie s’arrête.",
+          "soft": "Le quatrième roi fait un gage choisi par la table, et la partie s’arrête."
+        }
+      },
+      "game": {
+        "customTag": "Règle maison",
+        "cardName": "{rank} de {suit}",
+        "kings": "Rois sortis",
+        "kingsCount": "{count}/{total}",
+        "cardsLeft": "{count, plural, one {# carte restante} other {# cartes restantes}}",
+        "tapToDraw": "Touchez pour tirer",
+        "draw": "Tirer une carte",
+        "turnOf": "Au tour de {name}",
+        "drawnBy": "Tirée par {name}",
+        "spanNext": "jusqu’au prochain {rank}",
+        "spanOwn": "jusqu’à son prochain 8",
+        "spanGame": "pour toute la partie",
+        "kingOrder": "roi {count} sur {total}",
+        "inForce": "En vigueur",
+        "inForceEmpty": "Aucun rôle ni règle pour l’instant.",
+        "thumb": "Pouce",
+        "questions": "Questions",
+        "pairOf": "Binôme de {name}",
+        "ruleBy": "Règle de {name}",
+        "announce": "{name} : {card}. {title} — {text}",
+        "pairSet": "Binôme de {name} : {partner}.",
+        "pairWith": "en binôme avec {partner}",
+        "ruleAdded": "Nouvelle règle de {name} : {rule}",
+        "soundOn": "Activer le son",
+        "soundOff": "Couper le son",
+        "pair": {
+          "title": "{name}, choisis ton binôme",
+          "hint": "Il boira chaque fois que tu bois, jusqu’à ton prochain 8.",
+          "hintSoft": "Il prendra un point chaque fois que tu en prends un, jusqu’à ton prochain 8.",
+          "waiting": "{name} choisit son binôme",
+          "pick": "Choisis un joueur",
+          "confirm": "Binôme : {name}"
+        },
+        "newRule": {
+          "title": "{name}, invente une règle",
+          "hint": "Elle vaut pour toute la partie. Pas d’idée ? Tires-en une au hasard.",
+          "label": "Ta règle",
+          "placeholder": "Ex. : interdit de dire « oui »",
+          "idea": "Une idée au hasard",
+          "waiting": "{name} invente une règle",
+          "add": "Ajouter la règle",
+          "skip": "Passer"
+        }
+      },
+      "suggestions": {
+        "noNames": "Interdit d’appeler quelqu’un par son prénom.",
+        "noPointing": "Interdit de montrer quelqu’un du doigt.",
+        "noYesNo": "Interdit de dire « oui » ou « non ».",
+        "thirdPerson": "Chacun parle de soi à la troisième personne.",
+        "raiseHand": "Avant de parler, on lève la main.",
+        "accent": "Tout le monde parle avec l’accent de son choix.",
+        "leftHand": "On ne touche le téléphone que de la main gauche.",
+        "tRex": "Bras de T-Rex : les coudes restent collés au corps.",
+        "compliment": "Avant de tirer une carte, on fait un compliment à son voisin.",
+        "captain": "Chaque phrase se termine par « mon capitaine ».",
+        "noPhones": "Interdit de regarder son propre téléphone.",
+        "noSwearing": "Interdit de dire un gros mot."
+      },
+      "end": {
+        "title": "La coupe est pour {name}",
+        "shared": "{name} boit la coupe !",
+        "solo": "{name} boit 5 gorgées !",
+        "soft": "La table choisit le gage de {name}.",
+        "summary": "Bilan",
+        "cardsDrawn": "{count, plural, one {# carte tirée} other {# cartes tirées}}",
+        "playerLine": "{cards, plural, one {# carte} other {# cartes}} · {kings, plural, one {# roi} other {# rois}}",
+        "cupBadge": "La coupe",
+        "inForce": "En vigueur à la fin"
+      }
+    },
+    "patate-chaude": {
+      "title": "Patate Chaude",
+      "page": {
+        "challenge": "Défis",
+        "challenges": {
+          "mix": {
+            "label": "Mélange",
+            "desc": "Thèmes, lettres et syllabes"
+          },
+          "theme": {
+            "label": "Thèmes",
+            "desc": "« Une marque de voiture »"
+          },
+          "letter": {
+            "label": "Lettres",
+            "desc": "« Un mot qui commence par B »"
+          },
+          "syllable": {
+            "label": "Syllabes",
+            "desc": "« Un mot qui contient TRA »"
+          }
+        },
+        "fuse": "Mèche",
+        "fuses": {
+          "short": "Courte",
+          "normal": "Normale",
+          "long": "Longue"
+        },
+        "fuseRange": "{min} à {max} s",
+        "fuseSecret": "La durée exacte est tirée en secret dans la plage : personne ne sait quand ça saute.",
+        "rounds": "Manches",
+        "roundsUnit": "{count, plural, one {manche} other {manches}}",
+        "unlimited": "Illimité",
+        "unlimitedDesc": "On s’arrête quand on veut",
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "challenge": "On allume la mèche : un défi s’affiche (un thème, une lettre ou une syllabe) et la durée de la mèche reste secrète.",
+          "pass": "Celui qui tient la bombe dit à voix haute un mot qui colle, touche « Je passe » et tend vite le téléphone à son voisin.",
+          "reject": "Mot déjà dit ou hors sujet ? La table touche « Rejeté ! » : le joueur garde la bombe et en cherche un autre. Deux rejets de suite : il boit 1 gorgée.",
+          "boom": "BOUM : celui qui tient la bombe boit 3 gorgées, et la manche suivante repart de chez lui.",
+          "end": "À la fin des manches, le moins d’explosions gagne."
+        },
+        "loadFailed": "Les défis n’ont pas pu être chargés. Vérifie ta connexion, puis réessaie.",
+        "retry": "Réessayer"
+      },
+      "game": {
+        "round": "Manche {current}",
+        "roundOf": "Manche {current}/{total}",
+        "soundOn": "Activer le son",
+        "soundOff": "Couper le son",
+        "holderLead": "La bombe est chez",
+        "readyHint": "Le défi s’affiche quand la mèche s’allume. Dis un mot qui colle, puis passe vite la bombe !",
+        "light": "Allumer la mèche",
+        "kinds": {
+          "theme": "Thème",
+          "letter": "Un mot qui commence par",
+          "syllable": "Un mot qui contient"
+        },
+        "announce": {
+          "theme": "Thème : {value}",
+          "letter": "Un mot qui commence par {value}",
+          "syllable": "Un mot qui contient {value}"
+        },
+        "tickTock": "tic… tac…",
+        "passes": "{count, plural, =0 {Aucune passe} one {# passe} other {# passes}}",
+        "passTo": "Je passe à {name}",
+        "rejected": "Rejeté !",
+        "rejectedOnce": "Rejeté une fois : encore un et {name} boit 1 gorgée.",
+        "rejectPenalty": "Deux rejets de suite : {name} boit 1 gorgée !",
+        "liveLit": "La mèche est allumée. {challenge}. La bombe est chez {name}.",
+        "liveHolder": "La bombe est chez {name}.",
+        "liveRejected": "Rejeté ! {name} garde la bombe.",
+        "liveReady": "Manche suivante : la bombe repart de chez {name}.",
+        "standings": "Explosions",
+        "explosions": "{count, plural, =0 {aucune explosion} one {# explosion} other {# explosions}}"
+      },
+      "boom": {
+        "title": "BOUM !",
+        "holder": "{name} tenait la bombe",
+        "verdict": "{name} boit {count, plural, one {# gorgée} other {# gorgées}}",
+        "live": "BOUM ! {name} tenait la bombe : {verdict}.",
+        "fuse": "Mèche",
+        "fuseValue": "{seconds} s",
+        "passes": "Passes",
+        "next": "Manche suivante",
+        "seeRanking": "Voir le classement",
+        "finish": "Terminer la partie"
+      },
+      "end": {
+        "title": "Fin de la partie",
+        "winners": "{count, plural, one {{names} gagne : le moins d’explosions !} other {Ex æquo en tête : {names} !}}",
+        "ranking": "Classement",
+        "penalties": "{count, plural, one {# pénalité} other {# pénalités}}"
+      },
+      "finishConfirm": {
+        "title": "Terminer la partie ?",
+        "description": "Place au classement : le moins d’explosions gagne.",
+        "confirm": "Voir le classement",
+        "cancel": "Continuer à jouer"
+      },
+      "soft": {
+        "rules": {
+          "reject": "Mot déjà dit ou hors sujet ? La table touche « Rejeté ! » : le joueur garde la bombe et en cherche un autre. Deux rejets de suite : 1 point de pénalité.",
+          "boom": "BOUM : celui qui tient la bombe prend 1 point de pénalité, et la manche suivante repart de chez lui."
+        },
+        "rejectedOnce": "Rejeté une fois : encore un et {name} prend 1 point de pénalité.",
+        "rejectPenalty": "Deux rejets de suite : {name} prend 1 point de pénalité !",
+        "verdict": "{name} prend {count, plural, one {# point de pénalité} other {# points de pénalité}}",
+        "points": "{count, plural, one {# point} other {# points}}",
+        "struck": "« {word} » est rayé : la bombe revient chez {name}, qui prend {count, plural, one {# point de pénalité} other {# points de pénalité}}."
+      },
+      "about": {
+        "p1": "Un défi s’affiche : un thème (« Un fruit », « Une marque de voiture »), une lettre ou une syllabe. Celui qui tient la bombe trouve un mot qui colle et la passe à son voisin. La mèche brûle en secret, de 10 à 75 secondes selon le réglage : celui qui la tient au moment du BOUM perd la manche, et la suivante repart de chez lui.",
+        "p2": "En ligne, chacun joue sur son téléphone : le porteur tape son mot, le jeu vérifie la lettre, la syllabe et les mots déjà dits, puis la bombe file chez le suivant. Dès quatre joueurs, la table peut contester un mot hors sujet ou inventé, quel que soit le défi : rayé, il renvoie la bombe à son auteur. L’hôte choisit les défis, la mèche et le nombre de manches ; la télé affiche la bombe en grand.",
+        "p3": "Garde deux mots d’avance pendant que la bombe tourne, et préfère les mots courts sur une lettre : ils se tapent plus vite. Le moins d’explosions gagne. En mode apéro, l’explosion coûte 3 gorgées et un mot rayé 1 ; en mode sans alcool, ce sont des points de pénalité. Il faut au moins deux joueurs : un bot ne trouve pas de mots."
+      },
+      "lobby": {
+        "challenge": "Défis",
+        "challenges": {
+          "mix": "Mélange",
+          "theme": "Thèmes",
+          "letter": "Lettres",
+          "syllable": "Syllabes"
+        },
+        "fuse": "Mèche",
+        "fuses": {
+          "short": "Courte",
+          "normal": "Normale",
+          "long": "Longue"
+        },
+        "fuseRange": "{min}–{max} s",
+        "rounds": "Manches",
+        "roundsUnit": "{count, plural, one {manche} other {manches}}",
+        "unlimited": "Illimité",
+        "unlimitedHint": "fin au choix"
+      },
+      "online": {
+        "phase": {
+          "ready": "La mèche va s’allumer",
+          "burning": "La bombe tourne"
+        },
+        "startsWith": "La bombe commence chez {name}",
+        "startsAgain": "La bombe repart de chez {name}",
+        "readyHint": "Le défi s’affiche quand la mèche s’allume. Tape un mot qui colle et envoie-le : la bombe file au suivant.",
+        "startsMine":"La bombe commence chez toi : prépare un mot !",
+        "mineHint": "Tape un mot qui colle et envoie : la bombe file chez {name}.",
+        "theirHint": "La mèche brûle… elle peut sauter à tout moment.",
+        "wordLabel": "Ton mot",
+        "wordPlaceholder": "Un mot qui colle…",
+        "said": "Déjà dit",
+        "saidEmpty": "Aucun mot pour l’instant : à {name} d’ouvrir le bal.",
+        "saidBy": "par {name}",
+        "struckTag": "rayé",
+        "contest": "Contester « {word} »",
+        "contestShort": "Contester",
+        "contested": "Contesté",
+        "contestCount": "{count, plural, one {# contestation} other {# contestations}} sur {total} pour rayer le mot",
+        "contestHint": "Hors sujet ou inventé ? Conteste : à {total, plural, one {# contestation} other {# contestations}}, le mot est rayé et la bombe revient à son auteur.",
+        "contestHintOthers": "La table peut contester ce mot : à {total, plural, one {# contestation} other {# contestations}}, il est rayé et la bombe revient à son auteur.",
+        "struck": "« {word} » est rayé : la bombe revient chez {name}, qui boit {count, plural, one {# gorgée} other {# gorgées}}.",
+        "fuseInfo": "Mèche de {min} à {max} s",
+        "nextRoundIn": "Manche suivante dans {seconds} s",
+        "rankingIn": "Classement dans {seconds} s",
+        "nextIs": "ensuite : {name}",
+        "tableOrder": "Ordre de passe",
+        "endGame": "Terminer la partie",
+        "endConfirm": {
+          "title": "Terminer pour toute la table ?",
+          "description": "La partie s’arrête sur tous les téléphones et le classement s’affiche : le moins d’explosions gagne.",
+          "confirm": "Terminer pour tous",
+          "cancel": "Continuer à jouer"
+        },
+        "asideMine": "Deux explosions sans jouer : la bombe te saute pour l’instant.",
+        "resume": "Je suis là",
+        "asideTag": "en pause",
+        "notEnough": "Plus assez de joueurs : la partie s’arrête.",
+        "leftTag": "parti",
+        "you": "toi"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Un défi, une bombe",
+            "body": "La mèche s’allume et le défi s’affiche : un thème, une lettre ou une syllabe. La bombe part de chez un joueur, et la durée de la mèche reste secrète."
+          },
+          {
+            "title": "Tape, envoie, passe",
+            "body": "Tu tiens la bombe ? Tape un mot qui colle et envoie-le : elle file chez le suivant. Mot déjà dit ou qui ne colle pas : refusé, trouves-en un autre, vite."
+          },
+          {
+            "title": "Gare au BOUM",
+            "body": "Celui qui tient la bombe quand elle explose perd la manche. Dès quatre joueurs, un mot hors sujet ou inventé se conteste : si assez de joueurs le contestent, il est rayé et la bombe revient à son auteur."
+          }
+        ]
+      }
+    },
+    "pile-poil": {
+      "title": "Pile Poil",
+      "page": {
+        "level": "Niveau",
+        "levels": {
+          "normal": {
+            "label": "Normal",
+            "desc": "Chiffres effacés au bout de 3 s"
+          },
+          "pro": {
+            "label": "Pro",
+            "desc": "Chiffres effacés dès le départ"
+          }
+        },
+        "target": "Cible",
+        "targets": {
+          "fixed": {
+            "label": "10 secondes",
+            "desc": "La même cible à chaque tour"
+          },
+          "variable": {
+            "label": "Variable",
+            "desc": "De 5 à 20 s, tirée à chaque tour"
+          }
+        },
+        "rounds": "Nombre de tours",
+        "roundsCount": "{count, plural, one {# tour} other {# tours}}",
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "goal": "Chaque tour a une cible : 10 secondes, ou une durée tirée au sort entre 5 et 20 s en mode Variable.",
+          "play": "À ton tour, touche « Démarrer », puis « STOP » quand tu crois y être pile. Les chiffres s’effacent au bout de 3 secondes (dès le départ en Pro) : à toi de sentir le temps.",
+          "rank": "Quand tout le monde a joué, le tour se classe à l’écart avec la cible. Le tour suivant commence au joueur suivant.",
+          "furthest": "Le plus loin de la cible boit 1 gorgée par demi-seconde d’écart (arrondi), au moins 1 et 5 au plus. Ex æquo : tous boivent.",
+          "bullseye": "Pile poil, à moins de 0,05 s : tu distribues 5 gorgées.",
+          "end": "Après le dernier tour, le plus petit écart cumulé l’emporte.",
+          "variant": "Variante « sous pression » : la table a le droit de compter faux à voix haute."
+        }
+      },
+      "dial": {
+        "target": "Cible",
+        "targetSmall": "Cible {target}",
+        "unit": "s",
+        "hidden": "?,??",
+        "hint": {
+          "normal": "chiffres effacés à 3 s",
+          "pro": "chiffres effacés dès le départ"
+        },
+        "exact": "Pile poil !",
+        "early": "Trop tôt",
+        "late": "Trop tard"
+      },
+      "game": {
+        "progress": "Tour {current}/{total}",
+        "level": {
+          "normal": "Niveau normal",
+          "pro": "Niveau pro"
+        },
+        "prompt": "{name}, arrête le chrono pile à {target}",
+        "start": "Démarrer",
+        "stop": "STOP",
+        "cancelled": "Essai annulé : l’écran a été quitté pendant la mesure. Recommence.",
+        "resultLine": "{time} · {delta}",
+        "next": "Au suivant : {name}",
+        "showRanking": "Classement du tour",
+        "provisional": "Classement provisoire"
+      },
+      "round": {
+        "title": "Fin du tour {current}/{total}",
+        "target": "Cible {target}",
+        "ranking": "Classement du tour",
+        "general": "Au général",
+        "next": "Tour suivant",
+        "final": "Classement final"
+      },
+      "verdict": {
+        "provisional": "Pour l’instant, {names} {people, plural, one {boirait} other {boiraient}} {count, plural, one {# gorgée} other {# gorgées}}.",
+        "furthestLine": "{names} {people, plural, one {boit} other {boivent}} {count, plural, one {# gorgée} other {# gorgées}}.",
+        "bullseyeLine": "Pile poil ! {names} {people, plural, one {distribue} other {distribuent chacun}} {count, plural, one {# gorgée} other {# gorgées}}.",
+        "bullseyeBadge": "pile poil · distribue {count}",
+        "furthestBadge": "{delta} · boit {count}"
+      },
+      "list": {
+        "and": "{head} et {last}"
+      },
+      "live": {
+        "result": "{name} : {time}, écart {delta}.",
+        "roundEnd": "Fin du tour {current}."
+      },
+      "end": {
+        "winner": "{name} l’emporte !",
+        "tie": "Égalité en tête !",
+        "subtitle": "{count, plural, one {# tour joué} other {# tours joués}} · classement à l’écart cumulé",
+        "results": "Classement final",
+        "gap": "{gap} d’écart cumulé",
+        "bullseyes": "{count, plural, one {# pile poil} other {# pile poil}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "furthest": "Le plus loin de la cible perd 1 point par demi-seconde d’écart (arrondi), au moins 1 et 5 au plus. Ex æquo : tous perdent.",
+            "bullseye": "Pile poil, à moins de 0,05 s : tu gagnes 5 points.",
+            "end": "Après le dernier tour, le plus petit écart cumulé l’emporte. Les points se comptent à part : ils ne changent pas le classement."
+          }
+        },
+        "verdict": {
+          "provisional": "Pour l’instant, {names} {people, plural, one {perdrait} other {perdraient}} {count, plural, one {# point} other {# points}}.",
+          "furthestLine": "{names} {people, plural, one {perd} other {perdent}} {count, plural, one {# point} other {# points}}.",
+          "bullseyeLine": "Pile poil ! {names} {people, plural, one {gagne} other {gagnent chacun}} {count, plural, one {# point} other {# points}}.",
+          "bullseyeBadge": "pile poil · +{count, plural, one {# pt} other {# pts}}",
+          "furthestBadge": "{delta} · −{count, plural, one {# pt} other {# pts}}"
+        },
+        "end": {
+          "points": "{points} {count, plural, one {point} other {points}}"
+        }
+      }
+    },
+    "degaine": {
+      "title": "Dégaine !",
+      "page": {
+        "format": "Format",
+        "formats": {
+          "tournament": {
+            "label": "Tournoi",
+            "desc": "Toute la table, tableau à élimination"
+          },
+          "free": {
+            "label": "Duel libre",
+            "desc": "Vous choisissez les duellistes, revanches à volonté"
+          }
+        },
+        "decoys": "Leurres",
+        "decoyModes": {
+          "on": {
+            "label": "Avec leurres",
+            "desc": "Jusqu’à deux faux signaux par manche"
+          },
+          "off": {
+            "label": "Sans leurres",
+            "desc": "Rien que le vrai signal"
+          }
+        },
+        "rounds": "Manches par duel",
+        "roundModes": {
+          "one": {
+            "label": "Une manche",
+            "desc": "Le premier qui tire l’emporte"
+          },
+          "bestOf3": {
+            "label": "Au meilleur des 3",
+            "desc": "Deux manches gagnées pour passer"
+          }
+        },
+        "rulesTitle": "Règles du jeu",
+        "rules": {
+          "setup": "Posez le téléphone à plat entre les deux duellistes : chacun a sa moitié d’écran, celle du haut se lit depuis le côté d’en face.",
+          "ready": "Chacun touche « Prêt » sur sa moitié. Vient alors « Attention… », puis le signal tombe entre 2 et 8 secondes plus tard.",
+          "fire": "Au « FEU ! », le premier qui frappe sa propre moitié gagne la manche. Les temps de réaction s’affichent en millisecondes.",
+          "decoys": "Gare aux leurres (« FEUILLE ! », « FÊTE ! »…) : frapper avant le vrai signal, ou moins d’un dixième de seconde après, est un faux départ et fait perdre la manche. Si les deux partent trop tôt presque en même temps, chacun paie son faux départ et la manche se rejoue.",
+          "drinks": "Duel perdu : 2 gorgées, 3 en finale. Faux départ : 3 gorgées. Le champion du tournoi distribue 5 gorgées.",
+          "tournament": "En tournoi, le tableau est tiré au sort ; quand le compte n’est pas rond, des exempts passent directement au tour suivant."
+        }
+      },
+      "board": {
+        "nextDuel": "Prochain duel",
+        "versus": "contre",
+        "bye": "exempt",
+        "tbd": "à venir",
+        "winner": "vainqueur du duel",
+        "score": "{a} – {b}",
+        "seats": "{top} prend le haut de l’écran, {bottom} le bas.",
+        "start": "Lancer le duel",
+        "resume": "Reprendre le duel",
+        "freeDuel": "Duel libre",
+        "duelOf": "Duel {number} sur {total}",
+        "stage": {
+          "final": "Finale",
+          "semi": "Demi-finale",
+          "quarter": "Quart de finale",
+          "eighth": "Huitième de finale",
+          "other": "Tour {round}"
+        },
+        "stages": {
+          "final": "Finale",
+          "semi": "Demi-finales",
+          "quarter": "Quarts de finale",
+          "eighth": "Huitièmes de finale",
+          "other": "Tour {round}"
+        },
+        "subtitle": {
+          "tournament": "Tournoi · {count, plural, one {# joueur} other {# joueurs}}",
+          "free": "Duel libre",
+          "bestOf3": "au meilleur des 3"
+        },
+        "free": {
+          "title": "Qui s’affronte ?",
+          "hint": "Touchez deux joueurs : ils se font face, le téléphone posé entre eux.",
+          "top": "en haut de l’écran",
+          "bottom": "en bas de l’écran",
+          "pickTwo": "Choisissez deux duellistes",
+          "standings": "Bilan des duels",
+          "duelsWon": "{count, plural, =0 {aucun duel gagné} one {# duel gagné} other {# duels gagnés}}",
+          "finish": "Terminer"
+        }
+      },
+      "arena": {
+        "label": "Duel : {a} contre {b}",
+        "close": "Quitter le duel",
+        "ready": "Prêt",
+        "readyHint": "Touche « Prêt », puis frappe ta moitié au signal.",
+        "onGuard": "En garde !",
+        "waitingFor": "On attend {name}…",
+        "interrupted": "Duel interrompu : on reprend depuis « Prêt ».",
+        "keyHint": "Clavier : touche {key}",
+        "attention": "Attention…",
+        "fire": "FEU !",
+        "decoys": {
+          "decoy1": "FEUILLE !",
+          "decoy2": "FÊTE !",
+          "decoy3": "FEUTRE !",
+          "decoy4": "JEU !",
+          "decoy5": "PEU !",
+          "decoy6": "FEINTE !"
+        },
+        "ms": "{ms} ms",
+        "noTime": "—",
+        "tooEarly": "Trop tôt",
+        "fellFor": "« {word} »",
+        "score": "Manches {mine} – {theirs}",
+        "roundNumber": "Manche {number}",
+        "verdict": {
+          "won": "Gagné !",
+          "advance": {
+            "final": "Gagné · en finale",
+            "semi": "Gagné · en demi-finale",
+            "quarter": "Gagné · en quarts de finale",
+            "eighth": "Gagné · en huitièmes de finale",
+            "other": "Gagné · au tour suivant"
+          },
+          "champion": "Tournoi gagné !",
+          "roundWon": "Manche gagnée",
+          "roundLost": "Manche perdue",
+          "tooSlow": "Trop lent",
+          "falseStart": "Faux départ",
+          "tie": "Égalité",
+          "noShot": "Personne n’a tiré"
+        },
+        "cost": {
+          "drink": "boit {count}",
+          "give": "distribue {count}",
+          "points": "{count, plural, one {−# point} other {−# points}}",
+          "eliminated": "éliminé",
+          "runnerUp": "finaliste",
+          "chooseGame": "choisit le jeu suivant",
+          "replay": "on rejoue"
+        },
+        "actions": {
+          "nextRound": "Manche suivante",
+          "replayRound": "Rejouer la manche",
+          "nextDuel": "Duel suivant",
+          "seeChampion": "Voir le classement",
+          "rematch": "Revanche",
+          "otherDuellists": "Autres duellistes"
+        },
+        "live": {
+          "win": "{name} gagne en {time}.",
+          "falseStart": "Faux départ de {name}.",
+          "tie": "Égalité : la manche se rejoue.",
+          "noShot": "Personne n’a tiré : la manche se rejoue.",
+          "double": "Double faux départ : la manche se rejoue."
+        }
+      },
+      "end": {
+        "champion": "{name} remporte le tournoi !",
+        "championPrize": "{name} distribue {count, plural, one {# gorgée} other {# gorgées}}.",
+        "freeLeader": "{name} remporte le plus de duels !",
+        "freeTie": "Égalité en tête !",
+        "freeNone": "Aucun duel remporté",
+        "rankingTournament": "Classement du tournoi",
+        "rankingFree": "Bilan des duels",
+        "reachedChampion": "Tournoi remporté",
+        "best": "meilleur temps {time}",
+        "noBest": "aucun tir valide",
+        "pointsLost": "{count, plural, =0 {0 point} one {−# point} other {−# points}}"
+      },
+      "endConfirm": {
+        "title": "Terminer les duels ?",
+        "description": "Place au bilan : duels gagnés, gorgées et meilleurs temps.",
+        "confirm": "Voir le bilan",
+        "cancel": "Continuer"
+      },
+      "game": {
+        "soundOn": "Activer le son",
+        "soundOff": "Couper le son"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "drinks": "Sans alcool : un faux départ coûte 3 points ; en duel libre, un duel perdu en coûte 2 ; en tournoi, le perdant est éliminé. Le champion choisit le jeu suivant."
+          }
+        },
+        "end": {
+          "championPrize": "{name} choisit le jeu suivant."
+        },
+        "endConfirm": {
+          "description": "Place au bilan : duels gagnés, points perdus et meilleurs temps."
+        }
+      }
+    },
+    "doigt-du-destin": {
+      "title": "Le Doigt du Destin",
+      "modesLabel": "Mode de tirage",
+      "modes": {
+        "victim": "Victime",
+        "teams": "Deux camps",
+        "order": "Ordre",
+        "survival": "Survie"
+      },
+      "hints": {
+        "victim": "Le destin choisit un doigt : il boit {count, plural, one {# gorgée} other {# gorgées}}.",
+        "teams": "Le destin répartit les doigts en deux camps équilibrés : l’or contre le bleu.",
+        "order": "Le destin donne un numéro à chaque doigt : le 1 commence.",
+        "survival": "Un doigt éliminé par tirage ({eliminated, plural, one {# gorgée} other {# gorgées}}), jusqu’au dernier, qui distribue {survivor, plural, one {# gorgée} other {# gorgées}}."
+      },
+      "arena": {
+        "zone": "Zone de jeu : posez chacun un doigt ici",
+        "place": "Posez chacun un doigt",
+        "oneMore": "Encore un doigt…",
+        "hold": "Ne bougez plus…",
+        "noTouch": "Il faut un écran tactile : posez le téléphone au milieu de la table.",
+        "deviceLimit": "Ce téléphone suit jusqu’à {count} doigts.",
+        "limit": "{count} doigts maximum",
+        "fingerCount": "{count, plural, =0 {Aucun doigt} one {# doigt} other {# doigts}}",
+        "countdown": "Tirage dans {count}…",
+        "selecting": "Le destin choisit…",
+        "keepDown": "Gardez le doigt posé jusqu’au verdict.",
+        "liftEliminated": "Lève ton doigt : le tirage suivant t’attend.",
+        "nextDraw": "Tirage suivant dans un instant…",
+        "alive": "{count, plural, one {# doigt en lice} other {# doigts en lice}}",
+        "touchToRestart": "Posez un doigt pour relancer",
+        "soundOn": "Activer le son",
+        "soundOff": "Couper le son"
+      },
+      "result": {
+        "chosen": "Le destin a choisi",
+        "victim": "{count, plural, one {# gorgée pour toi} other {# gorgées pour toi}}",
+        "teams": "Deux camps : {gold} contre {blue}",
+        "teamsDetail": "Chaque cercle porte la couleur de son camp : or ou bleu.",
+        "order": "Le numéro 1 commence",
+        "orderDetail": "Puis le 2, le 3… dans l’ordre des numéros.",
+        "eliminated": "Éliminé : {count, plural, one {# gorgée} other {# gorgées}}",
+        "survivor": "Dernier doigt en lice : tu distribues {count, plural, one {# gorgée} other {# gorgées}}",
+        "lastEliminated": "Le dernier éliminé boit {count, plural, one {# gorgée} other {# gorgées}}.",
+        "nobody": "Plus aucun doigt en lice : personne ne gagne.",
+        "liftedOne": "Doigt levé avant la fin : {count, plural, one {# gorgée} other {# gorgées}}",
+        "liftedMany": "{fingers} doigts levés avant la fin : {count, plural, one {# gorgée} other {# gorgées}} chacun"
+      },
+      "tags": {
+        "victim": "Toi !",
+        "gold": "Or",
+        "blue": "Bleu",
+        "eliminated": "Éliminé",
+        "survivor": "Dernier !",
+        "lifted": "Levé"
+      },
+      "soft": {
+        "hints": {
+          "victim": "Le destin choisit un doigt : la table lui choisit un gage.",
+          "survival": "Un doigt éliminé par tirage, jusqu’au dernier en lice, qui gagne la manche."
+        },
+        "result": {
+          "victim": "Un gage pour toi",
+          "victimDetail": "La table choisit ton gage.",
+          "eliminated": "Éliminé !",
+          "survivor": "Dernier doigt en lice : tu gagnes la manche !",
+          "liftedOne": "Doigt levé avant la fin : {count, plural, one {−# point} other {−# points}}",
+          "liftedMany": "{fingers} doigts levés avant la fin : {count, plural, one {−# point} other {−# points}} chacun"
+        }
       }
     }
   },

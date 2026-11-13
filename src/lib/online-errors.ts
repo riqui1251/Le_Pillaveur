@@ -78,6 +78,16 @@ export const ONLINE_ERROR_CODES = [
   'incomplete_stop',
   'contest_needs_more_players',
   'fake_taken',
+  // Chiffre Piégé : nombre hors de l'intervalle encore ouvert, joker déjà grillé.
+  'out_of_range',
+  'joker_used',
+  // Patate Chaude : mot refusé par le serveur, contestation impossible
+  'word_too_short',
+  'word_too_long',
+  'word_already_said',
+  'word_wrong_letter',
+  'word_missing_syllable',
+  'contest_unavailable',
   // Refus du moteur sans code dédié — filet générique, jamais de texte brut
   'action_failed',
 
@@ -166,6 +176,9 @@ const LEGACY_ALIASES: Record<string, OnlineErrorCode> = {
   CONTEST_NEEDS_MORE_PLAYERS: 'contest_needs_more_players',
   // Grand Bluff : bluff identique à la vraie réponse ou à celui d'un autre.
   FAKE_TAKEN: 'fake_taken',
+  // Chiffre Piégé : nombre hors de l'intervalle, joker déjà utilisé.
+  OUT_OF_RANGE: 'out_of_range',
+  JOKER_USED: 'joker_used',
 }
 
 /** Résout une valeur `error` de l'API vers un code stable, ou null si inconnue */
@@ -234,6 +247,14 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   incomplete_stop: 'Remplissez toutes les cases avant de crier STOP',
   contest_needs_more_players: 'Pas assez de joueurs pour contester une réponse',
   fake_taken: 'Cette réponse est déjà prise, invente autre chose',
+  out_of_range: "Ce nombre est hors de l'intervalle",
+  joker_used: 'Joker déjà utilisé pour cette partie',
+  word_too_short: 'Mot trop court : deux lettres au moins',
+  word_too_long: 'Mot trop long : trente caractères au plus',
+  word_already_said: 'Mot déjà dit dans cette manche',
+  word_wrong_letter: 'Ce mot ne commence pas par la bonne lettre',
+  word_missing_syllable: 'Ce mot ne contient pas la syllabe demandée',
+  contest_unavailable: 'Ce mot ne peut pas être contesté',
   action_failed: 'Action impossible',
 
   conflict: 'Conflit, réessayez',

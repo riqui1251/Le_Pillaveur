@@ -129,6 +129,7 @@ describe('tenue en solo (soloFit)', () => {
     'petit-buveur': 'great',
     purple: 'great',
     '1220': 'great',
+    'chiffre-piege': 'great',
     dilemmes: 'group',
     'sans-filtre': 'group',
     crobard: 'group',
@@ -137,6 +138,7 @@ describe('tenue en solo (soloFit)', () => {
     imposteur: 'group',
     // Mesuré : quitté en 1 à 2 min seul contre des bots (07/10/2026).
     menteur: 'group',
+    'vue-de-nez': 'group',
   }
 
   it('classe chaque jeu complétable par des bots, et lui seul', () => {

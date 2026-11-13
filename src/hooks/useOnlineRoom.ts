@@ -694,6 +694,13 @@ export function useOnlineRoomState() {
       dilCoquin?: boolean
       pbcRounds?: number
       preManches?: number
+      cpMax?: number
+      cpRounds?: number
+      vdnCount?: number
+      vdnThemes?: string[]
+      pcChallenge?: 'mix' | 'theme' | 'letter' | 'syllable'
+      pcFuse?: 'short' | 'normal' | 'long'
+      pcRounds?: number
     }) => {
       if (!room) return null
       const res = await fetch(`/api/online/rooms/${room.id}/settings`, {

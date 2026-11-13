@@ -715,7 +715,15 @@
       "request_not_found": "Request not found.",
       "request_already_handled": "This request has already been handled.",
       "request_already_declined": "Request already declined.",
-      "fake_taken": "That answer's already taken — make up something else."
+      "fake_taken": "That answer's already taken — make up something else.",
+      "out_of_range": "Out of range — pick a number that’s still possible.",
+      "joker_used": "You’ve already burned your joker this game.",
+      "word_too_short": "Too short: at least two letters.",
+      "word_too_long": "Too long: thirty characters max.",
+      "word_already_said": "Already said this round: find something else!",
+      "word_wrong_letter": "That word doesn’t start with the right letter.",
+      "word_missing_syllable": "That word doesn’t contain the syllable.",
+      "contest_unavailable": "This word can’t be challenged."
     },
     "showcase": {
       "players": "{min} to {max} players",
@@ -1437,6 +1445,42 @@
       "tabou": {
         "title": "Play Taboo Voice online for free — describe, don't say it",
         "description": "Describe a word over voice chat without saying its 4 taboo words while your team guesses against the clock. 4–16 players, 2 per team, free, no install."
+      },
+      "chiffre-piege": {
+        "title": "Play The Trap Number for free — dodge the hidden number",
+        "description": "A trap number hides between 1 and 100: guess, close in on it and don’t land on it. Online for 2–16 players with voice chat, or on a single phone. Free."
+      },
+      "cap-ou-pas-cap": {
+        "title": "Play Truth or Dare for free — every card has its price",
+        "description": "Truth or dare with a price on every card: take it on and hand out sips, or drink. Four levels, six themes, free, on one phone passed around."
+      },
+      "vue-de-nez": {
+        "title": "Play Ballpark for free — the party guessing game",
+        "description": "How many bones in a skeleton? Everyone guesses in secret, closest hands out sips. Online for 2–16 players with voice chat, or on a single phone. Free."
+      },
+      "front-colle": {
+        "title": "Play Front Collé for free — guess the word on your forehead",
+        "description": "Phone stuck on your forehead, guess the word the table describes, mimes or hums for you. Tilt to score. Free, no install, on one phone."
+      },
+      "coupe-du-roi": {
+        "title": "Play King’s Cup for free — 13 cards, 13 rules",
+        "description": "The cult party card game: every card you draw sets off a rule, the app keeps track of the roles and the 4th king drinks the cup. Free, no install."
+      },
+      "patate-chaude": {
+        "title": "Play Hot Potato for free — the bomb with a secret fuse",
+        "description": "One theme, one bomb with a secret fuse: say a fitting word and pass it on before it blows. Online for 2–12 players with voice chat, or on a single phone. Free."
+      },
+      "pile-poil": {
+        "title": "Play Pile Poil for free — 10 seconds, blind",
+        "description": "Start the clock and stop it at exactly 10 seconds without seeing the digits: furthest off drinks. Free, no install, on one phone passed around."
+      },
+      "degaine": {
+        "title": "Play Draw! for free — the quick-draw reflex duel",
+        "description": "One phone laid between two duellists: on “FIRE!”, the fastest wins and whoever shoots too soon drinks. A tournament for the whole table, free."
+      },
+      "doigt-du-destin": {
+        "title": "Play Finger of Fate for free — who will it be?",
+        "description": "Everyone puts a finger on the screen and fate decides: a victim, two teams, the turn order or a survival round. Free, no install, on a single phone."
       }
     },
     "catalog": {
@@ -1556,6 +1600,47 @@
       "president": {
         "title": "Président",
         "description": "Empty your hand, cut with the 2, make someone else the Trou. Automatic exchange between rounds — 4 to 8 players."
+      },
+      "chiffre-piege": {
+        "title": "The Trap Number",
+        "description": "A trap number hides between 1 and 100: every guess tightens the net, and whoever lands on it drinks.",
+        "softDescription": "A trap number hides between 1 and 100: every guess tightens the net, and whoever lands on it loses points."
+      },
+      "cap-ou-pas-cap": {
+        "title": "Truth or Dare?",
+        "description": "Truth or dare, bar-style: every card shows its price. Take it on, or drink.",
+        "softDescription": "Truth or dare, bar-style: every card shows its price. Take it on, or lose points."
+      },
+      "vue-de-nez": {
+        "title": "Ballpark",
+        "description": "A question with a number for an answer. Everyone guesses in secret: closest hands out sips, furthest drinks.",
+        "softDescription": "A question with a number for an answer. Everyone guesses in secret: closest scores, furthest loses a point."
+      },
+      "front-colle": {
+        "title": "Front Collé",
+        "description": "Phone on your forehead, the table makes you guess the word: by describing it, miming it or humming it."
+      },
+      "coupe-du-roi": {
+        "title": "King’s Cup",
+        "description": "The great drinking-card classic: every card you draw triggers a rule, and the fourth king drinks the cup.",
+        "softDescription": "The great rule-card classic: every card you draw triggers a rule, and the fourth king takes a dare."
+      },
+      "patate-chaude": {
+        "title": "Hot Potato",
+        "description": "A bomb with a secret fuse goes round the table: say a word on the theme and pass it on fast before it blows."
+      },
+      "pile-poil": {
+        "title": "Pile Poil",
+        "description": "Stop the clock at exactly 10 seconds… without seeing the digits."
+      },
+      "degaine": {
+        "title": "Draw!",
+        "description": "A western duel on a single screen: at the signal, the fastest wins; shoot too soon and you drink.",
+        "softDescription": "A western duel on a single screen: at the signal, the fastest wins; shoot too soon and you lose the round."
+      },
+      "doigt-du-destin": {
+        "title": "Finger of Fate",
+        "description": "Everyone puts a finger on the screen. Fate picks one."
       }
     },
     "ballon-surprise": {
@@ -5369,6 +5454,1376 @@
         "p1": "All 54 cards, jokers included, are dealt, and each player sees only their own hand, on their phone. The first player lays a single card, a pair, three or four of a kind; the next ones lay as many cards, of an equal or higher rank, or pass. The order runs from the 3, the weakest, up to the ace, then the 2, the top card: it wins the trick on the spot.",
         "p2": "The first to empty their hand becomes President, the last one the Trou, with the Vice-President and the Vice-Trou in between. Before the next round the swaps happen by themselves: the Trou hands their two best cards to the President, who gives back their two worst. The house rules are on: “… or nothing” after an equal play, closing a four of a kind out of turn, chameleon jokers. The host picks 1, 3 or 5 rounds, with 30 seconds per turn.",
         "p3": "Keep your 2s to cut at the right moment, and don't break three of a kind for a single card. With four players the hands are long and the swaps weigh heavily; with seven or eight the rounds fly by and a well-kept joker decides the crown. You need four players: bots fill the table, each with its own temper. In drinking mode the Trou drinks; in alcohol-free mode they only lose their pride."
+      }
+    },
+    "chiffre-piege": {
+      "title": "The Trap Number",
+      "page": {
+        "range": "Trap range",
+        "rangeOption": "1 to {max}",
+        "rounds": "Number of rounds",
+        "roundsOption": "{count, plural, one {# round} other {# rounds}}",
+        "rulesTitle": "Game rules",
+        "rules": {
+          "trap": "The phone secretly hides a trap number between 1 and the chosen maximum.",
+          "guess": "On your turn, pick a number inside the range shown.",
+          "narrow": "Missed: the range closes in on the trap and you pass the phone to your neighbour.",
+          "boom": "Right on the trap: BOOM! You drink one sip per guess this round, yours included, {cap} at most.",
+          "last": "When only one number is left, it has to be the trap: you must play it.",
+          "joker": "“I pass” joker, one per player per game: skip your turn for {cost, plural, one {# sip} other {# sips}}.",
+          "next": "The next round starts with the loser’s neighbour. At the end, whoever drank the least wins."
+        }
+      },
+      "game": {
+        "progress": "Round {round}/{total} · guess #{attempt}",
+        "yourTurn": "Your turn",
+        "rangeLead": "The trap hides between",
+        "rangeAnd": "and",
+        "lastLead": "Only one left",
+        "rangeSummary": "The trap hides between {low} and {high}, on a range from 1 to {max}.",
+        "stake": "At stake",
+        "stakeValue": "{count, plural, one {# sip} other {# sips}}",
+        "risk": "Risk",
+        "riskValue": "{count, plural, =1 {Certain} other {1 in #}}",
+        "historyTitle": "Already tried",
+        "historyLegend": "↓ lower · ↑ higher",
+        "historyEmpty": "No guesses this round yet.",
+        "higher": "the trap is higher",
+        "lower": "the trap is lower",
+        "jokerChip": "joker",
+        "inputHint": "Pick a number between {low} and {high}",
+        "outOfRange": "Out of range: pick between {low} and {high}",
+        "inputLabel": "Your number, between {low} and {high}",
+        "inputPlaceholder": "{low} to {high}",
+        "try": "Try",
+        "tryValue": "Try {value}",
+        "jokerButton": "I pass (joker) · {count, plural, one {# sip} other {# sips}}",
+        "forcedTitle": "Only {value} is left: it’s the trap!",
+        "forcedWithJoker": "Play it… or burn your joker.",
+        "forcedNoJoker": "No joker left: you have to play it.",
+        "forcedPlay": "Play {value}",
+        "liveRound": "Round {round}: the trap hides between 1 and {max}.",
+        "liveRoundStarter": "Round {round}: {mine, select, yes {you open} other {{name} opens}}. The trap hides between 1 and {max}.",
+        "liveMiss": "{name} tries {value}: {dir, select, higher {the trap is higher} other {the trap is lower}}.",
+        "livePass": "{name} skips their turn with their joker."
+      },
+      "boom": {
+        "title": "BOOM!",
+        "who": "{name} lands on {value}",
+        "penalty": "{name} drinks {count, plural, one {# sip} other {# sips}}",
+        "attempts": "{count, plural, one {# guess} other {# guesses}}",
+        "round": "Round {round}/{total}",
+        "nextStarter": "Next up: {name}",
+        "nextRound": "Next round",
+        "seeRanking": "See the ranking",
+        "live": "BOOM! {name} lands on {value} and drinks {count, plural, one {# sip} other {# sips}}."
+      },
+      "end": {
+        "title": "Final ranking",
+        "winner": "{name} gets off lightest",
+        "tie": "{count, plural, other {# players tied for first}}",
+        "results": "From fewest to most penalties",
+        "details": "{booms, plural, =0 {Never trapped} one {Trapped once} other {Trapped # times}}{joker, select, used { · joker burned} other {}}",
+        "penalty": "{count, plural, =0 {0 sips} one {# sip} other {# sips}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "boom": "Right on the trap: BOOM! You lose one point per guess this round, yours included, {cap} at most.",
+            "joker": "“I pass” joker, one per player per game: skip your turn for {cost, plural, one {# point} other {# points}}.",
+            "next": "The next round starts with the loser’s neighbour. At the end, whoever lost the fewest points wins."
+          }
+        },
+        "game": {
+          "stakeValue": "{count, plural, one {−# point} other {−# points}}",
+          "jokerButton": "I pass (joker) · {count, plural, one {−# point} other {−# points}}"
+        },
+        "boom": {
+          "penalty": "{name} loses {count, plural, one {# point} other {# points}}",
+          "live": "BOOM! {name} lands on {value} and loses {count, plural, one {# point} other {# points}}."
+        },
+        "end": {
+          "penalty": "{count, plural, =0 {0 points} one {−# point} other {−# points}}"
+        },
+        "tv": {
+          "tally": "Points lost"
+        }
+      },
+      "about": {
+        "p1": "The server hides a trap number between 1 and 100, or between 1 and 50, or 1 and 200 if the host prefers. On your turn, you pick a number inside the range that’s still open. Miss, and the net tightens while everyone sees whether the trap is higher or lower. Hit it dead on: BOOM! You take one sip per guess made this round, yours included, five at most. In alcohol-free mode, they’re penalty points.",
+        "p2": "Everyone plays from their own phone, in turn: the range, the stake and the guesses already made show up on every screen, and big on the TV. When only one number is left, it has to be the trap: you must play it, unless you burn your “I pass” joker, one per game, which costs a sip. After each BOOM, the next round starts with the loser’s neighbour. The host picks 3, 5 or 10 rounds, and whoever took the fewest penalties gets off lightest.",
+        "p3": "The danger grows as the range shrinks: at “1 in 3”, a well-placed number hands the risk to the next player. Save your joker for the end of a round, when the stake is at its highest. Bots try a random number in the range and keep their joker for the last number: alone against them, games fly by. Allow five to fifteen minutes."
+      },
+      "lobby": {
+        "range": "Trap range",
+        "rangeUnit": "numbers",
+        "rounds": "Number of rounds",
+        "roundsUnit": "{count, plural, one {round} other {rounds}}"
+      },
+      "online": {
+        "waitingTurn": "{name} is picking a number…",
+        "autoTurn": "{name} left — their turn is played automatically…",
+        "tableTitle": "The table",
+        "jokerReady": "joker in hand",
+        "nextRoundIn": "Next round in {seconds}s",
+        "rankingIn": "Ranking in {seconds}s",
+        "waitingReturn": "{name} left — a bot takes their seat in {seconds}s unless they come back",
+        "afkWarning": "{name} has stopped playing — a bot takes their seat in {seconds}s",
+        "afkWarningSelf": "Your turn! Play within {seconds}s, or a bot takes your seat"
+      },
+      "tv": {
+        "tally": "Sips taken"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "A trap number",
+            "body": "The server hides a number between 1 and the chosen maximum. On your turn, pick a number inside the range shown."
+          },
+          {
+            "title": "The net tightens",
+            "body": "Miss: everyone sees whether the trap is higher or lower, and play moves on. Hit it: BOOM! One penalty per guess this round, yours included, five at most."
+          },
+          {
+            "title": "The “I pass” joker",
+            "body": "When only one number is left, it’s the trap: play it, or burn your joker (one per game, it costs 1). Whoever takes the fewest penalties gets off lightest."
+          }
+        ]
+      }
+    },
+    "cap-ou-pas-cap": {
+      "title": "Truth or Dare?",
+      "levels": {
+        "apero": "Warm-up",
+        "soiree": "Party",
+        "apres-minuit": "After midnight",
+        "progressif": "Progressive"
+      },
+      "themes": {
+        "souvenirs": "Memories",
+        "coeur": "Love & flirting",
+        "defis": "Physical dares",
+        "comedie": "Comedy",
+        "telephone": "Phone",
+        "table": "The table"
+      },
+      "kinds": {
+        "truth": "Truth",
+        "dare": "Dare"
+      },
+      "page": {
+        "level": "Level",
+        "levelDescs": {
+          "apero": "Light, to warm up the table",
+          "soiree": "Just the right dose",
+          "apres-minuit": "Bolder, never out of line",
+          "progressif": "Warm-up, Party from round 2, After midnight from round 4"
+        },
+        "themes": "Themes",
+        "themesCount": "{count} of {total}",
+        "mixAll": "Mix them all",
+        "mixAllDesc": "All six themes in one deck",
+        "themeDescs": {
+          "souvenirs": "First times, cringey childhood moments",
+          "coeur": "Crushes, exes, dates",
+          "defis": "Balance, funny faces, push-ups",
+          "comedie": "Impressions, accents, sketches",
+          "telephone": "Photos, texts, searches",
+          "table": "With another player"
+        },
+        "noTheme": "Pick at least one theme to start.",
+        "rulesTitle": "How to play",
+        "rules": {
+          "turn": "On your turn, pick Truth or Dare: the card flips over with its price, from 1 to 5.",
+          "cap": "Game on! Answer or take the dare, then hand out the price.",
+          "refuse": "No way? You drink the price.",
+          "joker": "Once per game, “Return to sender”: send the card to another player at double the price. If they refuse, they drink double.",
+          "table": "“The table” cards bring in another player, picked at random. Nobody ever has to: refusing costs the price, that’s all.",
+          "end": "No set ending: “End the game” shows the tally whenever the table decides."
+        }
+      },
+      "load": {
+        "loading": "Shuffling the deck…",
+        "error": "The cards couldn’t be loaded. Check your connection, then try again.",
+        "retry": "Try again"
+      },
+      "game": {
+        "round": "Round {round}",
+        "turnOf": "Now playing",
+        "levelPill": "Level: {level}",
+        "levelProgressive": "Progressive: {level}",
+        "levelUp": "Things are heating up: {level} level!",
+        "choose": "Truth or dare?",
+        "hints": {
+          "truth": "A question",
+          "dare": "A challenge"
+        },
+        "noCards": "No cards for this level and these themes.",
+        "price": "Price: {count, plural, one {# sip} other {# sips}}",
+        "doubled": "Double price",
+        "cap": "Game on!",
+        "capSub": "I hand out {count}",
+        "refuse": "No way",
+        "refuseSub": "I drink {count}",
+        "joker": "Return to sender",
+        "jokerReady": "“Return to sender” joker: available",
+        "jokerUsed": "“Return to sender” joker: already used",
+        "returned": "{sender} sends the card back to you: double price!",
+        "lastDone": "Game on! {name} hands out {count, plural, one {# sip} other {# sips}}.",
+        "lastRefused": "No way: {name} drinks {count, plural, one {# sip} other {# sips}}.",
+        "finish": "End the game"
+      },
+      "joker": {
+        "title": "Return to sender",
+        "body": "Who gets the card? Double price: {count, plural, one {# sip} other {# sips}}. Your turn is over.",
+        "cancel": "Keep the card"
+      },
+      "endConfirm": {
+        "title": "End the game?",
+        "description": "Time for the tally: who took it on, who chickened out, and how many sips.",
+        "confirm": "See the tally",
+        "cancel": "Keep playing"
+      },
+      "end": {
+        "title": "Game tally",
+        "cardsPlayed": "{count, plural, one {# card played} other {# cards played}}",
+        "boldest": "Boldest of the night: {names}",
+        "results": "Results",
+        "rankedBy": "Ranked by boldness (sips handed out minus sips drunk).",
+        "done": "{count, plural, one {# taken on} other {# taken on}}",
+        "refused": "{count, plural, one {# refused} other {# refused}}",
+        "given": "{count, plural, one {# sip handed out} other {# sips handed out}}",
+        "drunkUnit": "{count, plural, one {sip drunk} other {sips drunk}}",
+        "boldness": "boldness {score}",
+        "pointsUnit": "{count, plural, one {point} other {points}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "cap": "Game on! Answer or take the dare, and win the price in points.",
+            "refuse": "No way? You lose the price in points.",
+            "joker": "Once per game, “Return to sender”: send the card to another player at double the price. They win or lose double in points."
+          }
+        },
+        "game": {
+          "price": "Price: {count, plural, one {# point} other {# points}}",
+          "capSub": "+{count, plural, one {# point} other {# points}}",
+          "refuseSub": "−{count, plural, one {# point} other {# points}}",
+          "lastDone": "Game on! {name} wins {count, plural, one {# point} other {# points}}.",
+          "lastRefused": "No way: {name} loses {count, plural, one {# point} other {# points}}."
+        },
+        "joker": {
+          "body": "Who gets the card? Double price: {count, plural, one {# point} other {# points}} at stake. Your turn is over."
+        },
+        "endConfirm": {
+          "description": "Time for the tally: who took it on, who chickened out, and everyone’s points."
+        }
+      }
+    },
+    "vue-de-nez": {
+      "title": "Ballpark",
+      "loading": "Loading questions…",
+      "loadFailed": "The questions couldn’t be loaded. Check your connection, then try again.",
+      "retry": "Try again",
+      "noQuestions": "No questions available for these themes.",
+      "themes": {
+        "corps": "Human body",
+        "geographie": "Geography",
+        "histoire": "History",
+        "sciences": "Science",
+        "sport": "Sport",
+        "societe": "Society & everyday life",
+        "culture": "Culture & leisure"
+      },
+      "page": {
+        "questions": "Number of questions",
+        "themes": "Themes",
+        "themesAll": "Mix everything",
+        "themesAllHint": "All 7 themes, taking turns",
+        "themesPicked": "{count, plural, one {# theme picked} other {# themes picked}}",
+        "rulesTitle": "How to play",
+        "rules": {
+          "ask": "The phone asks a question whose answer is a number.",
+          "secret": "Everyone types a guess where nobody can see it, then passes the phone on.",
+          "reveal": "The reveal: the guesses land on a ruler, then the real answer drops.",
+          "closest": "Closest hands out 3 sips, or 6 for a bullseye (2% off at most, a year for a date).",
+          "farthest": "Furthest drinks 3 sips. Ties: everyone tied counts; if all are tied, nobody does.",
+          "score": "Final ranking: +3 for closest, +6 for a bullseye, −1 for furthest."
+        }
+      },
+      "game": {
+        "progress": "Question {current}/{total}",
+        "valueUnit": "{value} {unit}",
+        "answered": "Answers: {count}/{total}",
+        "chipDone": "has answered",
+        "chipPick": "Let {name} guess now",
+        "handoff": {
+          "validated": "{name}’s guess is locked in.",
+          "hint": "Everyone else, look away!",
+          "cta": "I’m {name}, my turn to guess"
+        },
+        "input": {
+          "label": "{name}, your guess",
+          "placeholder": "?",
+          "hint": "Nobody will see your number before the reveal.",
+          "preview": "That’s {value}",
+          "sign": "Switch sign",
+          "submit": "Lock it in",
+          "notMe": "That’s not me",
+          "errors": {
+            "notANumber": "That’s not a number.",
+            "belowMin": "At least {min}.",
+            "tooLarge": "That number is too big.",
+            "generic": "This guess couldn’t be saved."
+          }
+        },
+        "ready": {
+          "title": "Everyone has answered!",
+          "body": "Phone in the middle of the table: time for the reveal.",
+          "cta": "Reveal"
+        },
+        "reveal": {
+          "answer": "Answer",
+          "source": "Source: {source}",
+          "logScale": "Logarithmic scale",
+          "row": "{estimate} · off by {gap}",
+          "bullseye": "Bullseye!",
+          "next": "Next question",
+          "toRanking": "See the ranking",
+          "live": "Answer: {answer}.",
+          "liveRow": "{name}: {verdict}."
+        }
+      },
+      "verdict": {
+        "closest": "hands out {count}",
+        "bullseye": "hands out {count}",
+        "farthest": "drinks {count}",
+        "allEqual": "All tied: nobody drinks."
+      },
+      "end": {
+        "winner": "{name} has the best nose for numbers!",
+        "tie": "Tied for first: {names}",
+        "noWinner": "Nobody had the knack this time!",
+        "subtitle": "{count, plural, one {# question played} other {# questions played}}",
+        "ranking": "Ranking",
+        "points": "{count, plural, one {{score} pt} other {{score} pts}}",
+        "tally": "Closest: {closest} · Bullseye: {bullseye} · Furthest: {farthest}",
+        "sips": "{given, plural, one {# sip handed out} other {# sips handed out}} · {drunk, plural, one {# sip drunk} other {# sips drunk}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "closest": "Closest scores 3 points, or 6 for a bullseye (2% off at most, a year for a date).",
+            "farthest": "Furthest loses 1 point. Ties: everyone tied counts; if all are tied, nobody does."
+          }
+        },
+        "verdict": {
+          "closest": "{count, plural, one {+# point} other {+# points}}",
+          "bullseye": "{count, plural, one {+# point} other {+# points}}",
+          "farthest": "{count, plural, one {−# point} other {−# points}}",
+          "allEqual": "All tied: nobody scores."
+        }
+      },
+      "about": {
+        "p1": "How many bones are there in an adult skeleton? How tall is Everest? What year did the Berlin Wall fall? Ballpark asks the whole table a question with a number for an answer, and everyone types a guess in secret on their phone: sixty seconds to make up your mind, and you can change it until everyone has answered. 150 sourced questions per language across seven themes, from the human body to pop culture.",
+        "p2": "Then comes the reveal: every guess lands on a ruler, logarithmic when the orders of magnitude go wild, and the real answer drops with its unit and its source. Closest scores 3 points, or 6 for a bullseye within 2% (within a year for a date); furthest loses one. The server keeps score, and the host picks 5, 10 or 15 questions and the themes.",
+        "p3": "In drinking mode, closest hands out that many sips and furthest drinks three; in alcohol-free mode, only the points count. It works from two players up to sixteen, and bots round out a small table with a very human knack. The game also comes in a local version, on a single phone passed around the table."
+      },
+      "lobby": {
+        "questionCount": "Number of questions",
+        "questions": "questions",
+        "themes": "Themes",
+        "themesAll": "Mix everything",
+        "themesAllHint": "All 7 themes, taking turns",
+        "themeNames": {
+          "corps": "Human body",
+          "geographie": "Geography",
+          "histoire": "History",
+          "sciences": "Science",
+          "sport": "Sport",
+          "societe": "Society & everyday life",
+          "culture": "Culture & leisure"
+        }
+      },
+      "online": {
+        "phaseAnswer": "Secret guess",
+        "phaseReveal": "Reveal",
+        "yourEstimate": "Your guess",
+        "sealedTitle": "Guess sent",
+        "sealedHint": "Nobody can see it. You can change it until the reveal, which comes as soon as everyone has answered, or when the clock runs out.",
+        "edit": "Change my guess",
+        "spectating": "You’re watching this question: you’ll play in the next game.",
+        "noAnswer": "No answer",
+        "nobodyAnswered": "Nobody answered: this question is skipped.",
+        "singleAnswer": "Only one guess: nothing is at stake on this question.",
+        "you": "(you)",
+        "awayTag": "away",
+        "waitingReturn": "Waiting for {name} to return — bot in {seconds}s",
+        "autoNext": "The game moves on by itself when the clock runs out.",
+        "leaderNext": "{name} moves the game on, or it moves on by itself when the clock runs out."
+      },
+      "tv": {
+        "unit": "Unit: {unit}",
+        "estimates": "Guesses"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "One question, one number",
+            "body": "The same question for the whole table: type your guess in secret on your phone. 60 seconds at most, and you can change it until everyone has answered."
+          },
+          {
+            "title": "The ruler decides",
+            "body": "The guesses land on a ruler, then the real answer drops, with its unit and its source."
+          },
+          {
+            "title": "Close or far",
+            "body": "Closest scores 3 points, 6 for a bullseye (2% off at most, a year for a date); furthest loses 1."
+          }
+        ]
+      }
+    },
+    "front-colle": {
+      "title": "Front Collé",
+      "progress": "Turn {current}/{total}",
+      "themes": {
+        "cinema": "Movies & TV",
+        "personnalites": "Famous people",
+        "objets": "Objects",
+        "animaux": "Animals",
+        "metiers": "Jobs",
+        "lieux": "Places",
+        "cuisine": "Food",
+        "sport": "Sports",
+        "musique": "Songs & music"
+      },
+      "modes": {
+        "describe": "Describe",
+        "mime": "Mime",
+        "hum": "Hum"
+      },
+      "teams": {
+        "A": "Team A",
+        "B": "Team B"
+      },
+      "page": {
+        "mode": "Game mode",
+        "modes": {
+          "solo": {
+            "label": "Every player for themselves",
+            "desc": "Everyone keeps their own score"
+          },
+          "teams": {
+            "label": "Two teams",
+            "desc": "A, B, A, B… in table order"
+          }
+        },
+        "teamLine": "{team}: {names}",
+        "teamExtra": "{players, plural, one {{names} guesses {count} times: their team is one player short.} other {{names} guess {count} times each: their team is one player short.}}",
+        "duration": "Turn length",
+        "seconds": "{count} s",
+        "rounds": "Rounds",
+        "roundsCount": "{count, plural, one {# round} other {# rounds}}",
+        "roundsDesc": "{count, plural, one {Everyone guesses once} other {Everyone guesses # times}}",
+        "roundsDescTeams": "{count, plural, one {Each team guesses once} other {Each team guesses # times}}",
+        "instructions": "Clues",
+        "instructionModes": {
+          "mix": {
+            "label": "Mix",
+            "desc": "Describe, mime or hum, depending on the word"
+          },
+          "describe": {
+            "label": "Describe only",
+            "desc": "Words, nothing but words"
+          }
+        },
+        "themes": "Themes",
+        "allThemes": "Mix them all",
+        "wordsCount": "{count, plural, one {# word} other {# words}}",
+        "loading": "Loading words…",
+        "loadError": "Couldn’t load the words. Check your connection, then try again.",
+        "retry": "Try again",
+        "rulesTitle": "How to play",
+        "rules": {
+          "phone": "The guesser sticks the phone on their forehead, in landscape, screen facing the table.",
+          "clues": "A word shows up with its clue type: the table gets it guessed by describing it, miming it or humming it.",
+          "forbidden": "Saying the word or any part of it is forbidden.",
+          "tilt": "Tilt the phone down: got it. Tilt it up: pass. Come back upright before the next word.",
+          "touch": "No sensor? Tap the screen: top half means pass, bottom half means got it.",
+          "end": "When time runs out, the words get reviewed, then the phone moves to the next forehead."
+        },
+        "drinksTitle": "Who drinks?",
+        "drinks": {
+          "passed": "Passed word: the guesser drinks 1 sip.",
+          "said": "Word said while describing: the culprit drinks {count} sips.",
+          "best": "Best score of the game: hands out {count} sips."
+        }
+      },
+      "ready": {
+        "turnOf": "{name}’s turn",
+        "lead": "Stick the phone on your forehead, in landscape, screen facing the table.",
+        "gesturesTitle": "Moves",
+        "down": "Tilt down: got it",
+        "up": "Tilt up: pass",
+        "touchHint": "Or tap the screen: top half to pass, bottom half when you’ve got it.",
+        "noSensor": "No tilt sensor here: play by tapping the screen, top half to pass, bottom half when you’ve got it.",
+        "sensorDenied": "Sensor access denied: play by tapping the screen, top half to pass, bottom half when you’ve got it.",
+        "forbidden": "The table may not say the word or any part of it.",
+        "flip": "Flip the display",
+        "flipHint": "If the word shows upside down for the table.",
+        "go": "Ready",
+        "scoresTitle": "Scores",
+        "soundOn": "Turn sound on",
+        "soundOff": "Mute sound"
+      },
+      "arena": {
+        "up": "Up: pass",
+        "down": "Down: got it",
+        "touchUp": "Tap the top: pass",
+        "touchDown": "Tap the bottom: got it",
+        "passZone": "Pass",
+        "foundZone": "Got it",
+        "getReady": "Stick the phone on your forehead",
+        "secondsLeft": "{count, plural, one {second} other {seconds}}",
+        "foundLabel": "{count, plural, one {found} other {found}}",
+        "passedCount": "{count, plural, one {# passed} other {# passed}}",
+        "flashFound": "Got it!",
+        "flashPassed": "Pass",
+        "liveFound": "Got it! {count, plural, one {# word found} other {# words found}}",
+        "livePassed": "Passed. {count, plural, one {# word passed} other {# words passed}}",
+        "noWords": "No words left in these themes.",
+        "stop": "Stop the turn",
+        "stopConfirm": {
+          "title": "Stop this turn?",
+          "description": "The turn will start over, nothing is counted.",
+          "confirm": "Stop",
+          "cancel": "Keep playing"
+        }
+      },
+      "recap": {
+        "title": "Time’s up!",
+        "summary": "{name}: {found, plural, one {# found} other {# found}}, {passed, plural, one {# passed} other {# passed}}",
+        "words": "This turn’s words",
+        "noWords": "No word played this turn.",
+        "unknownWord": "Word unavailable",
+        "found": "Got it",
+        "passed": "Passed",
+        "tallyTitle": "Sips this turn",
+        "guesserDrinks": "{name} drinks {count, plural, one {# sip} other {# sips}}",
+        "guesserDry": "{name} drinks nothing: no word passed",
+        "saidLine": "{name} drinks {count, plural, one {# sip} other {# sips}} (word said)",
+        "saidTitle": "Word said?",
+        "saidHint": "Did someone say the word or part of it while describing? Tap the culprit: they drink {count} sips.",
+        "flag": "Flag {name} for saying the word ({count, plural, =0 {no fouls this turn} one {# foul this turn} other {# fouls this turn}})",
+        "flagCount": "×{count}",
+        "undo": "Undo",
+        "next": "{name}’s turn",
+        "toRanking": "See the ranking"
+      },
+      "end": {
+        "title": "Ranking",
+        "results": "Results",
+        "foundCount": "{count, plural, one {# found} other {# found}}",
+        "detail": "{found, plural, one {# found} other {# found}} · {passed, plural, one {# passed} other {# passed}}",
+        "saidCount": "{count, plural, one {# word said} other {# words said}}",
+        "drinks": "{count, plural, one {# sip drunk} other {# sips drunk}}",
+        "bestLine": "{winners, plural, one {Best score: {names} hands out {count} sips!} other {Best scores: {names} hand out {count} sips each!}}",
+        "noBest": "Perfect tie: nobody hands out sips."
+      },
+      "soft": {
+        "page": {
+          "drinksTitle": "How scoring works",
+          "drinks": {
+            "found": "Word found: +1 point.",
+            "passed": "Word passed: −1 point.",
+            "said": "Word said while describing: −{count} points for the culprit.",
+            "best": "Best score of the game: +{count} points."
+          }
+        },
+        "recap": {
+          "tallyTitle": "Points this turn",
+          "guesserGain": "{name} scores {count, plural, one {# point} other {# points}}",
+          "guesserLoss": "{name} loses {count, plural, one {# point} other {# points}}",
+          "guesserZero": "{name} scores no points this turn",
+          "saidLine": "{name} loses {count, plural, one {# point} other {# points}} (word said)",
+          "saidHint": "Did someone say the word or part of it while describing? Tap the culprit: −{count} points."
+        },
+        "end": {
+          "points": "{count, plural, one {# point} other {# points}}",
+          "bestLine": "{winners, plural, one {Best score: +{count} points for {names}!} other {Best scores: +{count} points for {names}!}}",
+          "noBest": "Perfect tie: no bonus."
+        }
+      }
+    },
+    "coupe-du-roi": {
+      "title": "King’s Cup",
+      "page": {
+        "cup": "The cup",
+        "cupModes": {
+          "solo": {
+            "label": "No shared glass",
+            "desc": "The fourth king drinks 5 sips."
+          },
+          "shared": {
+            "label": "Shared cup",
+            "desc": "Each king pours a little of their drink into the middle; the fourth drinks it all."
+          }
+        },
+        "softCup": "Alcohol-free: penalties are counted in points, and the fourth king takes a dare chosen by the table.",
+        "howTo": "How to play",
+        "steps": {
+          "deck": "Put the phone in the middle of the table: it shuffles a 52-card deck.",
+          "draw": "On your turn, draw a card: its rule shows up and applies straight away.",
+          "roles": "Some cards give a lasting role (thumb, questions, mate) or a rule for the whole game: the app keeps the “In play” list.",
+          "kings": "Four kings in the deck: with each one, pour a little of your drink into the cup (nothing without a shared glass). The fourth king drinks the cup — or 5 sips — and the game ends.",
+          "kingsSoft": "Four kings in the deck: whoever draws the fourth takes a dare chosen by the table, and the game ends."
+        },
+        "customize": "Customise the rules",
+        "customizeCount": "{count, plural, one {Customise the rules · # changed} other {Customise the rules · # changed}}",
+        "customizeHint": "Every table has its own version: write yours and it replaces the original rule, along with its role. Everything stays on this device.",
+        "rankRule": "{rank} · {title}",
+        "customPlaceholder": "Your version (optional)",
+        "reset": "Original rules",
+        "resetConfirm": {
+          "title": "Back to the original rules?",
+          "description": "{count, plural, one {Your house rule will be erased from this device.} other {Your # house rules will be erased from this device.}}",
+          "confirm": "Erase",
+          "cancel": "Keep my rules"
+        }
+      },
+      "ranks": {
+        "A": "Ace",
+        "2": "2",
+        "3": "3",
+        "4": "4",
+        "5": "5",
+        "6": "6",
+        "7": "7",
+        "8": "8",
+        "9": "9",
+        "10": "10",
+        "J": "Jack",
+        "Q": "Queen",
+        "K": "King"
+      },
+      "suits": {
+        "spade": "spades",
+        "heart": "hearts",
+        "diamond": "diamonds",
+        "club": "clubs"
+      },
+      "rules": {
+        "A": {
+          "title": "Waterfall",
+          "text": "Everyone drinks at the same time. You stop whenever you like; everyone else stops only after the neighbour on their left.",
+          "soft": "Everyone stands up: the last one still sitting takes 1 point."
+        },
+        "2": {
+          "title": "You",
+          "text": "Pick someone to drink 2 sips.",
+          "soft": "Pick someone to take 2 points."
+        },
+        "3": {
+          "title": "Me",
+          "text": "You drink 3 sips.",
+          "soft": "You take 3 points."
+        },
+        "4": {
+          "title": "Floor",
+          "text": "Everyone touches the floor: the last one drinks 2 sips.",
+          "soft": "Everyone touches the floor: the last one takes 2 points."
+        },
+        "5": {
+          "title": "Thumb",
+          "text": "You become thumb master: when you put your thumb on the edge of the table, everyone copies you. The last one drinks 2 sips.",
+          "soft": "You become thumb master: when you put your thumb on the edge of the table, everyone copies you. The last one takes 2 points."
+        },
+        "6": {
+          "title": "Heaven",
+          "text": "Everyone raises a hand: the last one drinks 2 sips.",
+          "soft": "Everyone raises a hand: the last one takes 2 points."
+        },
+        "7": {
+          "title": "Category",
+          "text": "Pick a topic, then go round the table: the first to dry up or repeat drinks 2 sips.",
+          "soft": "Pick a topic, then go round the table: the first to dry up or repeat takes 2 points."
+        },
+        "8": {
+          "title": "Mate",
+          "text": "Pick a mate: they drink every time you drink, until your next 8.",
+          "soft": "Pick a mate: they take a point every time you take one, until your next 8."
+        },
+        "9": {
+          "title": "Rhyme",
+          "text": "Say a word, then go round the table in rhymes: the first to dry up drinks 2 sips.",
+          "soft": "Say a word, then go round the table in rhymes: the first to dry up takes 2 points."
+        },
+        "10": {
+          "title": "Questions",
+          "text": "You become question master: anyone who answers one of your questions drinks 1 sip.",
+          "soft": "You become question master: anyone who answers one of your questions takes 1 point."
+        },
+        "J": {
+          "title": "Rule",
+          "text": "Make up a rule for the whole game; whoever forgets it drinks 1 sip.",
+          "soft": "Make up a rule for the whole game; whoever forgets it takes 1 point."
+        },
+        "Q": {
+          "title": "Never have I ever",
+          "text": "Go round the table with “Never have I ever…”: everyone who has done it drinks 1 sip.",
+          "soft": "Go round the table with “Never have I ever…”: everyone who has done it takes 1 point."
+        },
+        "K": {
+          "title": "King’s Cup",
+          "text": "From the first to the third king, pour a little of your drink into the cup. The fourth king drinks it, and the game ends.",
+          "solo": "No shared glass, nothing to pour: the fourth king drinks 5 sips, and the game ends.",
+          "soft": "The fourth king takes a dare chosen by the table, and the game ends."
+        }
+      },
+      "game": {
+        "customTag": "House rule",
+        "cardName": "{rank} of {suit}",
+        "kings": "Kings out",
+        "kingsCount": "{count}/{total}",
+        "cardsLeft": "{count, plural, one {# card left} other {# cards left}}",
+        "tapToDraw": "Tap to draw",
+        "draw": "Draw a card",
+        "turnOf": "{name}’s turn",
+        "drawnBy": "Drawn by {name}",
+        "spanNext": "until the next {rank}",
+        "spanOwn": "until their next 8",
+        "spanGame": "for the whole game",
+        "kingOrder": "king {count} of {total}",
+        "inForce": "In play",
+        "inForceEmpty": "No roles or rules yet.",
+        "thumb": "Thumb",
+        "questions": "Questions",
+        "pairOf": "{name}’s mate",
+        "ruleBy": "{name}’s rule",
+        "announce": "{name}: {card}. {title} — {text}",
+        "pairSet": "{name}’s mate: {partner}.",
+        "pairWith": "paired with {partner}",
+        "ruleAdded": "New rule from {name}: {rule}",
+        "soundOn": "Turn sound on",
+        "soundOff": "Mute sound",
+        "pair": {
+          "title": "{name}, pick your mate",
+          "hint": "They’ll drink every time you drink, until your next 8.",
+          "hintSoft": "They’ll take a point every time you take one, until your next 8.",
+          "waiting": "{name} is picking a mate",
+          "pick": "Pick a player",
+          "confirm": "Mate: {name}"
+        },
+        "newRule": {
+          "title": "{name}, make up a rule",
+          "hint": "It lasts the whole game. Stuck? Draw one at random.",
+          "label": "Your rule",
+          "placeholder": "E.g. no saying “yes”",
+          "idea": "Random idea",
+          "waiting": "{name} is making up a rule",
+          "add": "Add the rule",
+          "skip": "Skip"
+        }
+      },
+      "suggestions": {
+        "noNames": "No calling anyone by their first name.",
+        "noPointing": "No pointing at anyone.",
+        "noYesNo": "No saying “yes” or “no”.",
+        "thirdPerson": "Everyone talks about themselves in the third person.",
+        "raiseHand": "Raise your hand before you speak.",
+        "accent": "Everyone speaks with an accent of their choice.",
+        "leftHand": "The phone can only be touched with your left hand.",
+        "tRex": "T-Rex arms: elbows stay glued to your sides.",
+        "compliment": "Before drawing a card, pay your neighbour a compliment.",
+        "captain": "Every sentence ends with “captain”.",
+        "noPhones": "No looking at your own phone.",
+        "noSwearing": "No swearing."
+      },
+      "end": {
+        "title": "The cup goes to {name}",
+        "shared": "{name} drinks the cup!",
+        "solo": "{name} drinks 5 sips!",
+        "soft": "The table picks {name}’s dare.",
+        "summary": "Summary",
+        "cardsDrawn": "{count, plural, one {# card drawn} other {# cards drawn}}",
+        "playerLine": "{cards, plural, one {# card} other {# cards}} · {kings, plural, one {# king} other {# kings}}",
+        "cupBadge": "The cup",
+        "inForce": "In play at the end"
+      }
+    },
+    "patate-chaude": {
+      "title": "Hot Potato",
+      "page": {
+        "challenge": "Challenges",
+        "challenges": {
+          "mix": {
+            "label": "Mix",
+            "desc": "Themes, letters and syllables"
+          },
+          "theme": {
+            "label": "Themes",
+            "desc": "“A car brand”"
+          },
+          "letter": {
+            "label": "Letters",
+            "desc": "“A word starting with B”"
+          },
+          "syllable": {
+            "label": "Syllables",
+            "desc": "“A word containing TRA”"
+          }
+        },
+        "fuse": "Fuse",
+        "fuses": {
+          "short": "Short",
+          "normal": "Normal",
+          "long": "Long"
+        },
+        "fuseRange": "{min} to {max} s",
+        "fuseSecret": "The exact length is drawn in secret within the range: nobody knows when it blows.",
+        "rounds": "Rounds",
+        "roundsUnit": "{count, plural, one {round} other {rounds}}",
+        "unlimited": "Unlimited",
+        "unlimitedDesc": "Stop whenever you like",
+        "rulesTitle": "Game rules",
+        "rules": {
+          "challenge": "Light the fuse: a challenge appears (a theme, a letter or a syllable) and the length of the fuse stays secret.",
+          "pass": "Whoever holds the bomb says a fitting word out loud, taps “Pass to…” and quickly hands the phone to their neighbour.",
+          "reject": "Word already said or off topic? The table taps “Rejected!”: the player keeps the bomb and has to find another one. Two rejections in a row: they drink 1 sip.",
+          "boom": "BOOM: whoever holds the bomb drinks 3 sips, and the next round starts with them.",
+          "end": "When the rounds are over, the fewest explosions wins."
+        },
+        "loadFailed": "The challenges couldn’t be loaded. Check your connection, then try again.",
+        "retry": "Try again"
+      },
+      "game": {
+        "round": "Round {current}",
+        "roundOf": "Round {current}/{total}",
+        "soundOn": "Turn sound on",
+        "soundOff": "Mute sound",
+        "holderLead": "The bomb is with",
+        "readyHint": "The challenge appears when the fuse is lit. Say a fitting word, then pass the bomb fast!",
+        "light": "Light the fuse",
+        "kinds": {
+          "theme": "Theme",
+          "letter": "A word starting with",
+          "syllable": "A word containing"
+        },
+        "announce": {
+          "theme": "Theme: {value}",
+          "letter": "A word starting with {value}",
+          "syllable": "A word containing {value}"
+        },
+        "tickTock": "tick… tock…",
+        "passes": "{count, plural, =0 {No passes} one {# pass} other {# passes}}",
+        "passTo": "Pass to {name}",
+        "rejected": "Rejected!",
+        "rejectedOnce": "Rejected once: one more and {name} drinks 1 sip.",
+        "rejectPenalty": "Two rejections in a row: {name} drinks 1 sip!",
+        "liveLit": "The fuse is lit. {challenge}. The bomb is with {name}.",
+        "liveHolder": "The bomb is with {name}.",
+        "liveRejected": "Rejected! {name} keeps the bomb.",
+        "liveReady": "Next round: the bomb starts with {name}.",
+        "standings": "Explosions",
+        "explosions": "{count, plural, =0 {no explosions} one {# explosion} other {# explosions}}"
+      },
+      "boom": {
+        "title": "BOOM!",
+        "holder": "{name} was holding the bomb",
+        "verdict": "{name} drinks {count, plural, one {# sip} other {# sips}}",
+        "live": "BOOM! {name} was holding the bomb: {verdict}.",
+        "fuse": "Fuse",
+        "fuseValue": "{seconds} s",
+        "passes": "Passes",
+        "next": "Next round",
+        "seeRanking": "See the ranking",
+        "finish": "End the game"
+      },
+      "end": {
+        "title": "Game over",
+        "winners": "{count, plural, one {{names} wins: fewest explosions!} other {Tied for first: {names}!}}",
+        "ranking": "Ranking",
+        "penalties": "{count, plural, one {# penalty} other {# penalties}}"
+      },
+      "finishConfirm": {
+        "title": "End the game?",
+        "description": "Time for the ranking: the fewest explosions wins.",
+        "confirm": "See the ranking",
+        "cancel": "Keep playing"
+      },
+      "soft": {
+        "rules": {
+          "reject": "Word already said or off topic? The table taps “Rejected!”: the player keeps the bomb and has to find another one. Two rejections in a row: 1 penalty point.",
+          "boom": "BOOM: whoever holds the bomb takes 1 penalty point, and the next round starts with them."
+        },
+        "rejectedOnce": "Rejected once: one more and {name} takes 1 penalty point.",
+        "rejectPenalty": "Two rejections in a row: {name} takes 1 penalty point!",
+        "verdict": "{name} takes {count, plural, one {# penalty point} other {# penalty points}}",
+        "points": "{count, plural, one {# point} other {# points}}",
+        "struck": "“{word}” is struck out: the bomb goes back to {name}, who takes {count, plural, one {# penalty point} other {# penalty points}}."
+      },
+      "about": {
+        "p1": "A challenge appears: a theme (“A fruit”, “A car brand”), a letter or a syllable. Whoever holds the bomb finds a word that fits and passes it to their neighbour. The fuse burns in secret, 10 to 75 seconds depending on the setting: whoever holds it when it goes BOOM loses the round, and the next one starts with them.",
+        "p2": "Online, everyone plays on their own phone: the holder types a word, the game checks the letter, the syllable and the words already said, then the bomb flies to the next player. With four players or more, the table can challenge an off-topic or made-up word, whatever the challenge: struck out, it sends the bomb back to its author. The host picks the challenges, the fuse and the number of rounds; the TV shows the bomb in giant size.",
+        "p3": "Keep two words up your sleeve while the bomb goes round, and go for short words on a letter: they’re quicker to type. Fewest explosions wins. In drinking mode an explosion costs 3 sips and a struck-out word 1; in alcohol-free mode they’re penalty points. You need at least two players: a bot can’t find words."
+      },
+      "lobby": {
+        "challenge": "Challenges",
+        "challenges": {
+          "mix": "Mix",
+          "theme": "Themes",
+          "letter": "Letters",
+          "syllable": "Syllables"
+        },
+        "fuse": "Fuse",
+        "fuses": {
+          "short": "Short",
+          "normal": "Normal",
+          "long": "Long"
+        },
+        "fuseRange": "{min}–{max} s",
+        "rounds": "Rounds",
+        "roundsUnit": "{count, plural, one {round} other {rounds}}",
+        "unlimited": "Unlimited",
+        "unlimitedHint": "end any time"
+      },
+      "online": {
+        "phase": {
+          "ready": "The fuse is about to be lit",
+          "burning": "The bomb is going round"
+        },
+        "startsWith": "The bomb starts with {name}",
+        "startsAgain": "The bomb starts again with {name}",
+        "readyHint": "The challenge appears when the fuse is lit. Type a word that fits and send it: the bomb flies to the next player.",
+        "startsMine": "The bomb starts with you: get a word ready!",
+        "mineHint": "Type a word that fits and send it: the bomb flies to {name}.",
+        "theirHint": "The fuse is burning… it could blow any second.",
+        "wordLabel": "Your word",
+        "wordPlaceholder": "A word that fits…",
+        "said": "Already said",
+        "saidEmpty": "No words yet: {name} gets things started.",
+        "saidBy": "by {name}",
+        "struckTag": "struck out",
+        "contest": "Challenge “{word}”",
+        "contestShort": "Challenge",
+        "contested": "Challenged",
+        "contestCount": "{count, plural, one {# challenge} other {# challenges}} out of {total} to strike the word",
+        "contestHint": "Off topic or made up? Challenge it: at {total, plural, one {# challenge} other {# challenges}}, the word is struck out and the bomb goes back to its author.",
+        "contestHintOthers": "The table can challenge this word: at {total, plural, one {# challenge} other {# challenges}}, it is struck out and the bomb goes back to its author.",
+        "struck": "“{word}” is struck out: the bomb goes back to {name}, who drinks {count, plural, one {# sip} other {# sips}}.",
+        "fuseInfo": "Fuse: {min} to {max} s",
+        "nextRoundIn": "Next round in {seconds} s",
+        "rankingIn": "Ranking in {seconds} s",
+        "nextIs": "next: {name}",
+        "tableOrder": "Passing order",
+        "endGame": "End the game",
+        "endConfirm": {
+          "title": "End the game for the whole table?",
+          "description": "The game stops on every phone and the ranking appears: fewest explosions wins.",
+          "confirm": "End for everyone",
+          "cancel": "Keep playing"
+        },
+        "asideMine": "Two explosions without playing: the bomb skips you for now.",
+        "resume": "I’m back",
+        "asideTag": "on a break",
+        "notEnough": "Not enough players left: the game ends.",
+        "leftTag": "left",
+        "you": "you"
+      },
+      "tutorial": {
+        "steps": [
+          {
+            "title": "A challenge, a bomb",
+            "body": "The fuse is lit and the challenge appears: a theme, a letter or a syllable. The bomb starts with one player, and how long the fuse burns stays secret."
+          },
+          {
+            "title": "Type, send, pass",
+            "body": "Holding the bomb? Type a word that fits and send it: the bomb flies to the next player. Already said or doesn’t fit? Refused — find another one, fast."
+          },
+          {
+            "title": "Watch out for the BOOM",
+            "body": "Whoever holds the bomb when it blows loses the round. With four players or more, an off-topic or made-up word can be challenged: if enough players challenge it, it’s struck out and the bomb goes back to its author."
+          }
+        ]
+      }
+    },
+    "pile-poil": {
+      "title": "Pile Poil",
+      "page": {
+        "level": "Level",
+        "levels": {
+          "normal": {
+            "label": "Normal",
+            "desc": "Digits vanish after 3 s"
+          },
+          "pro": {
+            "label": "Pro",
+            "desc": "Digits hidden from the start"
+          }
+        },
+        "target": "Target",
+        "targets": {
+          "fixed": {
+            "label": "10 seconds",
+            "desc": "Same target every round"
+          },
+          "variable": {
+            "label": "Random",
+            "desc": "5 to 20 s, drawn each round"
+          }
+        },
+        "rounds": "Number of rounds",
+        "roundsCount": "{count, plural, one {# round} other {# rounds}}",
+        "rulesTitle": "Game rules",
+        "rules": {
+          "goal": "Every round has a target: 10 seconds, or a time drawn between 5 and 20 s in Random mode.",
+          "play": "On your turn, tap “Start”, then “STOP” when you think you’ve hit it dead on. The digits vanish after 3 seconds (from the start in Pro): you have to feel the time.",
+          "rank": "Once everyone has played, the round is ranked by distance from the target. The next round starts with the next player.",
+          "furthest": "Whoever is furthest off drinks 1 sip per half-second off (rounded), at least 1, at most 5. A tie? Everyone tied drinks.",
+          "bullseye": "Dead on, less than 0.05 s off: you hand out 5 sips.",
+          "end": "After the last round, the smallest total gap wins.",
+          "variant": "“Under pressure” variant: the table is allowed to count out loud — and get it wrong on purpose."
+        }
+      },
+      "dial": {
+        "target": "Target",
+        "targetSmall": "Target {target}",
+        "unit": "s",
+        "hidden": "?.??",
+        "hint": {
+          "normal": "digits vanish at 3 s",
+          "pro": "digits hidden from the start"
+        },
+        "exact": "Dead on!",
+        "early": "Too early",
+        "late": "Too late"
+      },
+      "game": {
+        "progress": "Round {current}/{total}",
+        "level": {
+          "normal": "Normal level",
+          "pro": "Pro level"
+        },
+        "prompt": "{name}, stop the clock at exactly {target}",
+        "start": "Start",
+        "stop": "STOP",
+        "cancelled": "Attempt cancelled: the screen was left while timing. Go again.",
+        "resultLine": "{time} · {delta}",
+        "next": "Next up: {name}",
+        "showRanking": "Round ranking",
+        "provisional": "Standings so far"
+      },
+      "round": {
+        "title": "End of round {current}/{total}",
+        "target": "Target {target}",
+        "ranking": "Round ranking",
+        "general": "Overall",
+        "next": "Next round",
+        "final": "Final ranking"
+      },
+      "verdict": {
+        "provisional": "For now, {names} {people, plural, one {would drink} other {would each drink}} {count, plural, one {# sip} other {# sips}}.",
+        "furthestLine": "{names} {people, plural, one {drinks} other {drink}} {count, plural, one {# sip} other {# sips}}.",
+        "bullseyeLine": "Dead on! {names} {people, plural, one {hands out} other {each hand out}} {count, plural, one {# sip} other {# sips}}.",
+        "bullseyeBadge": "dead on · hands out {count}",
+        "furthestBadge": "{delta} · drinks {count}"
+      },
+      "list": {
+        "and": "{head} and {last}"
+      },
+      "live": {
+        "result": "{name}: {time}, off by {delta}.",
+        "roundEnd": "End of round {current}."
+      },
+      "end": {
+        "winner": "{name} wins!",
+        "tie": "Tied for first!",
+        "subtitle": "{count, plural, one {# round played} other {# rounds played}} · ranked by total gap",
+        "results": "Final ranking",
+        "gap": "{gap} total gap",
+        "bullseyes": "{count, plural, one {# bullseye} other {# bullseyes}}"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "furthest": "Whoever is furthest off loses 1 point per half-second off (rounded), at least 1, at most 5. A tie? Everyone tied loses.",
+            "bullseye": "Dead on, less than 0.05 s off: you score 5 points.",
+            "end": "After the last round, the smallest total gap wins. Points are kept on the side: they don’t change the ranking."
+          }
+        },
+        "verdict": {
+          "provisional": "For now, {names} {people, plural, one {would lose} other {would each lose}} {count, plural, one {# point} other {# points}}.",
+          "furthestLine": "{names} {people, plural, one {loses} other {lose}} {count, plural, one {# point} other {# points}}.",
+          "bullseyeLine": "Dead on! {names} {people, plural, one {scores} other {each score}} {count, plural, one {# point} other {# points}}.",
+          "bullseyeBadge": "dead on · +{count, plural, one {# pt} other {# pts}}",
+          "furthestBadge": "{delta} · −{count, plural, one {# pt} other {# pts}}"
+        },
+        "end": {
+          "points": "{points} {count, plural, one {point} other {points}}"
+        }
+      }
+    },
+    "degaine": {
+      "title": "Draw!",
+      "page": {
+        "format": "Format",
+        "formats": {
+          "tournament": {
+            "label": "Tournament",
+            "desc": "The whole table, knockout bracket"
+          },
+          "free": {
+            "label": "Free duel",
+            "desc": "You pick the duellists, rematches at will"
+          }
+        },
+        "decoys": "Decoys",
+        "decoyModes": {
+          "on": {
+            "label": "With decoys",
+            "desc": "Up to two fake signals per round"
+          },
+          "off": {
+            "label": "No decoys",
+            "desc": "Only the real signal"
+          }
+        },
+        "rounds": "Rounds per duel",
+        "roundModes": {
+          "one": {
+            "label": "One round",
+            "desc": "First to shoot wins"
+          },
+          "bestOf3": {
+            "label": "Best of 3",
+            "desc": "Win two rounds to go through"
+          }
+        },
+        "rulesTitle": "Game rules",
+        "rules": {
+          "setup": "Lay the phone flat between the two duellists: each gets half of the screen, and the top half reads from the opposite side.",
+          "ready": "Each player taps “Ready” on their half. Then comes “Steady…”, and the signal drops 2 to 8 seconds later.",
+          "fire": "On “FIRE!”, the first to slap their own half wins the round. Reaction times are shown in milliseconds.",
+          "decoys": "Beware of decoys (“FIVE!”, “FINE!”…): hitting before the real signal, or less than a tenth of a second after it, is a false start and loses the round. If both jump the gun almost together, each pays for their false start and the round is replayed.",
+          "drinks": "Lost duel: 2 sips, 3 in the final. False start: 3 sips. The tournament champion hands out 5 sips.",
+          "tournament": "In a tournament, the bracket is drawn at random; when the numbers don’t add up, some players get a bye straight to the next round."
+        }
+      },
+      "board": {
+        "nextDuel": "Next duel",
+        "versus": "vs",
+        "bye": "bye",
+        "tbd": "to come",
+        "winner": "duel winner",
+        "score": "{a} – {b}",
+        "seats": "{top} takes the top of the screen, {bottom} the bottom.",
+        "start": "Start the duel",
+        "resume": "Resume the duel",
+        "freeDuel": "Free duel",
+        "duelOf": "Duel {number} of {total}",
+        "stage": {
+          "final": "Final",
+          "semi": "Semi-final",
+          "quarter": "Quarter-final",
+          "eighth": "Round of 16",
+          "other": "Round {round}"
+        },
+        "stages": {
+          "final": "Final",
+          "semi": "Semi-finals",
+          "quarter": "Quarter-finals",
+          "eighth": "Round of 16",
+          "other": "Round {round}"
+        },
+        "subtitle": {
+          "tournament": "Tournament · {count, plural, one {# player} other {# players}}",
+          "free": "Free duel",
+          "bestOf3": "best of 3"
+        },
+        "free": {
+          "title": "Who’s facing off?",
+          "hint": "Tap two players: they sit face to face, the phone lying between them.",
+          "top": "top of the screen",
+          "bottom": "bottom of the screen",
+          "pickTwo": "Pick two duellists",
+          "standings": "Duel results",
+          "duelsWon": "{count, plural, =0 {no duels won} one {# duel won} other {# duels won}}",
+          "finish": "Finish"
+        }
+      },
+      "arena": {
+        "label": "Duel: {a} vs {b}",
+        "close": "Leave the duel",
+        "ready": "Ready",
+        "readyHint": "Tap “Ready”, then slap your half at the signal.",
+        "onGuard": "En garde!",
+        "waitingFor": "Waiting for {name}…",
+        "interrupted": "Duel interrupted: back to “Ready”.",
+        "keyHint": "Keyboard: {key} key",
+        "attention": "Steady…",
+        "fire": "FIRE!",
+        "decoys": {
+          "decoy1": "FIVE!",
+          "decoy2": "FINE!",
+          "decoy3": "HIRE!",
+          "decoy4": "TIRE!",
+          "decoy5": "WIRE!",
+          "decoy6": "FIRM!"
+        },
+        "ms": "{ms} ms",
+        "noTime": "—",
+        "tooEarly": "Too early",
+        "fellFor": "“{word}”",
+        "score": "Rounds {mine} – {theirs}",
+        "roundNumber": "Round {number}",
+        "verdict": {
+          "won": "Won!",
+          "advance": {
+            "final": "Won · into the final",
+            "semi": "Won · into the semis",
+            "quarter": "Won · into the quarters",
+            "eighth": "Won · into the round of 16",
+            "other": "Won · on to the next round"
+          },
+          "champion": "Tournament won!",
+          "roundWon": "Round won",
+          "roundLost": "Round lost",
+          "tooSlow": "Too slow",
+          "falseStart": "False start",
+          "tie": "Tie",
+          "noShot": "Nobody shot"
+        },
+        "cost": {
+          "drink": "drinks {count}",
+          "give": "hands out {count}",
+          "points": "{count, plural, one {−# point} other {−# points}}",
+          "eliminated": "out",
+          "runnerUp": "runner-up",
+          "chooseGame": "picks the next game",
+          "replay": "replay"
+        },
+        "actions": {
+          "nextRound": "Next round",
+          "replayRound": "Replay the round",
+          "nextDuel": "Next duel",
+          "seeChampion": "See the ranking",
+          "rematch": "Rematch",
+          "otherDuellists": "Other duellists"
+        },
+        "live": {
+          "win": "{name} wins in {time}.",
+          "falseStart": "False start by {name}.",
+          "tie": "Tie: the round is replayed.",
+          "noShot": "Nobody shot: the round is replayed.",
+          "double": "Double false start: the round is replayed."
+        }
+      },
+      "end": {
+        "champion": "{name} wins the tournament!",
+        "championPrize": "{name} hands out {count, plural, one {# sip} other {# sips}}.",
+        "freeLeader": "{name} won the most duels!",
+        "freeTie": "Tied at the top!",
+        "freeNone": "No duel won",
+        "rankingTournament": "Tournament ranking",
+        "rankingFree": "Duel results",
+        "reachedChampion": "Tournament won",
+        "best": "best time {time}",
+        "noBest": "no valid shot",
+        "pointsLost": "{count, plural, =0 {0 points} one {−# point} other {−# points}}"
+      },
+      "endConfirm": {
+        "title": "Finish the duels?",
+        "description": "Time for the results: duels won, sips and best times.",
+        "confirm": "See the results",
+        "cancel": "Keep playing"
+      },
+      "game": {
+        "soundOn": "Turn sound on",
+        "soundOff": "Mute sound"
+      },
+      "soft": {
+        "page": {
+          "rules": {
+            "drinks": "Alcohol-free: a false start costs 3 points; in a free duel, a lost duel costs 2; in a tournament, the loser is out. The champion picks the next game."
+          }
+        },
+        "end": {
+          "championPrize": "{name} picks the next game."
+        },
+        "endConfirm": {
+          "description": "Time for the results: duels won, points lost and best times."
+        }
+      }
+    },
+    "doigt-du-destin": {
+      "title": "Finger of Fate",
+      "modesLabel": "Draw mode",
+      "modes": {
+        "victim": "Victim",
+        "teams": "Two teams",
+        "order": "Order",
+        "survival": "Survival"
+      },
+      "hints": {
+        "victim": "Fate picks one finger: it drinks {count, plural, one {# sip} other {# sips}}.",
+        "teams": "Fate splits the fingers into two balanced teams: gold versus blue.",
+        "order": "Fate gives every finger a number: number 1 goes first.",
+        "survival": "One finger is knocked out per draw ({eliminated, plural, one {# sip} other {# sips}}) until the last one, who hands out {survivor, plural, one {# sip} other {# sips}}."
+      },
+      "arena": {
+        "zone": "Play area: everyone puts a finger here",
+        "place": "Everyone, put a finger down",
+        "oneMore": "One more finger…",
+        "hold": "Hold still…",
+        "noTouch": "This needs a touchscreen: put the phone in the middle of the table.",
+        "deviceLimit": "This phone tracks up to {count} fingers.",
+        "limit": "{count} fingers max",
+        "fingerCount": "{count, plural, =0 {No fingers} one {# finger} other {# fingers}}",
+        "countdown": "Draw in {count}…",
+        "selecting": "Fate is choosing…",
+        "keepDown": "Keep your finger down until the verdict.",
+        "liftEliminated": "Lift your finger: the next draw is waiting for you.",
+        "nextDraw": "Next draw in a moment…",
+        "alive": "{count, plural, one {# finger left} other {# fingers left}}",
+        "touchToRestart": "Put a finger down to go again",
+        "soundOn": "Turn sound on",
+        "soundOff": "Turn sound off"
+      },
+      "result": {
+        "chosen": "Fate has chosen",
+        "victim": "{count, plural, one {# sip for you} other {# sips for you}}",
+        "teams": "Two teams: {gold} versus {blue}",
+        "teamsDetail": "Each circle shows its team colour: gold or blue.",
+        "order": "Number 1 goes first",
+        "orderDetail": "Then 2, then 3… in number order.",
+        "eliminated": "Out: {count, plural, one {# sip} other {# sips}}",
+        "survivor": "Last finger standing: you hand out {count, plural, one {# sip} other {# sips}}",
+        "lastEliminated": "The last one knocked out drinks {count, plural, one {# sip} other {# sips}}.",
+        "nobody": "No fingers left: nobody wins.",
+        "liftedOne": "Finger lifted too early: {count, plural, one {# sip} other {# sips}}",
+        "liftedMany": "{fingers} fingers lifted too early: {count, plural, one {# sip} other {# sips}} each"
+      },
+      "tags": {
+        "victim": "You!",
+        "gold": "Gold",
+        "blue": "Blue",
+        "eliminated": "Out",
+        "survivor": "Last one!",
+        "lifted": "Lifted"
+      },
+      "soft": {
+        "hints": {
+          "victim": "Fate picks one finger: the table picks its forfeit.",
+          "survival": "One finger is knocked out per draw until the last one standing, who wins the round."
+        },
+        "result": {
+          "victim": "A forfeit for you",
+          "victimDetail": "The table picks your forfeit.",
+          "eliminated": "Out!",
+          "survivor": "Last finger standing: you win the round!",
+          "liftedOne": "Finger lifted too early: {count, plural, one {−# point} other {−# points}}",
+          "liftedMany": "{fingers} fingers lifted too early: {count, plural, one {−# point} other {−# points}} each"
+        }
       }
     }
   },

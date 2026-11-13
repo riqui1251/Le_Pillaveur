@@ -46,6 +46,12 @@ import { TvPetitBac } from './TvPetitBac'
 import type { PbcClientView } from '@/lib/petit-bac/engine'
 import { TvPresident } from './TvPresident'
 import type { PreClientView } from '@/lib/president/engine'
+import { TvChiffrePiege } from './TvChiffrePiege'
+import type { ChiffrePiegeClientView } from '@/lib/chiffre-piege/online-state'
+import { TvVueDeNez } from './TvVueDeNez'
+import type { VdnClientView } from '@/lib/vue-de-nez/online-view'
+import { TvPatateChaude } from './TvPatateChaude'
+import type { PcClientView } from '@/lib/patate-chaude/online-shared'
 
 type ParsedState = (Record<string, unknown> & { phase?: string; winner?: unknown }) | null
 
@@ -254,6 +260,12 @@ export function TvRoomScreen({
     content = <TvPetitBac room={room} state={state as unknown as PbcClientView} />
   } else if (room.gameId === 'president') {
     content = <TvPresident room={room} state={state as unknown as PreClientView} />
+  } else if (room.gameId === 'chiffre-piege') {
+    content = <TvChiffrePiege room={room} state={state as unknown as ChiffrePiegeClientView} />
+  } else if (room.gameId === 'vue-de-nez') {
+    content = <TvVueDeNez room={room} state={state as unknown as VdnClientView} />
+  } else if (room.gameId === 'patate-chaude') {
+    content = <TvPatateChaude room={room} state={state as unknown as PcClientView} />
   } else {
     content = <TvLobby room={room} joinUrl={joinUrl} />
   }

@@ -33,6 +33,9 @@ import type { PreState } from '@/lib/president/engine'
 import type { PurpleState } from '@/lib/purple/engine'
 import type { Game1220State } from '@/lib/1220/engine'
 import type { TelephoneState } from '@/lib/telephone-dessine/engine'
+import { chiffrePiegeMatchOutcomes } from '@/lib/chiffre-piege/match-outcomes'
+import { vueDeNezMatchOutcomes } from '@/lib/vue-de-nez/match-outcomes'
+import { patateChaudeMatchOutcomes } from '@/lib/patate-chaude/match-outcomes'
 
 /**
  * Résultats de partie EN LIGNE pour le classement (victoires/défaites —
@@ -77,7 +80,10 @@ const FILLER_BOT_RE = /^bot-\d+$/
  *    décompte final ne correspond à aucun ensemble fixe de joueurs ;
  *  - purple et 1220 : le seul « score » est un compte de gorgées (une
  *    pénalité, pas un classement) ;
- *  - telephone-dessine : coopératif pur, aucun score dans le moteur.
+ *  - telephone-dessine : coopératif pur, aucun score dans le moteur ;
+ *  - chiffre-piege : gorgées ou points de pénalité, pas un classement ;
+ *  - patate-chaude : « le moins d'explosions gagne » désigne souvent la
+ *    moitié de la table ex æquo.
  */
 const PARTICIPATION_ONLY_GAMES = new Set([
   'dilemmes',
@@ -85,6 +91,8 @@ const PARTICIPATION_ONLY_GAMES = new Set([
   'purple',
   '1220',
   'telephone-dessine',
+  'chiffre-piege',
+  'patate-chaude',
 ])
 
 /** Applique les règles de comptage. Retourne [] si la partie ne compte pas. */
@@ -315,6 +323,15 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
         won: false,
       }))
     }
+    case 'chiffre-piege':
+      // Gorgées ou points de PÉNALITÉ : participation seulement (PARTICIPATION_ONLY_GAMES).
+      return chiffrePiegeMatchOutcomes(state)
+    case 'vue-de-nez':
+      // Rang « compétition » sur le score (+3, +6, −1) ; victoire au rang 1 avec un score positif.
+      return vueDeNezMatchOutcomes(state)
+    case 'patate-chaude':
+      // « Le moins d'explosions gagne » désigne souvent la moitié de la table : participation seulement.
+      return patateChaudeMatchOutcomes(state)
     default:
       return null
   }
