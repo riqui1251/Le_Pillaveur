@@ -1358,6 +1358,10 @@
         "title": "Play Purple online for free — red, black or purple?",
         "description": "The sneakiest card-colour bet around: 2–16 players, voice chat, free, no install. Play with friends — or solo, bots fill the table."
       },
+      "blackjack": {
+        "title": "Play Blackjack online for free — 21 against the dealer",
+        "description": "Get close to 21 without going over: hit, stand, double, split. 1 to 7 players, voice chat, free, no install — or solo, bots fill the table."
+      },
       "monsieur-3": {
         "title": "Play Monsieur 3 for free — dodge the 3s or drink",
         "description": "The dice game where 3s spell trouble: dodge the cursed combos or drink. Free, no install, on one phone passed around the table."
@@ -1541,6 +1545,11 @@
       "purple": {
         "title": "Purple",
         "description": "Red, black… or Purple? The most treacherous bet at the bar."
+      },
+      "blackjack": {
+        "title": "Blackjack",
+        "description": "Everyone against the dealer: get close to 21 without going over, or drink your bet.",
+        "softDescription": "Everyone against the dealer: get close to 21 without going over and score points."
       },
       "pyramide": {
         "title": "Pyramid",
@@ -1741,6 +1750,114 @@
         "waiting": "{name} is deciding: keep going or pass?",
         "hint": "Nice! Bet again or pass it on.",
         "continueSelf": "Bet again"
+      }
+    },
+    "blackjack": {
+      "title": "Blackjack",
+      "tutorial": {
+        "steps": [
+          {
+            "title": "Bet your chips",
+            "body": "Each round, bet 1, 2 or 3 chips: sips, or points in alcohol-free mode. You play against the dealer, not the table."
+          },
+          {
+            "title": "Get close to 21",
+            "body": "Draw cards to get close to 21 without going over. Face cards = 10, aces = 1 or 11. You can double your bet or split a pair."
+          },
+          {
+            "title": "The dealer decides",
+            "body": "The dealer draws to 17. Beaten or bust: you lose your bet (drink it, or lose the points). Win: hand it out, or score the points. Blackjack: one and a half times!"
+          }
+        ]
+      },
+      "minPlayers": "At least 1 player required.",
+      "dealer": "Dealer",
+      "dealerBlackjack": "Dealer blackjack!",
+      "dealerBust": "The dealer busts!",
+      "drink": "{count, plural, one {drink # sip} other {drink # sips}}",
+      "give": "{count, plural, one {give out # sip} other {give out # sips}}",
+      "outcome": {
+        "blackjack": "Blackjack!",
+        "win": "Won",
+        "push": "Push",
+        "lose": "Lost",
+        "bust": "Bust"
+      },
+      "phase": {
+        "betting": "Place your bets",
+        "playing": "Your move",
+        "results": "Round results",
+        "finished": "Game over"
+      },
+      "stakeFor": "{name}, your bet?",
+      "stakeSelf": "Your bet for this round?",
+      "stakeLabel": "Choose your bet",
+      "betPlaced": "Bet placed",
+      "betWaiting": "Thinking…",
+      "actions": {
+        "hit": "Hit",
+        "stand": "Stand",
+        "double": "Double",
+        "split": "Split"
+      },
+      "turnOf": "{name}'s turn",
+      "turnHand": "{name}'s turn · hand {index}/{count}",
+      "nextRound": "Next round",
+      "round": "Round {count}",
+      "roundsPlayed": "{count, plural, =0 {No round played} one {# round played} other {# rounds played}}",
+      "shoe": "{count, plural, one {# card in the shoe} other {# cards in the shoe}}",
+      "finishedTitle": "Game over",
+      "tallyTitle": "The tally",
+      "tallyLine": "{wins, plural, one {# hand won} other {# hands won}} out of {hands} · {given, plural, one {# sip given} other {# sips given}}",
+      "drunk": "{count, plural, one {# drunk} other {# drunk}}",
+      "table": {
+        "pays": "Blackjack pays 3 to 2",
+        "rule": "Dealer draws to 16, stands on 17",
+        "me": "You"
+      },
+      "landscape": {
+        "enter": "Switch to landscape",
+        "exit": "Portrait",
+        "hint": "Turn your phone sideways: the table switches to landscape."
+      },
+      "soft": {
+        "points": "{count, plural, one {# point} other {# points}}",
+        "lose": "{count, plural, one {lose # point} other {lose # points}}",
+        "win": "{count, plural, one {win # point} other {win # points}}",
+        "tallyTitle": "The standings",
+        "tallyLine": "{wins, plural, one {# hand won} other {# hands won}} out of {hands}",
+        "net": "{value} pts",
+        "endDescription": "Time for the standings: who scored the most points.",
+        "onlineEndDescription": "The game stops on every phone and the points standings are shown."
+      },
+      "tableLabel": "The table",
+      "endConfirm": {
+        "title": "End the game?",
+        "description": "Time for the tally: who drank and who handed out how much.",
+        "confirm": "See the tally",
+        "cancel": "Keep playing"
+      },
+      "online": {
+        "waitingBets": "Waiting for bets…",
+        "yourHand": "Your move: hit, stand, double or split",
+        "yourHandHint": "Get close to 21 without going over.",
+        "left": "Left",
+        "endGame": "End the game",
+        "waitingReturn": "{name} left — replaced in {seconds}s unless they come back",
+        "afkWarning": "{name} is idle — kicked and replaced by a bot in {seconds}s",
+        "afkWarningSelf": "Your turn! Play within {seconds}s or you'll be kicked and replaced by a bot",
+        "rematchWaiting": "Waiting ({count}/{total})",
+        "endConfirm": {
+          "title": "End it for the whole table?",
+          "description": "The game stops on every phone and the sip tally is shown.",
+          "confirm": "End for everyone",
+          "cancel": "Keep playing"
+        }
+      },
+      "about": {
+        "p1": "Everyone plays against the dealer. At the start of each round you bet 1, 2 or 3 sips, then everyone gets two cards; the dealer shows one and keeps the other face down. Face cards are worth 10, aces 1 or 11, other cards their value.",
+        "p2": "On your turn you hit to get closer to 21, stand, double your bet for a single card, or split a pair into two hands. Over 21, you bust. The dealer then reveals the hole card and draws to 17. Lost hand: drink your bet. Won hand: hand it out. Blackjack (ace + ten-card dealt): hand out one and a half times your bet.",
+        "p3": "Stand on 12 to 16 when the dealer shows a small card, double on 11, always split aces and eights. Alone, bots fill the table and play basic strategy. The game lasts as many rounds as you like."
       }
     },
     "roue-des-gorgees": {

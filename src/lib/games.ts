@@ -298,6 +298,31 @@ export const GAMES: GameMeta[] = [
     soloFit: 'great',
   },
   {
+    id: 'blackjack',
+    title: 'Black Jack',
+    description: "Chacun contre le croupier : approche 21 sans le dépasser, ou bois ta mise.",
+    path: '/games/blackjack',
+    emoji: '🃏',
+    suit: 'diamond',
+    rank: '2',
+    gradient: 'from-emerald-700 to-amber-500',
+    colorFrom: '#047857',
+    colorTo: '#f59e0b',
+    fallbackColor: '#047857',
+    onlineReady: true,
+    minPlayers: 1,
+    maxPlayers: 7,
+    localMinPlayers: 1,
+    botsFillable: true,
+    // Chacun joue contre le croupier : seul à table, la partie est entière.
+    soloFit: 'great',
+    // Mais seul face au croupier, la table semblait vide (minPlayers − 1 = 0
+    // bot) : trois voisins qui misent et tirent la rendent vivante.
+    soloBots: 3,
+    // Sans alcool, les mises deviennent des points et le bilan un classement.
+    softModeReady: true,
+  },
+  {
     id: 'pyramide',
     title: 'Pyramide',
     description: "Grimpe la pyramide : les gorgées doublent à chaque étage.",

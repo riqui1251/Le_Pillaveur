@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { redirect } from '@/i18n/navigation'
+import { isAppLocale } from '@/lib/locale-utils'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { LOCAL_PLAY_COOKIE, SESSION_COOKIE } from '@/lib/auth-cookies'
 import { LandingPage } from '@/components/landing/LandingPage'
@@ -24,6 +26,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
   const { locale } = await params
+  if (!isAppLocale(locale)) notFound()
   const t = await getTranslations({ locale, namespace: 'metadata' })
   const title = t('titleFull')
   const description = t('descriptionCount', { count: GAMES.filter((g) => !g.hidden).length })
@@ -50,6 +53,11 @@ export default async function Home({
   params: Promise<{ locale: string }>
 }) {
   const { locale } = await params
+  // Le layout rejette déjà une langue inconnue, mais la page est rendue EN
+  // PARALLÈLE : /apple-touch-icon.png (hors middleware i18n) arrivait ici
+  // avec locale = « apple-touch-icon.png » et l'heure de la table du vendredi
+  // (Intl.DateTimeFormat) levait un RangeError — 500 au lieu de 404.
+  if (!isAppLocale(locale)) notFound()
   const jar = await cookies()
   // Les habitués (session ou mode local déjà choisi) entrent directement
   // dans l'app ; les nouveaux visiteurs — et les moteurs de recherche —

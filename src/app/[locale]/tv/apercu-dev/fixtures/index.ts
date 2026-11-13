@@ -9,6 +9,7 @@ import { build as imposteur } from './imposteur'
 import { build as loupGarou } from './loup-garou'
 import { build as game1220 } from './game-1220'
 import { build as purple } from './purple'
+import { build as blackjack } from './blackjack'
 import { build as bluff } from './bluff'
 import { build as espion } from './espion'
 import { build as tabou } from './tabou'
@@ -34,6 +35,7 @@ export const PREVIEW_GAMES: { game: string; build: () => TvPreviewFixture[] }[] 
   { game: 'loup-garou', build: loupGarou },
   { game: '1220', build: game1220 },
   { game: 'purple', build: purple },
+  { game: 'blackjack', build: blackjack },
   { game: 'bluff', build: bluff },
   { game: 'espion', build: espion },
   { game: 'tabou', build: tabou },

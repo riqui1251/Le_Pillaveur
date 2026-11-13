@@ -22,6 +22,7 @@ describe('jeux jouables hors ligne', () => {
       'petit-buveur',
       'hi-lo',
       'purple',
+      'blackjack',
       'pyramide',
       'plinko',
       '1220',

@@ -5,6 +5,7 @@ import { currentPlayerId } from '@/lib/petit-buveur/engine'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 import type { Difficulty } from '@/lib/petit-buveur/types'
 import { launchPurpleRoom } from '@/lib/online-purple'
+import { launchBlackjackRoom } from '@/lib/online-blackjack'
 import { launch1220Room } from '@/lib/online-1220'
 import { launchToucherCouleRoom } from '@/lib/online-toucher-coule'
 import { launchMenteurRoom } from '@/lib/online-menteur'
@@ -126,6 +127,9 @@ export async function launchOnlineRoom(roomId: string, room: RoomWithMembers) {
       break
     case 'purple':
       await launchPurpleRoom(roomId, room)
+      break
+    case 'blackjack':
+      await launchBlackjackRoom(roomId, room)
       break
     case '1220':
       await launch1220Room(roomId, room)

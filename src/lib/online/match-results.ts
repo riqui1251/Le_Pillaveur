@@ -31,6 +31,7 @@ import type { MCState } from '@/lib/mots-codes/engine'
 import type { PbcState } from '@/lib/petit-bac/engine'
 import type { PreState } from '@/lib/president/engine'
 import type { PurpleState } from '@/lib/purple/engine'
+import type { BjState } from '@/lib/blackjack/engine'
 import type { Game1220State } from '@/lib/1220/engine'
 import type { TelephoneState } from '@/lib/telephone-dessine/engine'
 import { chiffrePiegeMatchOutcomes } from '@/lib/chiffre-piege/match-outcomes'
@@ -78,7 +79,7 @@ const FILLER_BOT_RE = /^bot-\d+$/
  *  - dilemmes : pur social, le moteur n'a aucun score ;
  *  - espion : les rôles TOURNENT à chaque manche, le « camp gagnant » du
  *    décompte final ne correspond à aucun ensemble fixe de joueurs ;
- *  - purple et 1220 : le seul « score » est un compte de gorgées (une
+ *  - purple, blackjack et 1220 : le seul « score » est un compte de gorgées (une
  *    pénalité, pas un classement) ;
  *  - telephone-dessine : coopératif pur, aucun score dans le moteur ;
  *  - chiffre-piege : gorgées ou points de pénalité, pas un classement ;
@@ -89,6 +90,7 @@ const PARTICIPATION_ONLY_GAMES = new Set([
   'dilemmes',
   'espion',
   'purple',
+  'blackjack',
   '1220',
   'telephone-dessine',
   'chiffre-piege',
@@ -303,6 +305,12 @@ export function matchOutcomesFor(gameId: string, state: unknown): MatchOutcome[]
         isBot: p.isBot,
         won: false,
       }))
+    }
+    case 'blackjack': {
+      // Chacun contre le croupier : des gorgées bues et données, aucun
+      // vainqueur entre joueurs.
+      const s = state as BjState
+      return s.players.map((p) => ({ playerId: p.id, isBot: p.isBot, won: false }))
     }
     case '1220': {
       // Idem : des gorgées distribuées, aucun vainqueur.
