@@ -5503,6 +5503,7 @@
         "pass": "Pasar",
         "leadHint": "Tú abres: simple, pareja, trío o póker — a elegir.",
         "out": "¡Has terminado! Posición {rank} — mira a los demás sudar.",
+        "sittingOut": "Esta ronda se repartió sin ti: {last, select, true {la miras, sin entrar en la clasificación.} other {vuelves en el próximo reparto.}}",
         "roles": {
           "president": "{genre, select, f {Presidenta} m {Presidente} other {Presidente}}",
           "trou": "Trou",

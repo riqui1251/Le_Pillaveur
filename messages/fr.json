@@ -5503,6 +5503,7 @@
         "pass": "Passer",
         "leadHint": "Tu mènes : simple, paire, brelan ou carré — au choix.",
         "out": "Tu as fini ! Position {rank} — regarde les autres transpirer.",
+        "sittingOut": "La manche a été distribuée sans toi : {last, select, true {tu la regardes, sans y être classé.} other {tu reprends à la prochaine donne.}}",
         "roles": {
           "president": "{genre, select, f {Présidente} m {Président} other {Président}}",
           "trou": "Trou",

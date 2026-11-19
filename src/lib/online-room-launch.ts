@@ -14,7 +14,7 @@ import { launchQuizRoom } from '@/lib/online-quiz'
 import { launchLoupGarouRoom } from '@/lib/online-loup-garou'
 import { launchBluffRoom } from '@/lib/online-bluff'
 import { launchEspionRoom } from '@/lib/online-espion'
-import { launchTabouRoom, tabouHasTwoHumansPerTeam } from '@/lib/online-tabou'
+import { launchTabouRoom } from '@/lib/online-tabou'
 import { launchCrobardRoom } from '@/lib/online-crobard'
 import { launchTelephoneDessineRoom } from '@/lib/online-telephone-dessine'
 import { launchSansFiltreRoom } from '@/lib/online-sans-filtre'
@@ -29,6 +29,7 @@ import { isOnlineGameFinished, parseOnlineGameState, parseRoomSettings } from '@
 import { recordGameSessionStart } from '@/lib/online/game-sessions'
 import { armRoomTicker, cancelRoomTicker } from '@/lib/online/room-ticker'
 import { recordDeparture } from '@/lib/online/departures'
+import { launchRosterRefusal } from '@/lib/online/launch-roster'
 
 export type RoomWithMembers = {
   id: string
@@ -318,7 +319,8 @@ async function dropAbsentMembers(
 /**
  * Vote rematch : relance quand tous les membres PRÉSENTS ont voté, sinon
  * enregistre le vote. Les absents (REMATCH_PRESENCE_MS) sont retirés de la
- * table au moment de la relance.
+ * table au moment de la relance — si elle a lieu : des présents trop peu
+ * nombreux pour le jeu ramènent la table au lobby, absents compris.
  */
 export async function processRematchVote(roomId: string, room: RematchRoom, userId: string) {
   const gameId = room.gameId ?? ''
@@ -381,25 +383,36 @@ export async function processRematchVote(roomId: string, room: RematchRoom, user
             where: { id: roomId },
             data: { gameStateJson: stateJson },
           })
-          // Les absents sortent AVANT le lancement, dans la même relance : la
-          // nouvelle partie se distribue aux seuls présents.
-          const relaunched = await dropAbsentMembers(roomId, room, presentMembers, absentUserIds)
-          // Tabou Vocal : la règle des 2 humains par équipe vaut aussi pour
-          // « Rejouer », qui ne passe pas par la route launch. Une table que les
-          // départs ont réduite ne repart pas avec des bots de complément (un
-          // bot ne décrit rien) : elle revient au lobby, qui affiche la règle.
-          if (
-            (gameId === 'tabou' &&
-              !tabouHasTwoHumansPerTeam(
-                relaunched.members.map((m) => m.userId),
-                relaunched.settingsJson
-              )) ||
-            // Patate Chaude se joue sans bots : moins de deux présents, retour au lobby.
-            (gameId === 'patate-chaude' && relaunched.members.length < 2)
-          ) {
+          // « Rejouer » ne passe pas par la route launch : les bornes du jeu se
+          // revérifient ici, sur les seuls PRÉSENTS, comme en fin de briefing.
+          // Minimum d'un jeu sans bots de complément (Téléphone Dessiné, Mots
+          // Codés, Patate Chaude…), équipes de Mots Codés, 2 humains par équipe
+          // au Tabou : en dessous, le lanceur lèverait à chaque vote. La table
+          // revient au lobby, qui affiche la règle. Vérifié AVANT de retirer les
+          // absents : rien n'est relancé, ils gardent leur siège (le lobby le
+          // libère s'ils ne reviennent pas) au lieu d'un « la table a rejoué
+          // sans vous ». Le plafond, lui, ne renvoie pas au lobby : il compte
+          // les bots réglés par l'hôte, que les lanceurs ramènent d'eux-mêmes
+          // sous le maximum — un ami assis à l'écran de fin d'une table pleine
+          // de bots prend la place d'un bot.
+          const refusal = launchRosterRefusal(room, presentUserIds, { afterBriefing: true })
+          if (refusal && refusal.code !== 'max_players') {
+            // L'hôte absent garde son siège mais passe la main au plus ancien
+            // présent, comme à la relance : sinon personne ne peut changer de
+            // jeu ni lancer avant que le lobby libère son siège (2 min).
+            const nextHostUserId = presentMembers[0]?.userId
+            if (nextHostUserId && absentUserIds.includes(room.hostUserId)) {
+              await prisma.onlineRoom.update({
+                where: { id: roomId },
+                data: { hostUserId: nextHostUserId },
+              })
+            }
             await resetRoomToWaitingLobby(roomId)
             return
           }
+          // Les absents sortent AVANT le lancement, dans la même relance : la
+          // nouvelle partie se distribue aux seuls présents.
+          const relaunched = await dropAbsentMembers(roomId, room, presentMembers, absentUserIds)
           await launchOnlineRoom(roomId, relaunched)
         } catch (error) {
           // Relance ratée : sans ce retour en arrière la sentinelle figerait la

@@ -33,6 +33,7 @@ import {
   preLastPlayRank,
   preOuRien,
   preRankOf,
+  preSitsOut,
   preSuitOf,
   PRE_INTERLUDE_MS,
   PRE_RANKS,
@@ -622,6 +623,13 @@ export function PresidentOnline() {
         <p className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-felt-deep/70 px-4 py-3 text-center text-base font-bold text-emerald-300">
           <Flag aria-hidden className="h-5 w-5 shrink-0" />
           {t('out', { rank: myOutRank })}
+        </p>
+      )}
+
+      {/* Revenu après la donne : ni main ni barre, il faut dire pourquoi. */}
+      {seated && preSitsOut(view, user.id, view.myHand.length) && (
+        <p className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-center text-sm font-semibold text-cream">
+          {t('sittingOut', { last: String(view.manche + 1 >= view.totalManches) })}
         </p>
       )}
 

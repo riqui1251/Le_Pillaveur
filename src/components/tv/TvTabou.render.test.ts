@@ -65,6 +65,20 @@ describe('TvTabou — écran TV du Tabou Vocal', () => {
     }
   })
 
+  it('décrivant parti en pleine manche de 60 s : le chrono reste le vrai, pas figé sur 5', () => {
+    const step = steps.find((s) => (JSON.parse(s.room!.gameStateJson!) as TabouClientView).phase === 'describing')!
+    const view = JSON.parse(step.room!.gameStateJson!) as TabouClientView
+    // État relu d'avant le relais : parti, toujours décrivant, 40 s au compteur.
+    const legacy: TabouClientView = {
+      ...view,
+      phaseEndsAt: Date.now() + 40_000,
+      players: view.players.map((p) => (p.id === view.describerId ? { ...p, isBot: false, leftAt: Date.now() } : p)),
+    }
+    const { html } = render({ ...step, room: { ...step.room!, gameStateJson: JSON.stringify(legacy) } })
+
+    expect(html).toMatch(/tabular-nums[^>]*>(40|39)</)
+  })
+
   it('montre à la fin le compteur de revanche, comme les téléphones', () => {
     const finished = steps.map(render).filter(({ view }) => view.phase === 'finished')
     for (const { html, view } of finished) {

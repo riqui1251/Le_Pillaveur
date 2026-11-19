@@ -5503,6 +5503,7 @@
         "pass": "Passa",
         "leadHint": "Apri tu: singola, coppia, tris o poker — a scelta.",
         "out": "Hai finito! Posizione {rank} — guarda gli altri sudare.",
+        "sittingOut": "Questa mano è stata distribuita senza di te: {last, select, true {la guardi, senza entrare in classifica.} other {rientri alla prossima distribuzione.}}",
         "roles": {
           "president": "{genre, select, f {Presidente} m {Presidente} other {Presidente}}",
           "trou": "Trou",

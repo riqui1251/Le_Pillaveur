@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import type { TvRoomDto } from '@/lib/online-room'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { TABOU_BOT_DESCRIBER_ROUND_MS, TABOU_COUNTDOWN_MS, TABOU_ROUND_MS, type TabouClientView, type TabouPlayerView, type TabouTeam } from '@/lib/tabou/engine'
+import { TABOU_BOT_DESCRIBER_ROUND_MS, TABOU_COUNTDOWN_MS, TABOU_ROUND_MS, tabouDescriberIsAway, type TabouClientView, type TabouPlayerView, type TabouTeam } from '@/lib/tabou/engine'
 import { cn } from '@/lib/utils'
 import { PhaseCountdown } from '@/components/online/PhaseCountdown'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
@@ -79,8 +79,13 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
       </>
     )
   } else {
-    // Un bot décrivant écourte la manche côté moteur : la barre part de sa vraie durée.
-    const total = describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
+    // Décrivant bot ou parti : manche écourtée côté moteur, la barre part de sa
+    // vraie durée. Le temps restant fait foi : une manche pleine déjà lancée
+    // (décrivant devenu bot ou parti en cours de route) garde son échelle, sans
+    // quoi le chiffre restait figé sur « 5 » jusqu'aux dernières secondes.
+    const away = tabouDescriberIsAway(describer)
+    const roundTotalMs = (leftMs: number) =>
+      away && leftMs <= TABOU_BOT_DESCRIBER_ROUND_MS + 2_000 ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
     const leftPlayer = state.players.find((p) => !p.isBot && p.leftAt)
     center = (
       <>
@@ -98,10 +103,10 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
             {({ leftMs, seconds }) => (
               <div className="flex w-full flex-col items-center gap-3">
                 <span className={cn('text-8xl font-black leading-none tabular-nums', leftMs < 15_000 ? 'text-red-300' : 'text-white')}>
-                  {Math.min(total / 1000, seconds)}
+                  {Math.min(roundTotalMs(leftMs) / 1000, seconds)}
                 </span>
                 <div className="flex w-full">
-                  <TvTimeBar timeLeftMs={leftMs} totalMs={total} dangerMs={15_000} colorClass="bg-emerald-400" dangerClass="bg-red-400" />
+                  <TvTimeBar timeLeftMs={leftMs} totalMs={roundTotalMs(leftMs)} dangerMs={15_000} colorClass="bg-emerald-400" dangerClass="bg-red-400" />
                 </div>
               </div>
             )}

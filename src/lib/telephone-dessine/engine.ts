@@ -298,11 +298,21 @@ function revealBack(state: TelephoneState, now: number): TelephoneState {
   }
 }
 
-/** Résout la manche dès que tous les joueurs actifs ont soumis. */
+/**
+ * Résout la manche dès que tous les joueurs PRÉSENTS ont soumis. Par joueur,
+ * pas au compte : le maillon rendu par un joueur parti ensuite tenait la place
+ * d'un présent qui écrivait encore. Table vide : rien à résoudre.
+ */
 function maybeResolveRound(state: TelephoneState, now: number): TelephoneState {
   const active = telephoneActive(state)
-  if (state.submittedIds.length < active.length) return state
+  if (active.length === 0) return state
+  if (!active.every((p) => state.submittedIds.includes(p.id))) return state
   return resolveRound(state, now)
+}
+
+/** Soumissions des joueurs présents — le « x » de « x/y ont rendu ». */
+function presentSubmittedCount(state: TelephoneState): number {
+  return telephoneActive(state).filter((p) => state.submittedIds.includes(p.id)).length
 }
 
 // ─── Réducteur ───────────────────────────────────────────────────────────────
@@ -434,13 +444,18 @@ export function reduceTelephone(state: TelephoneState, action: TelephoneAction):
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new TelephoneEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: TelephoneState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le dernier joueur attendu s'en va : plus aucune soumission ne viendra
+      // résoudre la manche, la table attendrait l'échéance pour un maillon
+      // blanc de toute façon. Ouvre au plus la révélation, jamais la fin de partie.
+      if (next.phase === 'contributing') return maybeResolveRound(next, action.at)
+      return next
     }
 
     case 'REJOIN': {
@@ -563,7 +578,7 @@ export function toTelephoneClientView(state: TelephoneState, viewerId: string): 
   return {
     ...rest,
     phaseKey: phaseKey(state),
-    submittedCount: state.submittedIds.length,
+    submittedCount: presentSubmittedCount(state),
     totalToSubmit: active.length,
     haveISubmitted: state.submittedIds.includes(viewerId),
     received,
@@ -588,7 +603,7 @@ export function toTelephoneSpectatorView(state: TelephoneState): TelephoneClient
   return {
     ...rest,
     phaseKey: phaseKey(state),
-    submittedCount: state.submittedIds.length,
+    submittedCount: presentSubmittedCount(state),
     totalToSubmit: active.length,
     haveISubmitted: false,
     received: null,

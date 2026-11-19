@@ -220,10 +220,17 @@ function pickWords(
   return { picked, remaining: queue }
 }
 
-/** Un bot ne peut pas dessiner à voix... à l'écran → manche écourtée. */
+/** Un bot ne dessine pas, un joueur parti non plus → manche écourtée. */
 function roundDurationFor(state: CrobardState, drawerId: string): number {
   const drawer = state.players.find((p) => p.id === drawerId)
-  return drawer?.isBot ? CROBARD_BOT_DRAWER_ROUND_MS : CROBARD_DRAWING_MS
+  return drawer?.isBot || drawer?.leftAt ? CROBARD_BOT_DRAWER_ROUND_MS : CROBARD_DRAWING_MS
+}
+
+/** Tous les devineurs encore à table ont trouvé (aucun devineur = rien à attendre). */
+function everyPresentGuesserFound(state: CrobardState): boolean {
+  return crobardActive(state)
+    .filter((p) => p.id !== state.drawerId)
+    .every((p) => state.correctGuessers.includes(p.id))
 }
 
 // ─── Création ────────────────────────────────────────────────────────────────
@@ -288,6 +295,33 @@ function startDrawing(state: CrobardState, word: string, now: number): CrobardSt
     correctGuessers: [],
     ...enterPhase(state.phaseSeq, 'drawing', roundDurationFor(state, state.drawerId), now),
     phase: 'drawing',
+    version: state.version + 1,
+  }
+}
+
+/**
+ * Ouvre le choix du mot au créneau `fromIdx`, sur un tirage neuf. Son titulaire
+ * peut être parti : le délai de choix est le temps qu'on lui laisse pour revenir
+ * (l'échéance passe la main, voir ADVANCE). Le sauter d'office lui coûtait son
+ * tour de dessin pour quelques secondes d'absence.
+ */
+function enterChoosing(state: CrobardState, fromIdx: number, now: number): CrobardState {
+  const rng = rngFromState(state.rngState)
+  const { picked, remaining } = pickWords(rng, state.remainingWords, state.allWords, 3)
+  const drawerIdx = fromIdx % state.drawerOrder.length
+  return {
+    ...state,
+    drawerIdx,
+    drawerId: state.drawerOrder[drawerIdx],
+    wordChoices: picked,
+    remainingWords: remaining,
+    word: null,
+    strokes: [],
+    correctGuessers: [],
+    lastRoundWord: null,
+    ...enterPhase(state.phaseSeq, 'choosing', CROBARD_CHOOSING_MS, now),
+    phase: 'choosing',
+    rngState: rng.getState(),
     version: state.version + 1,
   }
 }
@@ -361,12 +395,10 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
           if (p.id === state.drawerId) return { ...p, score: p.score + CROBARD_DRAWER_POINTS_PER_GUESSER }
           return p
         })
-        let next: CrobardState = { ...state, correctGuessers, players, version: state.version + 1 }
-        const remainingGuessers = crobardActive(next).filter((p) => p.id !== next.drawerId)
-        if (correctGuessers.length >= remainingGuessers.length) {
-          next = endRound(next, action.now)
-        }
-        return next
+        const next: CrobardState = { ...state, correctGuessers, players, version: state.version + 1 }
+        // Par joueur, pas au compte : un devineur qui a trouvé puis est parti
+        // tenait la place d'un présent qui cherchait encore.
+        return everyPresentGuesserFound(next) ? endRound(next, action.now) : next
       }
       if (verdict === 'close') throw new CrobardEngineError('GUESS_CLOSE')
       throw new CrobardEngineError('GUESS_WRONG')
@@ -375,20 +407,17 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
     case 'ADVANCE': {
       const check = checkAdvance(state, action.claimedKey, action.now)
       if (!check.ok) throw new CrobardEngineError(check.error)
-      if (state.phase === 'countdown') {
-        const rng = rngFromState(state.rngState)
-        const { picked, remaining } = pickWords(rng, state.remainingWords, state.allWords, 3)
-        return {
-          ...state,
-          wordChoices: picked,
-          remainingWords: remaining,
-          ...enterPhase(state.phaseSeq, 'choosing', CROBARD_CHOOSING_MS, action.now),
-          phase: 'choosing',
-          rngState: rng.getState(),
-          version: state.version + 1,
-        }
-      }
+      if (state.phase === 'countdown') return enterChoosing(state, state.drawerIdx, action.now)
       if (state.phase === 'choosing') {
+        // Le dessinateur est parti et n'est pas revenu dans le délai de choix :
+        // son créneau passe au suivant — même manche, nouveau tirage (il a vu
+        // les trois mots et peut revenir deviner) — au lieu du mot par défaut
+        // et de 80 s de toile vide. Son remplacement par un bot n'arrive qu'à
+        // 3 min. Table vide : manche écourtée, pas de choix en boucle.
+        const drawer = state.players.find((p) => p.id === state.drawerId)
+        if (drawer?.leftAt && crobardActive(state).length > 0) {
+          return enterChoosing(state, state.drawerIdx + 1, action.now)
+        }
         const word = state.wordChoices?.[0]
         if (!word) throw new CrobardEngineError('NO_WORD_CHOICES')
         return startDrawing(state, word, action.now)
@@ -415,25 +444,7 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
           version: state.version + 1,
         }
       }
-      const rng = rngFromState(state.rngState)
-      const { picked, remaining } = pickWords(rng, state.remainingWords, state.allWords, 3)
-      const drawerIdx = (state.drawerIdx + 1) % state.drawerOrder.length
-      return {
-        ...state,
-        drawerIdx,
-        drawerId: state.drawerOrder[drawerIdx],
-        wordChoices: picked,
-        remainingWords: remaining,
-        word: null,
-        strokes: [],
-        correctGuessers: [],
-        lastRoundWord: null,
-        round: state.round + 1,
-        ...enterPhase(state.phaseSeq, 'choosing', CROBARD_CHOOSING_MS, action.now),
-        phase: 'choosing',
-        rngState: rng.getState(),
-        version: state.version + 1,
-      }
+      return enterChoosing({ ...state, round: state.round + 1 }, state.drawerIdx + 1, action.now)
     }
 
     case 'LEAVE': {
@@ -441,13 +452,26 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new CrobardEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: CrobardState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Plus aucun humain à table (des bots, tout au plus) : rien à faire
+      // avancer, chacun retrouve la manche — et son tour — à son retour.
+      if (!crobardActive(next).some((p) => !p.isBot)) return next
+      // Un départ ouvre au plus le bilan, jamais la fin de partie : elle
+      // s'enregistre sur /action, la route de départ ne sait pas le faire.
+      if (action.playerId === next.drawerId) {
+        // En plein dessin, la toile resterait morte jusqu'à l'échéance : la
+        // manche se clôt. Pendant le choix, rien à faire ici : il a jusqu'à
+        // l'échéance pour revenir, c'est elle qui passe la main (ADVANCE).
+        return next.phase === 'drawing' ? endRound(next, action.at) : next
+      }
+      if (next.phase === 'drawing' && everyPresentGuesserFound(next)) return endRound(next, action.at)
+      return next
     }
 
     case 'REJOIN': {

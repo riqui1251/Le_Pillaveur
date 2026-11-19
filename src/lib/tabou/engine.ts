@@ -20,9 +20,9 @@ export const TABOU_COUNTDOWN_MS = 5_000
 /** Durée d'une manche de description. */
 export const TABOU_ROUND_MS = 60_000
 /**
- * Durée écourtée quand le décrivant tiré au sort est un bot (un bot ne
- * peut pas décrire un mot à voix haute) — la manche se résout d'elle-même
- * au bout de quelques secondes plutôt que de bloquer la partie 60 s.
+ * Durée écourtée quand le décrivant du créneau est un bot (un bot ne peut pas
+ * décrire un mot à voix haute) ou un joueur parti — la manche se résout
+ * d'elle-même au bout de quelques secondes plutôt que de bloquer la partie 60 s.
  */
 export const TABOU_BOT_DESCRIBER_ROUND_MS = 5_000
 /** Options de score cible proposées au lobby. */
@@ -114,10 +114,21 @@ function buildDescriberOrder(players: TabouInitialPlayer[]): string[] {
   return order
 }
 
-/** Un bot ne peut pas décrire à voix haute → manche écourtée pour ne pas bloquer la partie. */
+/**
+ * Un bot ne décrit pas à voix haute, un joueur parti non plus (et son
+ * remplacement par un bot n'arrive qu'après 3 min) → manche écourtée.
+ */
 function roundDurationFor(state: TabouState, describerId: string): number {
-  const describer = state.players.find((p) => p.id === describerId)
-  return describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
+  return tabouDescriberIsAway(state.players.find((p) => p.id === describerId))
+    ? TABOU_BOT_DESCRIBER_ROUND_MS
+    : TABOU_ROUND_MS
+}
+
+/** Le décrivant ne décrira rien : bot, ou joueur parti. Sa manche est écourtée. */
+export function tabouDescriberIsAway(
+  describer: Pick<TabouPlayer, 'isBot' | 'leftAt'> | null | undefined
+): boolean {
+  return Boolean(describer && (describer.isBot || describer.leftAt))
 }
 
 /** Tire le prochain mot sans répétition ; réamorce la file si épuisée. */
@@ -312,13 +323,21 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new TabouEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: TabouState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Le décrivant s'en va en pleine manche : plus personne ne décrit, et lui
+      // seul pouvait passer le mot. Bilan tout de suite (les points marqués
+      // restent) plutôt que le reste des 60 s à vide. Jamais la fin de partie :
+      // elle s'enregistre sur /action, au « continuer » du bilan.
+      if (next.phase === 'describing' && action.playerId === next.describerId) {
+        return endRound(next, action.at)
+      }
+      return next
     }
 
     case 'REJOIN': {

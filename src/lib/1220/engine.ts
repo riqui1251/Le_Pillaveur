@@ -130,6 +130,34 @@ export function lockConfigsIfAllReady(state: Game1220State, setupReady: string[]
   }
 }
 
+/**
+ * Partie déjà lancée : donne des paris à qui n'en a pas. Les configs se
+ * verrouillent sur les seuls présents en fin de mise en place : un joueur parti
+ * à ce moment-là revenait (ou devenait bot) sans paris, donc sans aucun verdict
+ * jusqu'à la fin. Il reprend son brouillon — ou les choix par défaut s'il est
+ * en conflit, comme à l'échéance.
+ */
+function withMissingConfigs(state: Game1220State, playerIds: Iterable<string>): Game1220State {
+  if (state.phase !== 'play' || !state.configs) return state
+  const missing = new Set([...playerIds].filter((id) => !state.configs?.some((c) => c.playerId === id)))
+  if (missing.size === 0) return state
+  const added: Config1220[] = state.players
+    .filter((p) => missing.has(p.id))
+    .map((p) => {
+      const draft = state.draft[p.id] ?? defaultChoices1220()
+      const choices = draft.drinkNumber === draft.giveNumber ? defaultChoices1220() : draft
+      // Identité APRÈS le brouillon : un brouillon forgé portant un `playerId`
+      // l'écraserait, et la config manquerait encore au retour suivant.
+      return { ...choices, playerId: p.id, name: p.name }
+    })
+  const seat = (id: string) => state.players.findIndex((p) => p.id === id)
+  return {
+    ...state,
+    configs: [...state.configs, ...added].sort((a, b) => seat(a.playerId) - seat(b.playerId)),
+    setupReady: Array.from(new Set([...state.setupReady, ...added.map((c) => c.playerId)])),
+  }
+}
+
 export function reduceGame1220(state: Game1220State, action: Game1220Action): Game1220State {
   switch (action.type) {
     case 'SET_DRAFT': {
@@ -238,11 +266,14 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
     case 'REJOIN': {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot || !player.leftAt) throw new Game1220EngineError('CANNOT_REJOIN')
-      return {
-        ...state,
-        players: state.players.map((p) => (p.id === action.playerId ? { ...p, leftAt: null } : p)),
-        version: state.version + 1,
-      }
+      return withMissingConfigs(
+        {
+          ...state,
+          players: state.players.map((p) => (p.id === action.playerId ? { ...p, leftAt: null } : p)),
+          version: state.version + 1,
+        },
+        [action.playerId]
+      )
     }
 
     case 'REPLACE_LEFT': {
@@ -259,7 +290,7 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
         version: state.version + 1,
       }
       if (next.phase === 'setup') return lockConfigsIfAllReady(next, next.setupReady)
-      return next
+      return withMissingConfigs(next, ids)
     }
 
     default:

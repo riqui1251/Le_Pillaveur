@@ -332,12 +332,11 @@ describe('processRematchVote — Patate Chaude', () => {
   it('renvoie au lobby quand un seul joueur reste présent', async () => {
     db = { gameStateJson: pcFinished([]), stateVersion: 7 }
 
-    // u2 a fermé l'onglet sans quitter : u1 vote seul, la relance le retire.
+    // u2 a fermé l'onglet sans quitter : u1 vote seul. Rien n'est relancé,
+    // donc u2 garde son siège — le lobby le libérera s'il ne revient pas.
     await processRematchVote('room-1', pcRoom(db, ['u2']), 'u1')
 
-    expect(memberMock.deleteMany).toHaveBeenCalledWith({
-      where: { roomId: 'room-1', userId: { in: ['u2'] } },
-    })
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
     expect(roomWrites().at(-1)).toMatchObject({ status: 'waiting', gameStateJson: null, stateVersion: 0 })
     expect(roomWrites().some((d) => d.status === 'playing')).toBe(false)
   })
@@ -352,6 +351,115 @@ describe('processRematchVote — Patate Chaude', () => {
     const players = JSON.parse(write?.gameStateJson ?? '{}').players as { id: string; isBot: boolean }[]
     expect(players.map((p) => p.id)).toEqual(['u1', 'u2'])
     expect(players.some((p) => p.isBot)).toBe(false)
+  })
+})
+
+// Jeux sans bots de complément : sous leur minimum, le lanceur lève. Avant,
+// les absents étaient déjà retirés (« la table a rejoué sans vous ») et chaque
+// nouveau vote relevait la même erreur, la table figée sur l'écran de fin.
+describe('processRematchVote — effectif insuffisant pour relancer', () => {
+  const USERS = ['u1', 'u2', 'u3', 'u4']
+  const smallRoom = (gameId: string, row: Row, absent: string[] = []) => ({
+    id: 'room-1',
+    gameId,
+    hostUserId: 'u1',
+    settingsJson: JSON.stringify({ lang: 'fr' }),
+    members: USERS.map((userId) => ({
+      userId,
+      user: { displayName: userId },
+      lastSeenAt: absent.includes(userId) ? absentSince() : new Date(),
+    })),
+    gameStateJson: row.gameStateJson,
+    stateVersion: row.stateVersion,
+  })
+  const over = (votes: string[]) => JSON.stringify({ version: 7, phase: 'finished', rematchVotes: votes })
+  const roomWrites = () =>
+    roomMock.update.mock.calls.map((c) => c[0].data as { status?: string; gameStateJson?: string | null })
+
+  it('Téléphone Dessiné à 2 présents (minimum 3) : retour au lobby, aucun absent retiré', async () => {
+    db = { gameStateJson: over(['u2']), stateVersion: 7 }
+
+    await expect(
+      processRematchVote('room-1', smallRoom('telephone-dessine', db, ['u3', 'u4']), 'u1')
+    ).resolves.toBeUndefined()
+
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
+    expect(roomWrites().at(-1)).toMatchObject({ status: 'waiting', gameStateJson: null, stateVersion: 0 })
+    expect(roomWrites().some((d) => d.status === 'playing')).toBe(false)
+    // Chacun retrouve le délai de grâce du lobby, absents compris.
+    expect(memberMock.updateMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1' },
+      data: { isReady: false, lastSeenAt: expect.any(Date) },
+    })
+  })
+
+  it('Mots Codés à 3 présents (minimum 4) : retour au lobby, aucun absent retiré', async () => {
+    db = { gameStateJson: over(['u2', 'u3']), stateVersion: 7 }
+
+    await expect(
+      processRematchVote('room-1', smallRoom('mots-codes', db, ['u4']), 'u1')
+    ).resolves.toBeUndefined()
+
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
+    expect(roomWrites().at(-1)).toMatchObject({ status: 'waiting', gameStateJson: null, stateVersion: 0 })
+  })
+
+  it('hôte absent : il garde son siège mais passe la main au plus ancien présent', async () => {
+    db = { gameStateJson: over(['u3']), stateVersion: 7 }
+
+    // u1 est l'hôte (smallRoom) : sans la passation, u2 et u3 ne pourraient ni
+    // changer de jeu ni lancer avant que le lobby libère son siège.
+    await processRematchVote('room-1', smallRoom('telephone-dessine', db, ['u1', 'u4']), 'u2')
+
+    expect(roomMock.update).toHaveBeenCalledWith({ where: { id: 'room-1' }, data: { hostUserId: 'u2' } })
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
+    expect(roomWrites().at(-1)).toMatchObject({ status: 'waiting', gameStateJson: null, stateVersion: 0 })
+  })
+
+  it('hôte présent : il reste l’hôte au retour au lobby', async () => {
+    db = { gameStateJson: over(['u2']), stateVersion: 7 }
+
+    await processRematchVote('room-1', smallRoom('telephone-dessine', db, ['u3', 'u4']), 'u1')
+
+    expect(roomWrites().some((d) => 'hostUserId' in d)).toBe(false)
+  })
+
+  it('Téléphone Dessiné à 3 présents : relance entre présents, l’absent est retiré', async () => {
+    db = { gameStateJson: over(['u2', 'u3']), stateVersion: 7 }
+
+    await processRematchVote('room-1', smallRoom('telephone-dessine', db, ['u4']), 'u1')
+
+    expect(memberMock.deleteMany).toHaveBeenCalledWith({
+      where: { roomId: 'room-1', userId: { in: ['u4'] } },
+    })
+    const write = roomWrites().find((d) => d.status === 'playing')
+    const players = JSON.parse(write?.gameStateJson ?? '{}').players as { id: string }[]
+    expect(players.map((p) => p.id)).toEqual(['u1', 'u2', 'u3'])
+  })
+
+  it('table pleine de bots rejointe à l’écran de fin : la relance a lieu, les bots font la place', async () => {
+    db = { gameStateJson: finished(['u2', 'u3']), stateVersion: 4 }
+    // 7 bots réglés pour 1 humain (8 places au Président), puis deux amis
+    // arrivent : 3 + 7 dépasse le plafond, mais le lanceur ramène les bots à 5.
+    const room = { ...roomInput(db), settingsJson: JSON.stringify({ botsCount: 7 }) }
+
+    await processRematchVote('room-1', room, 'u1')
+
+    expect(launchPresidentMock).toHaveBeenCalledTimes(1)
+    expect(launchedMemberIds()).toEqual(['u1', 'u2', 'u3'])
+    expect(db).toEqual({ gameStateJson: playing(), stateVersion: 1 })
+  })
+
+  it('le vote suivant ne retombe pas sur la même erreur : la table est au lobby', async () => {
+    db = { gameStateJson: over(['u2']), stateVersion: 7 }
+    await processRematchVote('room-1', smallRoom('telephone-dessine', db, ['u3', 'u4']), 'u1')
+
+    // La base ne porte plus de partie terminée : un clic retardataire est refusé
+    // proprement, sans toucher aux membres.
+    await expect(
+      processRematchVote('room-1', smallRoom('telephone-dessine', db, ['u3', 'u4']), 'u2')
+    ).rejects.toThrow('game_not_finished')
+    expect(memberMock.deleteMany).not.toHaveBeenCalled()
   })
 })
 

@@ -168,6 +168,18 @@ export function preActive(state: PreState): PrePlayer[] {
   return state.players.filter((p) => !p.leftAt)
 }
 
+/**
+ * Assis à la table mais pas servi par la donne en cours : il regarde la manche
+ * et reprendra à la suivante. Lisible sur l'état comme sur la vue d'un joueur.
+ */
+export function preSitsOut(
+  state: Pick<PreState, 'phase' | 'outOrder'>,
+  playerId: string,
+  handCount: number
+): boolean {
+  return state.phase === 'playing' && handCount === 0 && !state.outOrder.includes(playerId)
+}
+
 /** Joueurs encore en course dans la manche (actifs ET avec des cartes). */
 function inRace(state: PreState): PrePlayer[] {
   return preActive(state).filter((p) => p.hand.length > 0)
@@ -481,9 +493,13 @@ function endManche(state: PreState, now: number): PreState {
   state = archiveTrick(state, state.lastPlay?.playerId ?? null)
   const straggler = inRace(state)[0] ?? null
   const ranking = [...state.outOrder, ...(straggler ? [straggler.id] : [])]
-  // Les déserteurs (inactifs avec cartes) ferment le classement.
+  // Les déserteurs (inactifs avec cartes) ferment le classement. Une main vide
+  // hors de l'ordre de sortie, c'est un joueur que la donne n'a PAS servi
+  // (parti au compte à rebours ou à l'interlude, revenu ou remplacé par un bot
+  // depuis) : il n'a pas joué la manche, il n'y est pas classé — sinon il
+  // héritait du Trou, de l'échange et des gorgées à la place du vrai dernier.
   for (const p of state.players) {
-    if (!ranking.includes(p.id)) ranking.push(p.id)
+    if (!ranking.includes(p.id) && p.hand.length > 0) ranking.push(p.id)
   }
   const presidentId = ranking[0] ?? null
   const trouId = ranking[ranking.length - 1] ?? null

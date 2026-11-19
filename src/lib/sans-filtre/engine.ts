@@ -212,6 +212,34 @@ function enterJudging(state: SFState, now: number): SFState {
   }
 }
 
+/** Ceux qu'on attend encore : présents, hors juge, sans carte abattue. */
+function awaitedPlayers(state: SFState): SFPlayer[] {
+  return roundPlayers(state).filter((p) => !state.submissions.some((s) => s.playerId === p.id))
+}
+
+/**
+ * Le juge n'est plus là en pleine manche : le rôle passe au prochain de la
+ * rotation, sans attendre le remplacement par un bot (3 min, alors que le
+ * jugement en dure 1 min 30 et se soldait par une couronne au hasard). Le
+ * nouveau juge reprend la carte qu'il avait abattue : il ne départage pas sa
+ * propre réponse. En jugement, il repart avec un délai entier.
+ */
+function handOverJudge(state: SFState, now: number): SFState {
+  const judgeId = nextJudgeId(state, state.judgeId)
+  if (!judgeId || judgeId === state.judgeId) return state
+  const own = state.submissions.find((s) => s.playerId === judgeId)
+  const next: SFState = {
+    ...state,
+    judgeId,
+    submissions: own ? state.submissions.filter((s) => s.playerId !== judgeId) : state.submissions,
+    players: own
+      ? state.players.map((p) => (p.id === judgeId ? { ...p, hand: [...p.hand, own.card] } : p))
+      : state.players,
+  }
+  if (next.phase === 'judging' || awaitedPlayers(next).length === 0) return enterJudging(next, now)
+  return next
+}
+
 /** Couronne (ou non) et repioche pour ceux qui ont joué. */
 function enterReveal(
   state: SFState,
@@ -258,10 +286,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
         p.id === actor.id ? { ...p, hand: p.hand.filter((c) => c !== action.card) } : p
       )
       const next = { ...state, players, submissions, version: state.version + 1 }
-      const waiting = roundPlayers(next).filter(
-        (p) => !submissions.some((s) => s.playerId === p.id)
-      )
-      if (waiting.length === 0) return enterJudging(next, action.now)
+      if (awaitedPlayers(next).length === 0) return enterJudging(next, action.now)
       return next
     }
 
@@ -320,13 +345,23 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new SFEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const next: SFState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Plus aucun humain à table (des bots, tout au plus) : rien à faire
+      // avancer, chacun retrouve la manche — et son rôle — à son retour.
+      if (humans(next).length === 0) return next
+      if (next.phase !== 'submit' && next.phase !== 'judging') return next
+      if (action.playerId === next.judgeId) return handOverJudge(next, action.at)
+      // Le dernier joueur attendu s'en va : inutile de laisser courir le chrono.
+      if (next.phase === 'submit' && awaitedPlayers(next).length === 0) {
+        return enterJudging(next, action.at)
+      }
+      return next
     }
 
     case 'REJOIN': {
@@ -347,7 +382,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       )
       if (expired.length === 0) throw new SFEngineError('NOTHING_TO_REPLACE')
       const ids = new Set(expired.map((p) => p.id))
-      let next: SFState = {
+      const next: SFState = {
         ...state,
         players: state.players.map((p) =>
           ids.has(p.id) ? { ...p, isBot: true, leftAt: null } : p
@@ -357,8 +392,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       // Le juge devenu bot passe la main au prochain de la rotation (humain
       // s'il en reste 2+) pour ne pas geler la table jusqu'au timeout.
       if (next.judgeId && ids.has(next.judgeId) && next.phase === 'judging') {
-        const replacement = nextJudgeId(next, next.judgeId)
-        if (replacement) next = { ...next, judgeId: replacement }
+        return handOverJudge(next, action.now)
       }
       return next
     }

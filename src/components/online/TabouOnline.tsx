@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import {
   TABOU_BOT_DESCRIBER_ROUND_MS,
   TABOU_ROUND_MS,
+  tabouDescriberIsAway,
   type TabouClientView,
   type TabouPlayerView,
   type TabouTeam,
@@ -278,7 +279,8 @@ export function TabouOnline() {
   const describing = view.phase === 'describing'
   const roundEnd = view.phase === 'roundEnd'
   const gameDecided = view.scores.A >= view.targetScore || view.scores.B >= view.targetScore
-  const roundTotal = describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
+  const shortRound = tabouDescriberIsAway(describer)
+  const roundTotal = shortRound ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
 
   // En pleine manche, la carte dit déjà tout au décrivant : son bandeau
   // s'allège pour que la carte entière tienne sur un petit écran.
@@ -358,7 +360,7 @@ export function TabouOnline() {
           phase={phaseTitle}
           endsAt={describing ? view.phaseEndsAt : null}
           total={roundTotal}
-          dangerMs={describer?.isBot ? 0 : 15_000}
+          dangerMs={shortRound ? 0 : 15_000}
           right={<TutorialReopenButton onClick={tutorial.reopen} className="h-11 w-11" />}
           status={
             <span className="flex flex-wrap items-center gap-x-2">

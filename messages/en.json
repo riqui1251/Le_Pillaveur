@@ -5503,6 +5503,7 @@
         "pass": "Pass",
         "leadHint": "You lead: single, pair, triple or quad — your choice.",
         "out": "You are out! Position {rank} — watch the others sweat.",
+        "sittingOut": "This round was dealt without you: {last, select, true {you watch it and are not ranked.} other {you are back in at the next deal.}}",
         "roles": {
           "president": "{genre, select, f {President} m {President} other {President}}",
           "trou": "Trou",

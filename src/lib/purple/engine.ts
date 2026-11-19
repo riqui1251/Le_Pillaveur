@@ -259,7 +259,19 @@ export function reducePurple(state: PurpleState, action: PurpleAction): PurpleSt
       const next = { ...state, players, version: state.version + 1 }
       // Si c'était le tour du partant, passe la main sans changer la cagnotte.
       if (currentPurpleActorId(state) === action.playerId && activePlayerIds(next).length > 0) {
-        return { ...next, currentPlayer: nextActiveIndex(next, next.currentPlayer) }
+        // Sa pioche part avec lui : le verdict et la décision s'affichent au
+        // nom du joueur COURANT, le suivant aurait lu « tu dois boire » pour
+        // une pénalité déjà comptée au partant, puis perdu son tour à la fermer.
+        return {
+          ...next,
+          currentPlayer: nextActiveIndex(next, next.currentPlayer),
+          drawnCards: [],
+          lastBet: null,
+          isCorrect: null,
+          canContinue: false,
+          pendingReveal: false,
+          amountToDrink: 0,
+        }
       }
       return next
     }
