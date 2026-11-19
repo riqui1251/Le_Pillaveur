@@ -548,6 +548,83 @@ describe('contrat remplacement (LEAVE / REJOIN / REPLACE_LEFT)', () => {
   })
 })
 
+describe('le tour ne se pose jamais sur un partant tant qu’un autre vivant est présent', () => {
+  const four = (over: Partial<MenteurState> = {}) =>
+    craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1]), P('d', [3, 3])], { turnIdx: 0, ...over })
+  const bid = (s: MenteurState, playerId: string, qty: number, face: number, say?: MenteurSay) =>
+    reduceMenteur(s, { type: 'BID', playerId, qty, face, say })
+  const leave = (s: MenteurState, playerId: string, at = T0) => reduceMenteur(s, { type: 'LEAVE', playerId, at })
+
+  it('D part hors de son tour, A, B, C enchérissent : la main revient à A, pas à D', () => {
+    const left = leave(four(), 'd')
+    expect(left.turnIdx).toBe(0)
+    const atC = bid(bid(left, 'a', 1, 2), 'b', 2, 2)
+    expect(atC.turnIdx).toBe(2)
+    const after = bid(atC, 'c', 3, 2)
+    expect(after.turnIdx).toBe(0)
+    expect(currentMenteurActorId(after)).toBe('a')
+    // sure / unsure visent le vrai répondant, celui que le moteur désigne.
+    expect(bid(atC, 'c', 3, 2, { kind: 'sure', targetId: 'a' }).speech).toEqual([
+      { playerId: 'c', kind: 'sure', targetId: 'a', round: 1 },
+    ])
+    expect(() => bid(atC, 'c', 3, 2, { kind: 'sure', targetId: 'd' })).toThrow('INVALID_TARGET')
+  })
+
+  it('CONTINUE : le perdant du défi parti ne rouvre pas, le suivant présent le fait', () => {
+    // b (un 4) + c (un joker) = 2 dés de 4 : l'enchère tient, d (accusateur) perd un dé.
+    const revealed = reduceMenteur(four({ turnIdx: 3, currentBid: { qty: 2, face: 4, by: 'c' } }), {
+      type: 'DUDO',
+      playerId: 'd',
+      now: T0,
+    })
+    expect(revealed.lastReveal?.loserId).toBe('d')
+    expect(revealed.players[3].dice).toHaveLength(1)
+    const next = reduceMenteur(leave(revealed, 'd', T0 + 1_000), { type: 'CONTINUE', playerId: 'a', now: T_CONT })
+    expect(next.phase).toBe('bidding')
+    expect(next.turnIdx).toBe(0)
+    expect(currentMenteurActorId(next)).toBe('a')
+  })
+
+  it('CONTINUE : perdant éliminé, son suivant parti est sauté aussi', () => {
+    const s = craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1]), P('d', [3])], {
+      turnIdx: 3,
+      currentBid: { qty: 2, face: 4, by: 'c' },
+    })
+    const revealed = reduceMenteur(leave(s, 'a'), { type: 'DUDO', playerId: 'd', now: T0 })
+    expect(revealed.lastReveal?.eliminatedId).toBe('d')
+    const next = reduceMenteur(revealed, { type: 'CONTINUE', playerId: 'b', now: T_CONT })
+    expect(next.turnIdx).toBe(1)
+  })
+
+  it('tous les autres vivants partis : repli sur le prochain vivant, sans exception', () => {
+    const away = leave(leave(craft([P('a', [2, 3]), P('b', [4, 5]), P('c', [6, 1])], { turnIdx: 0 }), 'b'), 'c')
+    expect(bid(away, 'a', 1, 2).turnIdx).toBe(1)
+    expect(leave(away, 'a', T0 + 1).turnIdx).toBe(1)
+
+    const duo = craft([P('a', [2, 3]), P('b', [4, 5])], { turnIdx: 1, currentBid: { qty: 1, face: 4, by: 'a' } })
+    const revealed = reduceMenteur(duo, { type: 'DUDO', playerId: 'b', now: T0 })
+    expect(revealed.lastReveal?.loserId).toBe('b')
+    const empty = leave(leave(revealed, 'a'), 'b')
+    const next = reduceMenteur(empty, { type: 'CONTINUE', playerId: 'a', now: T_CONT })
+    expect(next.phase).toBe('bidding')
+    expect([0, 1]).toContain(next.turnIdx)
+  })
+
+  it('le revenant (REJOIN) ou le partant devenu bot retrouve ses tours', () => {
+    const round = bid(bid(bid(leave(four(), 'd'), 'a', 1, 2), 'b', 2, 2), 'c', 3, 2)
+    expect(round.turnIdx).toBe(0)
+    const back = reduceMenteur(round, { type: 'REJOIN', playerId: 'd' })
+    expect(back.turnIdx).toBe(0)
+    const again = bid(bid(bid(back, 'a', 4, 2), 'b', 5, 2), 'c', 6, 2)
+    expect(again.turnIdx).toBe(3)
+    expect(currentMenteurActorId(again)).toBe('d')
+
+    const replaced = reduceMenteur(round, { type: 'REPLACE_LEFT', now: T0 + 60_000, graceMs: 30_000 })
+    expect(replaced.players[3].isBot).toBe(true)
+    expect(bid(bid(bid(replaced, 'a', 4, 2), 'b', 5, 2), 'c', 6, 2).turnIdx).toBe(3)
+  })
+})
+
 describe('vues anti-triche', () => {
   it('le viewer voit SES dés, les autres un simple compte, jamais rngState', () => {
     const s = craft([P('a', [2, 3]), P('b', [4, 5, 6])])

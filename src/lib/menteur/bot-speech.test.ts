@@ -352,6 +352,41 @@ describe('défi, Calza et pique d’ouverture', () => {
     }
   })
 
+  it('voisin parti : sure / unsure visent le suivant PRÉSENT, celui que le moteur désigne, et le coup passe pour chaque persona', () => {
+    const table = (name: string, over: Partial<MenteurState> = {}) =>
+      reduceMenteur(
+        craft(
+          [
+            P('me', [6, 6, 6, 1, 1], { name }),
+            P('h1', [2, 3, 4, 5, 6], { name: 'Riqui', isBot: false }),
+            P('h2', [1, 2, 4, 4, 6], { name: 'Lola', isBot: false }),
+            P('h3', [2, 2, 5, 6, 6], { name: 'Max', isBot: false }),
+          ],
+          over
+        ),
+        { type: 'LEAVE', playerId: 'h1', at: T0 }
+      )
+    const facing = { currentBid: { qty: 3, face: 4, by: 'h3' }, bids: [{ qty: 3, face: 4, by: 'h3' }] }
+    let tells = 0
+    for (const persona of BOT_PERSONAS) {
+      for (const s of [table(persona.name), table(persona.name, facing)]) {
+        expect(currentMenteurActorId(s)).toBe('me')
+        for (let g = 0; g < 40; g += 1) {
+          const r = applyMenteurBotAction(s, createRng(`voisin-${persona.name}-${g}`).next, T0 + 3_000)
+          expect(r, `${persona.name}, graine ${g}`).toMatchObject({ ok: true })
+          if (!r.ok) continue
+          if (r.state.currentBid?.by === 'me') expect(currentMenteurActorId(r.state)).toBe('h2')
+          const said = r.state.speech?.find((sp) => sp.kind === 'sure' || sp.kind === 'unsure')
+          if (said) {
+            expect(said.targetId).toBe('h2')
+            tells += 1
+          }
+        }
+      }
+    }
+    expect(tells).toBeGreaterThan(100)
+  }, SLOW)
+
   it('chaque parole est valide pour le moteur, qui l’accepte dans la même réduction', () => {
     const states = biddingStates(6)
     let checked = 0

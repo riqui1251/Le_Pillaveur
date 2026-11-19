@@ -31,6 +31,7 @@ import {
   type EspionHumanSpeakKind,
 } from '@/lib/espion/engine'
 import { espionLocationsFor } from '@/lib/espion/data'
+import { espionOffersGuess, espionPanelMode, type EspionPanelMode } from '@/lib/espion/panel-mode'
 import { ESPION_QUESTION_IDS, type EspionAnswer, type EspionQuestionId } from '@/lib/espion/data/questions'
 import { espionBotTickDelayMs, espionHash01 } from '@/lib/espion/bot-tick'
 import { botAvatarFromName } from '@/lib/online/bot-personas'
@@ -61,7 +62,7 @@ import { espionTurn } from './espion/espion-turn'
  * Dès qu'un bot est à table, un fil de questions et réponses par boutons
  * s'ajoute au vocal, avec une seule zone d'action, par priorité : on
  * m'interroge (QuestionCard) ; une accusation est en cours (soutenir ou
- * « Je ne suis pas d'accord ») ; c'est à moi de poser (AskSheet) ; sinon
+ * « Je ne suis pas d'accord », l'espion pouvant toujours deviner) ; c'est à moi de poser (AskSheet) ; sinon
  * accuser, poser une question et, pour l'espion, deviner — plus deux paroles
  * libres, « Je trouve ça louche » et « Me défendre » (quand on me vise,
  * espionAimedBy), auxquelles les bots réagissent. Une table 100 % humaine
@@ -73,7 +74,7 @@ import { espionTurn } from './espion/espion-turn'
  * (soutien).
  */
 
-type PanelMode = 'question' | 'accusation' | 'ask' | 'accuse' | 'guess' | 'speak' | 'idle'
+type PanelMode = EspionPanelMode
 
 function parseView(json: string | null | undefined): EspionClientView | null {
   if (!json) return null
@@ -380,19 +381,20 @@ export function EspionOnline() {
       return { round: view.round, ids: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id] }
     })
 
-  const mode: PanelMode = myQuestion
-    ? 'question'
-    : acc
-      ? 'accusation'
-      : askable && (askOpen || (myHand && !askDismissed))
-        ? 'ask'
-        : showAccuseGrid
-          ? 'accuse'
-          : showGuessGrid && view.isSpy
-            ? 'guess'
-            : speakMode && hasBot
-              ? 'speak'
-              : 'idle'
+  const mode: PanelMode = espionPanelMode({
+    isSpy: view.isSpy,
+    hasBot,
+    questionForMe: Boolean(myQuestion),
+    accusation: Boolean(acc),
+    askable,
+    askOpen,
+    myHand,
+    askDismissed,
+    showAccuseGrid,
+    showGuessGrid,
+    speakMode,
+  })
+  const offersGuess = espionOffersGuess(mode, view.isSpy)
 
   // Un seul volet ouvert à la fois : ouvrir l'un referme les autres.
   const openPanel = (next: 'ask' | 'accuse' | 'guess' | 'speak') => {
@@ -535,7 +537,7 @@ export function EspionOnline() {
       </div>
     )
   } else if (mode === 'guess') {
-    panel = (
+    const grid = (
       <LocationGuessGrid
         locations={locations}
         struck={struckIds}
@@ -545,6 +547,37 @@ export function EspionOnline() {
         onSelect={setGuessPick}
         disabled={busy}
       />
+    )
+    panel = acc ? (
+      <div className="space-y-3">
+        <div className="space-y-2 rounded-2xl border border-suit-red/40 bg-suit-red/10 p-3">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight text-cream">
+                {t('accusation.title', { accuser: nameOf(acc.accuserId), target: nameOf(acc.targetId) })}
+              </p>
+              <p className="mt-0.5 text-xs text-cream/80">
+                {t('accusation.support', { count: acc.supporters.length, needed: majorityNeeded })}
+              </p>
+            </div>
+            <Button variant="quiet" size="game" className="shrink-0" onClick={closePanels}>
+              {tc('back')}
+            </Button>
+          </div>
+          <PhaseCountdown
+            variant="bar"
+            showDigits
+            endsAt={acc.endsAt}
+            total={ESPION_ACCUSATION_WINDOW_MS}
+            dangerMs={5_000}
+            colorClassName="bg-gold"
+            className="flex w-full items-center gap-3"
+          />
+        </div>
+        {grid}
+      </div>
+    ) : (
+      grid
     )
   } else if (mode === 'speak') {
     panel = (
@@ -585,7 +618,7 @@ export function EspionOnline() {
             </p>
           </>
         )}
-        {view.isSpy && (
+        {offersGuess && (
           <Button variant="quiet" size="game" onClick={() => openPanel('guess')} className="w-full">
             <MapPin aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
             {t('guessButton')}
@@ -606,14 +639,30 @@ export function EspionOnline() {
         : iAmAccused
           ? t('accusation.youAreAccused')
           : null
+    const withDecline = canVote && hasBot && !iAmAccuser
+    const defendSlot = !canVote && iAmAccused && hasBot && defendButton ? defendButton : null
+    // Trois boutons côte à côte à 375 px : marges et corps resserrés pour tenir sur la hauteur du bouton.
+    const tight = withDecline && offersGuess
+    const btnClass = cn('min-w-0 flex-1 whitespace-normal leading-tight', tight && 'px-2 text-sm')
+    const guessButton = offersGuess ? (
+      <Button
+        variant="quiet"
+        size={defendSlot ? 'game' : 'gameLg'}
+        className={btnClass}
+        onClick={() => openPanel('guess')}
+      >
+        <MapPin aria-hidden className="mr-1.5 h-4 w-4 shrink-0" />
+        {t('guessButton')}
+      </Button>
+    ) : null
     if (canVote) {
       barActions = (
         <div className="flex gap-2">
-          {hasBot && !iAmAccuser && (
+          {withDecline && (
             <Button
               variant="quiet"
               size="gameLg"
-              className="min-w-0 flex-1 whitespace-normal leading-tight"
+              className={btnClass}
               onClick={() => void sendAction({ action: 'decline' })}
               disabled={busy}
             >
@@ -623,16 +672,26 @@ export function EspionOnline() {
           <Button
             variant="danger"
             size="gameLg"
-            className="min-w-0 flex-1 whitespace-normal leading-tight"
+            className={btnClass}
             onClick={() => setSupportAsked(true)}
             disabled={busy}
           >
             {t('accusation.supportButton')}
           </Button>
+          {guessButton}
         </div>
       )
-    } else if (iAmAccused && hasBot && defendButton) {
-      barActions = defendButton
+    } else if (defendSlot) {
+      barActions = guessButton ? (
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">{defendSlot}</div>
+          {guessButton}
+        </div>
+      ) : (
+        defendSlot
+      )
+    } else if (guessButton) {
+      barActions = <div className="flex gap-2">{guessButton}</div>
     }
   } else if (mode === 'ask') {
     barStatus = t('asksLeft', { n: ESPION_ASKS_PER_PLAYER - myAsks, max: ESPION_ASKS_PER_PLAYER })
@@ -702,7 +761,7 @@ export function EspionOnline() {
     ) : (
       <div className="flex gap-2">
         <Button variant="quiet" size="gameLg" className="min-w-0 flex-1" onClick={closePanels}>
-          {tc('close')}
+          {acc ? tc('back') : tc('close')}
         </Button>
         <Button
           variant="primary"

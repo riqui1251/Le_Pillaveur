@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import type { TvRoomDto } from '@/lib/online-room'
 import type { LGClientView, LGPlayerView, LGRole } from '@/lib/loup-garou/engine'
+import { lgPhaseDisplay } from '@/lib/loup-garou/phase-display'
 import { WolfIcon } from '@/components/icons/GameIcons'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
@@ -82,6 +83,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
   const reduced = useReducedMotion()
   const finished = state.phase === 'finished'
   const isNight = NIGHT_PHASES.has(state.phase)
+  const phaseDisplay = lgPhaseDisplay(state, '')
   const isVote = state.phase === 'day-vote' || state.phase === 'day-revote'
   const totalPhaseMs = state.phase === 'day-debate' ? state.debateMs : PHASE_TOTAL_MS[state.phase] ?? 60_000
   const alive = state.players.filter((p) => p.alive)
@@ -340,9 +342,9 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
           {t(isNight || state.phase === 'reveal-role' ? 'roundNight' : 'roundDay', { n: Math.max(1, state.round) })}
         </span>
         <span className="shrink-0 font-display text-2xl font-bold uppercase tracking-widest text-gold">
-          {t(`phases.${state.phase}`)}
+          {t(phaseDisplay.labelKey)}
         </span>
-        {state.phaseEndsAt !== null ? (
+        {phaseDisplay.countdown && state.phaseEndsAt !== null ? (
           <PhaseCountdown
             variant="bar"
             endsAt={state.phaseEndsAt}
@@ -363,7 +365,7 @@ export function TvLoupGarou({ room, state }: { room: TvRoomDto; state: LGClientV
 
       <div className="flex min-h-0 flex-1 gap-8">
         <motion.div
-          key={`${state.phase}#${state.phaseSeq}`}
+          key={phaseDisplay.screenKey}
           initial={reduced ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}

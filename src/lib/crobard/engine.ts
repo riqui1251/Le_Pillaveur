@@ -157,12 +157,31 @@ export function crobardActive(state: CrobardState): CrobardPlayer[] {
   return state.players.filter((p) => !p.leftAt)
 }
 
-function normalize(text: string): string {
+// œ et æ ne se décomposent pas en NFD : « coeur » serait refusé pour « Cœur ».
+// Tirets, apostrophes (dont la typographique du clavier iOS) et ponctuation
+// deviennent une seule espace.
+export function normalizeCrobardGuess(text: string): string {
   return text
     .toLowerCase()
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{M}/gu, '')
+    .replace(/(?:[^\p{L}\p{N}]|\p{Lm})+/gu, ' ')
     .trim()
+}
+
+function compact(normalized: string): string {
+  return normalized.replace(/ /g, '')
+}
+
+export function judgeCrobardGuess(text: string, secret: string): 'correct' | 'close' | 'wrong' {
+  const guess = normalizeCrobardGuess(text)
+  const word = normalizeCrobardGuess(secret)
+  if (guess.length === 0 || word.length === 0) return 'wrong'
+  if (guess === word || compact(guess) === compact(word)) return 'correct'
+  if (levenshtein(guess, word) <= 1 || levenshtein(compact(guess), compact(word)) <= 1) return 'close'
+  return 'wrong'
 }
 
 /** Distance de Levenshtein (DP classique) — pour le feedback « proche ! ». */
@@ -332,9 +351,8 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
       if (player.id === state.drawerId) throw new CrobardEngineError('DRAWER_CANNOT_GUESS')
       if (state.correctGuessers.includes(player.id)) throw new CrobardEngineError('ALREADY_GUESSED')
 
-      const guess = normalize(action.text)
-      const word = normalize(state.word ?? '')
-      if (guess.length > 0 && guess === word) {
+      const verdict = judgeCrobardGuess(action.text, state.word ?? '')
+      if (verdict === 'correct') {
         const place = state.correctGuessers.length
         const points = place === 0 ? CROBARD_POINTS_FIRST : place === 1 ? CROBARD_POINTS_SECOND : CROBARD_POINTS_OTHER
         const correctGuessers = [...state.correctGuessers, player.id]
@@ -350,7 +368,7 @@ export function reduceCrobard(state: CrobardState, action: CrobardAction): Croba
         }
         return next
       }
-      if (guess.length > 0 && levenshtein(guess, word) <= 1) throw new CrobardEngineError('GUESS_CLOSE')
+      if (verdict === 'close') throw new CrobardEngineError('GUESS_CLOSE')
       throw new CrobardEngineError('GUESS_WRONG')
     }
 

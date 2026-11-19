@@ -6,10 +6,12 @@ import {
   currentTCPlayerId,
   placeTCBots,
   reduceTC,
+  tcActorPlaysAuto,
   toTCClientView,
   toTCSpectatorView,
   TCEngineError,
   TC_MODES,
+  TC_PLACEMENT_MS,
   type TCClientView,
   type TCInitialPlayer,
   type TCMode,
@@ -85,11 +87,13 @@ export function buildTCState(
   mode: TCMode,
   teamChoices: Record<string, TeamId>,
   seed: string | number,
-  rules: { powerups?: boolean } = {}
+  rules: { powerups?: boolean } = {},
+  now: number = Date.now()
 ): TCState {
   const players = buildTCPlayers(members, mode, teamChoices)
   // Les bots placent leurs navires immédiatement.
-  return advanceTCBots(createInitialTCState(players, mode, seed, rules))
+  const state = advanceTCBots(createInitialTCState(players, mode, seed, rules))
+  return { ...state, placementEndsAt: now + TC_PLACEMENT_MS }
 }
 
 export function serializeTCState(state: TCState): string {
@@ -114,30 +118,35 @@ export type TCRoomActionInput =
   | { type: 'bot' }
   /** Tick client : remplace par des bots les joueurs partis depuis plus de 3 min (horloge SERVEUR). */
   | { type: 'replace-left' }
+  /** Échéance du placement (horloge SERVEUR) : les non placés le sont au hasard. */
+  | { type: 'advance' }
 
 export type TCRoomActionResult = { ok: true; state: TCState } | { ok: false; error: string }
 
 /**
  * Applique une action de salle. Les bots ne jouent qu'UN tir à la fois via le
- * tick `bot` (déclenché par un client quand c'est le tour d'un bot) : chaque
- * tir de bot est donc un état diffusé séparément, visible par tous.
+ * tick `bot` (déclenché par un client quand c'est le tour d'un bot ou d'un
+ * joueur parti) : chaque tir est donc un état diffusé séparément, visible par tous.
  */
 export function applyTCRoomAction(
   state: TCState,
   userId: string,
-  input: TCRoomActionInput
+  input: TCRoomActionInput,
+  now: number = Date.now()
 ): TCRoomActionResult {
   try {
     if (input.type === 'replace-left') {
-      const next = reduceTC(state, { type: 'REPLACE_LEFT', now: Date.now() })
+      const next = reduceTC(state, { type: 'REPLACE_LEFT', now })
       if (next === state) return { ok: false, error: 'NOTHING_TO_REPLACE' }
       // Un remplacé en phase placement doit poser ses navires immédiatement.
       return { ok: true, state: placeTCBots(next) }
     }
+    if (input.type === 'advance') {
+      return { ok: true, state: reduceTC(state, { type: 'PLACEMENT_TIMEOUT', now }) }
+    }
     if (input.type === 'bot') {
-      const activeId = currentTCPlayerId(state)
-      const active = state.players.find((p) => p.id === activeId)
-      if (!active?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+      const active = state.players.find((p) => p.id === currentTCPlayerId(state))
+      if (!active || !tcActorPlaysAuto(state)) return { ok: false, error: 'NOT_BOT_TURN' }
       const rng = rngFromState(state.rngState)
       const cell = botChooseCell(state, active.id, rng)
       const bomb = botShouldUseBomb(state, active, cell, rng)

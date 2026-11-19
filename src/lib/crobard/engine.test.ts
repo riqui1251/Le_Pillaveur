@@ -193,6 +193,55 @@ describe('GUESS', () => {
     ).toThrow('ALREADY_GUESSED')
   })
 
+  describe('normalisation : ligatures, tirets, apostrophes, espaces', () => {
+    function guessOn(word: string, text: string) {
+      const s = { ...makeWithKnownWord(), word }
+      const guesser = s.players.find((p) => p.id !== s.drawerId)!.id
+      return () => reduceCrobard(s, { type: 'GUESS', playerId: guesser, text, now: T0 })
+    }
+    function accepted(word: string, text: string): boolean {
+      return guessOn(word, text)().correctGuessers.length === 1
+    }
+
+    it.each([
+      ['Cœur', 'coeur'],
+      ['Œil', 'oeil'],
+      ['Ex æquo', 'ex aequo'],
+      ['Arc-en-ciel', 'arc en ciel'],
+      ['Arc-en-ciel', 'arc-en-ciel'],
+      ['Arc-en-ciel', 'arcenciel'],
+      ['Arc-en-ciel', 'Arc–en—ciel'],
+      ['Sous-marin', 'sous marin'],
+      ["Feu d'artifice", 'feu d’artifice'],
+      ['Feu d’artifice', "feu d'artifice"],
+      ["Feu d'artifice", 'feu dartifice'],
+      ["Feu d'artifice", 'feu dʼartifice'],
+      ['Pomme de terre', 'pomme  de   terre'],
+      ['Pomme de terre', '  POMME DE TERRE !  '],
+      ['Fantôme', 'FANTOME'],
+      ['Noël', 'noel'],
+    ])('« %s » accepte « %s »', (word, text) => {
+      expect(accepted(word, text)).toBe(true)
+    })
+
+    it('une proposition vide (ou que de la ponctuation) est refusée', () => {
+      expect(guessOn('Cœur', '')).toThrow('GUESS_WRONG')
+      expect(guessOn('Cœur', '   ')).toThrow('GUESS_WRONG')
+      expect(guessOn('Cœur', ' - ’ ')).toThrow('GUESS_WRONG')
+    })
+
+    it('« Proche » se calcule sur la forme normalisée', () => {
+      expect(guessOn('Arc-en-ciel', 'arc en cie')).toThrow('GUESS_CLOSE')
+      expect(guessOn('Cœur', 'coeurs')).toThrow('GUESS_CLOSE')
+      expect(guessOn('Sous-marin', 'sous marins')).toThrow('GUESS_CLOSE')
+    })
+
+    it('un mot faux reste faux', () => {
+      expect(guessOn('Cœur', 'pomme')).toThrow('GUESS_WRONG')
+      expect(guessOn('Arc-en-ciel', 'soleil')).toThrow('GUESS_WRONG')
+    })
+  })
+
   it('fin de manche anticipée dès que tous les non-dessinateurs ont trouvé', () => {
     let s = makeWithKnownWord()
     const word = s.word!

@@ -55,6 +55,7 @@ import {
   type LGRole,
 } from '@/lib/loup-garou/engine'
 import type { LGSpeakKind } from '@/lib/loup-garou/server-adapter'
+import { lgPhaseDisplay } from '@/lib/loup-garou/phase-display'
 import { useAdvanceTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { playGameSound } from '@/lib/sound/game-sounds'
@@ -551,6 +552,7 @@ export function LoupGarouOnline() {
   const myRole = view.myRole
   const finished = view.phase === 'finished'
   const isNight = NIGHT_PHASES.has(view.phase)
+  const phaseDisplay = lgPhaseDisplay(view, user.id)
   const isDebate = view.phase === 'day-debate'
   const isVotePhase = view.phase === 'day-vote' || view.phase === 'day-revote'
   // Chat du village : ouvert pendant les phases de jour (débat + votes).
@@ -1065,8 +1067,8 @@ export function LoupGarouOnline() {
     >
       <PhaseHeader
         round={roundLabel}
-        phase={t(`phases.${view.phase}`)}
-        endsAt={view.phaseEndsAt}
+        phase={t(phaseDisplay.labelKey)}
+        endsAt={phaseDisplay.countdown ? view.phaseEndsAt : null}
         total={totalPhaseMs}
         dangerMs={10_000}
         className={cn(isNight && 'border-chip-blue/50')}
@@ -1289,7 +1291,7 @@ export function LoupGarouOnline() {
       {/* ── Centre par phase ─────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={`${view.phase}#${view.phaseSeq}`}
+          key={phaseDisplay.screenKey}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}

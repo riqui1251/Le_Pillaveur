@@ -219,10 +219,26 @@ describe('LoupGarouOnline : écrans de partie dans les 4 langues', () => {
   })
 
   it('bandeau : « Nuit 1 » la nuit, « Jour 1 » le jour, la phase en entier', () => {
-    const night = render(craft(table('villageois'), 'night-wolves'))
+    const night = render(craft(table('loup'), 'night-wolves'))
     expect(night).toContain('Nuit 1')
     expect(night).toContain(lg('phases.night-wolves'))
     expect(render(craft(table('villageois'), 'day-vote'))).toContain('Jour 1')
+  })
+
+  it('la nuit, qui n’agit pas lit une nuit générique, sans chrono : ni la sous-phase ni sa durée ne trahissent un rôle', () => {
+    const actor = render(craft(table('sorciere'), 'night-witch', { nightVictimId: 'v' }))
+    expect(actor).toContain(lg('phases.night-witch'))
+    expect(actor).toContain('role="timer"')
+    for (const [role, phase] of [
+      ['villageois', 'night-witch'],
+      ['villageois', 'night-guard'],
+      ['loup', 'night-seer'],
+    ] as const) {
+      const html = render(craft(table(role), phase))
+      expect(html, `${role} ${phase}`).toContain(lg('phases.night'))
+      expect(html, `${role} ${phase}`).not.toContain(lg(`phases.${phase}`))
+      expect(html, `${role} ${phase}`).not.toContain('role="timer"')
+    }
   })
 
   it('vote du jour : choisir dans la grille, valider dans la barre ; accusations sur les cartes, débat à revoir', () => {

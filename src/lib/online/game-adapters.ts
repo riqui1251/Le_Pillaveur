@@ -26,7 +26,13 @@ import {
   tcSpectatorViewJson,
   type TCRoomActionInput,
 } from '@/lib/toucher-coule/server-adapter'
-import { currentTCPlayerId, reduceTC, toTCClientView, type TCState } from '@/lib/toucher-coule/engine'
+import {
+  currentTCPlayerId,
+  reduceTC,
+  tcActorPlaysAuto,
+  toTCClientView,
+  type TCState,
+} from '@/lib/toucher-coule/engine'
 import {
   parseMenteurState,
   serializeMenteurState,
@@ -597,11 +603,14 @@ const toucherCouleAdapter: GameAdapter = {
       input = { type: 'bot' }
     } else if (body.action === 'replace-left') {
       input = { type: 'replace-left' }
+    } else if (body.action === 'advance') {
+      input = { type: 'advance' }
     } else {
       return { ok: false, error: 'invalid_action', status: 400 }
     }
     const result = applyTCRoomAction(state, userId, input)
-    if (!result.ok) return { ok: false, error: result.error, status: 403 }
+    // 409 sur l'échéance : useAdvanceTick reprend un tick parti avant l'horloge serveur.
+    if (!result.ok) return { ok: false, error: result.error, status: input.type === 'advance' ? 409 : 403 }
     return { ok: true, state: result.state }
   },
   convertToBot: (state, userId) => convertTCPlayerToBot(state as TCState, userId),
@@ -625,14 +634,16 @@ const toucherCouleAdapter: GameAdapter = {
     if (!player) return null
     return reduceTC(state, { type: 'REJOIN', playerId: userId })
   },
-  // ToucherCouleOnline : tir du bot au tour, en bataille seulement (hors
-  // bataille, currentTCPlayerId rend null — le placement des bots est
-  // immédiat côté moteur).
+  // ToucherCouleOnline : tir d'un bot ou d'un joueur parti au tour, au tempo
+  // d'un bot (le placement des bots est immédiat côté moteur) ; échéance du
+  // placement → navires des retardataires posés au hasard.
   serviceTick(rawState, now, options) {
     const state = rawState as TCState
     const actor = playerById(state.players, currentTCPlayerId(state))
+    const placementDue = state.phase === 'placement' ? state.placementEndsAt ?? null : null
     return serviceTickOf(state.players, now, options, {
-      botDelayMs: (rand) => (actor?.isBot ? botTickDelayMs(actor.name, rand) : null),
+      advance: placementDue !== null ? { body: { action: 'advance' }, dueAt: placementDue } : null,
+      botDelayMs: (rand) => (actor && tcActorPlaysAuto(state) ? botTickDelayMs(actor.name, rand) : null),
     })
   },
 }

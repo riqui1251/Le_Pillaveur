@@ -15,6 +15,7 @@ import {
   isLegalRaise,
   menteurHumanSeated,
   menteurTotalDice,
+  reduceMenteur,
   toMenteurClientView,
   toMenteurSpectatorView,
   MENTEUR_REVEAL_MIN_MS,
@@ -25,7 +26,12 @@ import {
   type MenteurSpeech,
   type MenteurState,
 } from './engine'
-import { applyMenteurBotAction, applyMenteurRoomAction, type MenteurRoomActionInput } from './server-adapter'
+import {
+  applyMenteurBotAction,
+  applyMenteurRoomAction,
+  type MenteurRoomActionInput,
+  type MenteurRoomActionResult,
+} from './server-adapter'
 import { menteurBotTickDelayMs } from './bot-tick'
 import { menteurRevealReactions } from './reveal-reactions'
 import {
@@ -445,6 +451,71 @@ function run(config: string, games: number, seatsOf: (seed: number) => Seat[], r
   })
 }
 
+/** Le partant ne revient jamais : il finit en bot au remplacement, ce délai après son départ. */
+const LEAVER_GRACE_MS = 180_000
+
+/**
+ * Une partie où un humain (« p ») quitte la table à un coup tiré au sort,
+ * assis juste après un bot, puis finit en bot au remplacement. D'ici là le
+ * tour ne se pose sur lui pendant les enchères que si plus personne d'autre
+ * n'est présent (repli), et aucun coup de bot (parole comprise) n'est refusé :
+ * le Menteur n'a pas d'échéance, un refus figerait la table jusqu'au
+ * remplacement.
+ */
+function playWithLeaver(key: string, botCount: number, rules: MenteurRules): { final: MenteurState; fallbacks: number } {
+  const bots = mixedBots(botCount, key)
+  const seats: Seat[] = [bots[0], { id: 'p', name: 'Paul', policy: 'nonLecteur' }, ...bots.slice(1), HERO('nonLecteur')]
+  let s = createMenteurState(
+    seats.map((x) => ({ id: x.id, name: x.name, isBot: x.policy === 'bot' })),
+    `des-${key}`,
+    rules
+  )
+  const rng = createRng(`menteur-${key}`)
+  const sayRng = createRng(`menteur-say-${key}`)
+  const seatOf = new Map(seats.map((x) => [x.id, x]))
+  const leaveStep = Math.floor(createRng(`depart-${key}`).next() * 25)
+  let leftAt: number | null = null
+  let fallbacks = 0
+  let now = T0
+  for (let steps = 0; s.phase !== 'finished'; steps += 1) {
+    if (steps > STEP_CAP) throw new Error(`partie sans fin : ${key}`)
+    if (steps === leaveStep) {
+      s = reduceMenteur(s, { type: 'LEAVE', playerId: 'p', at: now })
+      leftAt = now
+    }
+    if (leftAt !== null && now - leftAt >= LEAVER_GRACE_MS && s.players.some((p) => p.leftAt)) {
+      s = reduceMenteur(s, { type: 'REPLACE_LEFT', now, graceMs: LEAVER_GRACE_MS })
+    }
+    const actorId = currentMenteurActorId(s)!
+    const actor = s.players.find((p) => p.id === actorId)!
+    if (s.phase === 'bidding' && actor.leftAt) {
+      const seated = s.players.filter((p) => p.dice.length > 0 && !p.leftAt)
+      if (seated.length > 1) throw new Error(`tour posé sur le partant : ${key}, coup ${steps}`)
+      // Repli voulu : seul celui qui vient de jouer est encore là, le remplacement débloque.
+      fallbacks += 1
+      now = Math.max(now, leftAt! + LEAVER_GRACE_MS)
+      continue
+    }
+    let r: MenteurRoomActionResult
+    if (actor.isBot) {
+      const delay = menteurBotTickDelayMs(
+        { phase: s.phase, actorIsBot: true, actorName: actor.name, humanSeated: menteurHumanSeated(s.players) },
+        rng.next
+      )
+      now += delay ?? 0
+      r = applyMenteurBotAction(s, rng.next, now, sayRng.next)
+    } else {
+      now += HUMAN_THINK_MS
+      // À la révélation, n'importe qui relance la manche : le héros le fait pour le partant.
+      const by = actor.leftAt ? 'h' : actorId
+      r = applyMenteurRoomAction(s, by, humanMove(s, seatOf.get(by)!, rng.next, null), now)
+    }
+    if (!r.ok) throw new Error(`refus inattendu : ${r.error} (${key}, coup ${steps})`)
+    s = r.state
+  }
+  return { final: s, fallbacks }
+}
+
 const rate = (n: number, d: number) => (d === 0 ? 0 : n / d)
 const total = (t: Tally, k: keyof TraitTally) => TRAITS.reduce((acc, tr) => acc + t.byTrait[tr][k], 0)
 const traitRate = (t: Tally, trait: BotTrait, n: keyof TraitTally, d: keyof TraitTally) =>
@@ -463,6 +534,26 @@ describe('simulation du Menteur', () => {
             expect(menteurTotalDice(final)).toBeGreaterThan(0)
           }
         }
+      })
+    }, 60_000)
+
+    it('un humain part en cours de partie, assis après un bot : la table ne se fige jamais, aucun coup refusé', () => {
+      withoutAmbientChance(() => {
+        let replaced = 0
+        let fallbacks = 0
+        for (let botCount = 1; botCount <= 4; botCount += 1) {
+          for (let seed = 0; seed < 30; seed += 1) {
+            const key = `depart-${botCount}-${seed}`
+            const game = playWithLeaver(key, botCount, seed % 2 ? { palifico: true, calza: true } : {})
+            expect(game.final.phase).toBe('finished')
+            expect(game.final.winnerId).not.toBeNull()
+            if (game.final.players.find((p) => p.id === 'p')!.isBot) replaced += 1
+            fallbacks += game.fallbacks
+          }
+        }
+        expect(replaced).toBeGreaterThan(100)
+        // Le repli (seul celui qui vient de jouer est encore là) reste rare.
+        expect(fallbacks).toBeLessThan(60)
       })
     }, 60_000)
 

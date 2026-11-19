@@ -5,6 +5,7 @@ import { buildRoomDto } from '@/lib/online-room'
 import { launchOnlineRoom, resetRoomToWaitingLobby } from '@/lib/online-room-launch'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { BRIEFING_TIMEOUT_MS, parseBriefing, serializeBriefing } from '@/lib/online/briefing'
+import { launchRosterRefusal } from '@/lib/online/launch-roster'
 import { onlineErrorBody } from '@/lib/online-errors'
 
 type Params = { params: Promise<{ roomId: string }> }
@@ -60,9 +61,11 @@ export async function POST(request: Request, { params }: Params) {
   const timedOut = isTimeoutTick && Date.now() - briefing.startedAt >= BRIEFING_TIMEOUT_MS
 
   if (allAcked || timedOut) {
-    // Patate Chaude se joue sans bots : un départ pendant le briefing qui laisse moins de deux
-    // joueurs renvoie la table au lobby, au lieu de lancer une partie impossible.
-    if (room.gameId === 'patate-chaude' && room.members.length < 2) {
+    // Un départ pendant le briefing (DELETE ne touche pas au briefing) peut
+    // faire repasser la table sous les bornes que /launch avait validées : le
+    // lanceur lèverait, la table revient donc au lobby, qui affiche la règle.
+    const memberIds = room.members.map((m) => m.userId)
+    if (launchRosterRefusal(room, memberIds, { afterBriefing: true })) {
       const reset = await prisma.onlineRoom.updateMany({
         where: { id: roomId, status: 'briefing' },
         data: { status: 'waiting', briefingJson: null },
@@ -81,8 +84,26 @@ export async function POST(request: Request, { params }: Params) {
       data: { status: 'playing', briefingJson: null },
     })
     if (claimed.count === 1) {
-      await launchOnlineRoom(roomId, room)
-      publishRoomChanged(roomId, { type: 'changed' })
+      try {
+        await launchOnlineRoom(roomId, room)
+        publishRoomChanged(roomId, { type: 'changed' })
+      } catch (error) {
+        console.error('briefing-ack: launchOnlineRoom failed', error)
+        // Sans ce retour en arrière la salle restait « playing » sans état ni
+        // version : ni action, ni retour au lobby, ni Rejouer n'aboutissaient.
+        // Gardé sur la version lue : un lanceur qui a écrit son état avant de
+        // lever laisse une partie jouable, qu'on ne détruit pas.
+        const rolledBack = await prisma.onlineRoom.updateMany({
+          where: { id: roomId, status: 'playing', stateVersion: room.stateVersion },
+          data: { status: 'waiting', gameStateJson: null, stateVersion: 0, currentTurnUserId: null },
+        })
+        if (rolledBack.count === 1) {
+          await resetRoomToWaitingLobby(roomId)
+          publishRoomChanged(roomId, { type: 'lobby' })
+        } else {
+          publishRoomChanged(roomId, { type: 'changed' })
+        }
+      }
     }
   }
 

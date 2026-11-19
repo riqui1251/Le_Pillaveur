@@ -2763,6 +2763,7 @@
         "confirmPlacement": "Conferma le mie navi",
         "waitingPlacement": "In attesa degli altri giocatori…",
         "placedCount": "{placed}/{total} giocatori pronti",
+        "placementAutoIn": "Navi posizionate a caso tra {seconds} s",
         "hitReplay": "Colpito = spari di nuovo!",
         "enemyWaters": "Acque nemiche",
         "yourFleet": "La tua flotta",
@@ -4862,7 +4863,8 @@
           "day-vote": "Voto",
           "day-revote": "Secondo voto",
           "night-guard": "Il guardiano veglia…",
-          "night-raven": "Il corvo volteggia…"
+          "night-raven": "Il corvo volteggia…",
+          "night": "Notte fonda…"
         },
         "ghostBanner": "Sei un fantasma: vedi TUTTO… ma shhh, non una parola in vocale!",
         "yourRole": "Il tuo ruolo segreto",

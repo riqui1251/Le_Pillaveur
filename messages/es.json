@@ -2763,6 +2763,7 @@
         "confirmPlacement": "Confirmar mis barcos",
         "waitingPlacement": "Esperando a los demás jugadores…",
         "placedCount": "{placed}/{total} jugadores listos",
+        "placementAutoIn": "Barcos colocados al azar en {seconds} s",
         "hitReplay": "¡Tocado = vuelves a disparar!",
         "enemyWaters": "Aguas enemigas",
         "yourFleet": "Tu flota",
@@ -4862,7 +4863,8 @@
           "day-vote": "Votación",
           "day-revote": "Segunda votación",
           "night-guard": "El salvador vela…",
-          "night-raven": "El cuervo planea…"
+          "night-raven": "El cuervo planea…",
+          "night": "Noche cerrada…"
         },
         "ghostBanner": "Eres un fantasma: lo ves TODO… pero shhh, ¡ni una palabra por voz!",
         "yourRole": "Tu rol secreto",

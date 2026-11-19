@@ -48,6 +48,9 @@ export type TCPlayer = {
 /** Délai de grâce avant qu'un joueur parti soit remplacé par un bot. */
 export const TC_REJOIN_GRACE_MS = 3 * 60 * 1000
 
+/** Durée du placement : à l'échéance, les navires non posés le sont au hasard. */
+export const TC_PLACEMENT_MS = 90 * 1000
+
 export type TCShip = {
   id: string
   ownerId: string
@@ -92,6 +95,11 @@ export type TCState = {
   rngState: number
   /** Power-up "Bombe" activé pour la partie (choix hôte, figé au lancement). */
   rulePowerups: boolean
+  /**
+   * Échéance du placement (epoch ms serveur). Absente (parties lancées avant
+   * son ajout, aperçus TV) : pas d'échéance.
+   */
+  placementEndsAt?: number | null
 }
 
 export type TCAction =
@@ -101,6 +109,7 @@ export type TCAction =
   | { type: 'LEAVE'; playerId: string; at: number }
   | { type: 'REJOIN'; playerId: string }
   | { type: 'REPLACE_LEFT'; now: number }
+  | { type: 'PLACEMENT_TIMEOUT'; now: number }
 
 export class TCEngineError extends Error {
   constructor(code: string) {
@@ -116,6 +125,20 @@ export function otherTeam(team: TeamId): TeamId {
 export function currentTCPlayerId(state: TCState): string | null {
   if (state.phase !== 'battle') return null
   return state.turnOrder[state.currentTurnIndex] ?? null
+}
+
+/**
+ * Le tir au tour est joué par l'IA : bot, ou humain parti (en attendant son
+ * retour ou son remplacement). Sauter son tour ne marche pas : en 1 contre 1,
+ * l'adversaire tirerait sans fin. Partagé avec le client (vue sans rngState).
+ */
+export function tcActorPlaysAuto(
+  state: Pick<TCState, 'phase' | 'players' | 'turnOrder' | 'currentTurnIndex'>
+): boolean {
+  if (state.phase !== 'battle') return false
+  const actorId = state.turnOrder[state.currentTurnIndex]
+  const actor = state.players.find((p) => p.id === actorId)
+  return Boolean(actor && (actor.isBot || actor.leftAt))
 }
 
 /** Vrai si les cellules forment une ligne droite contiguë (horizontale ou verticale). */
@@ -398,13 +421,18 @@ export function reduceTC(state: TCState, action: TCAction): TCState {
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.isBot) throw new TCEngineError('UNKNOWN_PLAYER')
       if (player.leftAt) return state
-      return {
+      const left: TCState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: action.at } : p
         ),
         version: state.version + 1,
       }
+      // Sans navires, il bloquerait le lancement de la bataille jusqu'à son remplacement.
+      if (state.phase === 'placement' && !player.placed) {
+        return reduceTC(left, { type: 'AUTO_PLACE', playerId: action.playerId })
+      }
+      return left
     }
     case 'REJOIN': {
       const player = state.players.find((p) => p.id === action.playerId)
@@ -432,21 +460,33 @@ export function reduceTC(state: TCState, action: TCAction): TCState {
         version: state.version + 1,
       }
     }
+    case 'PLACEMENT_TIMEOUT': {
+      if (state.phase !== 'placement') throw new TCEngineError('NOT_PLACEMENT_PHASE')
+      if (state.placementEndsAt == null || action.now < state.placementEndsAt) {
+        throw new TCEngineError('NOT_DUE')
+      }
+      return autoPlaceWhere(state, () => true)
+    }
     default:
       throw new TCEngineError('UNKNOWN_ACTION')
   }
 }
 
-/** Fait uniquement placer les bots (sans tirer) — utilisé après un remplacement en phase placement. */
-export function placeTCBots(state: TCState): TCState {
+/** Place au hasard les joueurs non placés retenus par `pick`, tant que dure le placement. */
+function autoPlaceWhere(state: TCState, pick: (p: TCPlayer) => boolean): TCState {
   let current = state
   for (let guard = 0; guard < 20; guard += 1) {
     if (current.phase !== 'placement') return current
-    const bot = current.players.find((p) => p.isBot && !p.placed)
-    if (!bot) return current
-    current = reduceTC(current, { type: 'AUTO_PLACE', playerId: bot.id })
+    const next = current.players.find((p) => !p.placed && pick(p))
+    if (!next) return current
+    current = reduceTC(current, { type: 'AUTO_PLACE', playerId: next.id })
   }
   return current
+}
+
+/** Fait uniquement placer les bots (sans tirer) — utilisé après un remplacement en phase placement. */
+export function placeTCBots(state: TCState): TCState {
+  return autoPlaceWhere(state, (p) => p.isBot)
 }
 
 /**

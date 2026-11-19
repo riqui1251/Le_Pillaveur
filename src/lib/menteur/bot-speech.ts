@@ -4,6 +4,7 @@ import type { MenteurBotAction, MenteurBotWhy } from './bot-brain'
 import {
   isMenteurAsk,
   isMenteurRemark,
+  menteurNextSeatedIdx,
   MENTEUR_SPEECH_CAP,
   type MenteurClientView,
   type MenteurDuel,
@@ -89,16 +90,16 @@ export function menteurGrudgeTarget(view: MenteurClientView, botId: string, ranc
   return foe && foe.id !== botId && foe.diceCount > 0 ? foe.id : null
 }
 
-/** Le joueur en lice qui répondra à une enchère du bot : le suivant à table. */
+/**
+ * Le joueur qui répondra à une enchère du bot : celui où le moteur posera le
+ * tour, partants sautés. La même règle que le moteur, sinon il refuse le coup.
+ */
 function answererOf(view: MenteurClientView, botId: string): string | null {
-  const n = view.players.length
   const at = view.players.findIndex((p) => p.id === botId)
   if (at < 0) return null
-  for (let step = 1; step < n; step += 1) {
-    const p = view.players[(at + step) % n]
-    if (p.diceCount > 0) return p.id
-  }
-  return null
+  const seats = view.players.map((p) => ({ alive: p.diceCount > 0, leftAt: p.leftAt }))
+  const idx = menteurNextSeatedIdx(seats, at)
+  return idx === null ? null : view.players[idx].id
 }
 
 const talks = (chance: number, rand: () => number) => chance > 0 && rand() < chance

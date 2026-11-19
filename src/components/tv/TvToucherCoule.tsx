@@ -334,6 +334,13 @@ export function TvToucherCoule({ room, state }: { room: TvRoomDto; state: TCClie
                 total: state.players.length,
               })}
             </p>
+            {state.placementEndsAt != null && (
+              <p className="text-xl font-semibold text-white/70">
+                <PhaseCountdown endsAt={state.placementEndsAt}>
+                  {({ seconds }) => tg('placementAutoIn', { seconds })}
+                </PhaseCountdown>
+              </p>
+            )}
           </div>
         ) : active ? (
           <div className="flex w-full min-w-0 flex-col items-center gap-2">

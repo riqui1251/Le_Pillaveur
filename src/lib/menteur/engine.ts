@@ -240,14 +240,39 @@ export function menteurTotalDice(state: MenteurState): number {
   return state.players.reduce((sum, p) => sum + p.dice.length, 0)
 }
 
-/** Prochain index VIVANT strictement après `fromIdx` (ordre de table circulaire). */
-function nextAliveIdx(state: MenteurState, fromIdx: number): number {
-  const n = state.players.length
+/**
+ * Prochain siège vivant et PRÉSENT (sans `leftAt`) strictement après
+ * `fromIdx`, en ordre de table circulaire ; si tous les autres vivants sont
+ * partis, le prochain vivant (au pire `fromIdx` lui-même) ; null si personne
+ * n'est en vie. Le Menteur n'a aucune horloge de phase et les ticks ne jouent
+ * que pour un bot : un tour posé sur un humain parti figerait la table
+ * jusqu'au remplacement (plusieurs minutes).
+ *
+ * Pur, sur l'état comme sur la vue client : le moteur y pose le tour après
+ * une enchère, et les bots y adressent sure / unsure (bot-speech.ts). Les
+ * deux doivent désigner le même joueur, sinon withSay refuse le coup entier.
+ */
+export function menteurNextSeatedIdx(
+  seats: readonly { alive: boolean; leftAt: number | null }[],
+  fromIdx: number
+): number | null {
+  const n = seats.length
+  for (let step = 1; step < n; step += 1) {
+    const idx = (fromIdx + step) % n
+    if (seats[idx].alive && !seats[idx].leftAt) return idx
+  }
   for (let step = 1; step <= n; step += 1) {
     const idx = (fromIdx + step) % n
-    if (isMenteurAlive(state.players[idx])) return idx
+    if (seats[idx].alive) return idx
   }
-  throw new MenteurEngineError('NO_ALIVE_PLAYER')
+  return null
+}
+
+function nextSeatedIdx(state: MenteurState, fromIdx: number): number {
+  const seats = state.players.map((p) => ({ alive: isMenteurAlive(p), leftAt: p.leftAt }))
+  const idx = menteurNextSeatedIdx(seats, fromIdx)
+  if (idx === null) throw new MenteurEngineError('NO_ALIVE_PLAYER')
+  return idx
 }
 
 /**
@@ -433,7 +458,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         throw new MenteurEngineError('ILLEGAL_BID')
       }
       const bid: MenteurBid = { qty: action.qty, face: action.face, by: actor.id }
-      const turnIdx = nextAliveIdx(state, state.turnIdx)
+      const turnIdx = nextSeatedIdx(state, state.turnIdx)
       // sure / unsure parlent au joueur qui doit répondre ; ally à celui qu'on suit.
       const answers = action.say?.kind === 'ally' ? (state.currentBid?.by ?? null) : state.players[turnIdx].id
       return {
@@ -605,8 +630,9 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         }
       }
       // Nouvelle manche : tout le monde relance ses dés (RNG seedé), et le
-      // perdant du défi rouvre les enchères (s'il est éliminé, ou en cas de
-      // Calza réussi sans perdant : le joueur central du défi ; sinon le suivant).
+      // perdant du défi rouvre les enchères (en cas de Calza réussi sans
+      // perdant : le joueur central du défi). S'il est éliminé ou parti, le
+      // suivant présent ouvre à sa place.
       const rng = rngFromState(state.rngState)
       const players = state.players.map((p) =>
         isMenteurAlive(p) ? { ...p, dice: rollDice(rng, p.dice.length) } : p
@@ -615,9 +641,9 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       const leaderIdx = state.players.findIndex((p) => p.id === leaderId)
       const base: MenteurState = { ...state, players }
       const turnIdx =
-        leaderIdx >= 0 && isMenteurAlive(players[leaderIdx])
+        leaderIdx >= 0 && isMenteurAlive(players[leaderIdx]) && !players[leaderIdx].leftAt
           ? leaderIdx
-          : nextAliveIdx(base, Math.max(0, leaderIdx))
+          : nextSeatedIdx(base, Math.max(0, leaderIdx))
       return {
         ...base,
         phase: 'bidding',
@@ -643,13 +669,10 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
         p.id === action.playerId ? { ...p, leftAt: action.at } : p
       )
       const next: MenteurState = { ...state, players, version: state.version + 1 }
-      // Le partant garde ses dés (il peut revenir, ou finir en bot). Mais
-      // l'état du Menteur n'a AUCUNE horloge de phase : s'il tenait les
-      // enchères, la table resterait figée jusqu'au remplacement automatique
-      // (plusieurs minutes). On rend donc la main tout de suite au suivant
-      // encore en lice, en sautant au passage les autres partants.
-      // (`isMenteurAlive` garantit au passage qu'un suivant existe : au pire
-      // nextAliveIdx revient sur le partant lui-même, jamais NO_ALIVE_PLAYER.)
+      // Le partant garde ses dés (il peut revenir, ou finir en bot). S'il
+      // tenait les enchères, la main passe tout de suite au suivant présent
+      // (nextSeatedIdx). `isMenteurAlive` garantit qu'un vivant existe : au
+      // pire le repli revient sur le partant lui-même, jamais NO_ALIVE_PLAYER.
       if (
         state.phase !== 'bidding' ||
         players[state.turnIdx]?.id !== action.playerId ||
@@ -657,13 +680,7 @@ export function reduceMenteur(state: MenteurState, action: MenteurAction): Mente
       ) {
         return next
       }
-      let turnIdx = nextAliveIdx(next, state.turnIdx)
-      for (let step = 0; step < players.length && players[turnIdx].leftAt; step += 1) {
-        const after = nextAliveIdx(next, turnIdx)
-        if (after === turnIdx) break // plus qu'un seul vivant : on lui laisse la main
-        turnIdx = after
-      }
-      return { ...next, turnIdx }
+      return { ...next, turnIdx: nextSeatedIdx(next, state.turnIdx) }
     }
 
     case 'REJOIN': {

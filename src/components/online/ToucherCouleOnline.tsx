@@ -43,11 +43,19 @@ import { TurnBanner } from '@/components/game/TurnBanner'
 import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { TC_MODES, TC_REJOIN_GRACE_MS, otherTeam, type TCClientView, type TeamId } from '@/lib/toucher-coule/engine'
+import {
+  TC_MODES,
+  TC_PLACEMENT_MS,
+  TC_REJOIN_GRACE_MS,
+  otherTeam,
+  tcActorPlaysAuto,
+  type TCClientView,
+  type TeamId,
+} from '@/lib/toucher-coule/engine'
 import { tcBombCells, tcBombFits, tcCellPx, tcColumnLetter, tcCoord, tcShipCells } from '@/lib/toucher-coule/board'
 import { botAvatarFromName, botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
+import { useAdvanceTick, useAfkTick, useBotReferee } from '@/hooks/useBotReferee'
 import { useGameAction } from '@/hooks/useGameAction'
 import { GameTutorialModal, TutorialReopenButton, useGameTutorial } from './GameTutorialModal'
 import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerTag'
@@ -317,7 +325,8 @@ export function ToucherCouleOnline() {
   }, [phase])
 
   // Ticks « arbitre » (avec secours par rang, cf. useBotReferee) :
-  // - tour d'un bot → demande au serveur de jouer UN tir (rythme visible) ;
+  // - tour d'un bot ou d'un joueur parti → demande au serveur de jouer UN tir
+  //   (rythme visible) ;
   // - joueur parti depuis plus de 3 min → demande son remplacement par un bot.
   // La garde expectedVersion rend les ticks concurrents inoffensifs.
   const battleActor =
@@ -330,11 +339,23 @@ export function ToucherCouleOnline() {
     userId: user?.id,
     players: view?.players,
     enabled: Boolean(view && user && room && view.phase !== 'finished'),
-    botTick: battleActor?.isBot
-      ? { body: { action: 'bot' }, delayMs: botTickDelayMs(battleActor.name) }
-      : null,
+    botTick:
+      battleActor && view && tcActorPlaysAuto(view)
+        ? { body: { action: 'bot' }, delayMs: botTickDelayMs(battleActor.name) }
+        : null,
     replaceLeft: Boolean(view?.players.some((p) => !p.isBot && p.leftAt)),
     graceMs: TC_REJOIN_GRACE_MS,
+  })
+
+  // Échéance du placement : les navires des retardataires sont posés au hasard.
+  const placementEndsAt = view?.phase === 'placement' ? view.placementEndsAt ?? null : null
+  useAdvanceTick({
+    roomId: room?.id,
+    stateVersion: room?.stateVersion,
+    userId: user?.id,
+    players: view?.players,
+    enabled: Boolean(view && user && room),
+    advance: placementEndsAt !== null ? { phaseKey: 'placement', dueAt: placementEndsAt } : null,
   })
 
   // Toute écriture d'état (tir, tour qui passe, départ) remet la visée à zéro :
@@ -715,10 +736,19 @@ export function ToucherCouleOnline() {
       <PhaseHeader
         round={t('boardInfo', { mode: view.mode, size })}
         phase={placementPhase ? (placingNow ? t('phasePlacement') : t('waitingPlacement')) : t('phaseBattle')}
+        endsAt={placementEndsAt}
+        total={TC_PLACEMENT_MS}
         status={
-          placementPhase
-            ? t('placedCount', { placed: view.players.filter((p) => p.placed).length, total: view.players.length })
-            : undefined
+          placementPhase ? (
+            <>
+              {t('placedCount', { placed: view.players.filter((p) => p.placed).length, total: view.players.length })}
+              {placingNow && placementEndsAt !== null && (
+                <PhaseCountdown endsAt={placementEndsAt}>
+                  {({ seconds }) => <span className="block">{t('placementAutoIn', { seconds })}</span>}
+                </PhaseCountdown>
+              )}
+            </>
+          ) : undefined
         }
         right={
           <>

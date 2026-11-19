@@ -2763,6 +2763,7 @@
         "confirmPlacement": "Valider mes bateaux",
         "waitingPlacement": "En attente des autres joueurs…",
         "placedCount": "{placed}/{total} joueurs prêts",
+        "placementAutoIn": "Bateaux placés au hasard dans {seconds} s",
         "hitReplay": "Touché = tu rejoues !",
         "enemyWaters": "Eaux ennemies",
         "yourFleet": "Ta flotte",
@@ -4862,7 +4863,8 @@
           "day-vote": "Vote",
           "day-revote": "Revote",
           "night-guard": "Le salvateur veille…",
-          "night-raven": "Le corbeau plane…"
+          "night-raven": "Le corbeau plane…",
+          "night": "Nuit noire…"
         },
         "ghostBanner": "Tu es un fantôme : tu vois TOUT… mais chuuut, pas un mot au vocal !",
         "yourRole": "Ton rôle secret",

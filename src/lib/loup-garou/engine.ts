@@ -1365,6 +1365,12 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
     p.id === viewerId ||
     (iAmWolf && p.role === 'loup') // les loups se connaissent
 
+  /**
+   * Gorgées d'un vivant : les +3 des seuls loups quand un complice est lynché
+   * et le +1 de potion de la Sorcière désigneraient leur rôle.
+   */
+  const sipsVisible = (p: LGPlayer): boolean => finished || ghost || !p.alive || p.id === viewerId
+
   const hasVoted: Record<string, boolean> = {}
   if (state.phase === 'day-vote' || state.phase === 'day-revote') {
     for (const p of players) hasVoted[p.id] = Boolean(dayVotes[p.id])
@@ -1385,7 +1391,7 @@ export function toLGClientView(state: LGState, viewerId: string): LGClientView {
       isBot: p.isBot,
       leftAt: p.leftAt,
       alive: p.alive,
-      sips: p.sips,
+      sips: sipsVisible(p) ? p.sips : 0,
       role: roleVisible(p) ? p.role : null,
     })),
     wolfVotes: iAmWolf || ghost || finished ? wolfVotes : null,

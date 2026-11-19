@@ -2763,6 +2763,7 @@
         "confirmPlacement": "Confirm my ships",
         "waitingPlacement": "Waiting for the other players…",
         "placedCount": "{placed}/{total} players ready",
+        "placementAutoIn": "Ships placed at random in {seconds}s",
         "hitReplay": "Hit = shoot again!",
         "enemyWaters": "Enemy waters",
         "yourFleet": "Your fleet",
@@ -4862,7 +4863,8 @@
           "day-vote": "Vote",
           "day-revote": "Revote",
           "night-guard": "The bodyguard watches…",
-          "night-raven": "The raven circles…"
+          "night-raven": "The raven circles…",
+          "night": "Dead of night…"
         },
         "ghostBanner": "You are a ghost: you see EVERYTHING… but shhh, not a word on voice!",
         "yourRole": "Your secret role",
