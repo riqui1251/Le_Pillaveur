@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { NextIntlClientProvider, type AbstractIntlMessages } from 'next-intl'
 import { describe, expect, it } from 'vitest'
 import fr from '../../../messages/fr.json'
-import type { TabouClientView } from '@/lib/tabou/engine'
+import { TABOU_ROUND_MS, type TabouClientView } from '@/lib/tabou/engine'
 import { getTabouWords } from '@/lib/tabou/data'
 import { build } from '@/app/[locale]/tv/apercu-dev/fixtures/tabou'
 import { TvTabou } from './TvTabou'
@@ -89,12 +89,63 @@ describe('TvTabou — écran TV du Tabou Vocal', () => {
     expect(finished.some(({ view }) => (view.rematchVotes ?? []).length > 0)).toBe(true)
   })
 
+  /** Manche ouverte écourtée (5 s) : personne pour décrire ou pour deviner. */
+  const isShort = (view: TabouClientView) => view.phase === 'describing' && (view.roundMs ?? TABOU_ROUND_MS) < TABOU_ROUND_MS
+
   it('le bandeau du joueur parti tient sur deux lignes sans couper le décompte', () => {
-    const left = steps.map(render).filter(({ view }) => view.phase === 'describing' && view.players.some((p) => !p.isBot && p.leftAt))
+    const left = steps
+      .map(render)
+      .filter(({ view }) => view.phase === 'describing' && !isShort(view) && view.players.some((p) => !p.isBot && p.leftAt))
     expect(left.length).toBeGreaterThan(0)
     for (const { html } of left) {
       expect(html).toMatch(/En attente du retour de Marie-Charlotte — bot dans \d+s/)
       expect(html).not.toMatch(/truncate[^"]*amber-100|amber-100[^"]*truncate/)
+    }
+  })
+
+  it('manche écourtée : l’écran dit pourquoi, et garde l’avis de retour s’il y a un absent', () => {
+    const rendered = steps.map((s) => ({ ...render(s), fixture: s.fixture }))
+    const short = rendered.filter(({ view }) => isShort(view))
+    // Décrivant bot, et décrivant humain sans coéquipier présent pour deviner.
+    expect(new Set(short.map((s) => s.fixture))).toEqual(new Set(['decrivant-bot', 'partie-arretee', 'partie-arretee-egalite']))
+    for (const { html, view } of short) {
+      expect(html).toContain(fr.games.tabou.game.shortRound)
+      expect(html).not.toMatch(/truncate[^"]*amber-100|amber-100[^"]*truncate/)
+      // À 2 contre 2 avec un départ de chaque côté, TOUTES les manches sont
+      // écourtées : sans cette ligne, la TV ne disait jamais qui est attendu
+      // ni combien de temps il reste avant que la partie soit perdue.
+      const someoneAway = view.players.some((p) => !p.isBot && p.leftAt)
+      if (someoneAway) expect(html).toMatch(/En attente du retour de .+ — bot dans \d+s/)
+      else expect(html).not.toContain('En attente du retour')
+    }
+    expect(short.some(({ view }) => view.players.some((p) => !p.isBot && p.leftAt))).toBe(true)
+    for (const { html, view } of rendered) {
+      if (!isShort(view)) expect(html).not.toContain(fr.games.tabou.game.shortRound)
+    }
+  })
+
+  it('partie arrêtée faute de joueurs : le score, la raison, et l’égalité quand il y en a une', () => {
+    const ends = steps
+      .map((s) => ({ ...render(s), fixture: s.fixture }))
+      .filter(({ view }) => view.phase === 'finished')
+    const stopped = ends.filter(({ view }) => view.scores.A < view.targetScore && view.scores.B < view.targetScore)
+    expect(new Set(stopped.map((s) => s.fixture))).toEqual(new Set(['partie-arretee', 'partie-arretee-egalite']))
+    for (const { html, view, fixture } of stopped) {
+      expect(html).toContain(fr.games.tabou.game.victory.stopped)
+      expect(html).toContain(`Équipe A ${view.scores.A} · Équipe B ${view.scores.B}`)
+      if (fixture === 'partie-arretee-egalite') {
+        expect(view.winnerTeam).toBeNull()
+        expect(html).toContain(fr.games.tabou.game.victory.draw)
+        expect(html).not.toContain(fr.games.tabou.game.victory.teamBWin)
+      } else {
+        expect(view.winnerTeam).toBe('A')
+        // Le rendu échappe l'apostrophe droite de « L'équipe ».
+        expect(html).toContain(fr.games.tabou.game.victory.teamAWin.replace(/'/g, '&#x27;'))
+      }
+    }
+    // Une victoire au score cible ne parle pas d'arrêt.
+    for (const { html } of ends.filter((e) => !stopped.includes(e))) {
+      expect(html).not.toContain(fr.games.tabou.game.victory.stopped)
     }
   })
 

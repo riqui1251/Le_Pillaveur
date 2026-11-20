@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils'
 import {
   TABOU_BOT_DESCRIBER_ROUND_MS,
   TABOU_ROUND_MS,
+  tabouGameIsDecided,
   tabouRoundIsPlayable,
   type TabouClientView,
   type TabouPlayerView,
@@ -181,6 +182,8 @@ export function TabouOnline() {
   const isOpponent = !view.isDescriber && Boolean(myTeam) && Boolean(describer) && describer?.team !== myTeam
   const finished = view.phase === 'finished'
   const won = finished && myTeam && view.winnerTeam === myTeam
+  // Fin sans que la cible soit atteinte : partie arrêtée faute de joueurs.
+  const targetReached = view.scores.A >= view.targetScore || view.scores.B >= view.targetScore
 
   const iconOf = (p: { id: string; name: string; isBot: boolean }) =>
     p.isBot ? botAvatarFromName(p.name) : room.members.find((m) => m.userId === p.id)?.preferences?.icon ?? '👤'
@@ -261,11 +264,22 @@ export function TabouOnline() {
             transition={{ type: 'spring', stiffness: 220, damping: 18 }}
             className="flex flex-col items-center gap-2 text-center"
           >
-            <Trophy aria-hidden className={cn('h-14 w-14', view.winnerTeam === 'A' ? 'text-sky-300' : 'text-rose-300')} />
+            <Trophy
+              aria-hidden
+              className={cn(
+                'h-14 w-14',
+                view.winnerTeam === 'A' ? 'text-sky-300' : view.winnerTeam === 'B' ? 'text-rose-300' : 'text-gold'
+              )}
+            />
             <h2 className="font-display text-3xl font-bold text-gold">
-              {view.winnerTeam === 'A' ? t('victory.teamAWin') : t('victory.teamBWin')}
+              {view.winnerTeam === 'A'
+                ? t('victory.teamAWin')
+                : view.winnerTeam === 'B'
+                  ? t('victory.teamBWin')
+                  : t('victory.draw')}
             </h2>
             <p className="text-base font-semibold text-cream/80">{t('score', { a: view.scores.A, b: view.scores.B })}</p>
+            {!targetReached && <p className="max-w-xs text-sm font-semibold text-cream/80">{t('victory.stopped')}</p>}
           </motion.div>
         }
         ranking={<div className="w-full max-w-sm">{renderTeams(true)}</div>}
@@ -278,7 +292,8 @@ export function TabouOnline() {
   const countdown = view.phase === 'countdown'
   const describing = view.phase === 'describing'
   const roundEnd = view.phase === 'roundEnd'
-  const gameDecided = view.scores.A >= view.targetScore || view.scores.B >= view.targetScore
+  // Même règle que le moteur : cible atteinte, ou plus aucune équipe en état de marquer.
+  const gameDecided = tabouGameIsDecided(view)
   // Durée à l'ouverture de la manche (elle ne change pas si quelqu'un part ou
   // revient ensuite). États d'avant ce champ : seul un décrivant bot l'écourtait.
   const roundTotal = view.roundMs ?? (describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS)
@@ -442,6 +457,12 @@ export function TabouOnline() {
 
         {roundEnd && (
           <>
+            {/* Le bouton dit « Voir le résultat » loin de la cible : il faut dire pourquoi. */}
+            {gameDecided && !targetReached && (
+              <p className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
+                {t('victory.stopped')}
+              </p>
+            )}
             {view.lastRoundWord && (
               <WordCard
                 label={t('roundEnd.wordWasLabel')}

@@ -18,6 +18,8 @@ Deux équipes s'affrontent. À chaque manche, un orateur voit un mot à faire de
 
 La première équipe qui atteint le score cible choisi par l'hôte (15, 20 ou 25 mots devinés).
 
+Si des départs ne laissent plus deux humains dans aucune équipe, la partie s'arrête sur le score : l'équipe qui mène l'emporte, et à égalité personne ne gagne.
+
 ## Astuces
 
 - Passez vite les mots qui bloquent : le chrono est votre vrai adversaire.

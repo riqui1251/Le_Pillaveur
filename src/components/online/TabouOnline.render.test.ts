@@ -41,7 +41,10 @@ vi.mock('@/components/online/GameTutorialModal', () => ({
   TutorialReopenButton: () => null,
 }))
 vi.mock('@/components/online/GameOnlineLobby', () => ({ GameOnlineLobby: () => null }))
-vi.mock('@/components/online/OnlineEndScreen', () => ({ OnlineEndScreen: () => null }))
+// L'en-tête de l'écran de fin est rendu tel quel : c'est lui qui annonce le vainqueur.
+vi.mock('@/components/online/OnlineEndScreen', () => ({
+  OnlineEndScreen: ({ header }: { header: unknown }) => header,
+}))
 vi.mock('@/components/online/XpGainBanner', () => ({ XpGainBanner: () => null }))
 
 const LOCALES = ['fr', 'en', 'es', 'it'] as const
@@ -107,6 +110,66 @@ function render(state: TabouState, viewerId: string, locale: string = 'fr', erro
     )
   )
 }
+
+/** 2 contre 2, un départ de chaque côté, les partis remplacés par des bots : bilan d'une partie bloquée. */
+function stalledBilan(pointsA: number): TabouState {
+  let s = firstRound()
+  for (let i = 0; i < pointsA; i += 1) s = reduceTabou(s, { type: 'FOUND', playerId: 'p2', now: NOW + 1_000 + i })
+  s = reduceTabou(s, { type: 'LEAVE', playerId: 'p2', at: NOW + 5_000 })
+  s = reduceTabou(s, { type: 'LEAVE', playerId: 'p3', at: NOW + 6_000 })
+  s = reduceTabou(s, { type: 'REPLACE_LEFT', now: NOW + 200_000, graceMs: 180_000 })
+  expect(s.phase).toBe('roundEnd')
+  return s
+}
+
+const game = (locale: string) =>
+  (catalogue(locale) as { games: { tabou: { game: { victory: Record<string, string>; roundEnd: Record<string, string> } } } })
+    .games.tabou.game
+
+describe('TabouOnline : partie arrêtée faute de joueurs', () => {
+  it('au bilan : la raison est écrite et le bouton mène au résultat, dans les 4 langues', () => {
+    const bilan = stalledBilan(2)
+    for (const locale of LOCALES) {
+      const errors: unknown[] = []
+      const html = render(bilan, 'p0', locale, errors)
+      expect(errors, locale).toEqual([])
+      expect(html, locale).toContain(game(locale).victory.stopped)
+      expect(html, locale).toContain(game(locale).roundEnd.seeResult)
+    }
+  })
+
+  it('à la fin : le meilleur score l’emporte, et l’arrêt est expliqué', () => {
+    const over = reduceTabou(stalledBilan(2), { type: 'CONTINUE', playerId: 'p0', now: NOW + 201_000 })
+    expect(over.phase).toBe('finished')
+    for (const locale of LOCALES) {
+      const errors: unknown[] = []
+      const html = render(over, 'p0', locale, errors)
+      expect(errors, locale).toEqual([])
+      // Le rendu échappe l'apostrophe droite de « L'équipe ».
+      expect(html, locale).toContain(game(locale).victory.teamAWin.replace(/'/g, '&#x27;'))
+      expect(html, locale).toContain(game(locale).victory.stopped)
+    }
+  })
+
+  it('à égalité : ni vainqueur ni équipe B par défaut', () => {
+    const over = reduceTabou(stalledBilan(0), { type: 'CONTINUE', playerId: 'p0', now: NOW + 201_000 })
+    for (const locale of LOCALES) {
+      const html = render(over, 'p1', locale)
+      expect(html, locale).toContain(game(locale).victory.draw)
+      expect(html, locale).not.toContain(game(locale).victory.teamBWin)
+    }
+  })
+
+  it('un bilan ordinaire n’annonce pas d’arrêt', () => {
+    const state = firstRound()
+    const bilan = reduceTabou(state, { type: 'ADVANCE', claimedKey: phaseKey(state), now: state.phaseEndsAt ?? NOW })
+
+    const html = render(bilan, 'p0')
+
+    expect(html).not.toContain(game('fr').victory.stopped)
+    expect(html).not.toContain(game('fr').roundEnd.seeResult)
+  })
+})
 
 describe('TabouOnline : manche écourtée', () => {
   it('dit pourquoi la manche ne dure que quelques secondes, dans les 4 langues, sans clé manquante', () => {

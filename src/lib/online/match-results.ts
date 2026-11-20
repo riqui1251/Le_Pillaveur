@@ -97,6 +97,16 @@ const PARTICIPATION_ONLY_GAMES = new Set([
   'patate-chaude',
 ])
 
+/**
+ * Cette partie n'a pas de gagnant à classer : le jeu n'en désigne jamais, ou
+ * elle s'est arrêtée à égalité (Tabou bloqué faute de joueurs). L'écran de fin
+ * y annonce « Égalité » : une « défaite » pour chacun le contredirait.
+ */
+export function matchIsParticipationOnly(gameId: string, state: unknown): boolean {
+  if (PARTICIPATION_ONLY_GAMES.has(gameId)) return true
+  return gameId === 'tabou' && (state as TabouState).winnerTeam === null
+}
+
 /** Applique les règles de comptage. Retourne [] si la partie ne compte pas. */
 export function computeMatchResults(outcomes: MatchOutcome[]): MatchResultRow[] {
   const accounts = outcomes.filter((o) => !FILLER_BOT_RE.test(o.playerId))
@@ -500,7 +510,7 @@ export async function recordMatchResults(
   }
 
   // Jeux sans gagnant : XP de participation pour tous, pas de classement.
-  const participationOnly = PARTICIPATION_ONLY_GAMES.has(args.gameId)
+  const participationOnly = matchIsParticipationOnly(args.gameId, args.state)
   if (!participationOnly) {
     await client.onlineMatchResult.createMany({
       data: rows.map((r) => ({

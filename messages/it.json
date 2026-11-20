@@ -3747,6 +3747,8 @@
         "victory": {
           "teamAWin": "La squadra A vince la partita!",
           "teamBWin": "La squadra B vince la partita!",
+          "draw": "Pareggio!",
+          "stopped": "Troppo pochi giocatori per continuare: la partita finisce qui.",
           "replay": "Rigioca",
           "rematchWaiting": "In attesa degli altri ({count}/{total})",
           "backToMenu": "Torna al menu"

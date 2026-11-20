@@ -3747,6 +3747,8 @@
         "victory": {
           "teamAWin": "L'équipe A remporte la partie !",
           "teamBWin": "L'équipe B remporte la partie !",
+          "draw": "Égalité !",
+          "stopped": "Plus assez de joueurs pour continuer : la partie s’arrête sur ce score.",
           "replay": "Rejouer",
           "rematchWaiting": "En attente des autres ({count}/{total})",
           "backToMenu": "Retour au menu"

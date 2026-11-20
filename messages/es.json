@@ -3747,6 +3747,8 @@
         "victory": {
           "teamAWin": "¡El equipo A gana la partida!",
           "teamBWin": "¡El equipo B gana la partida!",
+          "draw": "¡Empate!",
+          "stopped": "Faltan jugadores para seguir: la partida termina con este marcador.",
           "replay": "Jugar de nuevo",
           "rematchWaiting": "Esperando a los demás ({count}/{total})",
           "backToMenu": "Volver al menú"

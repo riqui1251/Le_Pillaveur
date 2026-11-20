@@ -196,6 +196,11 @@ export function rejoinTabouPlayer(state: TabouState, playerId: string): TabouSta
 export function convertTabouPlayerToBot(state: TabouState, playerId: string): TabouState | null {
   const player = state.players.find((p) => p.id === playerId)
   if (!player || player.isBot || state.phase === 'finished') return null
+  // Au bilan, personne n'est « inactif à son tour » : n'importe quel joueur
+  // peut continuer. Le remplacement y visait le premier présent, et le
+  // convertir pouvait rendre la partie bloquée — donc l'arrêter au profit de
+  // l'équipe qui mène, sur une simple requête de l'adversaire.
+  if (state.phase === 'roundEnd') return null
   return {
     ...state,
     players: state.players.map((p) => (p.id === playerId ? { ...p, isBot: true, leftAt: null } : p)),

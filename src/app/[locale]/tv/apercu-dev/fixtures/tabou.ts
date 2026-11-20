@@ -158,10 +158,41 @@ function botDescriber(): TvPreviewFixture {
   }
 }
 
+/**
+ * 2 contre 2, un départ de chaque côté : manche écourtée faute de devineur,
+ * puis, les partis remplacés par des bots, partie arrêtée sur le score.
+ * `pointsA` à 0 donne l'arrêt à égalité.
+ */
+function stalledGame(pointsA: number, id: string, label: string): TvPreviewFixture {
+  const { list, state } = table(4, 0, 15)
+  let s = found(advance(state), pointsA)
+  // Le coéquipier du décrivant (équipe A) quitte : bilan immédiat. Puis un joueur de B.
+  s = leave(leave(s, list[2].userId), list[3].userId)
+  const bilan = s
+  const shortRound = next(bilan)
+  const replaced = reduceTabou(advance(shortRound), {
+    type: 'REPLACE_LEFT',
+    now: Date.now() + 200_000,
+    graceMs: 180_000,
+  })
+  return {
+    id,
+    label,
+    steps: [
+      step('bilan, un parti de chaque côté', list, bilan),
+      step('manche écourtée (personne pour deviner)', list, shortRound),
+      step('dernier bilan (partis remplacés par des bots)', list, replaced),
+      step('partie arrêtée', list, next(replaced)),
+    ],
+  }
+}
+
 export function build(): TvPreviewFixture[] {
   return [
     fullGame(16, 'partie-16', 'Partie complète, 16 joueurs (8 contre 8), noms longs'),
     fullGame(4, 'partie-4', 'Partie complète, 4 joueurs (2 contre 2)'),
     botDescriber(),
+    stalledGame(3, 'partie-arretee', 'Partie arrêtée faute de joueurs (2 contre 2, un départ de chaque côté)'),
+    stalledGame(0, 'partie-arretee-egalite', 'Partie arrêtée à égalité'),
   ]
 }

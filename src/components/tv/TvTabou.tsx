@@ -34,15 +34,24 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
 
   let center: ReactNode
   if (state.phase === 'finished') {
-    const color = state.winnerTeam === 'A' ? 'text-sky-300' : 'text-rose-300'
+    const color = state.winnerTeam === 'A' ? 'text-sky-300' : state.winnerTeam === 'B' ? 'text-rose-300' : 'text-gold'
+    // Fin sans que la cible soit atteinte : partie arrêtée faute de joueurs.
+    const targetReached = state.scores.A >= state.targetScore || state.scores.B >= state.targetScore
     const rematch = rematchCounter(room.members, state.rematchVotes ?? [], null)
     center = (
       <>
         <Trophy aria-hidden className={cn('h-28 w-28', color)} />
         <p className="font-display text-5xl font-black leading-tight text-gold">
-          {state.winnerTeam === 'A' ? t('victory.teamAWin') : t('victory.teamBWin')}
+          {state.winnerTeam === 'A'
+            ? t('victory.teamAWin')
+            : state.winnerTeam === 'B'
+              ? t('victory.teamBWin')
+              : t('victory.draw')}
         </p>
         <p className="text-3xl font-bold text-white/80">{t('score', { a: state.scores.A, b: state.scores.B })}</p>
+        {!targetReached && (
+          <p className="line-clamp-2 break-words text-2xl font-semibold leading-snug text-white/80">{t('victory.stopped')}</p>
+        )}
         {rematch.total > 1 && rematch.count > 0 && (
           <p className="rounded-full border-2 border-gold/50 bg-gold/10 px-8 py-3 text-2xl font-bold text-gold">
             {tTv('rematchPending')} <span className="tabular-nums">{rematch.count}/{rematch.total}</span>
@@ -89,6 +98,10 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
         ? TABOU_BOT_DESCRIBER_ROUND_MS
         : TABOU_ROUND_MS)
     const leftPlayer = state.players.find((p) => !p.isBot && p.leftAt)
+    // Même repli que la barre pour les états d'avant `roundMs`.
+    const shortRound =
+      (state.roundMs ?? (describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS)) < TABOU_ROUND_MS
+    const notice = 'line-clamp-2 w-full break-words rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-2 text-xl font-semibold leading-snug text-amber-100'
     center = (
       <>
         <p className="text-xl font-bold uppercase tracking-widest text-emerald-300">{t('phaseDescribing')}</p>
@@ -114,8 +127,12 @@ export function TvTabou({ room, state }: { room: TvRoomDto; state: TabouClientVi
             )}
           </PhaseCountdown>
         )}
+        {shortRound && <p className={notice}>{t('shortRound')}</p>}
+        {/* Affiché même en manche écourtée : quand un départ dans chaque équipe
+            les écourte toutes, c'est le seul endroit où la TV dit qui est
+            attendu, et pour combien de temps encore. */}
         {leftPlayer?.leftAt && (
-          <p className="line-clamp-2 w-full break-words rounded-2xl border border-amber-400/30 bg-amber-500/10 px-5 py-2 text-xl font-semibold leading-snug text-amber-100">
+          <p className={notice}>
             <PhaseCountdown endsAt={leftPlayer.leftAt + ONLINE_REPLACE_GRACE_MS}>
               {({ seconds }) => t('waitingReturn', { name: leftPlayer.name, seconds })}
             </PhaseCountdown>

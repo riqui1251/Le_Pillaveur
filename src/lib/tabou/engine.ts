@@ -144,6 +144,33 @@ export function tabouRoundIsPlayable(
   return players.some((p) => p.id !== describer.id && p.team === describer.team && here(p))
 }
 
+/**
+ * L'équipe pourra encore marquer : il lui reste deux joueurs qui ne sont pas
+ * des bots — présents, ou partis depuis peu (ils peuvent revenir tant qu'un bot
+ * ne les a pas remplacés).
+ */
+function teamCanStillScore(players: readonly Pick<TabouPlayer, 'isBot' | 'team'>[], team: TabouTeam): boolean {
+  return players.filter((p) => p.team === team && !p.isBot).length >= 2
+}
+
+/**
+ * Plus AUCUNE équipe ne pourra marquer, pour de bon : chacune a perdu un joueur
+ * que son bot remplace (2 contre 2 avec un départ de chaque côté). Le score ne
+ * bougera plus, la cible est hors d'atteinte : la partie doit pouvoir s'arrêter.
+ */
+export function tabouGameIsStalled(players: readonly Pick<TabouPlayer, 'isBot' | 'team'>[]): boolean {
+  return !teamCanStillScore(players, 'A') && !teamCanStillScore(players, 'B')
+}
+
+/** Le prochain « continuer » du bilan clôt la partie : score cible atteint, ou partie bloquée. */
+export function tabouGameIsDecided(state: Pick<TabouState, 'scores' | 'targetScore' | 'players'>): boolean {
+  return (
+    state.scores.A >= state.targetScore ||
+    state.scores.B >= state.targetScore ||
+    tabouGameIsStalled(state.players)
+  )
+}
+
 /** Tire le prochain mot sans répétition ; réamorce la file si épuisée. */
 function pickWord(
   rng: SeededRng,
@@ -300,13 +327,18 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       if (!state.players.some((p) => p.id === action.playerId)) {
         throw new TabouEngineError('UNKNOWN_PLAYER')
       }
-      if (state.scores.A >= state.targetScore || state.scores.B >= state.targetScore) {
+      // Fin de partie constatée ICI, sur /action, où les résultats
+      // s'enregistrent — jamais sur un départ. Une partie bloquée s'arrête sur
+      // son score : le meilleur l'emporte, l'égalité ne sacre personne (une
+      // cible atteinte ne laisse jamais les deux équipes à égalité).
+      if (tabouGameIsDecided(state)) {
+        const { A, B } = state.scores
         return {
           ...state,
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,
-          winnerTeam: state.scores.A > state.scores.B ? 'A' : 'B',
+          winnerTeam: A === B ? null : A > B ? 'A' : 'B',
           version: state.version + 1,
         }
       }

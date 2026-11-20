@@ -311,6 +311,52 @@ describe('recordMatchResults (enregistrement + XP)', () => {
     expect(xpUpdates).toEqual([{ ids: ['u1', 'u2'], increment: XP_LOSS }])
   })
 
+  it('tabou arrêté à égalité : participation pour tous, aucune défaite au classement', async () => {
+    const { client, created, xpUpdates } = fakeClient({ u1: {}, u2: {}, u3: {}, u4: {} })
+    // 2 contre 2, un départ de chaque côté (u3 et u4 remplacés par leur bot), 0 à 0.
+    const state = {
+      phase: 'finished',
+      winnerTeam: null,
+      scores: { A: 0, B: 0 },
+      players: [
+        { id: 'u1', isBot: false, leftAt: null, team: 'A' },
+        { id: 'u2', isBot: false, leftAt: null, team: 'B' },
+        { id: 'u3', isBot: true, leftAt: null, team: 'A' },
+        { id: 'u4', isBot: true, leftAt: null, team: 'B' },
+      ],
+    }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'tabou', state })
+    // L'écran de fin annonce « Égalité » : pas de « Défaite » pour autant.
+    expect(n).toBe(0)
+    expect(created).toHaveLength(0)
+    expect(xpUpdates).toEqual([{ ids: ['u1', 'u2', 'u3', 'u4'], increment: XP_LOSS }])
+    expect(recallXpGain('u1')?.reason).toBe('participation')
+  })
+
+  it('tabou arrêté avec une équipe devant : victoire et défaites enregistrées comme d’habitude', async () => {
+    const { client, created } = fakeClient({ u1: {}, u2: {}, u3: {}, u4: {} })
+    const state = {
+      phase: 'finished',
+      winnerTeam: 'A',
+      scores: { A: 3, B: 0 },
+      players: [
+        { id: 'u1', isBot: false, leftAt: null, team: 'A' },
+        { id: 'u2', isBot: false, leftAt: null, team: 'B' },
+        { id: 'u3', isBot: true, leftAt: null, team: 'A' },
+        { id: 'u4', isBot: true, leftAt: null, team: 'B' },
+      ],
+    }
+    const n = await recordMatchResults(client, { roomId: 'r1', gameId: 'tabou', state })
+    expect(n).toBe(4)
+    expect((created as { userId: string; outcome: string }[]).map((r) => `${r.userId}:${r.outcome}`)).toEqual([
+      'u1:win',
+      'u2:loss',
+      // Déserteur de l'équipe gagnante : défaite, comme partout.
+      'u3:loss',
+      'u4:loss',
+    ])
+  })
+
   it('succès : first_game pour tous, first_win pour le gagnant, speed_demon sur le Quiz', async () => {
     const { client, achievements } = fakeClient({ u1: {}, u2: {} })
     const state = { players: [

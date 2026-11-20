@@ -3747,6 +3747,8 @@
         "victory": {
           "teamAWin": "Team A wins the game!",
           "teamBWin": "Team B wins the game!",
+          "draw": "It’s a tie!",
+          "stopped": "Not enough players left to go on: the game ends on this score.",
           "replay": "Play again",
           "rematchWaiting": "Waiting for the others ({count}/{total})",
           "backToMenu": "Back to menu"
