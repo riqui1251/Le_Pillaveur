@@ -160,6 +160,31 @@ describe('TabouOnline : partie arrêtée faute de joueurs', () => {
     }
   })
 
+  it('partis depuis plus de 3 min, jamais remplacés : le bouton annonce le résultat, comme le moteur', () => {
+    let s = firstRound()
+    // Délai de retour écoulé depuis longtemps, aucun téléphone ne les a convertis.
+    s = reduceTabou(s, { type: 'LEAVE', playerId: 'p2', at: NOW - 400_000 })
+    s = reduceTabou(s, { type: 'LEAVE', playerId: 'p3', at: NOW - 400_000 })
+    expect(s.phase).toBe('roundEnd')
+
+    const html = render(s, 'p0')
+
+    // Le moteur arrêterait la partie au clic : l'écran ne promet plus la manche suivante.
+    expect(html).toContain(game('fr').victory.stopped)
+    expect(html).toContain(game('fr').roundEnd.seeResult)
+  })
+
+  it('partis depuis moins de 3 min : le bouton lance bien la manche suivante', () => {
+    let s = firstRound()
+    s = reduceTabou(s, { type: 'LEAVE', playerId: 'p2', at: Date.now() - 10_000 })
+    s = reduceTabou(s, { type: 'LEAVE', playerId: 'p3', at: Date.now() - 10_000 })
+
+    const html = render(s, 'p0')
+
+    expect(html).not.toContain(game('fr').victory.stopped)
+    expect(html).not.toContain(game('fr').roundEnd.seeResult)
+  })
+
   it('un bilan ordinaire n’annonce pas d’arrêt', () => {
     const state = firstRound()
     const bilan = reduceTabou(state, { type: 'ADVANCE', claimedKey: phaseKey(state), now: state.phaseEndsAt ?? NOW })

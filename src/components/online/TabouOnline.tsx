@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { useTranslations } from 'next-intl'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Ban, Check, Loader2, Mic, SkipForward, Trophy, WifiOff, type LucideIcon } from 'lucide-react'
@@ -19,8 +19,8 @@ import { cn } from '@/lib/utils'
 import {
   TABOU_BOT_DESCRIBER_ROUND_MS,
   TABOU_ROUND_MS,
-  tabouGameIsDecided,
   tabouRoundIsPlayable,
+  tabouStalledAt,
   type TabouClientView,
   type TabouPlayerView,
   type TabouTeam,
@@ -45,6 +45,23 @@ import { genreOf } from './bot-speech/bot-speech-feed'
  * tour y reste monté, et sonne quand le rôle de décrivant ARRIVE au joueur
  * (dès le bilan qui l'annonce) au lieu de se remonter muet à chaque phase.
  */
+
+/**
+ * Vrai à partir de l'instant `at`, avec un re-rendu programmé à cet instant :
+ * rien d'autre ne réveille l'écran quand un délai s'écoule sans qu'aucun état
+ * ne change. `null` : jamais.
+ */
+function useReached(at: number | null): boolean {
+  const [, wake] = useReducer((n: number) => n + 1, 0)
+  useEffect(() => {
+    if (at === null || !Number.isFinite(at)) return
+    const wait = at - Date.now()
+    if (wait <= 0) return
+    const id = setTimeout(wake, wait + 50)
+    return () => clearTimeout(id)
+  }, [at])
+  return at !== null && Date.now() >= at
+}
 
 function parseView(json: string | null | undefined): TabouClientView | null {
   if (!json) return null
@@ -131,6 +148,10 @@ export function TabouOnline() {
   const view = useMemo(() => (inGame ? parseView(room?.gameStateJson) : null), [inGame, room?.gameStateJson])
   const tutorial = useGameTutorial('tabou', inGame)
   const cosmetics = useMemberCosmetics(room)
+  // Partie bloquée : même instant que le moteur (un parti est perdu à la fin
+  // de son délai de retour), sinon le bouton du bilan promettait une manche
+  // que le clic transformait en fin de partie.
+  const stalled = useReached(view ? tabouStalledAt(view.players) : null)
 
   // ÉCHÉANCE DE PHASE : tick « advance » générique, arbitré par rang.
   useAdvanceTick({
@@ -293,7 +314,7 @@ export function TabouOnline() {
   const describing = view.phase === 'describing'
   const roundEnd = view.phase === 'roundEnd'
   // Même règle que le moteur : cible atteinte, ou plus aucune équipe en état de marquer.
-  const gameDecided = tabouGameIsDecided(view)
+  const gameDecided = targetReached || stalled
   // Durée à l'ouverture de la manche (elle ne change pas si quelqu'un part ou
   // revient ensuite). États d'avant ce champ : seul un décrivant bot l'écourtait.
   const roundTotal = view.roundMs ?? (describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS)

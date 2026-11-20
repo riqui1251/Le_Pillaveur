@@ -147,26 +147,43 @@ export function tabouRoundIsPlayable(
 
 type StallPlayer = Pick<TabouPlayer, 'isBot' | 'team' | 'leftAt'>
 
-/**
- * L'équipe pourra encore marquer : il lui reste deux joueurs qui ne sont pas
- * des bots — présents, ou partis depuis moins que le délai de retour. Passé ce
- * délai, un parti est perdu pour la partie même si aucun bot ne l'a remplacé :
- * le remplacement est déclenché par un téléphone, et une table qui ne regarde
- * que la TV n'en a aucun d'éveillé. `now` absent : seuls les bots sont perdus.
- */
-function teamCanStillScore(players: readonly StallPlayer[], team: TabouTeam, now?: number): boolean {
-  const lost = (p: StallPlayer) =>
-    p.isBot || (now !== undefined && Boolean(p.leftAt) && now - (p.leftAt as number) >= ONLINE_REPLACE_GRACE_MS)
-  return players.filter((p) => p.team === team && !lost(p)).length >= 2
+/** Un parti a dépassé son délai de retour : perdu pour la partie, même si aucun bot ne l'a remplacé. */
+function leftForGood(player: Pick<TabouPlayer, 'leftAt'>, now: number): boolean {
+  return Boolean(player.leftAt) && now - (player.leftAt as number) >= ONLINE_REPLACE_GRACE_MS
 }
 
 /**
- * Plus AUCUNE équipe ne pourra marquer, pour de bon : chacune a perdu un joueur
- * (2 contre 2 avec un départ de chaque côté). Le score ne bougera plus, la
- * cible est hors d'atteinte : la partie doit pouvoir s'arrêter.
+ * Instant à partir duquel plus AUCUNE équipe ne pourra marquer si personne ne
+ * revient : chacune n'aura plus deux joueurs en jeu (2 contre 2 avec un départ
+ * de chaque côté). Un bot est perdu depuis toujours, un parti à la fin de son
+ * délai de retour — même si aucun bot ne l'a remplacé : le remplacement est
+ * déclenché par un téléphone, et une table qui ne regarde que la TV n'en a
+ * aucun d'éveillé. `-Infinity` : c'est déjà le cas par les seuls bots.
+ * `null` : rien ne l'annonce. Écrans et moteur lisent le même instant.
+ */
+export function tabouStalledAt(players: readonly StallPlayer[]): number | null {
+  const teamOutAt = (team: TabouTeam): number => {
+    const lostAt = players
+      .filter((p) => p.team === team)
+      .map((p) => (p.isBot ? -Infinity : p.leftAt ? p.leftAt + ONLINE_REPLACE_GRACE_MS : Infinity))
+      // Pas de soustraction : Infinity - Infinity donnerait NaN.
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    // Moins de deux joueurs en jeu dès la perte de l'avant-dernier.
+    return lostAt.length < 2 ? -Infinity : lostAt[lostAt.length - 2]
+  }
+  const at = Math.max(teamOutAt('A'), teamOutAt('B'))
+  return at === Infinity ? null : at
+}
+
+/**
+ * Plus aucune équipe ne pourra marquer : le score ne bougera plus, la cible est
+ * hors d'atteinte, la partie doit pouvoir s'arrêter. `now` absent : seuls les
+ * remplacements déjà faits comptent.
  */
 export function tabouGameIsStalled(players: readonly StallPlayer[], now?: number): boolean {
-  return !teamCanStillScore(players, 'A', now) && !teamCanStillScore(players, 'B', now)
+  const at = tabouStalledAt(players)
+  if (at === null) return false
+  return now === undefined ? at === -Infinity : now >= at
 }
 
 /** Le prochain « continuer » du bilan clôt la partie : score cible atteint, ou partie bloquée. */
@@ -345,6 +362,12 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
         const { A, B } = state.scores
         return {
           ...state,
+          // Un parti hors délai sort de la partie comme si un bot l'avait
+          // remplacé : compté perdu, il ne peut plus « encore revenir », et il
+          // n'est pas classé comme un humain présent.
+          players: state.players.map((p) =>
+            !p.isBot && leftForGood(p, action.now) ? { ...p, isBot: true, leftAt: null } : p
+          ),
           phase: 'finished',
           phaseSeq: state.phaseSeq + 1,
           phaseEndsAt: null,

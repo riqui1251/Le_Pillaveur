@@ -4,6 +4,7 @@ import {
   reduceTabou,
   tabouGameIsDecided,
   tabouGameIsStalled,
+  tabouStalledAt,
   TABOU_BOT_DESCRIBER_ROUND_MS,
   TABOU_COUNTDOWN_MS,
   type TabouEntry,
@@ -110,6 +111,45 @@ describe('Tabou — plus aucune équipe ne peut marquer', () => {
     const at = T0 + 10_000 + GRACE
     expect(tabouGameIsStalled(s.players, at)).toBe(false)
     expect(next(s, 'p0', at).phase).toBe('describing')
+  })
+
+  it('l’instant du blocage se lit sur l’état : les écrans basculent en même temps que le moteur', () => {
+    // Personne n'est parti : rien en vue.
+    expect(tabouStalledAt(describing().players)).toBeNull()
+    // Un départ de chaque côté : bloquée à la fin du délai du DERNIER parti.
+    const bilan = oneLeftPerTeam(0)
+    expect(tabouStalledAt(bilan.players)).toBe(T0 + 11_000 + GRACE)
+    // Partis remplacés par des bots : bloquée depuis toujours.
+    expect(tabouStalledAt(replaceLeft(bilan, T0 + 200_000).players)).toBe(Number.NEGATIVE_INFINITY)
+    // Une seule équipe touchée : l'autre peut marquer, rien en vue.
+    expect(tabouStalledAt(leave(describing(), 'p2', T0 + 10_000).players)).toBeNull()
+    // À 3 contre 3, un seul parti dans chaque équipe : il reste deux joueurs partout.
+    let six = describing(6)
+    six = leave(leave(six, 'p2', T0 + 10_000), 'p3', T0 + 11_000)
+    expect(tabouStalledAt(six.players)).toBeNull()
+  })
+
+  it('à l’arrêt, un parti hors délai sort de la partie comme s’il avait été remplacé', () => {
+    const s = next(oneLeftPerTeam(2), 'p0', T0 + 11_000 + GRACE)
+
+    expect(s.phase).toBe('finished')
+    // Compté perdu ET encore « de retour possible » : l'un contredisait l'autre.
+    for (const id of ['p2', 'p3']) {
+      expect(s.players.find((p) => p.id === id)).toMatchObject({ isBot: true, leftAt: null })
+    }
+    for (const id of ['p0', 'p1']) expect(s.players.find((p) => p.id === id)?.isBot).toBe(false)
+  })
+
+  it('fin au score cible : un parti depuis moins de 3 min garde son siège', () => {
+    let s = { ...describing(6), scores: { A: 19, B: 3 } }
+    s = leave(s, 'p4', T0 + 1_000)
+    s = found(s, 'p2', T0 + 2_000)
+    s = reduceTabou(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: s.phaseEndsAt ?? T0 })
+
+    s = next(s, 'p0', T0 + 70_000)
+
+    expect(s.phase).toBe('finished')
+    expect(s.players.find((p) => p.id === 'p4')).toMatchObject({ isBot: false, leftAt: T0 + 1_000 })
   })
 
   it('une seule équipe hors jeu : l’autre continue de jouer', () => {
