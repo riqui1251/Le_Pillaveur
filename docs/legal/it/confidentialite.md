@@ -1,6 +1,6 @@
 # Informativa sulla privacy
 
-**Ultimo aggiornamento:** 22 ottobre 2026
+**Ultimo aggiornamento:** 20 novembre 2026
 
 ## 1. Introduzione
 
@@ -124,6 +124,8 @@ Il Servizio utilizza i seguenti cookie:
 Puoi modificare la tua scelta in qualsiasi momento, senza eliminare i cookie, con il link «Statistiche di visita» del menu e del piè di pagina della home page: riapre la scelta Accetta / Rifiuta. Rifiutare cancella immediatamente i dati descritti al punto 3.3 per questo browser e, se sei connesso e avevi accettato le statistiche su questo browser, lo storico delle visite del tuo account. La scelta vale solo per questo browser.
 
 Il tuo browser conserva inoltre nella sua memoria locale semplici preferenze di visualizzazione, senza alcun identificativo e mai inviate ai nostri server: per esempio `lp-friday-table-dismissed`, salvata quando nascondi l'annuncio del tavolo aperto del venerdì, ricorda soltanto la settimana interessata (nella forma «2026-W41»).
+
+Il tutorial per i nuovi giocatori vi lascia allo stesso modo un segno (`lp-tour-seen`), che ricorda soltanto che l'hai visto o saltato, per non riproportelo su questo dispositivo; non contiene alcun identificativo e non viene mai inviato ai nostri server. Mentre il tutorial è in corso, un segno di sessione (`lp-tour-run`) permette di riprenderlo dopo un ricaricamento della pagina; scompare alla chiusura della scheda. Se hai effettuato l'accesso, registriamo anche sul tuo account la data in cui l'hai visto o saltato, per non riproportelo su un altro dispositivo: questa data viene eliminata insieme al tuo account.
 
 ## 4. Finalità del trattamento
 

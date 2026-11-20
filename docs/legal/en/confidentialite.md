@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 22 October 2026
+**Last updated:** 20 November 2026
 
 ## 1. Introduction
 
@@ -124,6 +124,8 @@ The Service uses the following cookies:
 You can change your choice at any time, without deleting your cookies, with the "Visit statistics" link in the menu and in the home page footer: it reopens the Accept / Decline choice. Declining immediately erases the data described in 3.3 for this browser and, if you are signed in and had accepted visit statistics in this browser, your account's visit history. The choice only applies to this browser.
 
 Your browser also keeps simple display preferences in its local storage, with no identifier and never sent to our servers: for example `lp-friday-table-dismissed`, saved when you hide the Friday open table announcement, only remembers the week concerned (in the form "2026-W41").
+
+The new players tutorial leaves a mark there in the same way (`lp-tour-seen`), which only remembers that you have seen or skipped it, so that it is not offered again on this device; it contains no identifier and is never sent to our servers. While the tutorial is running, a session mark (`lp-tour-run`) lets it resume after a page reload; it disappears when the tab is closed. If you are signed in, we also record on your account the date on which you saw or skipped it, so that it is not offered again on another device: this date is deleted with your account.
 
 ## 4. Purposes of processing
 

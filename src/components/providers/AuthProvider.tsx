@@ -39,6 +39,8 @@ export type AuthUser = {
    * session valide en base (déconnexion, connexion à un autre compte).
    */
   isGuest?: boolean
+  /** Le compte a déjà vu ou passé le tuto des nouveaux joueurs. Absent des réponses de connexion : relu au chargement suivant. */
+  tourSeen?: boolean
 }
 
 type AuthContextValue = {

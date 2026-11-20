@@ -178,6 +178,7 @@ export function LocalGamePrelobby({
               type="button"
               variant="primary"
               size="gameLg"
+              data-tour="prelobby-start"
               onClick={onStart}
               disabled={startDisabled}
               className="w-full"
@@ -231,7 +232,7 @@ interface PrelobbyDisclosureProps {
 export function PrelobbyDisclosure({ label, open, onToggle, children, className }: PrelobbyDisclosureProps) {
   const panelId = useId()
   return (
-    <section className={cn('rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2', className)}>
+    <section data-tour="prelobby-rules" className={cn('rounded-2xl border border-gold/15 bg-felt-deep/70 px-4 py-2', className)}>
       <h2 className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
         <button
           type="button"

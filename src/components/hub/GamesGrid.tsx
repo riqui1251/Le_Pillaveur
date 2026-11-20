@@ -64,6 +64,7 @@ function GamesCardGrid({
   isDisabled,
   disabledLabel,
   disabledHint,
+  tourAnchor,
 }: {
   games: LocalizedGameMeta[]
   soloHints?: boolean
@@ -71,9 +72,11 @@ function GamesCardGrid({
   isDisabled?: (game: LocalizedGameMeta) => boolean
   disabledLabel?: string
   disabledHint?: string
+  /** Repère du tuto des nouveaux joueurs (`data-tour`) : la grille qu'il invite à toucher. */
+  tourAnchor?: string
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
+    <div data-tour={tourAnchor} className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
       {games.map((game) => (
         <GameCard
           key={game.id}
@@ -259,11 +262,13 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
           {localCatalog ? (
             localGames.length > 0 && (
               <section>
-                <ModeTitle icon={<Smartphone className="h-4 w-4" />}>
-                  {t('localSection.title', { count: localGames.length })}
-                </ModeTitle>
-                <p className="mb-2 text-xs leading-snug text-cream/80">{t('localSection.hint')}</p>
-                <GamesCardGrid games={localGames} {...offlineCard} />
+                <div data-tour="hub-local-head">
+                  <ModeTitle icon={<Smartphone className="h-4 w-4" />}>
+                    {t('localSection.title', { count: localGames.length })}
+                  </ModeTitle>
+                  <p className="mb-2 text-xs leading-snug text-cream/80">{t('localSection.hint')}</p>
+                </div>
+                <GamesCardGrid games={localGames} tourAnchor="hub-local-grid" {...offlineCard} />
               </section>
             )
           ) : soloSections ? (

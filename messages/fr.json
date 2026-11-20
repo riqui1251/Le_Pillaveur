@@ -93,6 +93,10 @@
       "regles": {
         "label": "Règles",
         "description": "Les règles de chaque jeu"
+      },
+      "tuto": {
+        "label": "Revoir le tuto",
+        "description": "Le pas à pas des nouveaux joueurs"
       }
     },
     "legal": {
@@ -8246,6 +8250,234 @@
     "exitFullscreen": "Quitter le plein écran",
     "changeCode": "Changer de code",
     "host": "Hôte"
+  },
+  "tour": {
+    "skip": "Passer le tuto",
+    "next": "Suivant",
+    "back": "Retour",
+    "gotIt": "Compris",
+    "tapHint": "ou touche l’élément entouré d’or",
+    "doHint": "À toi : fais-le sur l’écran",
+    "demoBadge": "Démonstration",
+    "dialogLabel": "Tuto des nouveaux joueurs",
+    "chapterLabel": "{n}/{total} · {name}",
+    "progressAria": "Chapitre {n} sur {total}, étape {step} sur {steps}",
+    "chapters": {
+      "players": "Les joueurs",
+      "games": "Choisir un jeu",
+      "table": "La table et les règles",
+      "online": "Jouer en ligne",
+      "friends": "Les amis",
+      "voice": "Le vocal",
+      "ingame": "En partie"
+    },
+    "welcome": {
+      "kicker": "Bienvenue à table",
+      "title": "Première soirée au Pillaveur ?",
+      "body": "On te montre l’essentiel pas à pas : ajouter les joueurs, lancer un jeu, trouver les règles. Deux minutes, pas plus.",
+      "start": "Lancer le tuto",
+      "foot": "Tu pourras le revoir depuis le menu."
+    },
+    "bridge": {
+      "kicker": "Première partie lancée",
+      "title": "Et pour jouer chacun sur son téléphone ?",
+      "body": "La suite est une démonstration du jeu en ligne : ouvrir une table, inviter tes amis, le vocal et le chat. Ta partie t’attend juste derrière.",
+      "continue": "Voir le jeu en ligne",
+      "stop": "Terminer ici"
+    },
+    "end": {
+      "kicker": "Tuto terminé",
+      "title": "À toi de jouer",
+      "itemPlayers": "Ajouter les joueurs et choisir qui joue",
+      "itemGame": "Ouvrir un jeu et lancer la table",
+      "itemRules": "Trouver les règles avant de lancer et dans le menu",
+      "itemOnline": "Les amis, le vocal, le chat et l’ampoule des règles d’une table en ligne",
+      "onlineLater": "Le jeu en ligne se joue avec un compte gratuit. Sa démonstration reste dans le tuto.",
+      "play": "Jouer maintenant",
+      "again": "Revoir le tuto"
+    },
+    "confirmSkip": {
+      "kicker": "Passer le tuto",
+      "title": "On s’arrête là ?",
+      "body": "Tu le retrouves quand tu veux dans le menu, à l’entrée « Revoir le tuto ».",
+      "yes": "Passer le tuto",
+      "no": "Continuer le tuto"
+    },
+    "nudge": {
+      "needPlayers": "Ajoute d’abord un prénom.",
+      "needTwo": "Il faut au moins deux joueurs choisis.",
+      "pickGame": "Touche le jeu qui te tente.",
+      "notReady": "Ce bouton n’est pas encore disponible."
+    },
+    "local": {
+      "addRow": {
+        "title": "Écris les prénoms",
+        "body": "Tape les prénoms de la tablée, séparés par des virgules, puis touche « Ajouter ». Sur un seul téléphone, aucun compte n’est demandé."
+      },
+      "cards": {
+        "title": "Une carte dorée joue ce soir",
+        "body": "Les joueurs ajoutés sont déjà choisis. Touche une carte pour mettre quelqu’un de côté, retouche-la pour le reprendre."
+      },
+      "start": {
+        "title": "Tout le monde est là ?",
+        "body": "Le bas de l’écran compte les joueurs prêts. Il en faut au moins deux, puis touche le bouton."
+      },
+      "partyBar": {
+        "title": "Les réglages de la soirée",
+        "body": "Un téléphone ou en ligne, avec ou sans alcool, qui joue : tout se règle ici, une fois pour la soirée."
+      },
+      "localSection": {
+        "title": "Deux familles de jeux",
+        "body": "« Sur ce téléphone » : un seul appareil passe de main en main. Plus bas, « Un téléphone chacun » : les jeux en ligne."
+      },
+      "pickGame": {
+        "title": "Choisis ton premier jeu",
+        "body": "Chaque carte résume le jeu en deux lignes. Touche celui qui te tente."
+      },
+      "rules": {
+        "title": "Les règles sont ici",
+        "body": "Avant de lancer, le jeu range ses règles dans ce volet. Touche-le pour le déplier."
+      },
+      "launch": {
+        "title": "Lance la partie",
+        "body": "Le grand bouton du bas est toujours l’action du moment."
+      },
+      "table": {
+        "title": "Voilà la table de jeu",
+        "body": "L’action du moment reste sous le pouce, et le jeu dit à qui c’est le tour : passe-lui le téléphone."
+      },
+      "menu": {
+        "title": "Un doute en pleine partie ?",
+        "body": "Le menu, en haut à gauche, garde les règles de tous les jeux. Ouvre-le."
+      },
+      "menuRules": {
+        "title": "Menu, puis Règles",
+        "body": "Une page par jeu : le principe, le déroulement, comment on gagne."
+      },
+      "again": {
+        "title": "Il reste à portée de main",
+        "body": "Pour revoir le tuto, ouvre le menu : l’entrée « Revoir le tuto » le relance du début."
+      }
+    },
+    "demo": {
+      "mode": {
+        "title": "Chacun sur son téléphone",
+        "body": "Pour jouer à distance, ou chacun le sien, ouvre les réglages de la soirée. Il faut un compte gratuit."
+      },
+      "goOnline": {
+        "title": "Passe en ligne",
+        "body": "Chacun joue sur son téléphone, réunis par un code de table. Tu reviens à « Local » quand tu veux."
+      },
+      "pickOnline": {
+        "title": "Les jeux en ligne",
+        "body": "Le chiffre donne le nombre de joueurs. Le petit robot : des bots peuvent compléter la table."
+      },
+      "openTable": {
+        "title": "Ouvre ta table",
+        "body": "Tu en deviens l’hôte. Pour rejoindre celle d’un ami, tape son code juste au-dessus."
+      },
+      "privacy": {
+        "title": "Qui peut rejoindre ?",
+        "body": "Privée : sur code, QR ou invitation. Ouverte : visible de tous dans la liste des lobbies."
+      },
+      "code": {
+        "title": "Le code de ta table",
+        "body": "Tes amis le tapent pour s’asseoir avec toi. Touche-le pour le copier."
+      },
+      "friendsMenu": {
+        "title": "Ta liste d’amis",
+        "body": "Elle se range dans le menu."
+      },
+      "menuFriends": {
+        "title": "Menu, puis Gérer mes amis",
+        "body": "Une pastille verte y compte tes amis en ligne."
+      },
+      "addFriend": {
+        "title": "Ajoute un ami avec son code",
+        "body": "Chaque compte a un code LP-…, affiché sous le pseudo sur la page Compte. Tape celui de ton ami, puis « Ajouter »."
+      },
+      "accept": {
+        "title": "Accepte une demande",
+        "body": "Ta demande est partie. Celles que tu reçois arrivent ici."
+      },
+      "inviteOpen": {
+        "title": "Invite-les à ta table",
+        "body": "Depuis la table, « Inviter un ami » affiche le QR code et tes amis."
+      },
+      "invite": {
+        "title": "Un toucher, c’est envoyé",
+        "body": "Ton ami reçoit l’invitation sur son écran et s’assoit directement à ta table."
+      },
+      "mic": {
+        "title": "Le vocal de la partie",
+        "body": "Le micro, en haut de la table, ouvre le vocal réservé aux joueurs de cette partie."
+      },
+      "join": {
+        "title": "Rejoins quand tu veux",
+        "body": "Ton micro ne s’active qu’après avoir rejoint. Le téléphone demande l’autorisation la première fois."
+      },
+      "controls": {
+        "title": "Couper, sourdine, quitter",
+        "body": "Coupe ton micro, mets la table en sourdine ou raccroche. Le point vert montre qui est en vocal."
+      },
+      "bots": {
+        "title": "Pas assez de monde ?",
+        "body": "Des bots complètent la table. Tu peux même jouer seul contre eux."
+      },
+      "launch": {
+        "title": "L’hôte lance la partie",
+        "body": "Les invités touchent « Je suis prêt ». Quand la table est complète, c’est toi qui lances."
+      },
+      "briefing": {
+        "title": "Les règles avant chaque partie",
+        "body": "En ligne, chacun les lit en trois écrans sur son téléphone. La partie démarre quand tout le monde est prêt."
+      },
+      "bulb": {
+        "title": "L’ampoule rouvre les règles",
+        "body": "En pleine partie, elle reste en haut à droite, à côté du micro."
+      },
+      "howTo": {
+        "title": "Comment jouer ?",
+        "body": "Les mêmes écrans qu’au début, à ton rythme. La croix les referme."
+      },
+      "chatMenu": {
+        "title": "Le chat de la partie",
+        "body": "Lui aussi se range dans le menu."
+      },
+      "menuChat": {
+        "title": "Menu, puis Chat",
+        "body": "La pastille rouge compte les messages que tu n’as pas lus."
+      },
+      "write": {
+        "title": "Écris à la table",
+        "body": "L’onglet Partie est lu par tous les joueurs de la table. Le petit drapeau signale un message déplacé."
+      },
+      "private": {
+        "title": "Et en privé",
+        "body": "L’onglet Amis ouvre une conversation avec chaque ami, même hors partie."
+      }
+    },
+    "sample": {
+      "me": "Sacha",
+      "friend": "Camille",
+      "friend2": "Nino",
+      "bot": "Gaspard",
+      "botTag": "bot",
+      "chat1": "On est d’accord que {bot} répond bizarrement ?",
+      "chat2": "{name}, tu ne dis rien… 👀",
+      "chatMine": "Promis, ce n’est pas moi 😇",
+      "place": "Le casino",
+      "askTurn": "{name} choisit qui interroger",
+      "autoStart": "Démarrage auto dans 43 s",
+      "rulesTitle": "Un lieu secret, un espion",
+      "rulesBody": "Tout le monde connaît le lieu… sauf l’espion, qui ne sait rien ! Posez-vous des questions pour démasquer l’intrus sans trahir le lieu : à voix haute, et par boutons dès qu’un bot est à table.",
+      "round": "Manche {n} · Espion {spy} – Équipe {crew}",
+      "phase": "Discussion",
+      "locationLabel": "Le lieu",
+      "crewRole": "Tu es dans l’équipe",
+      "crewHint": "Réponds juste assez pour prouver que tu connais le lieu, sans le trahir.",
+      "accuse": "J'accuse quelqu'un !"
+    }
   },
   "gameTutorial": {
     "next": "Suivant",

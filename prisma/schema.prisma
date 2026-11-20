@@ -60,6 +60,9 @@ model User {
   reminderOptInAt    DateTime?
   reminderLastSentAt DateTime?
   reminderToken      String?   @unique
+  // Tuto des nouveaux joueurs : date à laquelle le compte l'a vu ou passé
+  // (null = jamais). Évite de le reproposer tout seul sur un autre appareil.
+  tourSeenAt         DateTime?
   // Avis de 1re partie (POST /api/feedback/first-game) : date à laquelle la
   // carte a été présentée PUIS notée ou refusée — posée une fois, jamais
   // remise à null. Seul but : ne pas redemander. Minimisation : une date, ni

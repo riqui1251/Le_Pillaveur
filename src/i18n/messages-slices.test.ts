@@ -5,12 +5,14 @@ import type { AbstractIntlMessages } from 'next-intl'
 import { GAMES } from '@/lib/games'
 import {
   GAME_IDS,
+  ON_DEMAND_PATHS,
   SERVER_ONLY_PATHS,
   coreMessages,
   gameMessages,
   gameSlice,
   mergeMessages,
   serverOnlySlice,
+  tourSlice,
   supervisionMessages,
   supervisionSlice,
   tvMessages,
@@ -194,6 +196,16 @@ describe('sur le vrai catalogue français', () => {
     }
   })
 
+  it('chaque chemin chargé à la demande existe, hors du socle, et sa tranche le sert entier', () => {
+    const core = coreMessages(FR)
+    for (const path of ON_DEMAND_PATHS) {
+      expect(FR[path], path).toBeDefined()
+      expect(core[path], path).toBeUndefined()
+    }
+    // Même nœud que le catalogue : la tranche ne recopie ni ne tronque rien.
+    expect(tourSlice(FR).tour).toBe(FR.tour)
+  })
+
   it('le socle pèse moins du tiers du catalogue', () => {
     const all = JSON.stringify(FR).length
     const core = JSON.stringify(coreMessages(FR)).length
@@ -207,10 +219,14 @@ describe('sur le vrai catalogue français', () => {
     }
   })
 
-  it('socle + tranche TV + supervision + textes serveur = le catalogue entier', () => {
+  it('socle + tranche TV + supervision + textes serveur + tuto = le catalogue entier', () => {
     // Rien ne tombe entre les tranches : tout ce qui existe est servi quelque
-    // part — les textes serveur, par les pages qui les rendent.
-    const rebuilt = mergeMessages(mergeMessages(tvMessages(FR), supervisionSlice(FR)), serverOnlySlice(FR))
+    // part — les textes serveur, par les pages qui les rendent ; le tuto, par
+    // /api/tour/messages.
+    const rebuilt = mergeMessages(
+      mergeMessages(mergeMessages(tvMessages(FR), supervisionSlice(FR)), serverOnlySlice(FR)),
+      tourSlice(FR)
+    )
     expect(rebuilt).toEqual(FR)
   })
 })

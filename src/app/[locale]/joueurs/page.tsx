@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 import { Link, useRouter } from "@/i18n/navigation"
 import { PlayerManager } from "@/components/PlayerManager"
 import { HubShell } from "@/components/hub/HubShell"
+import { TourAutoStart } from "@/components/tour/TourAutoStart"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { useAuth } from "@/hooks/useAuth"
 import { useBrowserOnline } from "@/hooks/useBrowserOnline"
@@ -54,6 +55,7 @@ function JoueursContent() {
 
   return (
     <>
+      <TourAutoStart />
       {!loading && !user && online && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
           <p className="text-sm text-amber-100/90">{t('guestPrompt')}</p>

@@ -123,7 +123,7 @@ export function GameShell({
       </main>
 
       {actionBar && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
+        <div data-tour="game-action" className="fixed inset-x-0 bottom-0 z-30 border-t border-gold/[0.15] bg-felt-deep/95 backdrop-blur-md">
           <div
             className={cn("game-surface flex items-center gap-2 pl-3 pt-3 sm:pl-4", actionBarInset)}
             style={surfaceStyle}

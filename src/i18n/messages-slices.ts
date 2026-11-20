@@ -76,6 +76,16 @@ const BORROWED_GAMES: Readonly<Record<string, readonly string[]>> = {
  */
 export const SERVER_ONLY_PATHS: readonly string[] = ['collections', 'landing.faq', 'rules', 'legal.meta', 'reminder']
 
+/**
+ * Sous-arbres chargés À LA DEMANDE par le navigateur : `tour`, les textes du
+ * tuto des nouveaux joueurs (≈ 7,5 Ko par langue). Le tuto se montre une fois,
+ * à un joueur qui arrive ; ses textes n'ont rien à faire dans le HTML de
+ * chaque page de chaque visite. Le socle les retire, /api/tour/messages les
+ * sert, et src/components/tour/TourLayer.tsx les ajoute au fournisseur parent
+ * (ClientMessages) autour du seul calque du tuto.
+ */
+export const ON_DEMAND_PATHS: readonly string[] = ['tour']
+
 /** Un nœud du catalogue (objet imbriqué) — les tableaux (étapes de tutoriel) sont des feuilles. */
 function isNode(value: unknown): value is AbstractIntlMessages {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -147,13 +157,14 @@ export function mergeMessages(base: AbstractIntlMessages, extra: AbstractIntlMes
 
 /**
  * Le socle : tout le catalogue SAUF `supervision`, SAUF les `games.<id>` des
- * jeux et SAUF les SERVER_ONLY_PATHS. `games.catalog`, `games.meta` et tout
+ * jeux, SAUF les SERVER_ONLY_PATHS et SAUF les ON_DEMAND_PATHS (le tuto).
+ * `games.catalog`, `games.meta` et tout
  * autre enfant de `games` qui n'est pas un identifiant de jeu restent : le
  * hub, la navbar et les pages serveur en lisent les titres.
  */
 export function coreMessages(all: AbstractIntlMessages): AbstractIntlMessages {
   let trimmed = all
-  for (const path of SERVER_ONLY_PATHS) trimmed = omitPath(trimmed, path.split('.'))
+  for (const path of [...SERVER_ONLY_PATHS, ...ON_DEMAND_PATHS]) trimmed = omitPath(trimmed, path.split('.'))
   const { supervision: _supervision, games, ...rest } = trimmed
   void _supervision
   if (!isNode(games)) return rest
@@ -198,6 +209,11 @@ export function gameSlice(all: AbstractIntlMessages, gameId: string): AbstractIn
 /** La tranche de l'espace staff : `supervision` seul. */
 export function supervisionSlice(all: AbstractIntlMessages): AbstractIntlMessages {
   return isNode(all.supervision) ? { supervision: all.supervision } : {}
+}
+
+/** La tranche du tuto des nouveaux joueurs : `tour` seul, servie à la demande (ON_DEMAND_PATHS). */
+export function tourSlice(all: AbstractIntlMessages): AbstractIntlMessages {
+  return isNode(all.tour) ? { tour: all.tour } : {}
 }
 
 /** La tranche de l'écran TV : les textes de TOUS les jeux — il affiche n'importe lequel. */

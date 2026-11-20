@@ -93,6 +93,10 @@
       "regles": {
         "label": "Rules",
         "description": "The rules of every game"
+      },
+      "tuto": {
+        "label": "Replay the tutorial",
+        "description": "The step-by-step for new players"
       }
     },
     "legal": {
@@ -8246,6 +8250,234 @@
     "exitFullscreen": "Exit fullscreen",
     "changeCode": "Change code",
     "host": "Host"
+  },
+  "tour": {
+    "skip": "Skip the tutorial",
+    "next": "Next",
+    "back": "Back",
+    "gotIt": "Got it",
+    "tapHint": "or tap the item circled in gold",
+    "doHint": "Your turn: do it on the screen",
+    "demoBadge": "Demo",
+    "dialogLabel": "New players tutorial",
+    "chapterLabel": "{n}/{total} · {name}",
+    "progressAria": "Chapter {n} of {total}, step {step} of {steps}",
+    "chapters": {
+      "players": "The players",
+      "games": "Pick a game",
+      "table": "The table and the rules",
+      "online": "Playing online",
+      "friends": "Friends",
+      "voice": "Voice chat",
+      "ingame": "In a game"
+    },
+    "welcome": {
+      "kicker": "Welcome to the table",
+      "title": "First night on Le Pillaveur?",
+      "body": "We’ll walk you through the essentials: adding players, starting a game, finding the rules. Two minutes, no more.",
+      "start": "Start the tutorial",
+      "foot": "You can replay it from the menu."
+    },
+    "bridge": {
+      "kicker": "First game started",
+      "title": "What about one phone each?",
+      "body": "Next comes a demo of online play: opening a table, inviting your friends, voice chat and text chat. Your game is waiting right behind it.",
+      "continue": "See online play",
+      "stop": "Finish here"
+    },
+    "end": {
+      "kicker": "Tutorial complete",
+      "title": "Your turn to play",
+      "itemPlayers": "Add players and choose who plays",
+      "itemGame": "Open a game and start the table",
+      "itemRules": "Find the rules before starting and in the menu",
+      "itemOnline": "Friends, voice chat, text chat and the rules bulb of an online table",
+      "onlineLater": "Online play needs a free account. Its demo stays in the tutorial.",
+      "play": "Play now",
+      "again": "Replay the tutorial"
+    },
+    "confirmSkip": {
+      "kicker": "Skip the tutorial",
+      "title": "Stop here?",
+      "body": "You can find it any time in the menu, under “Replay the tutorial”.",
+      "yes": "Skip the tutorial",
+      "no": "Keep going"
+    },
+    "nudge": {
+      "needPlayers": "Add a name first.",
+      "needTwo": "You need at least two selected players.",
+      "pickGame": "Tap the game you fancy.",
+      "notReady": "This button isn’t available yet."
+    },
+    "local": {
+      "addRow": {
+        "title": "Type the names",
+        "body": "Type the names of everyone at the table, separated by commas, then tap “Add”. On a single phone, no account is needed."
+      },
+      "cards": {
+        "title": "A gold card plays tonight",
+        "body": "Added players are already selected. Tap a card to set someone aside, tap it again to bring them back."
+      },
+      "start": {
+        "title": "Everyone here?",
+        "body": "The bottom of the screen counts the players who are ready. You need at least two, then tap the button."
+      },
+      "partyBar": {
+        "title": "Tonight’s settings",
+        "body": "One phone or online, with or without alcohol, who’s playing: set it all here, once for the night."
+      },
+      "localSection": {
+        "title": "Two families of games",
+        "body": "“On this phone”: a single device goes from hand to hand. Further down, “One phone each”: the online games."
+      },
+      "pickGame": {
+        "title": "Pick your first game",
+        "body": "Each card sums up the game in two lines. Tap the one you fancy."
+      },
+      "rules": {
+        "title": "The rules are here",
+        "body": "Before starting, the game keeps its rules in this panel. Tap it to unfold them."
+      },
+      "launch": {
+        "title": "Start the game",
+        "body": "The big button at the bottom is always the action of the moment."
+      },
+      "table": {
+        "title": "This is the game table",
+        "body": "The action of the moment stays under your thumb, and the game says whose turn it is: hand them the phone."
+      },
+      "menu": {
+        "title": "Unsure mid-game?",
+        "body": "The menu, top left, keeps the rules of every game. Open it."
+      },
+      "menuRules": {
+        "title": "Menu, then Rules",
+        "body": "One page per game: the idea, how it plays, how you win."
+      },
+      "again": {
+        "title": "It stays within reach",
+        "body": "To replay the tutorial, open the menu: “Replay the tutorial” starts it over."
+      }
+    },
+    "demo": {
+      "mode": {
+        "title": "One phone each",
+        "body": "To play remotely, or each on your own phone, open tonight’s settings. You need a free account."
+      },
+      "goOnline": {
+        "title": "Go online",
+        "body": "Everyone plays on their own phone, brought together by a table code. Switch back to “Local” whenever you like."
+      },
+      "pickOnline": {
+        "title": "The online games",
+        "body": "The number is the player count. The little robot: bots can fill the table."
+      },
+      "openTable": {
+        "title": "Open your table",
+        "body": "You become the host. To join a friend’s table, type their code just above."
+      },
+      "privacy": {
+        "title": "Who can join?",
+        "body": "Private: by code, QR or invite. Open: visible to everyone in the lobby list."
+      },
+      "code": {
+        "title": "Your table code",
+        "body": "Your friends type it to sit with you. Tap it to copy."
+      },
+      "friendsMenu": {
+        "title": "Your friends list",
+        "body": "It lives in the menu."
+      },
+      "menuFriends": {
+        "title": "Menu, then Manage my friends",
+        "body": "A green badge counts your friends who are online."
+      },
+      "addFriend": {
+        "title": "Add a friend with their code",
+        "body": "Every account has an LP-… code, shown under the nickname on the Account page. Type your friend’s, then “Add”."
+      },
+      "accept": {
+        "title": "Accept a request",
+        "body": "Your request is sent. The ones you receive show up here."
+      },
+      "inviteOpen": {
+        "title": "Invite them to your table",
+        "body": "From the table, “Invite a friend” shows the QR code and your friends."
+      },
+      "invite": {
+        "title": "One tap and it’s sent",
+        "body": "Your friend gets the invite on their screen and sits straight at your table."
+      },
+      "mic": {
+        "title": "The game’s voice chat",
+        "body": "The mic, at the top of the table, opens the voice chat reserved for the players of this game."
+      },
+      "join": {
+        "title": "Join whenever you like",
+        "body": "Your mic only turns on after you join. The phone asks for permission the first time."
+      },
+      "controls": {
+        "title": "Mute, deafen, leave",
+        "body": "Mute your mic, deafen the table or hang up. The green dot shows who’s in voice."
+      },
+      "bots": {
+        "title": "Not enough people?",
+        "body": "Bots fill the table. You can even play alone against them."
+      },
+      "launch": {
+        "title": "The host starts the game",
+        "body": "Guests tap “I’m ready”. Once the table is full, you start."
+      },
+      "briefing": {
+        "title": "The rules before every game",
+        "body": "Online, everyone reads them in three screens on their own phone. The game starts when everyone is ready."
+      },
+      "bulb": {
+        "title": "The bulb reopens the rules",
+        "body": "Mid-game, it stays at the top right, next to the mic."
+      },
+      "howTo": {
+        "title": "How to play?",
+        "body": "The same screens as at the start, at your own pace. The cross closes them."
+      },
+      "chatMenu": {
+        "title": "The game chat",
+        "body": "It lives in the menu too."
+      },
+      "menuChat": {
+        "title": "Menu, then Chat",
+        "body": "The red badge counts the messages you haven’t read."
+      },
+      "write": {
+        "title": "Write to the table",
+        "body": "The Game tab is read by every player at the table. The little flag reports an inappropriate message."
+      },
+      "private": {
+        "title": "And in private",
+        "body": "The Friends tab opens a conversation with each friend, even outside a game."
+      }
+    },
+    "sample": {
+      "me": "Sacha",
+      "friend": "Camille",
+      "friend2": "Nino",
+      "bot": "Gaspard",
+      "botTag": "bot",
+      "chat1": "Can we agree {bot} is answering weirdly?",
+      "chat2": "{name}, you’re very quiet… 👀",
+      "chatMine": "I swear it’s not me 😇",
+      "place": "The casino",
+      "askTurn": "{name} picks who to question",
+      "autoStart": "Auto start in 43 s",
+      "rulesTitle": "A secret location, a spy",
+      "rulesBody": "Everyone knows the location… except the spy, who knows nothing! Ask each other questions to unmask the intruder without giving the place away: out loud, and with buttons as soon as a bot is at the table.",
+      "round": "Round {n} · Spy {spy} – Crew {crew}",
+      "phase": "Discussion",
+      "locationLabel": "The location",
+      "crewRole": "You’re on the crew",
+      "crewHint": "Answer just enough to prove you know the place, without giving it away.",
+      "accuse": "I accuse someone!"
+    }
   },
   "gameTutorial": {
     "next": "Next",

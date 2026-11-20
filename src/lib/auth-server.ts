@@ -56,6 +56,8 @@ export type AuthUser = {
    * activité s'il n'a plus de session valide (retention-sweep).
    */
   isGuest?: boolean
+  /** Le compte a déjà vu ou passé le tuto des nouveaux joueurs (sur n'importe quel appareil). */
+  tourSeen?: boolean
 }
 
 /** Durée de session selon le type de compte (création et renouvellement). */
@@ -206,6 +208,7 @@ export async function getSessionFromToken(token: string | undefined): Promise<Va
       ambianceMode: user.ambianceMode === 'soft' ? 'soft' : 'alcool',
       onlineXp: user.onlineXp,
       isGuest: user.isGuest,
+      tourSeen: user.tourSeenAt != null,
     },
   }
 }

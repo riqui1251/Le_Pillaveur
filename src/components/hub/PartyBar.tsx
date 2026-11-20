@@ -79,6 +79,7 @@ export function PartyBar() {
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <div
         role="group"
+        data-tour="party-bar"
         aria-label={t('title')}
         aria-busy={loading || undefined}
         className="flex h-14 items-stretch divide-x divide-gold/20 overflow-hidden rounded-2xl border border-gold/30 bg-felt-deep/90 shadow-[0_12px_30px_-20px_rgba(0,0,0,0.9)]"

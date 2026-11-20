@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-**Dernière mise à jour :** 22 octobre 2026
+**Dernière mise à jour :** 20 novembre 2026
 
 ## 1. Introduction
 
@@ -124,6 +124,8 @@ Le Service utilise les cookies suivants :
 Vous pouvez modifier votre choix à tout moment, sans supprimer vos cookies, avec le lien « Statistiques de visite » du menu et du pied de la page d'accueil : il rouvre le choix Accepter / Refuser. Refuser efface immédiatement les données décrites au 3.3 pour ce navigateur et, si vous êtes connecté et aviez accepté les statistiques sur ce navigateur, l'historique des visites de votre compte. Le choix ne vaut que pour ce navigateur.
 
 Votre navigateur garde aussi, dans son stockage local, de simples préférences d'affichage, sans identifiant et jamais envoyées à nos serveurs : par exemple `lp-friday-table-dismissed`, enregistrée quand vous masquez le rendez-vous de la table ouverte du vendredi, ne retient que la semaine concernée (sous la forme « 2026-W41 »).
+
+Le tuto des nouveaux joueurs y laisse de la même façon une marque (`lp-tour-seen`), qui retient seulement que vous l'avez vu ou passé, pour ne plus vous le proposer sur cet appareil ; elle ne contient aucun identifiant et n'est jamais envoyée à nos serveurs. Pendant que le tuto est en cours, une marque de session (`lp-tour-run`) permet de le reprendre après un rechargement de la page ; elle disparaît à la fermeture de l'onglet. Si vous êtes connecté, nous enregistrons aussi sur votre compte la date à laquelle vous l'avez vu ou passé, pour ne pas vous le reproposer sur un autre appareil : cette date est supprimée avec votre compte.
 
 ## 4. Finalités du traitement
 

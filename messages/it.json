@@ -93,6 +93,10 @@
       "regles": {
         "label": "Regole",
         "description": "Le regole di ogni gioco"
+      },
+      "tuto": {
+        "label": "Rivedi il tutorial",
+        "description": "Il passo dopo passo per i nuovi giocatori"
       }
     },
     "legal": {
@@ -8246,6 +8250,234 @@
     "exitFullscreen": "Esci dallo schermo intero",
     "changeCode": "Cambia codice",
     "host": "Host"
+  },
+  "tour": {
+    "skip": "Salta il tutorial",
+    "next": "Avanti",
+    "back": "Indietro",
+    "gotIt": "Capito",
+    "tapHint": "oppure tocca l’elemento cerchiato d’oro",
+    "doHint": "Tocca a te: fallo sullo schermo",
+    "demoBadge": "Dimostrazione",
+    "dialogLabel": "Tutorial per i nuovi giocatori",
+    "chapterLabel": "{n}/{total} · {name}",
+    "progressAria": "Capitolo {n} di {total}, passo {step} di {steps}",
+    "chapters": {
+      "players": "I giocatori",
+      "games": "Scegliere un gioco",
+      "table": "Il tavolo e le regole",
+      "online": "Giocare online",
+      "friends": "Gli amici",
+      "voice": "La chat vocale",
+      "ingame": "In partita"
+    },
+    "welcome": {
+      "kicker": "Benvenuto al tavolo",
+      "title": "Prima serata su Le Pillaveur?",
+      "body": "Ti mostriamo l’essenziale passo dopo passo: aggiungere i giocatori, avviare un gioco, trovare le regole. Due minuti, non di più.",
+      "start": "Avvia il tutorial",
+      "foot": "Potrai rivederlo dal menu."
+    },
+    "bridge": {
+      "kicker": "Prima partita avviata",
+      "title": "E per giocare ognuno con il suo telefono?",
+      "body": "Il seguito è una dimostrazione del gioco online: aprire un tavolo, invitare gli amici, la chat vocale e la chat. La tua partita ti aspetta subito dietro.",
+      "continue": "Vedi il gioco online",
+      "stop": "Finisci qui"
+    },
+    "end": {
+      "kicker": "Tutorial terminato",
+      "title": "Tocca a te giocare",
+      "itemPlayers": "Aggiungere i giocatori e scegliere chi gioca",
+      "itemGame": "Aprire un gioco e avviare il tavolo",
+      "itemRules": "Trovare le regole prima di iniziare e nel menu",
+      "itemOnline": "Gli amici, la voce, la chat e la lampadina delle regole di un tavolo online",
+      "onlineLater": "Il gioco online richiede un account gratuito. La sua dimostrazione resta nel tutorial.",
+      "play": "Gioca ora",
+      "again": "Rivedi il tutorial"
+    },
+    "confirmSkip": {
+      "kicker": "Salta il tutorial",
+      "title": "Ci fermiamo qui?",
+      "body": "Lo ritrovi quando vuoi nel menu, alla voce «Rivedi il tutorial».",
+      "yes": "Salta il tutorial",
+      "no": "Continua il tutorial"
+    },
+    "nudge": {
+      "needPlayers": "Aggiungi prima un nome.",
+      "needTwo": "Servono almeno due giocatori scelti.",
+      "pickGame": "Tocca il gioco che ti ispira.",
+      "notReady": "Questo pulsante non è ancora disponibile."
+    },
+    "local": {
+      "addRow": {
+        "title": "Scrivi i nomi",
+        "body": "Scrivi i nomi della tavolata, separati da virgole, poi tocca «Aggiungi». Su un solo telefono non serve nessun account."
+      },
+      "cards": {
+        "title": "Una carta dorata gioca stasera",
+        "body": "I giocatori aggiunti sono già scelti. Tocca una carta per mettere qualcuno da parte, toccala di nuovo per riprenderlo."
+      },
+      "start": {
+        "title": "Ci siete tutti?",
+        "body": "In fondo allo schermo si contano i giocatori pronti. Ne servono almeno due, poi tocca il pulsante."
+      },
+      "partyBar": {
+        "title": "Le impostazioni della serata",
+        "body": "Un telefono o online, con o senza alcol, chi gioca: si regola tutto qui, una volta per la serata."
+      },
+      "localSection": {
+        "title": "Due famiglie di giochi",
+        "body": "«Su questo telefono»: un solo dispositivo passa di mano in mano. Più in basso, «Un telefono a testa»: i giochi online."
+      },
+      "pickGame": {
+        "title": "Scegli il tuo primo gioco",
+        "body": "Ogni carta riassume il gioco in due righe. Tocca quello che ti ispira."
+      },
+      "rules": {
+        "title": "Le regole sono qui",
+        "body": "Prima di iniziare, il gioco tiene le sue regole in questo pannello. Toccalo per aprirlo."
+      },
+      "launch": {
+        "title": "Avvia la partita",
+        "body": "Il pulsante grande in basso è sempre l’azione del momento."
+      },
+      "table": {
+        "title": "Ecco il tavolo da gioco",
+        "body": "L’azione del momento resta sotto il pollice, e il gioco dice a chi tocca: passagli il telefono."
+      },
+      "menu": {
+        "title": "Un dubbio in piena partita?",
+        "body": "Il menu, in alto a sinistra, conserva le regole di tutti i giochi. Aprilo."
+      },
+      "menuRules": {
+        "title": "Menu, poi Regole",
+        "body": "Una pagina per gioco: l’idea, lo svolgimento, come si vince."
+      },
+      "again": {
+        "title": "Resta a portata di mano",
+        "body": "Per rivedere il tutorial, apri il menu: «Rivedi il tutorial» lo fa ripartire dall’inizio."
+      }
+    },
+    "demo": {
+      "mode": {
+        "title": "Ognuno con il suo telefono",
+        "body": "Per giocare a distanza, o ognuno con il proprio, apri le impostazioni della serata. Serve un account gratuito."
+      },
+      "goOnline": {
+        "title": "Passa online",
+        "body": "Ognuno gioca sul suo telefono, riuniti da un codice del tavolo. Torni a «Locale» quando vuoi."
+      },
+      "pickOnline": {
+        "title": "I giochi online",
+        "body": "Il numero indica quanti giocatori. Il robottino: i bot possono completare il tavolo."
+      },
+      "openTable": {
+        "title": "Apri il tuo tavolo",
+        "body": "Diventi l’host. Per unirti a quello di un amico, scrivi il suo codice appena sopra."
+      },
+      "privacy": {
+        "title": "Chi può unirsi?",
+        "body": "Privato: con codice, QR o invito. Aperto: visibile a tutti nell’elenco delle lobby."
+      },
+      "code": {
+        "title": "Il codice del tuo tavolo",
+        "body": "I tuoi amici lo scrivono per sedersi con te. Toccalo per copiarlo."
+      },
+      "friendsMenu": {
+        "title": "La tua lista di amici",
+        "body": "Si trova nel menu."
+      },
+      "menuFriends": {
+        "title": "Menu, poi Gestisci i miei amici",
+        "body": "Un bollino verde conta i tuoi amici online."
+      },
+      "addFriend": {
+        "title": "Aggiungi un amico con il suo codice",
+        "body": "Ogni account ha un codice LP-…, mostrato sotto il nickname nella pagina Account. Scrivi quello del tuo amico, poi «Aggiungi»."
+      },
+      "accept": {
+        "title": "Accetta una richiesta",
+        "body": "La tua richiesta è partita. Quelle che ricevi arrivano qui."
+      },
+      "inviteOpen": {
+        "title": "Invitali al tuo tavolo",
+        "body": "Dal tavolo, «Invita un amico» mostra il codice QR e i tuoi amici."
+      },
+      "invite": {
+        "title": "Un tocco ed è inviato",
+        "body": "Il tuo amico riceve l’invito sul suo schermo e si siede direttamente al tuo tavolo."
+      },
+      "mic": {
+        "title": "La voce della partita",
+        "body": "Il microfono, in cima al tavolo, apre la chat vocale riservata ai giocatori di questa partita."
+      },
+      "join": {
+        "title": "Entra quando vuoi",
+        "body": "Il tuo microfono si attiva solo dopo essere entrato. Il telefono chiede il permesso la prima volta."
+      },
+      "controls": {
+        "title": "Muto, silenzia, esci",
+        "body": "Disattiva il microfono, silenzia il tavolo o riaggancia. Il punto verde mostra chi è in vocale."
+      },
+      "bots": {
+        "title": "Manca gente?",
+        "body": "I bot completano il tavolo. Puoi perfino giocare da solo contro di loro."
+      },
+      "launch": {
+        "title": "L’host avvia la partita",
+        "body": "Gli invitati toccano «Sono pronto». Quando il tavolo è completo, la avvii tu."
+      },
+      "briefing": {
+        "title": "Le regole prima di ogni partita",
+        "body": "Online, ognuno le legge in tre schermate sul suo telefono. La partita parte quando tutti sono pronti."
+      },
+      "bulb": {
+        "title": "La lampadina riapre le regole",
+        "body": "In piena partita resta in alto a destra, accanto al microfono."
+      },
+      "howTo": {
+        "title": "Come si gioca?",
+        "body": "Le stesse schermate dell’inizio, con i tuoi tempi. La croce le chiude."
+      },
+      "chatMenu": {
+        "title": "La chat della partita",
+        "body": "Anche lei si trova nel menu."
+      },
+      "menuChat": {
+        "title": "Menu, poi Chat",
+        "body": "Il bollino rosso conta i messaggi che non hai letto."
+      },
+      "write": {
+        "title": "Scrivi al tavolo",
+        "body": "La scheda Partita è letta da tutti i giocatori del tavolo. La bandierina segnala un messaggio fuori luogo."
+      },
+      "private": {
+        "title": "E in privato",
+        "body": "La scheda Amici apre una conversazione con ogni amico, anche fuori partita."
+      }
+    },
+    "sample": {
+      "me": "Sacha",
+      "friend": "Camille",
+      "friend2": "Nino",
+      "bot": "Gaspard",
+      "botTag": "bot",
+      "chat1": "Siamo d’accordo che {bot} risponde in modo strano?",
+      "chat2": "{name}, non dici niente… 👀",
+      "chatMine": "Giuro, non sono io 😇",
+      "place": "Il casinò",
+      "askTurn": "{name} sceglie chi interrogare",
+      "autoStart": "Avvio automatico tra 43 s",
+      "rulesTitle": "Un luogo segreto, una spia",
+      "rulesBody": "Tutti conoscono il luogo… tranne la spia, che non sa nulla! Fatevi domande per smascherare l’intrusa senza svelare il luogo: ad alta voce, e con i pulsanti appena c’è un bot al tavolo.",
+      "round": "Manche {n} · Spia {spy} – Squadra {crew}",
+      "phase": "Discussione",
+      "locationLabel": "Il luogo",
+      "crewRole": "Sei nella squadra",
+      "crewHint": "Rispondi quanto basta per dimostrare che conosci il luogo, senza tradirlo.",
+      "accuse": "Accuso qualcuno!"
+    }
   },
   "gameTutorial": {
     "next": "Avanti",

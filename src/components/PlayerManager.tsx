@@ -220,7 +220,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
             {/* Une seule ligne même à 375px : champ + bouton côte à côte,
                 le clavier reste ouvert entre deux ajouts (le focus est rendu
                 au champ dans `handleAddPlayer`). */}
-            <div className="flex items-center gap-2">
+            <div data-tour="players-add" className="flex items-center gap-2">
               <Input
                 ref={nameInputRef}
                 type="text"
@@ -262,10 +262,11 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               {t('emptyHint', { min: minPlayers })}
             </p>
           )}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div data-tour="players-grid" className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
             {players.map((player) => (
               <Card
                 key={player.id}
+                data-tour="player-card"
                 onClick={() => togglePlayerSelection(player.id)}
                 className={`cursor-pointer border-[#D8CCAE] bg-cream p-2.5 text-[#24201A] transition-all duration-200 sm:p-3 ${
                   selectedPlayerIds.includes(player.id)
@@ -368,6 +369,7 @@ export function PlayerManager({ onPlayersSelected, onStartOnline, minPlayers = 2
               à gauche sur quatre lignes. C'est le libellé du CTA qui se replie,
               borné à 60 % de la barre — le statut garde le reste. */}
           <Button
+            data-tour="players-start"
             onClick={handleStartGame}
             disabled={!canStart}
             className="h-auto min-h-[44px] max-w-[60%] shrink-0 whitespace-normal bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-center font-medium leading-tight text-white hover:from-amber-600 hover:to-orange-600 disabled:opacity-50"

@@ -1,8 +1,8 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2, BookOpen } from 'lucide-react'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2, BookOpen, GraduationCap } from 'lucide-react'
+import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useLocale, useTranslations } from 'next-intl'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,6 +17,7 @@ import { FeedbackMenuButton } from '@/components/feedback/FeedbackMenuButton'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { BrandMark } from '@/components/brand/BrandLogo'
 import { openAnalyticsConsent } from '@/components/legal/AgeGate'
+import { useTour } from '@/components/tour/TourProvider'
 import { cn } from '@/lib/utils'
 
 /**
@@ -128,6 +129,7 @@ export default function Navbar() {
   const pathname = usePathname()
   const pageMeta = usePageMeta(pathname)
   const { isFullscreen, isSupported: fsSupported, toggleFullscreen } = useFullscreen()
+  const { startTour } = useTour()
 
   const [inApp, setInApp] = useState(false)
   useEffect(() => {
@@ -173,6 +175,10 @@ export default function Navbar() {
     return base
   }, [user, t, inApp, locale])
 
+  // « Revoir le tuto » se range sous « Règles » ; hors français, où cette
+  // entrée n'existe pas, sous « Jeux ».
+  const tourAfter = links.some((l) => l.key === 'regles') ? 'regles' : 'jeux'
+
   const activeHref =
     links.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`))?.href ?? null
 
@@ -215,6 +221,7 @@ export default function Navbar() {
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:h-[3.75rem] sm:gap-4 sm:px-4">
           <button
             type="button"
+            data-tour="nav-burger"
             aria-label={drawerOpen ? t('closeMenu') : t('openMenu')}
             aria-expanded={drawerOpen}
             onClick={toggleDrawer}
@@ -392,6 +399,7 @@ export default function Navbar() {
           </div>
           <button
             type="button"
+            data-tour="nav-close"
             aria-label={t('closeMenu')}
             onClick={() => setDrawerOpen(false)}
             className="touch-target flex h-9 w-9 items-center justify-center rounded-lg text-white/50 transition-colors hover:bg-white/10 hover:text-white"
@@ -405,12 +413,14 @@ export default function Navbar() {
             {t('navigation')}
           </p>
           <ul className="space-y-1">
-            {links.map(({ href, label, icon: Icon, description }) => {
+            {links.map(({ href, key, label, icon: Icon, description }) => {
               const isActive = pathname === href || pathname.startsWith(`${href}/`)
               return (
-                <li key={href}>
+                <Fragment key={href}>
+                <li>
                   <Link
                     href={href}
+                    data-tour={key === 'regles' ? 'nav-rules' : undefined}
                     onClick={() => setDrawerOpen(false)}
                     className={cn(
                       'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150',
@@ -441,6 +451,29 @@ export default function Navbar() {
                     />
                   </Link>
                 </li>
+                {key === tourAfter && (
+                  <li>
+                    <button
+                      type="button"
+                      data-tour="nav-tour"
+                      onClick={() => {
+                        setDrawerOpen(false)
+                        startTour()
+                      }}
+                      className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-white/70 transition-all duration-150 hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-white/50 transition-colors group-hover:bg-white/10 group-hover:text-white/80">
+                        <GraduationCap className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium leading-none">{t('links.tuto.label')}</span>
+                        <span className="mt-0.5 block truncate text-[11px] opacity-50">{t('links.tuto.description')}</span>
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-white/20 transition-all group-hover:text-white/40" />
+                    </button>
+                  </li>
+                )}
+                </Fragment>
               )
             })}
           </ul>

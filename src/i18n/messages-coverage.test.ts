@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { AbstractIntlMessages } from 'next-intl'
-import { GAME_IDS, coreMessages, gameMessages, supervisionMessages, tvMessages } from './messages-slices'
+import { GAME_IDS, ON_DEMAND_PATHS, coreMessages, gameMessages, supervisionMessages, tvMessages } from './messages-slices'
 
 /**
  * Couverture des tranches de messages, route par route.
@@ -51,6 +51,21 @@ const CATALOGUE: AbstractIntlMessages = JSON.parse(
 const LECTEURS_ADMIS: Record<string, string> = {
   'components/i18n/ClientMessages.tsx':
     'lit les messages du fournisseur parent pour y AJOUTER une tranche — il fournit, il ne consomme pas',
+}
+
+/**
+ * Tranches chargées À LA DEMANDE (ON_DEMAND_PATHS) : aucun layout ne les
+ * fournit, le navigateur les réclame et les ajoute lui-même autour d'un
+ * sous-arbre précis. Chaque racine nomme le dossier dont les composants sont
+ * rendus SOUS ce fournisseur : un lecteur situé ailleurs afficherait la clé
+ * brute, et le test le refuse.
+ *
+ * `tour` : src/components/tour/TourLayer.tsx charge /api/tour/messages puis
+ * enveloppe tout le calque du tuto dans ClientMessages. TourProvider et
+ * TourAutoStart, montés hors de ce calque, ne lisent aucun texte.
+ */
+const TRANCHES_A_LA_DEMANDE: Record<string, string> = {
+  tour: 'components/tour/',
 }
 
 /** Marqueurs des lectures qu'on ne peut pas ramener à un namespace. */
@@ -261,6 +276,15 @@ function problemsFor(found: Map<string, Set<string>>, ref: SliceRef): string[] {
       continue
     }
 
+    const onDemandDir = TRANCHES_A_LA_DEMANDE[namespace.split('.')[0]]
+    if (onDemandDir && inCatalogue(namespace)) {
+      const outsiders = [...readers].filter((reader) => !reader.startsWith(onDemandDir)).sort()
+      if (outsiders.length > 0) {
+        problems.push(`${namespace} est chargé à la demande sous ${onDemandDir} — lu hors de ce dossier par ${outsiders.join(', ')}`)
+      }
+      continue
+    }
+
     if (!inCatalogue(namespace)) {
       problems.push(`${namespace} n'existe dans aucun catalogue — lu par ${who}`)
     } else if (!sliceHasWhole(slice, namespace)) {
@@ -347,6 +371,14 @@ describe('couverture des tranches de messages', () => {
     // (sur une page de jeu, seul le jeu de la page compte).
     expect(problemsFor(reads(`games.${JOKER}.nexistepas`), purple)).toHaveLength(1)
     expect(problemsFor(reads(`games.${JOKER}.tutorial`), purple)).toEqual([])
+  })
+
+  it('une tranche à la demande ne se lit que dans son dossier', () => {
+    expect(Object.keys(TRANCHES_A_LA_DEMANDE).sort()).toEqual([...ON_DEMAND_PATHS].sort())
+    const core: SliceRef = { kind: 'core' }
+    const reads = (reader: string) => new Map([['tour', new Set([reader])]])
+    expect(problemsFor(reads('components/tour/TourLocal.tsx'), core)).toEqual([])
+    expect(problemsFor(reads('components/layout/Navbar.tsx'), core)).toHaveLength(1)
   })
 
   for (const entry of entries) {
