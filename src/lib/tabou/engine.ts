@@ -20,9 +20,10 @@ export const TABOU_COUNTDOWN_MS = 5_000
 /** Durée d'une manche de description. */
 export const TABOU_ROUND_MS = 60_000
 /**
- * Durée écourtée quand le décrivant du créneau est un bot (un bot ne peut pas
- * décrire un mot à voix haute) ou un joueur parti — la manche se résout
- * d'elle-même au bout de quelques secondes plutôt que de bloquer la partie 60 s.
+ * Durée écourtée d'une manche qui ne peut rien rapporter (voir
+ * `tabouRoundIsPlayable`) : décrivant bot ou parti, ou personne pour deviner.
+ * Elle se résout d'elle-même au bout de quelques secondes plutôt que de bloquer
+ * la partie 60 s.
  */
 export const TABOU_BOT_DESCRIBER_ROUND_MS = 5_000
 /** Options de score cible proposées au lobby. */
@@ -70,6 +71,12 @@ export type TabouState = TimedPhaseState & {
   scores: { A: number; B: number }
   targetScore: number
   round: number
+  /**
+   * Durée de la manche en cours telle qu'elle a été OUVERTE : pleine, ou
+   * écourtée. Les écrans y calent leur barre de temps, et un retour ne relance
+   * qu'une manche écourtée. Absent des états d'avant ce champ.
+   */
+  roundMs?: number
   winnerTeam: TabouTeam | null
   rematchVotes: string[]
   /** SECRET serveur. */
@@ -83,7 +90,8 @@ export type TabouAction =
   | { type: 'ADVANCE'; claimedKey: string; now: number }
   | { type: 'CONTINUE'; playerId: string; now: number }
   | { type: 'LEAVE'; playerId: string; at: number }
-  | { type: 'REJOIN'; playerId: string }
+  /** `now` : horloge serveur du retour — sans elle, une manche écourtée ne peut pas repartir. */
+  | { type: 'REJOIN'; playerId: string; now?: number }
   | { type: 'REPLACE_LEFT'; now: number; graceMs: number }
 
 export class TabouEngineError extends Error {
@@ -114,21 +122,26 @@ function buildDescriberOrder(players: TabouInitialPlayer[]): string[] {
   return order
 }
 
-/**
- * Un bot ne décrit pas à voix haute, un joueur parti non plus (et son
- * remplacement par un bot n'arrive qu'après 3 min) → manche écourtée.
- */
-function roundDurationFor(state: TabouState, describerId: string): number {
-  return tabouDescriberIsAway(state.players.find((p) => p.id === describerId))
-    ? TABOU_BOT_DESCRIBER_ROUND_MS
-    : TABOU_ROUND_MS
+/** Champs d'ouverture d'une manche : pleine si elle peut rapporter, écourtée sinon. */
+function enterDescribing(state: TabouState, describerId: string, now: number) {
+  const roundMs = tabouRoundIsPlayable(state.players, describerId) ? TABOU_ROUND_MS : TABOU_BOT_DESCRIBER_ROUND_MS
+  return { ...enterPhase(state.phaseSeq, 'describing', roundMs, now), phase: 'describing' as const, roundMs }
 }
 
-/** Le décrivant ne décrira rien : bot, ou joueur parti. Sa manche est écourtée. */
-export function tabouDescriberIsAway(
-  describer: Pick<TabouPlayer, 'isBot' | 'leftAt'> | null | undefined
+/**
+ * La manche peut rapporter des points : un humain présent décrit, et au moins
+ * un coéquipier humain présent peut cliquer « trouvé ». Un bot ne décrit pas à
+ * voix haute et ne clique jamais ; un joueur parti non plus, et son
+ * remplacement par un bot n'arrive qu'après 3 min. Sinon la manche est écourtée.
+ */
+export function tabouRoundIsPlayable(
+  players: readonly Pick<TabouPlayer, 'id' | 'isBot' | 'leftAt' | 'team'>[],
+  describerId: string
 ): boolean {
-  return Boolean(describer && (describer.isBot || describer.leftAt))
+  const here = (p: Pick<TabouPlayer, 'isBot' | 'leftAt'>) => !p.isBot && !p.leftAt
+  const describer = players.find((p) => p.id === describerId)
+  if (!describer || !here(describer)) return false
+  return players.some((p) => p.id !== describer.id && p.team === describer.team && here(p))
 }
 
 /** Tire le prochain mot sans répétition ; réamorce la file si épuisée. */
@@ -232,6 +245,11 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       const describer = state.players.find((p) => p.id === state.describerId)!
       if (player.id === describer.id) throw new TabouEngineError('DESCRIBER_CANNOT_FOUND')
       if (player.team !== describer.team) throw new TabouEngineError('NOT_TEAMMATE')
+      // Personne ne décrit (décrivant parti ou bot, manche écourtée) : un
+      // coéquipier présent marquait des points sans qu'un mot ait été décrit.
+      if (!tabouRoundIsPlayable(state.players, state.describerId)) {
+        throw new TabouEngineError('ROUND_NOT_PLAYABLE')
+      }
       const scores = { ...state.scores, [describer.team]: state.scores[describer.team] + 1 }
       return drawNextWord({
         ...state,
@@ -267,13 +285,7 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       if (state.phase === 'countdown') {
         return {
           ...state,
-          ...enterPhase(
-            state.phaseSeq,
-            'describing',
-            roundDurationFor(state, state.describerId),
-            action.now
-          ),
-          phase: 'describing',
+          ...enterDescribing(state, state.describerId, action.now),
           version: state.version + 1,
         }
       }
@@ -311,8 +323,7 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
         roundStats: { found: 0, passed: 0, taboo: 0 },
         lastRoundWord: null,
         round: state.round + 1,
-        ...enterPhase(state.phaseSeq, 'describing', roundDurationFor(state, describerId), action.now),
-        phase: 'describing',
+        ...enterDescribing(state, describerId, action.now),
         rngState: rng.getState(),
         version: state.version + 1,
       }
@@ -330,11 +341,17 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
         ),
         version: state.version + 1,
       }
-      // Le décrivant s'en va en pleine manche : plus personne ne décrit, et lui
-      // seul pouvait passer le mot. Bilan tout de suite (les points marqués
-      // restent) plutôt que le reste des 60 s à vide. Jamais la fin de partie :
+      // Ce départ rend la manche injouable : le décrivant s'en va (lui seul
+      // pouvait décrire et passer le mot), ou le dernier coéquipier humain qui
+      // pouvait cliquer « trouvé ». Bilan tout de suite, les points marqués
+      // restent, plutôt que le reste des 60 s à vide. Jamais la fin de partie :
       // elle s'enregistre sur /action, au « continuer » du bilan.
-      if (next.phase === 'describing' && action.playerId === next.describerId) {
+      if (
+        next.phase === 'describing' &&
+        (action.playerId === next.describerId ||
+          (tabouRoundIsPlayable(state.players, state.describerId) &&
+            !tabouRoundIsPlayable(next.players, next.describerId)))
+      ) {
         return endRound(next, action.at)
       }
       return next
@@ -345,13 +362,31 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       if (!player || player.isBot || !player.leftAt) {
         throw new TabouEngineError('CANNOT_REJOIN')
       }
-      return {
+      const next: TabouState = {
         ...state,
         players: state.players.map((p) =>
           p.id === action.playerId ? { ...p, leftAt: null } : p
         ),
         version: state.version + 1,
       }
+      // Ce retour rend jouable une manche écourtée encore en cours (le
+      // décrivant revient, ou le coéquipier qui manquait pour deviner) : elle
+      // repart entière, sinon il ne restait que quelques secondes sur les 60.
+      // Une manche ouverte pleine garde son chrono, une manche échue attend
+      // son bilan, et un état d'avant `roundMs` n'est jamais relancé.
+      if (
+        action.now !== undefined &&
+        next.phase === 'describing' &&
+        next.roundMs !== undefined &&
+        next.roundMs < TABOU_ROUND_MS &&
+        next.phaseEndsAt !== null &&
+        action.now < next.phaseEndsAt &&
+        !tabouRoundIsPlayable(state.players, state.describerId) &&
+        tabouRoundIsPlayable(next.players, next.describerId)
+      ) {
+        return { ...next, ...enterDescribing(next, next.describerId, action.now) }
+      }
+      return next
     }
 
     case 'REPLACE_LEFT': {

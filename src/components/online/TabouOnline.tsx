@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import {
   TABOU_BOT_DESCRIBER_ROUND_MS,
   TABOU_ROUND_MS,
-  tabouDescriberIsAway,
+  tabouRoundIsPlayable,
   type TabouClientView,
   type TabouPlayerView,
   type TabouTeam,
@@ -279,8 +279,12 @@ export function TabouOnline() {
   const describing = view.phase === 'describing'
   const roundEnd = view.phase === 'roundEnd'
   const gameDecided = view.scores.A >= view.targetScore || view.scores.B >= view.targetScore
-  const shortRound = tabouDescriberIsAway(describer)
-  const roundTotal = shortRound ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS
+  // Durée à l'ouverture de la manche (elle ne change pas si quelqu'un part ou
+  // revient ensuite). États d'avant ce champ : seul un décrivant bot l'écourtait.
+  const roundTotal = view.roundMs ?? (describer?.isBot ? TABOU_BOT_DESCRIBER_ROUND_MS : TABOU_ROUND_MS)
+  const shortRound = roundTotal < TABOU_ROUND_MS
+  // « Trouvé » ne compte que si quelqu'un décrit : le moteur le refuse sinon.
+  const canScore = tabouRoundIsPlayable(view.players, view.describerId)
 
   // En pleine manche, la carte dit déjà tout au décrivant : son bandeau
   // s'allège pour que la carte entière tienne sur un petit écran.
@@ -394,6 +398,13 @@ export function TabouOnline() {
           </div>
         )}
 
+        {/* Cinq secondes au lieu de soixante : sans ce mot, la manche semble sauter. */}
+        {describing && shortRound && (
+          <p className="rounded-2xl border border-gold/30 bg-gold/10 px-4 py-2 text-center text-sm font-semibold text-cream">
+            {t('shortRound')}
+          </p>
+        )}
+
         {countdown && (
           <div className="flex flex-col items-center gap-2 py-4 text-center">
             <PhaseCountdownLaunch
@@ -469,7 +480,7 @@ export function TabouOnline() {
               variant="primary"
               size="gameLg"
               className="w-full text-lg"
-              disabled={busy}
+              disabled={busy || !canScore}
               aria-busy={busy}
               onClick={() => void sendAction({ action: 'found' })}
             >

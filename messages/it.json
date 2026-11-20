@@ -3757,6 +3757,7 @@
         },
         "roundLabel": "Manche {n} · obiettivo {target} punti",
         "phaseDescribingTitle": "Descrizione in corso",
+        "shortRound": "Manche accorciata: a questa squadra manca qualcuno per descrivere o per indovinare.",
         "describerHint": "Fai indovinare la parola alla tua squadra senza dire nessuna parola vietata.",
         "theirWord": "La parola di {name}",
         "watchWords": "Occhio a queste parole vietate",

@@ -3757,6 +3757,7 @@
         },
         "roundLabel": "Round {n} · first to {target} points",
         "phaseDescribingTitle": "Describing",
+        "shortRound": "Short round: this team is missing someone to describe or to guess.",
         "describerHint": "Get your team to guess the word without saying a single forbidden word.",
         "theirWord": "{name}'s word",
         "watchWords": "Listen out for these forbidden words",

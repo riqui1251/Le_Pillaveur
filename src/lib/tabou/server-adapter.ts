@@ -190,7 +190,7 @@ export function markTabouPlayerLeft(state: TabouState, playerId: string, at: num
 export function rejoinTabouPlayer(state: TabouState, playerId: string): TabouState | null {
   const player = state.players.find((p) => p.id === playerId)
   if (!player || player.isBot || !player.leftAt) return null
-  return reduceTabou(state, { type: 'REJOIN', playerId })
+  return reduceTabou(state, { type: 'REJOIN', playerId, now: Date.now() })
 }
 
 export function convertTabouPlayerToBot(state: TabouState, playerId: string): TabouState | null {

@@ -3757,6 +3757,7 @@
         },
         "roundLabel": "Ronda {n} · objetivo {target} puntos",
         "phaseDescribingTitle": "Descripción en curso",
+        "shortRound": "Ronda acortada: a este equipo le falta alguien para describir o para adivinar.",
         "describerHint": "Haz que tu equipo adivine la palabra sin decir ni una palabra prohibida.",
         "theirWord": "La palabra de {name}",
         "watchWords": "Vigila estas palabras prohibidas",

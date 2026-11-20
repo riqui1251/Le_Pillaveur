@@ -3757,6 +3757,7 @@
         },
         "roundLabel": "Manche {n} · objectif {target} points",
         "phaseDescribingTitle": "Description en cours",
+        "shortRound": "Manche écourtée : il manque quelqu’un pour décrire ou pour deviner dans cette équipe.",
         "describerHint": "Fais deviner le mot à ton équipe sans dire un seul mot interdit.",
         "theirWord": "Le mot de {name}",
         "watchWords": "Guette ces mots interdits",
