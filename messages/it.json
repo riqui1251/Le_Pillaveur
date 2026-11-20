@@ -3791,7 +3791,7 @@
       },
       "about": {
         "p1": "Due squadre, A e B, e un descrittore che cambia a ogni manche, ogni giocatore a turno. Vede sul telefono la parola da far indovinare e le sue quattro parole tabù, vietate sulle sue labbra; anche la squadra avversaria le vede, la sua mai. La descrive ad alta voce, in chat vocale, mentre la sua squadra spara proposte a raffica.",
-        "p2": "Una manche dura 60 secondi e ci passano più parole: un compagno tocca TROVATA, +1 punto per la squadra e la parola successiva arriva subito; il descrittore può passare una parola troppo difficile, senza punto; un avversario che sente una parola tabù tocca TABÙ, e la parola salta senza punti per nessuno. Il riepilogo svela l'ultima parola e il bilancio della manche. Vince la prima squadra che arriva al punteggio obiettivo: 15, 20 o 25, a scelta dell'host.",
+        "p2": "Una manche dura 60 secondi e ci passano più parole: un compagno tocca TROVATA, +1 punto per la squadra e la parola successiva arriva subito; il descrittore può passare una parola troppo difficile, senza punto; un avversario che sente una parola tabù tocca TABÙ, e la parola salta senza punti per nessuno. Il riepilogo svela l'ultima parola e il bilancio della manche. Vince la prima squadra che arriva al punteggio obiettivo: 15, 20 o 25, a scelta dell'host. Se le uscite non lasciano due umani in nessuna squadra, la partita finisce con il punteggio del momento.",
         "p3": "Gli avversari hanno la carta sotto gli occhi: ascoltano a caccia di ogni parola vietata, e a fare da arbitro è il fair play del tavolo. Descrivi l'uso quando la definizione è tabù e passa in fretta ciò che si blocca: il cronometro è il vero avversario. Quattro giocatori minimo, due per squadra, fino a sedici; niente bot all'avvio, un bot non descrive nulla, sostituisce solo un giocatore uscito. Le parole esistono in quattro lingue. Il gioco non conta sorsi, solo punti."
       }
     },
@@ -5140,6 +5140,7 @@
         "judgePickPrompt": "Leggi ogni risposta ad alta voce, poi incorona la migliore.",
         "judgeReading": "{name} sta leggendo le risposte…",
         "judgeReadAloud": "Consiglio: leggile ad alta voce in chat vocale — è lì che diventa divertente.",
+        "judgeOwnCard": "Avevi già giocato: la tua carta resta sul tavolo, ma non puoi incoronarla.",
         "crowned": {
           "title": "Carta incoronata!",
           "by": "Di {name} — +1 corona",

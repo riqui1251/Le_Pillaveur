@@ -345,7 +345,7 @@ function Ranking({
       {!finished && <p className="max-w-[64rem] text-center text-xl font-semibold text-white/80">{t('exchangeInfo')}</p>}
 
       <div className="flex items-center gap-8">
-        {!soft && <p className="text-3xl font-black text-amber-200">{t('trouDrinks')}</p>}
+        {!soft && len > 1 && <p className="text-3xl font-black text-amber-200">{t('trouDrinks')}</p>}
         {!finished && state.phaseEndsAt !== null && (
           <p className="text-3xl font-bold text-white/80">
             {t('nextManche')}

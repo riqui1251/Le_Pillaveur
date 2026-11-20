@@ -391,7 +391,9 @@ export function PresidentOnline() {
               iconOf={iconOf}
               labelOf={rankingLabel}
             />
-            {!isSoft && <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>}
+            {!isSoft && ranking.length > 1 && (
+              <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>
+            )}
           </>
         }
         // La progression était bien créditée au Président, mais aucun écran
@@ -439,7 +441,10 @@ export function PresidentOnline() {
             labelOf={rankingLabel}
           />
           <p className="max-w-sm text-center text-sm text-cream/80">{t('exchangeInfo')}</p>
-          {!isSoft && <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>}
+          {/* Un seul classé (les autres absents à la donne) : personne n'est Trou. */}
+          {!isSoft && ranking.length > 1 && (
+            <p className="font-display text-lg font-bold text-gold">{t('trouDrinks')}</p>
+          )}
         </div>
         {barMode === 'interlude' && (
           <OnlineActionBar status={actionError ?? t('interludeHint')} maxWidthClass="max-w-lg">

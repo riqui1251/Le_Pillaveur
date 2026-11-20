@@ -91,6 +91,26 @@ describe('12-20 — parti pendant la mise en place, la partie a démarré sans l
   })
 })
 
+describe('12-20 — brouillon forgé au verrouillage', () => {
+  it('un brouillon portant le nom d’un autre ne lui vole pas ses paris', () => {
+    let s = setup()
+    s = reduceGame1220(s, {
+      type: 'SET_DRAFT',
+      playerId: 'a',
+      choices: { drinkNumber: 3, giveNumber: 9, playerId: 'b', name: 'Bob' } as never,
+    })
+    for (const p of PLAYERS) s = reduceGame1220(s, { type: 'READY', playerId: p.id })
+
+    // Sans cela : deux lignes « Bob », aucune pour Alice.
+    expect(configIds(s)).toEqual(['a', 'b', 'c'])
+    expect(s.configs?.map((c) => c.name)).toEqual(['Alice', 'Bob', 'Chris'])
+    expect(s.configs?.[0]).toMatchObject({ drinkNumber: 3, giveNumber: 9 })
+
+    s = reduceGame1220(s, { type: 'ROLL', playerId: 'a' })
+    expect(rollIds(s)).toEqual(['a', 'b', 'c'])
+  })
+})
+
 describe('12-20 — départs qui ne changent rien aux paris', () => {
   it('parti puis revenu en pleine partie : ses paris verrouillés ne bougent pas', () => {
     let s = setup()

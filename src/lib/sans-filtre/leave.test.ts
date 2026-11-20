@@ -9,6 +9,7 @@ import {
   SF_SUBMIT_MS,
   type SFState,
 } from './engine'
+import { applySFBotAction, convertSFPlayerToBot } from './server-adapter'
 import { phaseKey } from '@/lib/online/phase-clock'
 
 const T0 = 1_000_000
@@ -55,42 +56,64 @@ describe('Sans Filtre — départ du juge', () => {
     expect(s.phaseEndsAt).toBe(T0 + 10_000 + SF_JUDGE_MS)
   })
 
-  it('le nouveau juge reprend sa carte : il ne peut pas couronner sa propre réponse', () => {
+  it('la carte du nouveau juge reste sur la table, mais il ne peut pas la couronner', () => {
     const before = judgingPhase()
     const own = cardOf(before, 'p1')!
+    const shown = (s: SFState, viewer: string) => toSFClientView(s, viewer).submissions?.map((x) => x.card)
 
     const s = leave(before, 'p0', T0 + 10_000)
 
-    expect(s.submissions.map((x) => x.playerId).sort()).toEqual(['p2', 'p3'])
-    expect(handOf(s, 'p1')).toHaveLength(SF_HAND_SIZE)
-    expect(handOf(s, 'p1')).toContain(own)
-    expect(toSFClientView(s, 'p1').submissions?.map((x) => x.card)).not.toContain(own)
+    // Rien ne disparaît de la liste anonyme : retirer sa carte la désignait à
+    // toute la table (et à la TV) comme celle du nouveau juge.
+    expect(s.submissions).toEqual(before.submissions)
+    for (const viewer of ['p1', 'p2', 'p3', '']) expect(shown(s, viewer)).toEqual(shown(before, viewer))
+    // Lui seul sait laquelle est la sienne : son écran la lui désactive.
+    expect(toSFClientView(s, 'p1').myPlayed).toBe(own)
     expect(() =>
       reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: own, now: T0 + 11_000 })
-    ).toThrow('INVALID_PICK')
+    ).toThrow('CANNOT_PICK_OWN')
 
     const picked = reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: cardOf(s, 'p2')!, now: T0 + 11_000 })
     expect(picked.phase).toBe('reveal')
     expect(picked.crowned?.playerId).toBe('p2')
-    // Le juge n'a rien joué cette manche : sa main ne grossit pas à la repioche.
+    // Sa carte est jouée, donc repiochée comme celles des autres.
     expect(handOf(picked, 'p1')).toHaveLength(SF_HAND_SIZE)
+    expect(handOf(picked, 'p1')).not.toContain(own)
+  })
+
+  it('jugement non rendu à temps : le tirage au sort ne couronne jamais la carte du juge', () => {
+    const handed = leave(judgingPhase(), 'p0', T0 + 10_000)
+    expect(handed.judgeId).toBe('p1')
+
+    for (let seed = 1; seed <= 60; seed += 1) {
+      const s = reduceSF(
+        { ...handed, rngState: seed * 7919 },
+        { type: 'ADVANCE', claimedKey: phaseKey(handed), now: handed.phaseEndsAt ?? T0 }
+      )
+      expect(s.phase).toBe('reveal')
+      expect(['p2', 'p3']).toContain(s.crowned?.playerId)
+    }
   })
 
   it('pendant la pose : le rôle passe tout de suite, la manche continue pour les autres', () => {
     let s = play(submitPhase(), 'p1')
+    const own = cardOf(s, 'p1')!
 
     s = leave(s, 'p0', T0 + 5_000)
 
     expect(s.judgeId).toBe('p1')
     expect(s.phase).toBe('submit')
     expect(s.phaseEndsAt).toBe(T0 + SF_SUBMIT_MS)
-    expect(s.submissions).toEqual([])
-    expect(handOf(s, 'p1')).toHaveLength(SF_HAND_SIZE)
+    // Sa carte déjà abattue reste en jeu, hors concours.
+    expect(cardOf(s, 'p1')).toBe(own)
     expect(() => play(s, 'p1')).toThrow('JUDGE_CANNOT_PLAY')
 
     s = play(play(s, 'p2'), 'p3')
     expect(s.phase).toBe('judging')
-    expect(s.submissions).toHaveLength(2)
+    expect(s.submissions).toHaveLength(3)
+    expect(() =>
+      reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: own, now: T0 + 6_000 })
+    ).toThrow('CANNOT_PICK_OWN')
   })
 
   it('pendant la pose, les autres ayant déjà joué : le jugement s’ouvre aussitôt', () => {
@@ -151,7 +174,7 @@ describe('Sans Filtre — départ du juge', () => {
     expect(s.phaseEndsAt).toBe(before.phaseEndsAt)
   })
 
-  it('juge remplacé par un bot (partie d’avant le correctif) : même passation, carte reprise', () => {
+  it('juge remplacé par un bot (partie d’avant le correctif) : même passation, sa carte hors concours', () => {
     const before = judgingPhase()
     // État tel que l'ancien moteur le laissait : juge parti, toujours juge.
     const legacy: SFState = {
@@ -162,8 +185,62 @@ describe('Sans Filtre — départ du juge', () => {
     const s = reduceSF(legacy, { type: 'REPLACE_LEFT', now: T0 + 20_000, graceMs: 5_000 })
 
     expect(s.judgeId).toBe('p1')
-    expect(s.submissions.map((x) => x.playerId).sort()).toEqual(['p2', 'p3'])
-    expect(handOf(s, 'p1')).toHaveLength(SF_HAND_SIZE)
+    expect(s.submissions).toEqual(before.submissions)
+    expect(() =>
+      reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: cardOf(s, 'p1')!, now: T0 + 21_000 })
+    ).toThrow('CANNOT_PICK_OWN')
+  })
+
+  it('juge inactif remplacé par un bot : le nouveau juge ne peut pas non plus couronner sa carte', () => {
+    const s = convertSFPlayerToBot(judgingPhase(), 'p0')!
+
+    expect(s.judgeId).toBe('p1')
+    expect(() =>
+      reduceSF(s, { type: 'JUDGE_PICK', playerId: 'p1', card: cardOf(s, 'p1')!, now: T0 + 2_000 })
+    ).toThrow('CANNOT_PICK_OWN')
+  })
+
+  it('juge inactif remplacé alors que la seule réponse est celle de son successeur : manche sans couronne', () => {
+    // p1 seul a joué, p2 et p3 partent : le jugement s'ouvre sur sa seule carte.
+    let s = play(submitPhase(), 'p1')
+    s = leave(leave(s, 'p2', T0 + 2_000), 'p3', T0 + 3_000)
+    expect(s.phase).toBe('judging')
+
+    s = convertSFPlayerToBot(s, 'p0')!
+
+    // Sans cela : un jugement sans aucune réponse à couronner, jusqu'à l'échéance.
+    expect(s.judgeId).toBe('p1')
+    expect(s.phase).toBe('reveal')
+    expect(s.crowned).toBeNull()
+  })
+
+  it('juge bot sans réponse à couronner : son tick ne plante pas, l’échéance clôt la manche', () => {
+    let s = play(submitPhase(), 'p1')
+    s = leave(leave(s, 'p2', T0 + 2_000), 'p3', T0 + 3_000)
+    // État anormal (deux remplacements de suite) : p1, seul auteur, juge et bot.
+    const stuck: SFState = {
+      ...s,
+      judgeId: 'p1',
+      players: s.players.map((p) => (p.id === 'p0' || p.id === 'p1' ? { ...p, isBot: true } : p)),
+    }
+
+    expect(applySFBotAction(stuck, () => 0.5)).toEqual({ ok: false, error: 'NOT_BOT_TURN' })
+    const after = reduceSF(stuck, { type: 'ADVANCE', claimedKey: phaseKey(stuck), now: stuck.phaseEndsAt ?? T0 })
+    expect(after.phase).toBe('reveal')
+    expect(after.crowned).toBeNull()
+  })
+
+  it('un bot devenu juge en cours de manche ne couronne pas sa propre carte', () => {
+    // Table solo : p0 humain juge, p1 à p3 bots. Le juge devient un bot qui a déjà joué.
+    let s = submitPhase(3)
+    for (const id of ['p1', 'p2', 'p3']) s = play(s, id)
+    const botJudge: SFState = { ...s, judgeId: 'p1' }
+
+    for (const r of [0, 0.2, 0.5, 0.8, 0.999]) {
+      const result = applySFBotAction(botJudge, () => r)
+      expect(result.ok && result.state.crowned?.playerId).not.toBe('p1')
+      expect(result.ok && result.state.phase).toBe('reveal')
+    }
   })
 })
 

@@ -3791,7 +3791,7 @@
       },
       "about": {
         "p1": "Two teams, A and B, and a describer who changes every round, each player in turn. They see, on their phone, the word to get across and its four taboo words, banned from their lips; the other team sees them too, their own team never does. They describe it out loud over voice chat while their team fires off guesses.",
-        "p2": "A round lasts 60 seconds and several words go by: a teammate taps GOT IT, +1 point for the team and the next word appears at once; the describer can pass a word that is too hard, no point; an opponent who hears a taboo word taps TABOO, and the word is skipped with no point for anyone. The round summary reveals the last word and the round's tally. First team to the target score wins: 15, 20 or 25, set by the host.",
+        "p2": "A round lasts 60 seconds and several words go by: a teammate taps GOT IT, +1 point for the team and the next word appears at once; the describer can pass a word that is too hard, no point; an opponent who hears a taboo word taps TABOO, and the word is skipped with no point for anyone. The round summary reveals the last word and the round's tally. First team to the target score wins: 15, 20 or 25, set by the host. If departures leave no team with two humans, the game ends on the current score.",
         "p3": "Opponents have the card in front of them: they listen out for the slightest forbidden word, and the table's fair play is the referee. Describe what it is used for when the definition is taboo, and pass fast on whatever sticks: the clock is the real enemy. Four players minimum, two per team, up to sixteen. Games can't start with bots: a bot can't describe anything, it only replaces a player who left. Words come in four languages. The game counts no sips, only points."
       }
     },
@@ -5140,6 +5140,7 @@
         "judgePickPrompt": "Read each answer aloud, then crown the best one.",
         "judgeReading": "{name} is reading the answers…",
         "judgeReadAloud": "Tip: read them out loud on voice chat — that’s where the fun is.",
+        "judgeOwnCard": "You had already played: your card stays on the table, but you can’t crown it.",
         "crowned": {
           "title": "Crowned card!",
           "by": "By {name} — +1 crown",

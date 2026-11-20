@@ -277,7 +277,11 @@ export function SansFiltreOnline() {
   // ── Partie en cours ──────────────────────────────────────────────────────
   const leftPlayer = view.players.find((p) => !p.isBot && p.leftAt)
   const canPlay = view.phase === 'submit' && !iAmJudge && view.myPlayed === null && view.myHand.length > 0
-  const canCrown = view.phase === 'judging' && iAmJudge && (view.submissions?.length ?? 0) > 0
+  // Un juge désigné en cours de manche garde sa carte sur la table (les
+  // réponses restent anonymes pour les autres), mais ne peut pas la couronner.
+  const ownCard = iAmJudge ? view.myPlayed : null
+  const canCrown =
+    view.phase === 'judging' && iAmJudge && (view.submissions ?? []).some((s) => s.card !== ownCard)
 
   // Carte soulevée encore valable : même phase, et toujours en main / parmi
   // les réponses (une resynchro peut l'avoir retirée).
@@ -285,7 +289,7 @@ export function SansFiltreOnline() {
     pick && pick.key === view.phaseKey
       ? canPlay && view.myHand.some((c) => c.card === pick.card)
         ? pick.card
-        : canCrown && view.submissions?.some((s) => s.card === pick.card)
+        : canCrown && pick.card !== ownCard && view.submissions?.some((s) => s.card === pick.card)
           ? pick.card
           : null
       : null
@@ -327,7 +331,7 @@ export function SansFiltreOnline() {
     view.phase === 'submit'
       ? canPlay
         ? t('playedStatus', { count: playedCount, total: playersInRound.length })
-        : view.myPlayed !== null
+        : view.myPlayed !== null && !iAmJudge
           ? t('played', { count: playedCount, total: playersInRound.length })
           : t('judgeWaits', { count: playedCount, total: playersInRound.length })
       : view.phase === 'judging'
@@ -434,7 +438,7 @@ export function SansFiltreOnline() {
                   corner={<CardCorner rank="?" suit="♣" className="text-[#24201A]/70" />}
                   selected={pickedCard === s.card}
                   pending={sendingCard === s.card}
-                  disabled={busy}
+                  disabled={busy || s.card === ownCard}
                   markIcon="crown"
                   sendingLabel={tCommon('sending')}
                   onToggle={() => togglePick(s.card)}
@@ -454,6 +458,9 @@ export function SansFiltreOnline() {
             </ul>
           )}
           {iAmJudge && <p className="text-center text-sm text-cream/70">{t('judgeReadAloud')}</p>}
+          {iAmJudge && ownCard !== null && (
+            <p className="text-center text-sm font-semibold text-cream/80">{t('judgeOwnCard')}</p>
+          )}
         </section>
       )}
 

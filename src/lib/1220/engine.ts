@@ -1,4 +1,12 @@
-import { evaluatePlayerRoll1220, type Choices1220 } from '@/lib/game-1220'
+import {
+  BANDS_1220,
+  evaluatePlayerRoll1220,
+  TOTAL_MAX,
+  TOTAL_MIN,
+  type Band1220,
+  type Choices1220,
+  type Parity1220,
+} from '@/lib/game-1220'
 import { hashSeed, rngFromState, type RngState } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 
@@ -105,6 +113,48 @@ export function createGame1220State(
   }
 }
 
+const PARITIES_1220: readonly Parity1220[] = ['pair', 'impair']
+
+/** Un chiffre de pari : une somme possible des deux dés. */
+function isBetNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= TOTAL_MIN && value <= TOTAL_MAX
+}
+
+/**
+ * Ne retient d'un corps reçu du client que les quatre champs d'un pari, aux
+ * valeurs admises. Le brouillon part tel quel dans l'état diffusé à toute la
+ * table et à la TV : un client modifié y glissait un nom, un `playerId`, des
+ * chiffres impossibles ou des kilo-octets de texte.
+ */
+export function sanitizeChoices1220(raw: unknown): Partial<Choices1220> {
+  if (typeof raw !== 'object' || raw === null) return {}
+  const { parity, band, drinkNumber, giveNumber } = raw as Record<string, unknown>
+  const out: Partial<Choices1220> = {}
+  if (PARITIES_1220.includes(parity as Parity1220)) out.parity = parity as Parity1220
+  if (BANDS_1220.includes(band as Band1220)) out.band = band as Band1220
+  if (isBetNumber(drinkNumber)) out.drinkNumber = drinkNumber
+  if (isBetNumber(giveNumber)) out.giveNumber = giveNumber
+  return out
+}
+
+/**
+ * Paris que vaut un brouillon : champs manquants ou invalides (brouillon
+ * d'avant l'assainissement, encore en base) remis à leur valeur par défaut.
+ */
+function effectiveChoices(draft: unknown): Choices1220 {
+  return { ...defaultChoices1220(), ...sanitizeChoices1220(draft) }
+}
+
+/**
+ * Paris à verrouiller à partir d'un brouillon. « Boire = donner » — que le
+ * bouton « prêt » refuse, mais qu'un départ ou un remplacement par bot
+ * verrouillait quand même — retombe sur les choix par défaut.
+ */
+function lockedChoices(draft: unknown): Choices1220 {
+  const choices = effectiveChoices(draft)
+  return choices.drinkNumber === choices.giveNumber ? defaultChoices1220() : choices
+}
+
 function activePlayerIds(state: Game1220State): string[] {
   return state.players.filter((p) => !p.leftAt).map((p) => p.id)
 }
@@ -118,7 +168,7 @@ export function lockConfigsIfAllReady(state: Game1220State, setupReady: string[]
   }
   const configs: Config1220[] = state.players
     .filter((p) => !p.leftAt)
-    .map((p) => ({ playerId: p.id, name: p.name, ...(state.draft[p.id] ?? defaultChoices1220()) }))
+    .map((p) => ({ ...lockedChoices(state.draft[p.id]), playerId: p.id, name: p.name }))
   return {
     ...state,
     version: state.version + 1,
@@ -143,13 +193,7 @@ function withMissingConfigs(state: Game1220State, playerIds: Iterable<string>): 
   if (missing.size === 0) return state
   const added: Config1220[] = state.players
     .filter((p) => missing.has(p.id))
-    .map((p) => {
-      const draft = state.draft[p.id] ?? defaultChoices1220()
-      const choices = draft.drinkNumber === draft.giveNumber ? defaultChoices1220() : draft
-      // Identité APRÈS le brouillon : un brouillon forgé portant un `playerId`
-      // l'écraserait, et la config manquerait encore au retour suivant.
-      return { ...choices, playerId: p.id, name: p.name }
-    })
+    .map((p) => ({ ...lockedChoices(state.draft[p.id]), playerId: p.id, name: p.name }))
   const seat = (id: string) => state.players.findIndex((p) => p.id === id)
   return {
     ...state,
@@ -165,11 +209,13 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       if (!player || player.leftAt) throw new Game1220EngineError('UNKNOWN_PLAYER')
       if (state.phase !== 'setup') throw new Game1220EngineError('WRONG_PHASE')
       if (state.setupReady.includes(action.playerId)) throw new Game1220EngineError('ALREADY_READY')
-      const current = state.draft[action.playerId] ?? defaultChoices1220()
+      const choices = sanitizeChoices1220(action.choices)
+      if (Object.keys(choices).length === 0) throw new Game1220EngineError('INVALID_CHOICES')
+      const current = effectiveChoices(state.draft[action.playerId])
       return {
         ...state,
         version: state.version + 1,
-        draft: { ...state.draft, [action.playerId]: { ...current, ...action.choices } },
+        draft: { ...state.draft, [action.playerId]: { ...current, ...choices } },
       }
     }
 
@@ -177,8 +223,9 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
       const player = state.players.find((p) => p.id === action.playerId)
       if (!player || player.leftAt) throw new Game1220EngineError('UNKNOWN_PLAYER')
       if (state.phase !== 'setup') throw new Game1220EngineError('WRONG_PHASE')
-      const choices = state.draft[action.playerId]
-      if (!choices) throw new Game1220EngineError('NO_DRAFT')
+      if (!state.draft[action.playerId]) throw new Game1220EngineError('NO_DRAFT')
+      // Jugé sur les paris qui seront verrouillés, pas sur le brouillon brut.
+      const choices = effectiveChoices(state.draft[action.playerId])
       if (choices.drinkNumber === choices.giveNumber) throw new Game1220EngineError('CLASH')
       if (state.setupReady.includes(action.playerId)) return state
       return lockConfigsIfAllReady(state, [...state.setupReady, action.playerId])
