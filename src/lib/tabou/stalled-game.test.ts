@@ -84,6 +84,34 @@ describe('Tabou — plus aucune équipe ne peut marquer', () => {
     expect(s.winnerTeam).toBeNull()
   })
 
+  it('partis depuis plus de 3 min, jamais remplacés (aucun téléphone éveillé) : la partie s’arrête quand même', () => {
+    // Le remplacement par un bot est déclenché par un téléphone : sur une table
+    // qui ne regarde que la TV, il n'arrive pas. Passé le délai de retour, un
+    // parti compte comme perdu pour la partie.
+    const bilan = oneLeftPerTeam(2)
+    const graceOver = T0 + 11_000 + GRACE
+    expect(tabouGameIsStalled(bilan.players, graceOver - 1)).toBe(false)
+    expect(tabouGameIsStalled(bilan.players, graceOver)).toBe(true)
+
+    const tooEarly = next(bilan, 'p0', graceOver - 1)
+    expect(tooEarly.phase).toBe('describing')
+
+    const s = next(bilan, 'p0', graceOver)
+    expect(s.phase).toBe('finished')
+    expect(s.winnerTeam).toBe('A')
+  })
+
+  it('un seul des deux partis a dépassé le délai : l’autre équipe peut encore se reformer, la partie continue', () => {
+    let s = describing()
+    s = leave(s, 'p2', T0 + 10_000)
+    s = leave(s, 'p3', T0 + 100_000)
+
+    // À T0 + 10 s + 3 min, p2 est perdu pour A ; p3, parti plus tard, peut revenir.
+    const at = T0 + 10_000 + GRACE
+    expect(tabouGameIsStalled(s.players, at)).toBe(false)
+    expect(next(s, 'p0', at).phase).toBe('describing')
+  })
+
   it('une seule équipe hors jeu : l’autre continue de jouer', () => {
     let s = leave(describing(), 'p2', T0 + 10_000)
     s = replaceLeft(s, T0 + 200_000)

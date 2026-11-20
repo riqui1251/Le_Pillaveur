@@ -1,5 +1,6 @@
 import { createRng, rngFromState, type SeededRng } from '@/lib/petit-buveur/rng'
 import { checkAdvance, enterPhase, phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 
 /**
  * TABOU VOCAL (mime/description en équipes) — moteur PUR, serveur-autoritaire.
@@ -144,30 +145,39 @@ export function tabouRoundIsPlayable(
   return players.some((p) => p.id !== describer.id && p.team === describer.team && here(p))
 }
 
+type StallPlayer = Pick<TabouPlayer, 'isBot' | 'team' | 'leftAt'>
+
 /**
  * L'équipe pourra encore marquer : il lui reste deux joueurs qui ne sont pas
- * des bots — présents, ou partis depuis peu (ils peuvent revenir tant qu'un bot
- * ne les a pas remplacés).
+ * des bots — présents, ou partis depuis moins que le délai de retour. Passé ce
+ * délai, un parti est perdu pour la partie même si aucun bot ne l'a remplacé :
+ * le remplacement est déclenché par un téléphone, et une table qui ne regarde
+ * que la TV n'en a aucun d'éveillé. `now` absent : seuls les bots sont perdus.
  */
-function teamCanStillScore(players: readonly Pick<TabouPlayer, 'isBot' | 'team'>[], team: TabouTeam): boolean {
-  return players.filter((p) => p.team === team && !p.isBot).length >= 2
+function teamCanStillScore(players: readonly StallPlayer[], team: TabouTeam, now?: number): boolean {
+  const lost = (p: StallPlayer) =>
+    p.isBot || (now !== undefined && Boolean(p.leftAt) && now - (p.leftAt as number) >= ONLINE_REPLACE_GRACE_MS)
+  return players.filter((p) => p.team === team && !lost(p)).length >= 2
 }
 
 /**
  * Plus AUCUNE équipe ne pourra marquer, pour de bon : chacune a perdu un joueur
- * que son bot remplace (2 contre 2 avec un départ de chaque côté). Le score ne
- * bougera plus, la cible est hors d'atteinte : la partie doit pouvoir s'arrêter.
+ * (2 contre 2 avec un départ de chaque côté). Le score ne bougera plus, la
+ * cible est hors d'atteinte : la partie doit pouvoir s'arrêter.
  */
-export function tabouGameIsStalled(players: readonly Pick<TabouPlayer, 'isBot' | 'team'>[]): boolean {
-  return !teamCanStillScore(players, 'A') && !teamCanStillScore(players, 'B')
+export function tabouGameIsStalled(players: readonly StallPlayer[], now?: number): boolean {
+  return !teamCanStillScore(players, 'A', now) && !teamCanStillScore(players, 'B', now)
 }
 
 /** Le prochain « continuer » du bilan clôt la partie : score cible atteint, ou partie bloquée. */
-export function tabouGameIsDecided(state: Pick<TabouState, 'scores' | 'targetScore' | 'players'>): boolean {
+export function tabouGameIsDecided(
+  state: Pick<TabouState, 'scores' | 'targetScore' | 'players'>,
+  now?: number
+): boolean {
   return (
     state.scores.A >= state.targetScore ||
     state.scores.B >= state.targetScore ||
-    tabouGameIsStalled(state.players)
+    tabouGameIsStalled(state.players, now)
   )
 }
 
@@ -331,7 +341,7 @@ export function reduceTabou(state: TabouState, action: TabouAction): TabouState 
       // s'enregistrent — jamais sur un départ. Une partie bloquée s'arrête sur
       // son score : le meilleur l'emporte, l'égalité ne sacre personne (une
       // cible atteinte ne laisse jamais les deux équipes à égalité).
-      if (tabouGameIsDecided(state)) {
+      if (tabouGameIsDecided(state, action.now)) {
         const { A, B } = state.scores
         return {
           ...state,

@@ -87,6 +87,47 @@ function render(state: PreState, viewerId: string, locale: string = 'fr', errors
   )
 }
 
+describe('PresidentOnline : classement d’une manche jouée seul', () => {
+  const trouDrinks = (locale: string): string =>
+    (catalogue(locale) as { games: { president: { game: { trouDrinks: string } } } }).games.president.game.trouDrinks
+
+  /** Tout le monde sauf p1 quitte au compte à rebours : p1 est servi seul, sa première carte clôt la manche. */
+  function playedAlone(): PreState {
+    let s = createPreState(PLAYERS, 'seed-render', NOW, 2)
+    for (const id of ['p2', 'p3', 'p4', 'p5']) s = reducePre(s, { type: 'LEAVE', playerId: id, at: NOW + 1_000 })
+    s = reducePre(s, { type: 'ADVANCE', claimedKey: phaseKey(s), now: NOW + 5_000 })
+    const hand = s.players.find((p) => p.id === 'p1')!.hand
+    s = reducePre(s, { type: 'PLAY', playerId: 'p1', cards: [hand[0]], now: NOW + 6_000 })
+    expect(s.phase).toBe('interlude')
+    expect(s.lastRanking).toEqual(['p1'])
+    return s
+  }
+
+  it('un seul classé : personne n’est Trou, « le Trou boit » ne s’affiche pas', () => {
+    expect(render(playedAlone(), 'p1')).not.toContain(trouDrinks('fr'))
+  })
+
+  it('classement ordinaire : « le Trou boit » reste affiché', () => {
+    const state = p5BackAfterTheDeal()
+    const hands: Record<string, number[]> = { p1: [36], p2: [0], p3: [8], p4: [16, 20] }
+    let s: PreState = {
+      ...state,
+      players: state.players.map((p) => ({ ...p, hand: hands[p.id] ?? p.hand })),
+      currentTurnId: 'p1',
+      lastPlay: null,
+      trickRun: null,
+      passedIds: [],
+      outOrder: [],
+    }
+    s = reducePre(s, { type: 'PLAY', playerId: 'p1', cards: [36], now: NOW + 10_000 })
+    s = reducePre(s, { type: 'PLAY', playerId: 'p2', cards: [0], now: NOW + 11_000 })
+    s = reducePre(s, { type: 'PLAY', playerId: 'p3', cards: [8], now: NOW + 12_000 })
+    expect(s.phase).toBe('interlude')
+
+    expect(render(s, 'p1')).toContain(trouDrinks('fr'))
+  })
+})
+
 describe('PresidentOnline : joueur revenu après la donne', () => {
   it('lit qu’il reprend à la prochaine donne, dans les 4 langues, sans clé manquante', () => {
     const state = p5BackAfterTheDeal()

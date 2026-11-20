@@ -118,7 +118,9 @@ export function lockConfigsIfAllReady(state: Game1220State, setupReady: string[]
   }
   const configs: Config1220[] = state.players
     .filter((p) => !p.leftAt)
-    .map((p) => ({ playerId: p.id, name: p.name, ...(state.draft[p.id] ?? defaultChoices1220()) }))
+    // Identité APRÈS le brouillon : forgé avec un `playerId`, il donnait deux
+    // lignes de paris à un autre joueur et aucune à son auteur.
+    .map((p) => ({ ...(state.draft[p.id] ?? defaultChoices1220()), playerId: p.id, name: p.name }))
   return {
     ...state,
     version: state.version + 1,

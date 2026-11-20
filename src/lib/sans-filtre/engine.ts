@@ -201,9 +201,22 @@ function startRound(state: SFState, now: number): SFState {
   return next
 }
 
+/**
+ * Réponses que le juge peut couronner : toutes, sauf la sienne. Un juge
+ * désigné en cours de manche (le précédent est parti) avait pu déjà jouer : sa
+ * carte reste sur la table, hors concours — la retirer la désignait à tous
+ * comme la sienne, alors que les réponses sont anonymes.
+ */
+export function sfEligibleSubmissions(
+  state: Pick<SFState, 'submissions' | 'judgeId'>
+): SFState['submissions'] {
+  return state.submissions.filter((s) => s.playerId !== state.judgeId)
+}
+
 function enterJudging(state: SFState, now: number): SFState {
-  // Aucune carte abattue (table de retardataires) → on saute le couronnement.
-  if (state.submissions.length === 0) return enterReveal(state, null, now)
+  // Rien à couronner (table de retardataires, ou seule carte : celle du juge)
+  // → on saute le couronnement.
+  if (sfEligibleSubmissions(state).length === 0) return enterReveal(state, null, now)
   return {
     ...state,
     ...enterPhase(state.phaseSeq, 'judging', SF_JUDGE_MS, now),
@@ -220,22 +233,14 @@ function awaitedPlayers(state: SFState): SFPlayer[] {
 /**
  * Le juge n'est plus là en pleine manche : le rôle passe au prochain de la
  * rotation, sans attendre le remplacement par un bot (3 min, alors que le
- * jugement en dure 1 min 30 et se soldait par une couronne au hasard). Le
- * nouveau juge reprend la carte qu'il avait abattue : il ne départage pas sa
- * propre réponse. En jugement, il repart avec un délai entier.
+ * jugement en dure 1 min 30 et se soldait par une couronne au hasard). S'il
+ * avait déjà joué, sa carte reste en jeu mais il ne peut pas la couronner
+ * (`sfEligibleSubmissions`). En jugement, il repart avec un délai entier.
  */
-function handOverJudge(state: SFState, now: number): SFState {
+export function sfHandOverJudge(state: SFState, now: number): SFState {
   const judgeId = nextJudgeId(state, state.judgeId)
   if (!judgeId || judgeId === state.judgeId) return state
-  const own = state.submissions.find((s) => s.playerId === judgeId)
-  const next: SFState = {
-    ...state,
-    judgeId,
-    submissions: own ? state.submissions.filter((s) => s.playerId !== judgeId) : state.submissions,
-    players: own
-      ? state.players.map((p) => (p.id === judgeId ? { ...p, hand: [...p.hand, own.card] } : p))
-      : state.players,
-  }
+  const next: SFState = { ...state, judgeId }
   if (next.phase === 'judging' || awaitedPlayers(next).length === 0) return enterJudging(next, now)
   return next
 }
@@ -295,6 +300,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       if (action.playerId !== state.judgeId) throw new SFEngineError('NOT_THE_JUDGE')
       const submission = state.submissions.find((s) => s.card === action.card)
       if (!submission) throw new SFEngineError('INVALID_PICK')
+      if (submission.playerId === state.judgeId) throw new SFEngineError('CANNOT_PICK_OWN')
       return enterReveal(state, { playerId: submission.playerId, card: submission.card }, action.now)
     }
 
@@ -307,10 +313,12 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
         return enterJudging(state, action.now)
       }
       if (state.phase === 'judging') {
-        // Juge endormi (ou devenu bot) → couronnement aléatoire reproductible.
+        // Juge endormi (ou devenu bot) → couronnement aléatoire reproductible,
+        // parmi les réponses qu'il aurait pu couronner.
+        const eligible = sfEligibleSubmissions(state)
+        if (eligible.length === 0) return enterReveal(state, null, action.now)
         const rng = rngFromState(state.rngState)
-        const pickIdx = rng.pickIndex(state.submissions.length)
-        const s = state.submissions[pickIdx]
+        const s = eligible[rng.pickIndex(eligible.length)]
         return {
           ...enterReveal(state, { playerId: s.playerId, card: s.card }, action.now),
           rngState: rng.getState(),
@@ -356,7 +364,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       // avancer, chacun retrouve la manche — et son rôle — à son retour.
       if (humans(next).length === 0) return next
       if (next.phase !== 'submit' && next.phase !== 'judging') return next
-      if (action.playerId === next.judgeId) return handOverJudge(next, action.at)
+      if (action.playerId === next.judgeId) return sfHandOverJudge(next, action.at)
       // Le dernier joueur attendu s'en va : inutile de laisser courir le chrono.
       if (next.phase === 'submit' && awaitedPlayers(next).length === 0) {
         return enterJudging(next, action.at)
@@ -392,7 +400,7 @@ export function reduceSF(state: SFState, action: SFAction): SFState {
       // Le juge devenu bot passe la main au prochain de la rotation (humain
       // s'il en reste 2+) pour ne pas geler la table jusqu'au timeout.
       if (next.judgeId && ids.has(next.judgeId) && next.phase === 'judging') {
-        return handOverJudge(next, action.now)
+        return sfHandOverJudge(next, action.now)
       }
       return next
     }

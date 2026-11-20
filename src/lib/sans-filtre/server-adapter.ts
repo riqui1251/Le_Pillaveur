@@ -3,6 +3,8 @@ import {
   currentSFActorId,
   reduceSF,
   sfActive,
+  sfEligibleSubmissions,
+  sfHandOverJudge,
   toSFClientView,
   toSFSpectatorView,
   SFEngineError,
@@ -164,27 +166,18 @@ export function rejoinSFPlayer(state: SFState, playerId: string): SFState | null
 export function convertSFPlayerToBot(state: SFState, playerId: string): SFState | null {
   const player = state.players.find((p) => p.id === playerId)
   if (!player || player.isBot || state.phase === 'finished') return null
-  let next: SFState = {
+  const next: SFState = {
     ...state,
     players: state.players.map((p) =>
       p.id === playerId ? { ...p, isBot: true, leftAt: null } : p
     ),
     version: state.version + 1,
   }
-  // Un juge AFK devenu bot passe la main au prochain humain — même règle que
-  // REPLACE_LEFT dans le moteur, pour ne pas geler la table jusqu'au timeout.
-  if (next.judgeId === playerId && next.phase === 'judging') {
-    const humans = sfActive(next).filter((p) => !p.isBot)
-    const order = next.players.map((p) => p.id)
-    const start = order.indexOf(playerId)
-    for (let step = 1; step <= order.length && humans.length > 0; step++) {
-      const candidate = next.players[(start + step) % order.length]
-      if (!candidate.isBot && !candidate.leftAt) {
-        next = { ...next, judgeId: candidate.id }
-        break
-      }
-    }
-  }
+  // Un juge AFK devenu bot passe la main par le MÊME relais que le moteur
+  // (REPLACE_LEFT, départ) : délai de jugement entier, et manche sans couronne
+  // si la seule réponse sur la table est celle du nouveau juge. Une copie
+  // locale de ce relais laissait un jugement sans rien à couronner.
+  if (next.judgeId === playerId && next.phase === 'judging') return sfHandOverJudge(next, Date.now())
   return next
 }
 
@@ -227,7 +220,7 @@ function sfWeightedCrownPick(
   state: SFState,
   rand: () => number
 ): { playerId: string; card: number } {
-  const entries = state.submissions.map((s) => ({
+  const entries = sfEligibleSubmissions(state).map((s) => ({
     submission: s,
     weight: state.players.find((p) => p.id === s.playerId)?.isBot ? 1 : 3,
   }))
@@ -271,6 +264,9 @@ export function applySFBotAction(
     if (state.phase === 'judging') {
       const judge = state.players.find((p) => p.id === state.judgeId)
       if (!judge?.isBot) return { ok: false, error: 'NOT_BOT_TURN' }
+      // Rien qu'il puisse couronner (sa propre carte seulement) : l'échéance
+      // du jugement clôt la manche sans couronne.
+      if (sfEligibleSubmissions(state).length === 0) return { ok: false, error: 'NOT_BOT_TURN' }
       const pick = sfWeightedCrownPick(state, rand)
       return {
         ok: true,

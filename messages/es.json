@@ -3787,7 +3787,7 @@
       },
       "about": {
         "p1": "Dos equipos, A y B, y un descriptor que cambia en cada ronda, cada jugador por turno. Ve en su teléfono la palabra que hay que hacer adivinar y sus cuatro palabras tabú, prohibidas en su boca; el equipo rival también las ve, su propio equipo nunca. La describe en voz alta, por el chat de voz, mientras su equipo dispara propuestas.",
-        "p2": "Una ronda dura 60 segundos y en ella desfilan varias palabras: un compañero pulsa ACERTADO, +1 punto para el equipo y la siguiente palabra llega al instante; el descriptor puede pasar una palabra demasiado difícil, sin punto; un rival que oye una palabra tabú pulsa TABÚ, y la palabra salta sin punto para nadie. El resumen desvela la última palabra y el balance de la ronda. Gana el primer equipo que llega a la puntuación objetivo: 15, 20 o 25, a elección del anfitrión.",
+        "p2": "Una ronda dura 60 segundos y en ella desfilan varias palabras: un compañero pulsa ACERTADO, +1 punto para el equipo y la siguiente palabra llega al instante; el descriptor puede pasar una palabra demasiado difícil, sin punto; un rival que oye una palabra tabú pulsa TABÚ, y la palabra salta sin punto para nadie. El resumen desvela la última palabra y el balance de la ronda. Gana el primer equipo que llega a la puntuación objetivo: 15, 20 o 25, a elección del anfitrión. Si las salidas no dejan dos humanos en ningún equipo, la partida termina con el marcador del momento.",
         "p3": "Los rivales tienen la tarjeta delante: escuchan al acecho de cualquier palabra prohibida, y el juego limpio de la mesa hace de árbitro. Describe por el uso cuando la definición es tabú y pasa rápido lo que se atasca: el reloj es el verdadero rival. Cuatro jugadores mínimo, dos por equipo, hasta dieciséis; sin bots al empezar, un bot no describe nada, solo sustituye a un jugador que se va. Las palabras existen en cuatro idiomas. El juego no cuenta tragos, solo puntos."
       }
     },
@@ -5136,6 +5136,7 @@
         "judgePickPrompt": "Lee cada respuesta en voz alta y corona la mejor.",
         "judgeReading": "{name} está leyendo las respuestas…",
         "judgeReadAloud": "Consejo: léelas en voz alta por el chat de voz — ahí está la gracia.",
+        "judgeOwnCard": "Ya habías jugado: tu carta sigue en la mesa, pero no puedes coronarla.",
         "crowned": {
           "title": "¡Carta coronada!",
           "by": "De {name} — +1 corona",
