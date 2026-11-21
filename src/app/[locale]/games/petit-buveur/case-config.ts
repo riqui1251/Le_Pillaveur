@@ -48,6 +48,8 @@ export interface Case {
   description?: string
   effect: number
   defiChallenge?: string
+  /** Énoncé tiré pour la case Question. */
+  questionText?: string
   gorgéeCulSec?: boolean
 }
 
@@ -73,6 +75,12 @@ function getDefis(t: PetitBuveurT): DefiItem[] {
 
 export function getOnlineVerifiableDefis(t: PetitBuveurT): DefiItem[] {
   return getDefis(t).filter((defi) => defi.verifiableOnline !== false)
+}
+
+/** Questions de la case Question (liste vide si le catalogue n'en a pas). */
+export function getQuestions(t: PetitBuveurT): string[] {
+  const raw = t.raw('questions')
+  return Array.isArray(raw) ? raw.filter((q): q is string => typeof q === 'string' && q.trim() !== '') : []
 }
 
 export function getDefiWheelChallenges(t: PetitBuveurT): string[] {
@@ -213,7 +221,9 @@ export function generateCase(
       return { type, effect: 0 }
     case 'question': {
       const drinks = Math.min(2 * multiplier, 4)
-      return { type, effect: drinks }
+      const questions = getQuestions(t)
+      const questionText = questions[Math.floor(Math.random() * questions.length)]
+      return questionText ? { type, effect: drinks, questionText } : { type, effect: drinks }
     }
     case 'vote': {
       const drinks = Math.min((Math.floor(Math.random() * 2) + 2) * multiplier, 5)

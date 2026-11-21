@@ -600,6 +600,68 @@ describe('Rétrocompatibilité : états d’avant (sans nouveaux champs)', () =>
   })
 })
 
+describe('statut posé : la case le dit dans son résultat (la carte affichait « Aucun dégât — sauvé ! »)', () => {
+  const statusCases: { type: EngineCase['type']; effect: number; note: object }[] = [
+    { type: 'protection', effect: 0, note: { kind: 'status', status: 'protection', playerId: 'b' } },
+    { type: 'malediction', effect: 3, note: { kind: 'status', status: 'curse', playerId: 'b', turns: 3 } },
+    { type: 'passe-tour', effect: 0, note: { kind: 'status', status: 'skip-turn', playerId: 'b' } },
+    { type: 'ancre', effect: 0, note: { kind: 'status', status: 'anchor', playerId: 'b' } },
+    { type: 'miroir-inverse', effect: 1, note: { kind: 'status', status: 'mirror', playerId: 'b' } },
+    { type: 'defi-chaine', effect: 5, note: { kind: 'status', status: 'chain', playerId: 'b', turns: 5 } },
+  ]
+
+  it.each(statusCases)('$type sur B : une note de statut, sans gorgée ni déplacement', ({ type, effect, note }) => {
+    const done = resolve(withPending(base([3, 4, 5]), { type, effect }), 'a', { targetId: 'b' })
+    expect(done.lastOutcome?.changes).toEqual([])
+    expect(done.lastOutcome?.notes).toEqual([note])
+  })
+
+  it.each(statusCases.filter((c) => c.type !== 'protection'))(
+    '$type sur un protégé : « protégé », pas de statut annoncé',
+    ({ type, effect }) => {
+      const s = withPending(base([3, 4, 5]), { type, effect })
+      protect(s, 'b')
+      const done = resolve(s, 'a', { targetId: 'b' })
+      expect(done.lastOutcome?.notes).toEqual([{ kind: 'protected', playerId: 'b' }])
+    }
+  )
+
+  it('Miroir et Mélange qui ne déplacent personne le disent', () => {
+    const miroir = resolve(withPending(base([7, 7, 7]), { type: 'miroir', effect: 0 }), 'a', { targetId: 'b' })
+    expect(miroir.lastOutcome?.notes).toEqual([{ kind: 'positions-unchanged' }])
+    const melange = resolve(withPending(base([7, 7, 7]), { type: 'melange', effect: 0 }), 'a', { targetId: 'b' })
+    expect(melange.lastOutcome?.notes).toEqual([{ kind: 'positions-unchanged' }])
+    const moved = resolve(withPending(base([2, 9, 20]), { type: 'miroir', effect: 0 }), 'a', { targetId: 'b' })
+    expect(moved.lastOutcome?.notes).toBeUndefined()
+  })
+})
+
+describe('case Question : un énoncé tiré avec la case', () => {
+  const question = (s: EngineState) => s.lastCase?.type === 'question'
+
+  it('avec une liste de questions, la case porte un index valide jusque dans la décision en attente', () => {
+    const { after } = rollUntil(
+      (seed) => ({ ...base([0, 5, 8], `q-${seed}`), settings: { ...SETTINGS, questionCount: 30 } }),
+      question
+    )
+    const index = after.lastCase?.questionIndex
+    expect(index).toBeGreaterThanOrEqual(0)
+    expect(index).toBeLessThan(30)
+    expect(after.pending?.case?.questionIndex).toBe(index)
+  })
+
+  it('sans liste (partie commencée avant) : pas d’index, et le générateur ne tire rien de plus', () => {
+    const { before, after } = rollUntil((seed) => base([0, 5, 8], `q-${seed}`), question)
+    expect(after.lastCase?.questionIndex).toBeUndefined()
+    const withList = reduce(
+      { ...before, settings: { ...SETTINGS, questionCount: 30 } },
+      { type: 'ROLL', playerId: 'a' }
+    )
+    expect(withList.lastDice).toBe(after.lastDice)
+    expect(withList.rngState).not.toBe(after.rngState)
+  })
+})
+
 // ─── Propriétés sur des parties aléatoires ──────────────────────────────────
 
 function mulberry(seed: number): () => number {
@@ -612,30 +674,19 @@ function mulberry(seed: number): () => number {
   }
 }
 
-/** Effet visible d'une résolution (gorgées, déplacement, note, spectacle, statut posé). */
+/**
+ * Ce que la carte de la case peut montrer, lu dans le RÉSULTAT seul (gorgées,
+ * déplacement, note, verdict, spectacle) : un statut posé dans l'état sans
+ * note s'affichait « Aucun dégât — sauvé ! ».
+ */
 function observable(before: EngineState, after: EngineState): string | null {
   const o = after.lastOutcome
   if (!o || o === before.lastOutcome) return null
   if (o.caseType === 'normal') return o.notes?.some((n) => n.kind === 'safe') ? null : 'normale sans message'
-  if (o.changes.length > 0 || (o.notes?.length ?? 0) > 0 || o.succeeded !== undefined) return null
+  if (o.changes.length > 0 || (o.notes?.length ?? 0) > 0 || o.succeeded !== undefined || o.chanceChoice) return null
   if (o.caseChanges?.some((c) => c.length > 0)) return null
   if (after.lastInteraction) return null
   const types = o.cases?.map((c) => c.type) ?? [o.effectiveCase?.type ?? o.caseType]
-  const target = o.targetId ? player(after, o.targetId) : undefined
-  const actor = player(after, o.actorId)
-  for (const type of types) {
-    if (type === 'miroir' || type === 'melange') return null
-    if (type === 'protection' && target?.protected) return null
-    if (type === 'malediction' && (target?.cursed ?? 0) > 0) return null
-    if (type === 'ancre' && target?.anchored) return null
-    if (type === 'miroir-inverse' && actor.mirrorDrinkTargetId === o.targetId) return null
-    if (type === 'defi-chaine' && actor.linkedTo === o.targetId) return null
-    if (type === 'passe-tour') {
-      if (target?.skipNextTurn) return null
-      const n = after.players.length
-      if (after.currentPlayer !== (before.currentPlayer + 1) % n) return null
-    }
-  }
   return `${types.join('+')} sans effet visible`
 }
 

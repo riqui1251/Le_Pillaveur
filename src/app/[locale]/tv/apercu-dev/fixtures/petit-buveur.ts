@@ -133,6 +133,16 @@ export function build(): TvPreviewFixture[] {
   const meta = playUntil(twelve, (s) => showsCard(s) && (s.lastOutcome?.caseType === 'repetition' || s.lastOutcome?.caseType === 'double-case'))
   fixtures.push({ id: 'meta-case-12', label: 'Répétition / Double case (titre composé)', steps: [step('méta-case', twelve, meta[meta.length - 1])] })
 
+  // Statut posé : ni gorgée ni déplacement, la carte dit quand même ce que la case a fait.
+  const status = playUntil(
+    twelve,
+    (s) => showsCard(s) && s.lastOutcome?.changes.length === 0 && Boolean(s.lastOutcome.notes?.some((n) => n.kind === 'status'))
+  )
+  fixtures.push({ id: 'statut-12', label: 'Statut posé, sans gorgée ni déplacement (12 joueurs)', steps: [step('carte', twelve, status[status.length - 1])] })
+
+  const question = playUntil(twelve, (s) => s.pending?.stage === 'verdict' && typeof s.pending.case?.questionIndex === 'number')
+  fixtures.push({ id: 'verdict-question-12', label: 'Question : l’énoncé pendant l’arbitrage (12 joueurs)', steps: [step('verdict', twelve, question[question.length - 1])] })
+
   // Lancer qui joue sa case d'office : dé → pion qui marche jusqu'à la case → pause → effet.
   const auto = playUntil(
     twelve,

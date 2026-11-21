@@ -11,8 +11,9 @@ import {
   deciderIdOf,
   defiTextAt,
   landingIndex,
-  noteMessage,
+  noteMessages,
   outcomeSignature,
+  questionTextAt,
   shownDrinks,
   type EngineView,
 } from '@/components/online/petit-buveur/view-helpers'
@@ -53,6 +54,10 @@ export function defiText(texts: PbTexts, index: number | undefined): string | nu
   )
 }
 
+export function questionText(texts: PbTexts, index: number | undefined): string | null {
+  return questionTextAt(texts.base.raw('questions'), index) ?? null
+}
+
 export function outcomeTitle(texts: PbTexts, outcome: LastOutcome): string {
   if (outcome.effectiveCase) {
     return `${caseLabel(texts, outcome.caseType)} → ${caseLabel(texts, outcome.effectiveCase.type)}`
@@ -71,8 +76,7 @@ export function outcomeLines(texts: PbTexts, outcome: LastOutcome, nameOf: (id: 
   }
   if (outcome.chanceChoice === 'reroll') lines.push(texts.t('game.dialogs.chanceReroll'))
   if (outcome.chanceChoice === 'plus2') lines.push(texts.t('game.dialogs.chanceAdvance'))
-  for (const n of outcome.notes ?? []) {
-    const msg = noteMessage(n, (id) => nameOf(id), outcome.actorId)
+  for (const msg of noteMessages(outcome.notes, (id) => nameOf(id), outcome.actorId)) {
     lines.push(texts.t(msg.key, msg.values))
   }
   return lines
@@ -88,8 +92,14 @@ export function onlineCard(view: EngineView, texts: PbTexts): TvPbCard | null {
   if (!last) return null
   const nameOf = (id: string | null | undefined) => view.players.find((p) => p.id === id)?.name ?? ''
   const outcome = view.lastOutcome && view.lastOutcome.caseType === last.type ? view.lastOutcome : null
-  const shownDefi: EngineCase | null =
-    outcome?.effectiveCase?.type === 'defi' ? outcome.effectiveCase : last.type === 'defi' ? last : null
+  // Un défi (ou une question) rejoué par Répétition / Rewind porte son texte dans la case effective.
+  const shownCase: EngineCase = outcome?.effectiveCase ?? last
+  const detail =
+    shownCase.type === 'defi'
+      ? defiText(texts, shownCase.defiIndex)
+      : shownCase.type === 'question'
+        ? questionText(texts, shownCase.questionIndex)
+        : null
   const lines = outcome ? outcomeLines(texts, outcome, nameOf) : []
   const family = getCaseMeta(last.type).family
   const landing = outcome ? landingIndex(view.players, outcome) : null
@@ -99,7 +109,7 @@ export function onlineCard(view: EngineView, texts: PbTexts): TvPbCard | null {
     title: outcome ? outcomeTitle(texts, outcome) : caseLabel(texts, last.type),
     caseNumber: landing != null ? landing + 1 : null,
     dice: view.lastDice ?? null,
-    detail: shownDefi ? defiText(texts, shownDefi.defiIndex) : null,
+    detail,
     changes: outcome ? outcome.changes : [],
     lines,
     targetId: outcome?.targetId ?? null,
@@ -125,7 +135,10 @@ export function onlinePending(view: EngineView, texts: PbTexts): TvPbPending | n
     const challenge = defiText(texts, pendingCase.defiIndex)
     detail = challenge ? texts.t('caseDescriptions.defi', { challenge, count: pendingCase.effect }) : null
   } else if (pendingCase?.type === 'question') {
-    detail = texts.t('caseDescriptions.question', { count: pendingCase.effect })
+    const question = questionText(texts, pendingCase.questionIndex)
+    detail = question
+      ? texts.t('caseDescriptions.questionAsked', { question, count: pendingCase.effect })
+      : texts.t('caseDescriptions.question', { count: pendingCase.effect })
   }
   const waiting: TvPbPending['waiting'] =
     pending.stage === 'side'

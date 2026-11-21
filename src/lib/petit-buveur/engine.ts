@@ -11,7 +11,7 @@ import {
   type EngineCase,
 } from './types'
 import { rngFromState, hashSeed, type RngState, type SeededRng } from './rng'
-import { generateCase } from './case-generator'
+import { generateCase, type CaseGenContext } from './case-generator'
 
 /**
  * Moteur Petit Buveur — pur, déterministe, serveur-autoritaire.
@@ -65,6 +65,8 @@ export interface EngineSettings {
    * vérifiables, pas de défi physique). Absent (états existants) = tous.
    */
   defiAllowed?: number[]
+  /** Taille de la liste i18n `questions`. Absent (états existants) : case Question sans énoncé. */
+  questionCount?: number
 }
 
 export type EnginePhase = 'playing' | 'awaiting-interaction' | 'finished'
@@ -112,6 +114,15 @@ export type OutcomeNote =
   | { kind: 'safe' }
   /** Personne n'est concerné (grappin en tête, loterie à deux, téléport sur soi…). */
   | { kind: 'no-effect' }
+  /** Miroir / Mélange : chaque pion retombe sur sa case. */
+  | { kind: 'positions-unchanged' }
+  /**
+   * Statut posé par la case : `playerId` le porte (protection, malédiction,
+   * passe-tour, ancre) ou est la cible du lien de l'acteur (miroir, chaîne).
+   */
+  | { kind: 'status'; status: OutcomeStatus; playerId: string; turns?: number }
+
+export type OutcomeStatus = 'protection' | 'curse' | 'skip-turn' | 'anchor' | 'mirror' | 'chain'
 
 export type ChanceChoice = 'reroll' | 'plus2'
 
@@ -617,9 +628,13 @@ function applyTargetedCase(fx: Fx, target: EnginePlayer, c: EngineCase, succeede
     case 'protection':
       target.protected = true
       target.protectionTurnsLeft = Math.max(players.length, 1)
+      note(fx, { kind: 'status', status: 'protection', playerId: target.id })
       break
     case 'malediction':
-      if (canAfflict(fx, target)) target.cursed = c.effect || DEFAULT_CURSE_TURNS
+      if (canAfflict(fx, target)) {
+        target.cursed = c.effect || DEFAULT_CURSE_TURNS
+        note(fx, { kind: 'status', status: 'curse', playerId: target.id, turns: target.cursed })
+      }
       break
     // Les protégés gardent leur case ; les autres sont miroités entre les cases restantes.
     case 'miroir': {
@@ -629,13 +644,17 @@ function applyTargetedCase(fx: Fx, target: EnginePlayer, c: EngineCase, succeede
       sorted.forEach((p, i) => {
         p.position = positions[positions.length - 1 - i]
       })
+      if (sorted.every((p, i) => p.position === positions[i])) note(fx, { kind: 'positions-unchanged' })
       break
     }
     case 'piege':
       drink(fx, target, target.position + 1)
       break
     case 'passe-tour':
-      if (canAfflict(fx, target)) target.skipNextTurn = true
+      if (canAfflict(fx, target)) {
+        target.skipNextTurn = true
+        note(fx, { kind: 'status', status: 'skip-turn', playerId: target.id })
+      }
       break
     case 'double-peine':
       drink(fx, target, c.effect * 2)
@@ -653,7 +672,10 @@ function applyTargetedCase(fx: Fx, target: EnginePlayer, c: EngineCase, succeede
       else note(fx, { kind: 'spared', playerId: target.id })
       break
     case 'ancre':
-      if (canAfflict(fx, target)) target.anchored = true
+      if (canAfflict(fx, target)) {
+        target.anchored = true
+        note(fx, { kind: 'status', status: 'anchor', playerId: target.id })
+      }
       break
     case 'inversion': {
       const last = players.reduce((min, p) => (p.position < min.position ? p : min))
@@ -664,10 +686,12 @@ function applyTargetedCase(fx: Fx, target: EnginePlayer, c: EngineCase, succeede
     case 'melange': {
       for (const p of players) if (shielded(p, actor)) note(fx, { kind: 'protected', playerId: p.id })
       const movable = players.filter((p) => !shielded(p, actor))
-      const shuffled = rng.shuffle(movable.map((p) => p.position))
+      const positions = movable.map((p) => p.position)
+      const shuffled = rng.shuffle(positions)
       movable.forEach((p, i) => {
         p.position = shuffled[i]
       })
+      if (shuffled.every((pos, i) => pos === positions[i])) note(fx, { kind: 'positions-unchanged' })
       break
     }
     // Le tour de création ne compte pas : le lien couvre aussi le prochain tour de l'acteur.
@@ -675,6 +699,7 @@ function applyTargetedCase(fx: Fx, target: EnginePlayer, c: EngineCase, succeede
       if (!canAfflict(fx, target)) break
       actor.mirrorDrinkTargetId = target.id
       actor.mirrorDrinkTurns = (c.effect || DEFAULT_MIRROR_TURNS) + 1
+      note(fx, { kind: 'status', status: 'mirror', playerId: target.id })
       break
     default:
       if (CASES_NO_TARGET.has(c.type)) applyNoTargetCase(fx, c)
@@ -683,15 +708,16 @@ function applyTargetedCase(fx: Fx, target: EnginePlayer, c: EngineCase, succeede
   }
 }
 
+function caseGenContext(w: Work): CaseGenContext {
+  const { difficulty, defiDrinks, defiAllowed, questionCount } = w.state.settings
+  return { difficulty, defiDrinks, defiAllowed, questionCount }
+}
+
 /** Tire deux cases simples pour une Double case (le générateur en ligne ne filtre rien). */
 function drawSimpleCases(w: Work): EngineCase[] {
   const out: EngineCase[] = []
   for (let guard = 0; out.length < 2 && guard < 200; guard += 1) {
-    const c = generateCase(w.rng, {
-      difficulty: w.state.settings.difficulty,
-      defiDrinks: w.state.settings.defiDrinks,
-      defiAllowed: w.state.settings.defiAllowed,
-    })
+    const c = generateCase(w.rng, caseGenContext(w))
     if (isSimpleCase(c)) out.push(c)
   }
   while (out.length < 2) out.push({ type: 'solo', effect: 1 })
@@ -717,11 +743,7 @@ function rollDice(w: Work): Roll {
 
 /** Tire la case d'arrivée et la joue (en attente si elle demande un choix). */
 function drawAndPlay(w: Work, roll: Roll): void {
-  const c = generateCase(w.rng, {
-    difficulty: w.state.settings.difficulty,
-    defiDrinks: w.state.settings.defiDrinks,
-    defiAllowed: w.state.settings.defiAllowed,
-  })
+  const c = generateCase(w.rng, caseGenContext(w))
   w.lastCase = c
   playDrawnCase(w, c, roll)
 }
@@ -1035,8 +1057,10 @@ function resolveInteractive(w: Work, p: EnginePending, effective: EngineCase, ch
       const target = resolveTarget(w, choice.targetId, false)
       targetId = target.id
       if (canAfflict(fx, target)) {
+        const turns = effective.effect || DEFAULT_CHAIN_TURNS
         actor.linkedTo = target.id
-        actor.linkedTurns = (effective.effect || DEFAULT_CHAIN_TURNS) + 1
+        actor.linkedTurns = turns + 1
+        note(fx, { kind: 'status', status: 'chain', playerId: target.id, turns })
       }
       break
     }

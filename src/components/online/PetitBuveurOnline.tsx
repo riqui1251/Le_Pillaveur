@@ -40,8 +40,9 @@ import {
   deciderIdOf,
   defiTextAt,
   landingIndex,
-  noteMessage,
+  noteMessages,
   outcomeSignature,
+  questionTextAt,
   randomTargetPool,
   rankByShown,
   shownDrinks,
@@ -60,7 +61,7 @@ import { OnlinePlayerName, RankCrest, useMemberCosmetics } from './OnlinePlayerT
 import { XpGainBanner } from './XpGainBanner'
 import { OnlineEndScreen } from './OnlineEndScreen'
 import { PlayerAvatarGlyph } from '@/components/icons/PlayerIcons'
-import type { LastOutcome, LastOutcomeChange, OutcomeNote } from '@/lib/petit-buveur/engine'
+import type { LastOutcome, LastOutcomeChange } from '@/lib/petit-buveur/engine'
 import '@/styles/petit-buveur-board.css'
 
 /**
@@ -292,6 +293,7 @@ export function PetitBuveurOnline() {
           ambiance === 'soft'
         )
       : undefined
+  const questionText = (index: number | undefined) => questionTextAt(basePB.raw('questions'), index)
   const difficulty = room.settings?.difficulty && DIFFICULTIES.includes(room.settings.difficulty)
     ? room.settings.difficulty
     : 'normal'
@@ -483,7 +485,12 @@ export function PetitBuveurOnline() {
         ? tPB('caseDescriptions.defi', { challenge, count: pendingCase.effect })
         : null
     }
-    if (pendingCase.type === 'question') return tPB('caseDescriptions.question', { count: pendingCase.effect })
+    if (pendingCase.type === 'question') {
+      const question = questionText(pendingCase.questionIndex)
+      return question
+        ? tPB('caseDescriptions.questionAsked', { question, count: pendingCase.effect })
+        : tPB('caseDescriptions.question', { count: pendingCase.effect })
+    }
     return null
   })()
   const randomTarget = (allowSelf: boolean) => {
@@ -500,10 +507,7 @@ export function PetitBuveurOnline() {
     )
   })()
   const noteLines = (outcome: LastOutcome) =>
-    (outcome.notes ?? []).map((n: OutcomeNote) => {
-      const msg = noteMessage(n, (id) => nameOf(id), outcome.actorId)
-      return tPB(msg.key, msg.values)
-    })
+    noteMessages(outcome.notes, (id) => nameOf(id), outcome.actorId).map((msg) => tPB(msg.key, msg.values))
   // Le détail d'une case jouée : verdict du défi, choix Chance, notes du moteur.
   const outcomeExtras = (outcome: LastOutcome): string[] => {
     const lines: string[] = []
@@ -845,13 +849,14 @@ export function PetitBuveurOnline() {
         {view.lastCase && !pending && board.caseRevealed && (() => {
           const outcome =
             view.lastOutcome && view.lastOutcome.caseType === view.lastCase.type ? view.lastOutcome : null
-          // Un défi rejoué par Répétition / Rewind porte son texte dans la case effective.
-          const shownDefi =
-            outcome?.effectiveCase?.type === 'defi'
-              ? outcome.effectiveCase
-              : view.lastCase.type === 'defi'
-                ? view.lastCase
-                : null
+          // Un défi (ou une question) rejoué par Répétition / Rewind porte son texte dans la case effective.
+          const shownCase = outcome?.effectiveCase ?? view.lastCase
+          const shownText =
+            shownCase.type === 'defi'
+              ? defiText(shownCase.defiIndex)
+              : shownCase.type === 'question'
+                ? questionText(shownCase.questionIndex)
+                : undefined
           return (
             <CaseRevealCard
               caseType={view.lastCase.type}
@@ -872,10 +877,8 @@ export function PetitBuveurOnline() {
                 </>
               }
             >
-              {/* Texte du défi tiré (seuls les défis vérifiables sont tirés en ligne). */}
-              {shownDefi && typeof shownDefi.defiIndex === 'number' && (
-                <p className="mt-1.5 text-sm font-medium text-cream">{defiText(shownDefi.defiIndex)}</p>
-              )}
+              {/* Texte du défi ou de la question tirés (seuls les défis vérifiables sont tirés en ligne). */}
+              {shownText && <p className="mt-1.5 text-sm font-medium text-cream">{shownText}</p>}
               {/* CE QUE la case a fait : gorgées prises, déplacements, protections —
                   lisible avant que le joueur suivant ne joue. */}
               {outcome &&

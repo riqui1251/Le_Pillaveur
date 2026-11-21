@@ -1,4 +1,11 @@
 import { describe, it, expect } from 'vitest'
+import { createTranslator } from 'next-intl'
+import fr from '../../../../messages/fr.json'
+import en from '../../../../messages/en.json'
+import es from '../../../../messages/es.json'
+import itMessages from '../../../../messages/it.json'
+import { withAmbiance } from '@/app/[locale]/games/petit-buveur/ambiance'
+import type { PetitBuveurT } from '@/app/[locale]/games/petit-buveur/case-config'
 import {
   autoAction,
   createInitialState,
@@ -8,7 +15,9 @@ import {
   type EngineSettings,
   type EngineState,
   type LastOutcome,
+  type OutcomeNote,
 } from '@/lib/petit-buveur/engine'
+import { QUESTION_COUNT } from '@/lib/petit-buveur/game-data'
 import type { EngineCase } from '@/lib/petit-buveur/types'
 import {
   choiceOf,
@@ -19,10 +28,13 @@ import {
   landingIndex,
   noteMessage,
   outcomeSignature,
+  questionTextAt,
   randomTargetPool,
   rankByShown,
   shownDrinks,
 } from './view-helpers'
+
+const CATALOGS = { fr, en, es, it: itMessages }
 
 const SETTINGS: EngineSettings = { difficulty: 'normal', defiDrinks: [1, 2, 1, 3, 2, 1, 2] }
 const IDS = ['a', 'b', 'c']
@@ -313,6 +325,95 @@ describe('noteMessage', () => {
     expect(noteMessage({ kind: 'safe' }, nameOf, 'c').values).toEqual({ player: 'C' })
     expect(noteMessage({ kind: 'no-effect' }, nameOf, 'a').key).toBe('online.notes.noEffect')
     expect(noteMessage({ kind: 'spared', playerId: 'b' }, nameOf, 'a').key).toBe('game.outcomes.rouletteSafe')
+    expect(noteMessage({ kind: 'positions-unchanged' }, nameOf, 'a').key).toBe('online.notes.positionsUnchanged')
+  })
+
+  it('annonce un statut posé avec les phrases du jeu local', () => {
+    const status = (s: Omit<Extract<OutcomeNote, { kind: 'status' }>, 'kind'>) =>
+      noteMessage({ kind: 'status', ...s }, nameOf, 'a')
+    expect(status({ status: 'protection', playerId: 'b' })).toEqual({
+      key: 'game.outcomes.protectionApplied',
+      values: { player: 'B' },
+    })
+    expect(status({ status: 'curse', playerId: 'b', turns: 3 })).toEqual({
+      key: 'game.outcomes.curseApplied',
+      values: { player: 'B', count: 3 },
+    })
+    expect(status({ status: 'skip-turn', playerId: 'b' }).key).toBe('game.outcomes.skipTurnNext')
+    expect(status({ status: 'anchor', playerId: 'b' }).key).toBe('game.outcomes.anchorApplied')
+    expect(status({ status: 'mirror', playerId: 'b' })).toEqual({
+      key: 'game.outcomes.mirrorLinkOneWay',
+      values: { actor: 'A', target: 'B' },
+    })
+    expect(status({ status: 'chain', playerId: 'c', turns: 5 })).toEqual({
+      key: 'game.outcomes.chainLinked',
+      values: { actor: 'A', target: 'C', count: 5 },
+    })
+  })
+
+  it('sur des parties réelles, chaque note se lit dans les 4 langues, en alcool comme en Soft', () => {
+    const notes = new Map<string, { note: OutcomeNote; actorId: string }>()
+    for (let seed = 0; seed < 60; seed += 1) {
+      for (const s of playStates(`notes-${seed}`)) {
+        for (const note of s.lastOutcome?.notes ?? []) {
+          const id = note.kind === 'status' ? `status:${note.status}` : note.kind
+          notes.set(id, { note, actorId: s.lastOutcome!.actorId })
+        }
+      }
+    }
+    expect([...notes.keys()]).toEqual(
+      expect.arrayContaining([
+        'status:protection',
+        'status:curse',
+        'status:skip-turn',
+        'status:anchor',
+        'status:mirror',
+        'status:chain',
+        'protected',
+        'safe',
+      ])
+    )
+    const problems: string[] = []
+    for (const [locale, messages] of Object.entries(CATALOGS)) {
+      for (const ambiance of ['alcool', 'soft'] as const) {
+        const t = withAmbiance(
+          createTranslator({
+            locale,
+            messages: messages as never,
+            namespace: 'games.petit-buveur' as never,
+            onError: (e) => problems.push(`${locale}/${ambiance} ${e.message}`),
+            getMessageFallback: ({ key }) => `MANQUE(${key})`,
+          }) as unknown as PetitBuveurT,
+          ambiance
+        )
+        for (const [id, { note, actorId }] of notes) {
+          const msg = noteMessage(note, (pid) => pid.toUpperCase(), actorId)
+          const text = t(msg.key, msg.values)
+          if (!text.trim() || /MANQUE\(|\{\w+\}/.test(text)) problems.push(`${locale}/${ambiance} ${id} → « ${text} »`)
+        }
+      }
+    }
+    expect(problems).toEqual([])
+  })
+})
+
+describe('questionTextAt', () => {
+  it('rend l’énoncé de l’index du moteur, rien hors liste', () => {
+    const list = ['Première ?', 'Deuxième ?', '  ']
+    expect(questionTextAt(list, 1)).toBe('Deuxième ?')
+    expect(questionTextAt(list, 2)).toBeUndefined()
+    expect(questionTextAt(list, 9)).toBeUndefined()
+    expect(questionTextAt(list, undefined)).toBeUndefined()
+    expect(questionTextAt('games.petit-buveur.questions', 0)).toBeUndefined()
+  })
+
+  it('les 4 catalogues ont la même liste que celle que compte le moteur', () => {
+    for (const messages of Object.values(CATALOGS)) {
+      const list: unknown[] = messages.games['petit-buveur'].questions
+      expect(list).toHaveLength(QUESTION_COUNT)
+      list.forEach((_, index) => expect(questionTextAt(list, index)).toBeTruthy())
+    }
+    expect(QUESTION_COUNT).toBeGreaterThanOrEqual(20)
   })
 })
 

@@ -131,6 +131,8 @@ export interface CaseGenContext {
   defiDrinks: number[]
   /** Indices de défis autorisés au tirage (absent = tous). */
   defiAllowed?: number[]
+  /** Taille de la liste i18n `questions` (absent ou 0 : case Question sans énoncé). */
+  questionCount?: number
   /** Types interdits pour ce tirage (ex. « Double case » : cases simples seulement). */
   excludeTypes?: Iterable<CaseType>
 }
@@ -220,8 +222,12 @@ export function generateCase(rng: SeededRng, ctx: CaseGenContext): EngineCase {
       return { type, effect: -1 }
     case 'pont':
       return { type, effect: 0 }
-    case 'question':
-      return { type, effect: Math.min(2 * multiplier, 4) }
+    case 'question': {
+      const effect = Math.min(2 * multiplier, 4)
+      const count = ctx.questionCount ?? 0
+      // Sans liste de questions (états existants) : aucun tirage de plus, graine pour graine.
+      return count > 0 ? { type, effect, questionIndex: rng.pickIndex(count) } : { type, effect }
+    }
     case 'vote':
       return { type, effect: Math.min(rng.int(2, 3) * multiplier, 5) }
     case 'miroir-inverse':

@@ -21,3 +21,6 @@ export const DEFI_COUNT = DEFI_DRINKS.length
 
 /** Indique si un défi est vérifiable en ligne (utile pour le mode online sans honneur). */
 export const DEFI_VERIFIABLE_ONLINE: boolean[] = defis.map((d) => d.verifiableOnline !== false)
+
+/** Nombre de questions de la case Question (liste i18n `questions`, même ordre dans les 4 langues). */
+export const QUESTION_COUNT: number = ((frMessages.games['petit-buveur'].questions as string[]) ?? []).length

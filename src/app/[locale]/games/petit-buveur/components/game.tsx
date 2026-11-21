@@ -159,6 +159,7 @@ interface LastActionRecord {
   turnNumber: number
   actorId: string
   caseType: CaseType
+  case?: StoredCase
   outcome: EffectOutcome
   targetId: string | null
   duelPrefix?: boolean
@@ -1410,6 +1411,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
       turnNumber: turnCountRef.current,
       actorId: actor.id,
       caseType: caseNotification.case.type,
+      case: caseNotification.case,
       outcome: caseNotification.outcome,
       targetId: caseNotification.targetPlayerId ?? lastTargetIdRef.current,
       duelPrefix: caseNotification.duelPrefix,

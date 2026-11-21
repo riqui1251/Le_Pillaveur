@@ -57,6 +57,8 @@ export interface EngineCase {
   effect: number
   /** Index du défi dans la liste i18n `defis` (résolu en texte côté client). */
   defiIndex?: number
+  /** Index de la question dans la liste i18n `questions` (résolu en texte côté client). */
+  questionIndex?: number
   /** Gorgée « cul sec » (difficulté extrême). */
   gorgeeCulSec?: boolean
 }

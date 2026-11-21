@@ -148,7 +148,58 @@ export function noteMessage(note: OutcomeNote, nameOf: (id: string) => string, a
       return { key: 'game.outcomes.safeCaseBoard', values: { player: nameOf(actorId) } }
     case 'no-effect':
       return { key: 'online.notes.noEffect', values: {} }
+    case 'positions-unchanged':
+      return { key: 'online.notes.positionsUnchanged', values: {} }
+    case 'status':
+      return statusMessage(note, nameOf, actorId)
   }
+}
+
+/**
+ * Notes d'un résultat, traduisibles. Une note d'un type inconnu est passée :
+ * un onglet resté ouvert pendant un déploiement reçoit les notes du nouveau
+ * moteur avec l'ancien code, et planterait en lisant `.key` de rien.
+ */
+export function noteMessages(
+  notes: readonly OutcomeNote[] | undefined,
+  nameOf: (id: string) => string,
+  actorId: string
+): NoteMessage[] {
+  return (notes ?? []).flatMap((n) => {
+    const msg = noteMessage(n, nameOf, actorId) as NoteMessage | undefined
+    return msg ? [msg] : []
+  })
+}
+
+/** Statut posé : les phrases du jeu local, pour dire en ligne la même chose qu'autour d'un seul téléphone. */
+function statusMessage(
+  note: Extract<OutcomeNote, { kind: 'status' }>,
+  nameOf: (id: string) => string,
+  actorId: string
+): NoteMessage {
+  const player = nameOf(note.playerId)
+  const link = { actor: nameOf(actorId), target: player }
+  switch (note.status) {
+    case 'protection':
+      return { key: 'game.outcomes.protectionApplied', values: { player } }
+    case 'curse':
+      return { key: 'game.outcomes.curseApplied', values: { player, count: note.turns ?? 3 } }
+    case 'skip-turn':
+      return { key: 'game.outcomes.skipTurnNext', values: { player } }
+    case 'anchor':
+      return { key: 'game.outcomes.anchorApplied', values: { player } }
+    case 'mirror':
+      return { key: 'game.outcomes.mirrorLinkOneWay', values: link }
+    case 'chain':
+      return { key: 'game.outcomes.chainLinked', values: { ...link, count: note.turns ?? 5 } }
+  }
+}
+
+/** Énoncé de la question `index` (liste i18n `questions`, index du moteur). */
+export function questionTextAt(questions: unknown, index: number | undefined): string | undefined {
+  if (typeof index !== 'number' || !Array.isArray(questions)) return undefined
+  const text: unknown = questions[index]
+  return typeof text === 'string' && text.trim() !== '' ? text : undefined
 }
 
 type DefiItem = { text: string }

@@ -5,6 +5,7 @@ export type StoredCase = {
   type: CaseType
   effect: number
   defiChallenge?: string
+  questionText?: string
   gorgéeCulSec?: boolean
 }
 
@@ -34,6 +35,8 @@ export type StoredLastAction = {
   turnNumber: number
   actorId: string
   caseType: CaseType
+  /** La case telle qu'annoncée (gorgées, défi, question) : sans elle, le rappel la décrit à 0 gorgée et sans énoncé. */
+  case?: StoredCase
   outcome: EffectOutcome
   targetId: string | null
   duelPrefix?: boolean
@@ -56,6 +59,7 @@ export function toStoredCase(c: Case): StoredCase {
     type: c.type,
     effect: c.effect,
     defiChallenge: c.defiChallenge,
+    questionText: c.questionText,
     gorgéeCulSec: c.gorgéeCulSec,
   }
 }
@@ -65,6 +69,9 @@ export function formatCaseDescription(c: StoredCase | Case, t: PetitBuveurT): st
 
   if (stored.type === 'defi' && stored.defiChallenge) {
     return t('caseDescriptions.defi', { challenge: stored.defiChallenge, count: stored.effect })
+  }
+  if (stored.type === 'question' && stored.questionText) {
+    return t('caseDescriptions.questionAsked', { question: stored.questionText, count: stored.effect })
   }
   if (stored.type === 'gorgée' && stored.gorgéeCulSec) {
     return t('caseDescriptions.gorgéeCulSec')
@@ -191,7 +198,7 @@ export function buildLastActionHtml(
 ): string {
   return buildNotificationHtml(
     {
-      case: { type: stored.caseType, effect: 0 },
+      case: stored.case ?? { type: stored.caseType, effect: 0 },
       outcome: stored.outcome,
       duelPrefix: stored.duelPrefix,
       includeEffectsSummary: stored.includeEffectsSummary ?? false,
@@ -205,6 +212,7 @@ export function normalizeStoredCase(raw: Case | StoredCase): StoredCase {
     type: raw.type,
     effect: raw.effect,
     defiChallenge: raw.defiChallenge,
+    questionText: raw.questionText,
     gorgéeCulSec: raw.gorgéeCulSec,
   }
 }

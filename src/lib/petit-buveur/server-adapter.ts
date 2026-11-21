@@ -10,7 +10,7 @@ import {
   type EngineAction,
   type InteractionChoice,
 } from './engine'
-import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE } from './game-data'
+import { DEFI_DRINKS, DEFI_VERIFIABLE_ONLINE, QUESTION_COUNT } from './game-data'
 import type { Difficulty } from './types'
 import { botDisplayName, pickBotPersonas } from '@/lib/online/bot-personas'
 
@@ -55,6 +55,7 @@ export function buildPetitBuveurEngineState(
     difficulty,
     defiDrinks: DEFI_DRINKS,
     defiAllowed: DEFI_VERIFIABLE_ONLINE.flatMap((ok, i) => (ok ? [i] : [])),
+    questionCount: QUESTION_COUNT,
   }
   const players = members.map((m) => ({ id: m.userId, name: m.displayName }))
   const botIds = new Set<string>()
