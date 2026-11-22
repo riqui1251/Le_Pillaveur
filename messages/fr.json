@@ -7609,7 +7609,7 @@
       "totalParties": "{count, plural, one {# partie au total} other {# parties au total}}",
       "parties": "parties",
       "noneRecorded": "Aucune partie enregistrée pour le moment.",
-      "allTimeNote": "Cumul depuis toujours, toutes périodes confondues : parties des joueurs locaux synchronisées sur les comptes, statistiques enregistrées en base et parties en ligne classées (une par salle). Ce n'est pas l'activité récente : pour la période choisie, voir le tableau « Par jeu »."
+      "allTimeNote": "Cumul depuis toujours, toutes périodes confondues : parties des joueurs locaux synchronisées sur les comptes, statistiques enregistrées en base et parties en ligne classées (une par partie, revanches comprises). Ce n'est pas l'activité récente : pour la période choisie, voir le tableau « Par jeu »."
     },
     "geo": {
       "onlineByCountry": "Navigateurs actifs par pays",

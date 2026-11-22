@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getBanState } from '@/lib/ban-server'
+import { SAME_MATCH_WINDOW_MS } from '@/lib/online/match-history'
 
 export type PendingInviteDto = {
   id: string
@@ -65,7 +66,7 @@ export type ReplayMate = {
 export const REPLAY_MATES_LIMIT = 6
 
 /**
- * Qui reconvoquer pour rejouer, jeu par jeu : les HUMAINS de la dernière table
+ * Qui reconvoquer pour rejouer, jeu par jeu : les HUMAINS de la dernière partie
  * terminée, dans la limite de ceux qu'on peut réellement inviter aujourd'hui.
  * Fonction pure (les requêtes vivent dans buildReplayMatesForUser) : c'est la
  * règle qu'on veut tester, pas Prisma.
@@ -75,40 +76,35 @@ export const REPLAY_MATES_LIMIT = 6
  */
 export function pickReplayMates(params: {
   selfUserId: string
-  /** roomId de la dernière table terminée, par jeu */
-  lastRoomIdByGame: Record<string, string>
-  /** lignes (roomId, userId) des résultats de ces tables */
-  matchRows: { roomId: string; userId: string }[]
+  /** lignes (jeu, joueur) des résultats de la DERNIÈRE partie de chaque jeu */
+  matchRows: { gameId: string; userId: string }[]
   /** comptes réellement invitables (amitié acceptée, pas de bannissement) : userId → pseudo */
   invitableById: Map<string, string>
   limit?: number
 }): Record<string, ReplayMate[]> {
-  const { selfUserId, lastRoomIdByGame, matchRows, invitableById } = params
+  const { selfUserId, matchRows, invitableById } = params
   const limit = params.limit ?? REPLAY_MATES_LIMIT
 
-  const byRoom = new Map<string, ReplayMate[]>()
+  // Par JEU, jamais par salle : une salle passée d'un jeu à l'autre garde son
+  // identifiant, et la rangée du second jeu reproposait les joueurs du premier.
+  const byGame = new Map<string, ReplayMate[]>()
   const seen = new Set<string>()
   for (const row of matchRows) {
     if (row.userId === selfUserId) continue
-    // Un même joueur peut avoir plusieurs lignes pour une table (rematch dans
-    // la même salle) : une seule proposition par table.
-    const key = `${row.roomId}|${row.userId}`
+    const key = `${row.gameId}|${row.userId}`
     if (seen.has(key)) continue
     seen.add(key)
     // Plus ami, compte supprimé ou banni : on ne le propose pas, plutôt que
     // de promettre une invitation qui échouerait à l'envoi.
     const displayName = invitableById.get(row.userId)
     if (!displayName) continue
-    const list = byRoom.get(row.roomId)
+    const list = byGame.get(row.gameId)
     if (list) list.push({ userId: row.userId, displayName })
-    else byRoom.set(row.roomId, [{ userId: row.userId, displayName }])
+    else byGame.set(row.gameId, [{ userId: row.userId, displayName }])
   }
 
   const result: Record<string, ReplayMate[]> = {}
-  for (const [gameId, roomId] of Object.entries(lastRoomIdByGame)) {
-    const mates = byRoom.get(roomId)
-    if (mates && mates.length > 0) result[gameId] = mates.slice(0, limit)
-  }
+  for (const [gameId, mates] of byGame) result[gameId] = mates.slice(0, limit)
   return result
 }
 
@@ -123,23 +119,34 @@ export async function buildReplayMatesForUser(
 ): Promise<Record<string, ReplayMate[]>> {
   if (gameIds.length === 0) return {}
 
-  // Dernière table TERMINÉE de chaque jeu : OnlineMatchResult est la seule
+  // Dernière partie TERMINÉE de chaque jeu : OnlineMatchResult est la seule
   // source qui retient le roomId (OnlineGameHistory ne compte que les lancements).
-  const lastRooms = await prisma.onlineMatchResult.findMany({
+  const lastMatches = await prisma.onlineMatchResult.findMany({
     where: { userId, gameId: { in: gameIds } },
     orderBy: { finishedAt: 'desc' },
     distinct: ['gameId'],
-    select: { gameId: true, roomId: true },
+    select: { gameId: true, roomId: true, finishedAt: true },
   })
-  if (lastRooms.length === 0) return {}
+  if (lastMatches.length === 0) return {}
 
-  const lastRoomIdByGame: Record<string, string> = {}
-  for (const row of lastRooms) lastRoomIdByGame[row.gameId] = row.roomId
-
+  // Les partenaires de CETTE partie seulement (même jeu, même salle, même
+  // fin : la borne de listRecentTables). Une salle rejouée ou passée à un
+  // autre jeu garde son roomId : la lire en entier reproposait un joueur
+  // parti avant la dernière manche, ou venu pour un autre jeu.
   const matchRows = await prisma.onlineMatchResult.findMany({
-    where: { roomId: { in: lastRooms.map((r) => r.roomId) }, userId: { not: userId } },
+    where: {
+      userId: { not: userId },
+      OR: lastMatches.map((match) => ({
+        roomId: match.roomId,
+        gameId: match.gameId,
+        finishedAt: {
+          gte: new Date(match.finishedAt.getTime() - SAME_MATCH_WINDOW_MS),
+          lte: new Date(match.finishedAt.getTime() + SAME_MATCH_WINDOW_MS),
+        },
+      })),
+    },
     orderBy: { finishedAt: 'asc' },
-    select: { roomId: true, userId: true },
+    select: { gameId: true, userId: true },
   })
   const candidateIds = [...new Set(matchRows.map((r) => r.userId))]
   if (candidateIds.length === 0) return {}
@@ -175,5 +182,5 @@ export async function buildReplayMatesForUser(
     invitableById.set(other.id, other.displayName)
   }
 
-  return pickReplayMates({ selfUserId: userId, lastRoomIdByGame, matchRows, invitableById })
+  return pickReplayMates({ selfUserId: userId, matchRows, invitableById })
 }

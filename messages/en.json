@@ -7609,7 +7609,7 @@
       "totalParties": "{count, plural, one {# game in total} other {# games in total}}",
       "parties": "games",
       "noneRecorded": "No game recorded yet.",
-      "allTimeNote": "All-time total, all periods combined: local players' games synced to accounts, statistics stored in the database and ranked online games (one per room). This is not recent activity: for the selected period, see the “By game” table."
+      "allTimeNote": "All-time total, all periods combined: local players' games synced to accounts, statistics stored in the database and ranked online games (one per game, rematches included). This is not recent activity: for the selected period, see the “By game” table."
     },
     "geo": {
       "onlineByCountry": "Active browsers by country",

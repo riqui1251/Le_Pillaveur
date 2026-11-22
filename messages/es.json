@@ -7609,7 +7609,7 @@
       "totalParties": "{count, plural, one {# partida en total} other {# partidas en total}}",
       "parties": "partidas",
       "noneRecorded": "Ninguna partida registrada por ahora.",
-      "allTimeNote": "Acumulado desde siempre, todos los periodos juntos: partidas de los jugadores locales sincronizadas en las cuentas, estadísticas guardadas en la base de datos y partidas en línea clasificadas (una por sala). No es la actividad reciente: para el periodo elegido, ver la tabla «Por juego»."
+      "allTimeNote": "Acumulado desde siempre, todos los periodos juntos: partidas de los jugadores locales sincronizadas en las cuentas, estadísticas guardadas en la base de datos y partidas en línea clasificadas (una por partida, revanchas incluidas). No es la actividad reciente: para el periodo elegido, ver la tabla «Por juego»."
     },
     "geo": {
       "onlineByCountry": "Navegadores activos por país",

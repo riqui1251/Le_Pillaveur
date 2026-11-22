@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { GAMES } from '@/lib/games'
+import { distinctMatches, type MatchEnd } from '@/lib/online/match-history'
 
 export type GamePlayStat = {
   gameId: string
@@ -36,24 +37,27 @@ function aggregateCloudGameStats(localPlayersJson: string | null): Map<string, n
 }
 
 /**
- * Parties EN LIGNE terminées, par jeu — dédupliquées par salle (une ligne
- * OnlineMatchResult par COMPTE humain, donc une salle à 4 joueurs produit
- * 4 lignes pour UNE seule partie).
+ * Parties EN LIGNE classées, par jeu, à partir des lignes de résultat (une par
+ * COMPTE humain : une table de 4 en produit 4 pour UNE seule partie). Une
+ * partie = une salle ET une fin (distinctMatches), revanches comprises.
+ * Fonction pure.
+ */
+export function countOnlineGames(rows: MatchEnd[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const match of distinctMatches(rows)) {
+    counts.set(match.gameId, (counts.get(match.gameId) ?? 0) + 1)
+  }
+  return counts
+}
+
+/**
+ * Un groupe par (jeu, salle, instant de fin) plutôt qu'une ligne par joueur :
+ * les lignes d'une partie naissent ensemble, la base les réunit avant de les
+ * servir.
  */
 async function aggregateOnlineGameStats(): Promise<Map<string, number>> {
-  const rows = await prisma.onlineMatchResult.findMany({
-    select: { gameId: true, roomId: true },
-  })
-  const roomsByGame = new Map<string, Set<string>>()
-  for (const r of rows) {
-    let rooms = roomsByGame.get(r.gameId)
-    if (!rooms) {
-      rooms = new Set()
-      roomsByGame.set(r.gameId, rooms)
-    }
-    rooms.add(r.roomId)
-  }
-  return new Map([...roomsByGame.entries()].map(([gameId, rooms]) => [gameId, rooms.size]))
+  const rows = await prisma.onlineMatchResult.groupBy({ by: ['gameId', 'roomId', 'finishedAt'] })
+  return countOnlineGames(rows)
 }
 
 type GlobalGamePlayStats = { games: GamePlayStat[]; totalParties: number }

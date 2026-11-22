@@ -14,6 +14,7 @@ const { prismaMock, cleanupAbandonedRoomsMock, listFlaggedMock } = vi.hoisted(()
     moderationTerm: { findMany: vi.fn() },
     userFeedback: { findMany: vi.fn() },
     dailyVisitor: { groupBy: vi.fn() },
+    onlineMatchResult: { groupBy: vi.fn() },
     localGameDaily: { findMany: vi.fn(), aggregate: vi.fn() },
     onlineRoom: { findMany: vi.fn(), deleteMany: vi.fn(), groupBy: vi.fn() },
   },
@@ -29,8 +30,9 @@ vi.mock('@/lib/name-moderation-attempts-server', () => ({
 
 import { FEEDBACK_INBOX_WHERE } from '@/lib/feedback'
 import { getGameById } from '@/lib/games'
-import { parisDayOffset } from '@/lib/paris-time'
+import { parisDayOffset, parisDayStartUtc } from '@/lib/paris-time'
 import {
+  countMatchesByParisDay,
   getGrowthStats,
   getSupervisionOverview,
   invalidateGrowthStats,
@@ -435,6 +437,7 @@ describe('logStaffAction', () => {
 /** Lectures de la Vue d'ensemble, toutes vides : chaque test surcharge ce qu'il vérifie. */
 function mockEmptyOverview() {
   prismaMock.dailyVisitor.groupBy.mockResolvedValue([])
+  prismaMock.onlineMatchResult.groupBy.mockResolvedValue([])
   prismaMock.$queryRawUnsafe.mockResolvedValue([])
   prismaMock.onlineRoom.findMany.mockResolvedValue([])
   prismaMock.onlineRoom.groupBy.mockResolvedValue([])
@@ -445,6 +448,68 @@ function mockEmptyOverview() {
   prismaMock.userFeedback.findMany.mockResolvedValue([])
   listFlaggedMock.mockResolvedValue([])
 }
+
+/**
+ * Série quotidienne « parties » de la Vue d'ensemble : une partie classée
+ * laisse une ligne par compte, et une salle rejouée garde son identifiant.
+ * Compter les salles d'un jour rendait UNE partie pour une soirée de revanches.
+ */
+describe('countMatchesByParisDay — parties classées par jour', () => {
+  const end = (roomId: string, iso: string, gameId = 'quiz') => ({ roomId, gameId, finishedAt: new Date(iso) })
+
+  it('trois manches enchaînées dans la même salle le même soir : trois parties, pas une', () => {
+    const counts = countMatchesByParisDay([
+      // Chaque manche : une ligne par joueur, à la même date.
+      end('r1', '2026-11-21T20:10:00.000Z'),
+      end('r1', '2026-11-21T20:10:00.000Z'),
+      end('r1', '2026-11-21T20:35:00.000Z'),
+      end('r1', '2026-11-21T20:35:00.000Z'),
+      end('r1', '2026-11-21T21:05:00.000Z'),
+    ])
+    expect(counts).toEqual(new Map([['2026-11-21', 3]]))
+  })
+
+  it('une soirée qui passe minuit à Paris : chaque partie au jour de SA fin', () => {
+    const counts = countMatchesByParisDay([
+      // 21/11 à 23 h 40 puis 22/11 à 0 h 20, heure de Paris (UTC+1).
+      end('r1', '2026-11-21T22:40:00.000Z'),
+      end('r1', '2026-11-21T23:20:00.000Z'),
+      // Une autre table, le 22 au soir.
+      end('r2', '2026-11-22T20:00:00.000Z', 'loup-garou'),
+    ])
+    expect(counts).toEqual(
+      new Map([
+        ['2026-11-21', 1],
+        ['2026-11-22', 2],
+      ])
+    )
+  })
+
+  it('aucune ligne : aucun jour', () => {
+    expect(countMatchesByParisDay([]).size).toBe(0)
+  })
+})
+
+describe('getSupervisionOverview — série quotidienne', () => {
+  it('lit un groupe par (jeu, salle, fin) depuis le minuit de Paris du premier jour, et compte les revanches', async () => {
+    mockEmptyOverview()
+    const today = parisDayOffset(0)
+    const noon = new Date(`${today}T11:00:00.000Z`)
+    prismaMock.onlineMatchResult.groupBy.mockResolvedValue([
+      { gameId: 'quiz', roomId: 'r1', finishedAt: noon },
+      { gameId: 'quiz', roomId: 'r1', finishedAt: new Date(noon.getTime() + 30 * 60 * 1000) },
+    ])
+
+    const overview = await getSupervisionOverview('admin')
+
+    const last = overview.dailySeries[overview.dailySeries.length - 1]
+    expect(last).toMatchObject({ date: today, parties: 2 })
+    const query = prismaMock.onlineMatchResult.groupBy.mock.calls[0][0]
+    expect(query.by).toEqual(['gameId', 'roomId', 'finishedAt'])
+    // 15 jours de Paris, aujourd'hui compris : la borne est un minuit de Paris.
+    expect(query.where.finishedAt.gte).toEqual(parisDayStartUtc(parisDayOffset(14)))
+  })
+})
 
 describe('getSupervisionOverview — tables en cours', () => {
   it('compte les statuts EN BASE, pas sur la liste plafonnée, diffusion TV comprise', async () => {

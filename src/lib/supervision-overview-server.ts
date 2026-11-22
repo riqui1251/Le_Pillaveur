@@ -7,6 +7,7 @@ import { getExcludedUserIds } from '@/lib/metrics-exclusions'
 import { parisDayOffset, parisDayStartUtc, parisDayString, parisDaysBack } from '@/lib/paris-time'
 import { cleanupAbandonedRooms } from '@/lib/online-room'
 import { GAME_JOURNAL_SINCE } from '@/lib/online/game-sessions'
+import { distinctMatches, type MatchEnd } from '@/lib/online/match-history'
 import { LOCAL_GAMES_WITHOUT_END_SCREEN } from '@/lib/local-game-beacon'
 import { errorTrace } from '@/lib/error-trace'
 import {
@@ -77,8 +78,6 @@ const ONLINE_LAUNCH_SERIES_DAYS = 14
 /** Fenêtres des parties locales, en jours de Paris (aujourd'hui inclus). */
 const LOCAL_PLAY_WINDOW_DAYS = { d1: 1, d7: 7, d30: 30 }
 const LOCAL_PLAY_SERIES_DAYS = 14
-
-const HOUR_MS = 60 * 60 * 1000
 
 /**
  * Jours de la série quotidienne de la vue d'ensemble : les 14 jours tracés,
@@ -354,9 +353,23 @@ function gameTitleFor(gameId: string | null): string {
 }
 
 /**
+ * Parties classées par jour de PARIS de leur fin. Une partie = une salle ET
+ * une fin (distinctMatches) : compter les SALLES d'un jour faisait d'une
+ * soirée de cinq revanches une seule partie. Fonction pure.
+ */
+export function countMatchesByParisDay(rows: MatchEnd[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const match of distinctMatches(rows)) {
+    const day = parisDayString(match.finishedAt)
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+  return counts
+}
+
+/**
  * Série des derniers jours de PARIS : visiteurs uniques (DailyVisitor, déjà
- * datés au jour de Paris) + parties distinctes (OnlineMatchResult,
- * dédupliquées par salle au sein d'un même jour de Paris).
+ * datés au jour de Paris) + parties classées (OnlineMatchResult, une par
+ * partie, revanches comprises).
  */
 async function getDailySeries(days: number): Promise<DailyPoint[]> {
   const dates = parisDaysBack(days)
@@ -369,32 +382,20 @@ async function getDailySeries(days: number): Promise<DailyPoint[]> {
       where: { date: { gte: since, lte: today } },
       _count: { _all: true },
     }),
-    // Prisma stocke DateTime en SQLite comme entier (ms epoch, vérifié :
-    // typeof(finishedAt) = 'integer'), pas en texte. SQLite ne connaît pas
-    // Europe/Paris et le conteneur tourne en UTC : le regroupement par jour de
-    // Paris se fait donc en JS. Pour ne pas remonter une ligne par joueur
-    // toutes les 15 s, la base ne renvoie que les couples DISTINCTS (salle,
-    // heure UTC) — l'avance de Paris sur UTC étant d'heures entières, une
-    // heure UTC tombe tout entière dans un seul jour de Paris. Borne basse :
-    // le minuit de PARIS du premier jour (le minuit UTC perdait les parties
+    // Un groupe par (jeu, salle, fin) plutôt qu'une ligne par joueur : la
+    // série est relue toutes les 15 s, et les lignes d'une partie naissent
+    // ensemble. SQLite ne connaît pas Europe/Paris et le conteneur tourne en
+    // UTC : le rangement par jour de Paris se fait en JS. Borne basse : le
+    // minuit de PARIS du premier jour (le minuit UTC perdait les parties
     // finies entre 0 h et 2 h, heure de Paris).
-    prisma.$queryRawUnsafe<Array<{ roomId: string; h: bigint | number }>>(
-      `SELECT DISTINCT roomId, finishedAt / ${HOUR_MS} as h
-       FROM OnlineMatchResult
-       WHERE finishedAt >= ?`,
-      parisDayStartUtc(since).getTime()
-    ),
+    prisma.onlineMatchResult.groupBy({
+      by: ['gameId', 'roomId', 'finishedAt'],
+      where: { finishedAt: { gte: parisDayStartUtc(since) } },
+    }),
   ])
 
   const visitorsByDate = new Map(visitorRows.map((r) => [r.date, r._count._all]))
-  const roomsByDate = new Map<string, Set<string>>()
-  for (const row of matchRows) {
-    const day = parisDayString(new Date(Number(row.h) * HOUR_MS))
-    const rooms = roomsByDate.get(day) ?? new Set<string>()
-    rooms.add(row.roomId)
-    roomsByDate.set(day, rooms)
-  }
-  const partiesByDate = new Map([...roomsByDate].map(([day, rooms]) => [day, rooms.size]))
+  const partiesByDate = countMatchesByParisDay(matchRows)
 
   return dates.map((date) => ({
     date,

@@ -32,6 +32,45 @@ export const RECENT_TABLES_MAX = 50
 /** Écart maximal entre deux lignes d'une même partie. */
 export const SAME_MATCH_WINDOW_MS = 5_000
 
+/** Fin d'une partie classée, telle que la porte chaque ligne de résultat. */
+export type MatchEnd = { gameId: string; roomId: string; finishedAt: Date }
+
+/**
+ * UNE entrée par partie à partir des lignes de résultat (une par compte
+ * humain) : même jeu, même salle, fins à la fenêtre près — pour qui COMPTE
+ * des parties. Compter par salle faisait d'une soirée de cinq revanches une
+ * seule partie. Chaque partie est rendue par sa première fin ; une date
+ * illisible est ignorée. Fonction pure, sans ordre garanti entre les tables.
+ */
+export function distinctMatches(rows: MatchEnd[]): MatchEnd[] {
+  const endsByTable = new Map<string, Map<string, number[]>>()
+  for (const row of rows) {
+    const end = row.finishedAt.getTime()
+    if (!Number.isFinite(end)) continue
+    let endsByRoom = endsByTable.get(row.gameId)
+    if (!endsByRoom) {
+      endsByRoom = new Map()
+      endsByTable.set(row.gameId, endsByRoom)
+    }
+    const ends = endsByRoom.get(row.roomId)
+    if (ends) ends.push(end)
+    else endsByRoom.set(row.roomId, [end])
+  }
+
+  const matches: MatchEnd[] = []
+  for (const [gameId, endsByRoom] of endsByTable) {
+    for (const [roomId, ends] of endsByRoom) {
+      ends.sort((a, b) => a - b)
+      let previous = Number.NEGATIVE_INFINITY
+      for (const end of ends) {
+        if (end - previous > SAME_MATCH_WINDOW_MS) matches.push({ gameId, roomId, finishedAt: new Date(end) })
+        previous = end
+      }
+    }
+  }
+  return matches
+}
+
 export type RecentTablePartner = {
   userId: string
   /** Nom affiché à la table (onlineDisplayName, à défaut displayName). */
