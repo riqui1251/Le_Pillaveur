@@ -24,6 +24,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 vi.mock('@/lib/user-activity-server', () => ({ deleteUserAccount: deleteUserAccountMock }))
 
 import { parseRetentionLastRun, type RetentionLastRun } from '@/lib/retention-sweep'
+import { VISIT_RETENTION_MS } from '@/lib/supervision/visit-tracking'
 
 const NOW = new Date('2026-10-10T12:00:00.000Z').getTime()
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -134,6 +135,9 @@ describe('balayage de conservation', () => {
     expect(prismaMock.accountVisit.deleteMany).toHaveBeenCalledWith({
       where: { startedAt: { lt: new Date(NOW - 180 * DAY_MS) } },
     })
+    // La fiche compte s'appuie sur la même durée pour dire « trop ancien pour
+    // qu'une visite existe encore » : les deux doivent bouger ensemble.
+    expect(VISIT_RETENTION_MS).toBe(180 * DAY_MS)
   })
 
   it('purge les retours (avis de 1re partie compris) envoyés il y a plus de 24 mois, quel que soit leur statut', async () => {

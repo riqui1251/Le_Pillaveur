@@ -38,11 +38,7 @@ import {
   type ChartTone,
   type StackedBarSegment,
 } from '@/components/supervision/charts'
-import {
-  DurationReliabilityBadge,
-  DurationReliabilityLegend,
-  tableDurationLabel,
-} from '@/components/supervision/GameSessionsPanel'
+import { DurationReliabilityBadge, DurationReliabilityLegend } from '@/components/supervision/GameSessionsPanel'
 import {
   EmptyState,
   ErrorState,
@@ -65,12 +61,13 @@ import type {
 } from '@/lib/account-activity-server'
 import type { AccountDescription } from '@/lib/account-kind-server'
 import { countryFlag, countryLabel } from '@/lib/country-display'
-import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
+import { formatPresenceDuration, tableDurationLabel, type DurationUnits } from '@/lib/format-presence'
 import { GAMES } from '@/lib/games'
 import { ACTIVE_WINDOW_MS, BEAT_INTERVAL_MS, HONEST_PRESENCE_SINCE, INTERACTION_WINDOW_MS } from '@/lib/heartbeat'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString, toWeekKey, weekKeyMonday } from '@/lib/paris-time'
 import { isOnline } from '@/lib/presence'
 import { canManageUsers, normalizeRole } from '@/lib/roles'
+import { UNTRACKED_REASON_KEYS, untrackedReason } from '@/lib/supervision/visit-tracking'
 import { cn } from '@/lib/utils'
 
 /**
@@ -308,7 +305,14 @@ export function AccountFile({ userId }: { userId: string }) {
             <>
               <PlayTotalsSection activity={activity} />
               {/* Absent d'une réponse antérieure au lot 6 : pas de bloc plutôt qu'un faux « non suivi ». */}
-              {activity.visits && <VisitsSection visits={activity.visits} role={user.role} />}
+              {activity.visits && (
+                <VisitsSection
+                  visits={activity.visits}
+                  role={user.role}
+                  lastSeenAt={user.lastSeenAt}
+                  played={activity.totals.d30}
+                />
+              )}
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <SeancesSection activity={activity} />
                 <RecentGamesSection activity={activity} userId={userId} />
@@ -788,7 +792,75 @@ const SLOT_ICONS: Record<VisitSlot, typeof Moon> = {
  * une TRANCHE horaire ; l'heure exacte reste dans le détail déplié d'une
  * visite, pour ne pas dresser d'emblée un profil horaire des soirées.
  */
-function VisitsSection({ visits, role }: { visits: AccountVisitsSummary; role: string }) {
+/**
+ * Compte sans aucune visite conservée : jamais « 0 visite », mais la RAISON
+ * (équipe, vu sans visite suivie, trop ancien pour le dire, jamais vu). Puis
+ * ses parties en ligne s'il en a : la durée de table ne dépend pas du suivi
+ * des visites, c'est elle qui montre qu'un joueur « sans temps » a joué.
+ */
+function UntrackedNotice({
+  role,
+  lastSeenAt,
+  played,
+}: {
+  role: string
+  lastSeenAt: string | null
+  played: AccountPlayTotals
+}) {
+  const t = useTranslations('supervision.accountFile')
+  const format = useFormatter()
+  const { units } = useFileFormat()
+  const reason = untrackedReason({
+    role,
+    lastSeenAt: lastSeenAt ? new Date(lastSeenAt) : null,
+    games: played.games,
+  })
+  const tableSeconds = played.reliableSeconds + played.estimatedSeconds
+  return (
+    <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/60">
+      <p className="flex items-start gap-2">
+        <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+        <span className="min-w-0">
+          {reason === 'beforeTracking'
+            ? t(UNTRACKED_REASON_KEYS[reason], {
+                date: format.dateTime(parisDayStartUtc(ANALYTICS_CONSENT_V2_SINCE), {
+                  dateStyle: 'short',
+                  timeZone: PARIS_TIME_ZONE,
+                }),
+              })
+            : t(UNTRACKED_REASON_KEYS[reason])}
+        </span>
+      </p>
+      {played.games > 0 && (
+        <p className="min-w-0 pl-6 text-cream/80">
+          {tableSeconds > 0
+            ? t('visitsPlayedOnline', {
+                games: played.games,
+                duration: tableDurationLabel(
+                  tableSeconds,
+                  played.estimatedSeconds > 0 ? 'estimated' : 'reliable',
+                  units
+                ),
+              })
+            : t('visitsPlayedOnlineNoTime', { games: played.games })}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function VisitsSection({
+  visits,
+  role,
+  lastSeenAt,
+  played,
+}: {
+  visits: AccountVisitsSummary
+  role: string
+  lastSeenAt: string | null
+  /** Parties en ligne des 30 derniers jours (journal). */
+  played: AccountPlayTotals
+}) {
   const t = useTranslations('supervision.accountFile')
   const format = useFormatter()
   const shortDay = (day: string) =>
@@ -801,16 +873,7 @@ function VisitsSection({ visits, role }: { visits: AccountVisitsSummary; role: s
   return (
     <SectionCard icon={Activity} title={t('visitsTitle')} description={t('visitsDesc')} bodyClassName="space-y-3">
       {!visits.tracked ? (
-        // Jamais « 0 visite » : rien ne dit que le compte n'est pas venu. Le
-        // staff, lui, n'est jamais suivi : la raison est connue.
-        <p className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/60">
-          <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
-          <span className="min-w-0">
-            {normalizeRole(role) !== 'user'
-              ? t('visitsStaffNotTracked')
-              : t('visitsNotTracked', { date: shortDay(ANALYTICS_CONSENT_V2_SINCE) })}
-          </span>
-        </p>
+        <UntrackedNotice role={role} lastSeenAt={lastSeenAt} played={played} />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -830,8 +893,10 @@ function VisitsSection({ visits, role }: { visits: AccountVisitsSummary; role: s
         </>
       )}
       {/* Couverture : ne jamais laisser croire à un temps complet. Aucun
-          navigateur lié au compte : rien à comparer, pas de ligne. */}
-      {coverage && coverage.seenBrowsers > 0 && (
+          navigateur lié au compte : rien à comparer, pas de ligne. Pas non
+          plus sous « Compte de l'équipe : … jamais enregistrées », que
+          « suivies sur 1 navigateur » contredirait. */}
+      {coverage && coverage.seenBrowsers > 0 && (visits.tracked || normalizeRole(role) === 'user') && (
         <p className="min-w-0 break-words text-[11px] leading-snug text-white/50">
           {t('visitsCoverage', { tracked: coverage.trackedBrowsers, seen: coverage.seenBrowsers })}
         </p>

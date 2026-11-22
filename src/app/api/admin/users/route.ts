@@ -25,7 +25,7 @@ import { logRejectedNameOnServer } from '@/lib/name-moderation-attempt-log'
 import { getIpsBySubjectKeys, subjectKeyFor } from '@/lib/ip-history-server'
 import { onlineSince } from '@/lib/presence'
 import { listFeatureBansForUsers, type FeatureBanState } from '@/lib/feature-bans'
-import { summarizeRecentVisitsByUser, type AccountVisitsDigest } from '@/lib/account-activity-server'
+import { summarizeRecentActivityByUser } from '@/lib/account-activity-server'
 import {
   accountDescriptionSelect,
   accountKindWhere,
@@ -55,12 +55,6 @@ const DAY_MS = 24 * 60 * 60 * 1000
 /** Filtre d'activité, sur User.lastSeenAt (dernière activité du compte). */
 const ACTIVITY_FILTERS = ['all', '24h', '7d', 'inactive30', 'never'] as const
 type ActivityFilter = (typeof ACTIVITY_FILTERS)[number]
-
-/**
- * Compte sans visite commencée ces 7 jours. « Visites non suivies » ne se
- * déduit pas d'ici : des visites plus anciennes peuvent exister (la fiche le dit).
- */
-const NO_RECENT_VISITS: AccountVisitsDigest = { visits: 0, activeSeconds: 0 }
 
 function parseKindFilter(value: string | null): ListedAccountKind | 'all' {
   return LISTED_ACCOUNT_KINDS.find((kind) => kind === value) ?? 'all'
@@ -249,19 +243,25 @@ export async function GET(request: Request) {
       countAccountsByKind(now),
     ])
 
-    // Résumé des visites sur 7 jours de Paris (« 3 visites · 1 h 10 actif ») :
-    // durées d'activité, donc admins et plus seulement. Pour un modérateur,
-    // rien n'est calculé et la propriété `visits7d` est ABSENTE — il ne voit
-    // que « actif il y a … » (lastSeenAt).
+    // Résumé des 7 derniers jours de Paris : visites (« 3 visites · 1 h 10
+    // actif », ou la raison de leur absence) et parties en ligne (« 2 parties
+    // · 40 min à table »). Durées d'activité, donc admins et plus seulement.
+    // Pour un modérateur, rien n'est calculé et les propriétés `visits7d` et
+    // `play7d` sont ABSENTES — il ne voit que « actif il y a … » (lastSeenAt).
     const showVisits = canViewSupervisionAnalytics(actor.role)
     const userIds = users.map((u) => u.id)
 
-    // Historique d'IP, sanctions ciblées et visites : uniquement pour la page
-    // affichée (un seul groupBy pour les visites).
-    const [ipsMap, featureBansMap, visitsMap] = await Promise.all([
+    // Historique d'IP, sanctions ciblées et résumé 7 jours : uniquement pour
+    // la page affichée, en lectures groupées.
+    const [ipsMap, featureBansMap, weekMap] = await Promise.all([
       getIpsBySubjectKeys(users.map((u) => subjectKeyFor(u.id, ''))),
       listFeatureBansForUsers(userIds),
-      showVisits ? summarizeRecentVisitsByUser(userIds, now) : null,
+      showVisits
+        ? summarizeRecentActivityByUser(
+            users.map((u) => ({ id: u.id, role: u.role, lastSeenAt: u.lastSeenAt })),
+            now
+          )
+        : null,
     ])
 
     return NextResponse.json({
@@ -269,7 +269,7 @@ export async function GET(request: Request) {
         ...serializeUser(u),
         ips: ipsMap.get(subjectKeyFor(u.id, '')) ?? [],
         featureBans: featureBansMap.get(u.id) ?? ([] as FeatureBanState[]),
-        ...(visitsMap ? { visits7d: visitsMap.get(u.id) ?? NO_RECENT_VISITS } : {}),
+        ...(weekMap?.get(u.id) ?? {}),
       })),
       total,
       page,

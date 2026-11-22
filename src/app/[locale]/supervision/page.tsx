@@ -142,6 +142,11 @@ import { FirstGameFeedbackMeta, FirstGameFeedbackPanel } from '@/components/supe
 import { OpsStatusPanel } from '@/components/supervision/OpsStatusPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
+  AccountWeekLines,
+  type AccountWeekPlay,
+  type AccountWeekVisits,
+} from '@/components/supervision/AccountWeekLines'
+import {
   SupervisionShell,
   SupervisionHeader,
   SupervisionNav,
@@ -691,9 +696,11 @@ type AdminUser = AccountKindFields & {
    * Résumé des visites sur 7 jours glissants (lot 6), servi aux admins et plus
    * seulement (canViewSupervisionAnalytics) : absent pour un modérateur.
    * Visites suivies sous consentement uniquement : 0 ne veut pas dire « pas
-   * venu ».
+   * venu », `state` dit pourquoi il n'y en a pas.
    */
-  visits7d?: { visits: number; activeSeconds: number }
+  visits7d?: AccountWeekVisits
+  /** Parties en ligne des mêmes 7 jours (journal), même garde que `visits7d`. */
+  play7d?: AccountWeekPlay
   ban: {
     banned: boolean
     banType: string | null
@@ -5399,16 +5406,9 @@ function SupervisionDashboard() {
                         )}
                         {/* Résumé 7 j (admins et plus : absent pour un modérateur).
                             Visites suivies sous consentement seulement : sans
-                            visite, « aucune visite suivie », jamais « 0 visite ». */}
+                            visite, la raison, jamais « 0 visite ». */}
                         {u.visits7d && (
-                          <span className="min-w-0 break-words text-[11px] tabular-nums text-white/45">
-                            {u.visits7d.visits > 0
-                              ? t('accounts.visits7d', {
-                                  visits: u.visits7d.visits,
-                                  active: formatPresenceDuration(u.visits7d.activeSeconds, durationUnits),
-                                })
-                              : t('accounts.visits7dNone')}
-                          </span>
+                          <AccountWeekLines visits={u.visits7d} play={u.play7d} units={durationUnits} />
                         )}
                         <ChevronDown
                           className={cn(

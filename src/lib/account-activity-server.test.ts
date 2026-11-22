@@ -70,6 +70,7 @@ import {
   summarizeAccountPlay,
   summarizeAccountVisits,
   summarizeMatchResults,
+  summarizeRecentActivityByUser,
   summarizeRecentVisitsByUser,
   summarizeVisitsCoverage,
   type AccountPlayedGame,
@@ -655,6 +656,168 @@ describe('summarizeRecentVisitsByUser', () => {
     expect(digests.get('u1')).toEqual({ visits: 3, activeSeconds: 4200 })
     expect(digests.get('u2')).toEqual({ visits: 1, activeSeconds: 0 })
     expect(digests.has('u3')).toBe(false)
+  })
+})
+
+describe('summarizeRecentActivityByUser — ligne « 7 j » de la liste Comptes', () => {
+  // Dimanche 22/11/2026 : la fenêtre s'ouvre le lundi 16/11 à 00:00 de Paris.
+  const now = new Date('2026-11-22T20:00:00Z')
+  const windowStart = new Date('2026-11-15T23:00:00Z')
+
+  type Seat = { userId: string | null; session: Record<string, unknown> }
+
+  /** Siège d'une partie de la fenêtre : début ISO, durée en minutes (null = en cours). */
+  function seat(userId: string | null, sessionId: string, startIso: string, minutes: number | null, endReason = 'finished'): Seat {
+    const startedAt = new Date(startIso)
+    return {
+      userId,
+      session: {
+        id: sessionId,
+        gameId: 'loup-garou',
+        startedAt,
+        endedAt: minutes === null ? null : new Date(startedAt.getTime() + minutes * MIN),
+        endReason: minutes === null ? null : endReason,
+        humanCount: 2,
+        _count: { participants: 2 },
+      },
+    }
+  }
+
+  /** Les deux groupBy de la table des visites : décompte (début dans la fenêtre) et visites poursuivies. */
+  function mockVisits({ started = [], carried = [] }: { started?: unknown[]; carried?: string[] }) {
+    visitMock.groupBy.mockImplementation(async (args: { where: { startedAt: { gte?: Date; lt?: Date } } }) =>
+      args.where.startedAt.lt ? carried.map((userId) => ({ userId, _count: { _all: 1 } })) : started
+    )
+  }
+
+  const account = (id: string, role = 'user', lastSeenAt: Date | null = null) => ({ id, role, lastSeenAt })
+
+  it('page vide : aucune lecture', async () => {
+    expect((await summarizeRecentActivityByUser([], now)).size).toBe(0)
+    expect(visitMock.groupBy).not.toHaveBeenCalled()
+    expect(seatMock.findMany).not.toHaveBeenCalled()
+  })
+
+  it('table de deux : A suivi, B sans visite — B est « vu », et les DEUX ont la même durée de table', async () => {
+    mockVisits({ started: [{ userId: 'a', _count: { _all: 2 }, _sum: { activeSeconds: 2400 } }] })
+    seatMock.findMany.mockResolvedValue([
+      seat('a', 's1', '2026-11-21T20:00:00Z', 20),
+      seat('b', 's1', '2026-11-21T20:00:00Z', 20),
+    ])
+
+    const digests = await summarizeRecentActivityByUser(
+      [account('a', 'user', new Date('2026-11-21T20:25:00Z')), account('b', 'user', new Date('2026-11-21T20:25:00Z'))],
+      now
+    )
+
+    const play7d = { games: 1, tableSeconds: 1200, estimated: false }
+    expect(digests.get('a')).toEqual({ visits7d: { visits: 2, activeSeconds: 2400, state: 'tracked' }, play7d })
+    expect(digests.get('b')).toEqual({ visits7d: { visits: 0, activeSeconds: 0, state: 'seenUntracked' }, play7d })
+  })
+
+  it('trois lectures groupées pour toute la page, bornées aux 7 jours de Paris', async () => {
+    mockVisits({})
+    seatMock.findMany.mockResolvedValue([])
+
+    await summarizeRecentActivityByUser([account('a'), account('b'), account('c')], now)
+
+    const ids = { in: ['a', 'b', 'c'] }
+    expect(visitMock.groupBy).toHaveBeenCalledTimes(2)
+    expect(visitMock.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: ids, startedAt: { gte: windowStart } } })
+    )
+    expect(visitMock.groupBy).toHaveBeenCalledWith({
+      by: ['userId'],
+      where: { userId: ids, startedAt: { lt: windowStart }, lastBeatAt: { gte: windowStart } },
+      _count: { _all: true },
+    })
+    expect(seatMock.findMany).toHaveBeenCalledTimes(1)
+    expect(seatMock.findMany.mock.calls[0][0]).toMatchObject({
+      where: { userId: ids, session: { startedAt: { gte: windowStart } } },
+      take: 2000,
+    })
+  })
+
+  it('chaque état : équipe, soirée passée minuit, vu sans visite, pas vu', async () => {
+    mockVisits({ carried: ['nuit'] })
+    seatMock.findMany.mockResolvedValue([])
+
+    const digests = await summarizeRecentActivityByUser(
+      [
+        account('equipe', 'fondateur', new Date('2026-11-22T10:00:00Z')),
+        // Visite commencée le dimanche 15 au soir, poursuivie après minuit.
+        account('nuit', 'user', new Date('2026-11-16T00:30:00Z')),
+        account('vu', 'user', new Date('2026-11-20T18:00:00Z')),
+        account('ancien', 'user', new Date('2026-11-01T18:00:00Z')),
+        account('jamais'),
+      ],
+      now
+    )
+
+    const state = (id: string) => digests.get(id)?.visits7d.state
+    expect(state('equipe')).toBe('staff')
+    expect(state('nuit')).toBe('carried')
+    expect(state('vu')).toBe('seenUntracked')
+    expect(state('ancien')).toBe('notSeen')
+    expect(state('jamais')).toBe('notSeen')
+    // Aucune partie : le résumé le dit par un zéro, la liste n'en fait pas une ligne.
+    expect(digests.get('vu')?.play7d).toEqual({ games: 0, tableSeconds: 0, estimated: false })
+  })
+
+  it('un compte de l’équipe garde sa durée de table : il était bien à la table', async () => {
+    mockVisits({})
+    seatMock.findMany.mockResolvedValue([seat('equipe', 's1', '2026-11-21T20:00:00Z', 45)])
+
+    const digests = await summarizeRecentActivityByUser([account('equipe', 'admin')], now)
+
+    expect(digests.get('equipe')).toEqual({
+      visits7d: { visits: 0, activeSeconds: 0, state: 'staff' },
+      play7d: { games: 1, tableSeconds: 2700, estimated: false },
+    })
+  })
+
+  it('durées de table : estimée signalée, en cours et inconnue comptées sans durée, siège en double compté une fois', async () => {
+    mockVisits({})
+    seatMock.findMany.mockResolvedValue([
+      seat('a', 's1', '2026-11-20T20:00:00Z', 30),
+      seat('a', 's1', '2026-11-20T20:00:00Z', 30),
+      seat('a', 's2', '2026-11-21T20:00:00Z', 10, 'abandoned'),
+      seat('a', 's3', '2026-11-22T19:30:00Z', null),
+      seat('a', 's4', '2026-11-19T20:00:00Z', 50, 'unknown'),
+      // Siège sans compte (compte supprimé) : à personne.
+      seat(null, 's1', '2026-11-20T20:00:00Z', 30),
+    ])
+
+    const digests = await summarizeRecentActivityByUser([account('a')], now)
+
+    expect(digests.get('a')?.play7d).toEqual({ games: 4, tableSeconds: 40 * 60, estimated: true })
+    // Un siège prouve la venue, même sans date de dernière activité.
+    expect(digests.get('a')?.visits7d.state).toBe('seenUntracked')
+  })
+
+  it('plafond de sièges atteint : pas de ligne des parties plutôt qu’une durée tronquée, et jamais « pas vu » sans preuve', async () => {
+    mockVisits({ started: [{ userId: 'suivi', _count: { _all: 1 }, _sum: { activeSeconds: 60 } }] })
+    seatMock.findMany.mockResolvedValue(
+      Array.from({ length: 2000 }, (_, i) => seat('a', `s${i}`, '2026-11-20T20:00:00Z', 10))
+    )
+
+    const digests = await summarizeRecentActivityByUser(
+      [
+        account('a', 'user', new Date('2026-11-20T20:00:00Z')),
+        account('suivi', 'user', new Date('2026-11-20T20:00:00Z')),
+        account('equipe', 'admin'),
+        // Ni visite ni date : il a peut-être un siège parmi ceux qu'on n'a pas lus.
+        account('inconnu'),
+      ],
+      now
+    )
+
+    // Ce que les visites, le rôle et la dernière activité établissent reste servi.
+    expect(digests.get('a')).toEqual({ visits7d: { visits: 0, activeSeconds: 0, state: 'seenUntracked' } })
+    expect(digests.get('suivi')).toEqual({ visits7d: { visits: 1, activeSeconds: 60, state: 'tracked' } })
+    expect(digests.get('equipe')).toEqual({ visits7d: { visits: 0, activeSeconds: 0, state: 'staff' } })
+    // « Pas vu » ne peut plus s'affirmer : aucun état, la liste n'écrit rien.
+    expect(digests.get('inconnu')).toEqual({ visits7d: { visits: 0, activeSeconds: 0 } })
   })
 })
 

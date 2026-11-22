@@ -6,7 +6,7 @@ import { ChevronDown, ChevronRight, History, Inbox } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { EmptyState, Pager, SectionCard, SkeletonRows } from '@/components/supervision/SupervisionLayout'
 import { GameIconById } from '@/components/hub/GameIconById'
-import { formatPresenceDuration, type DurationUnits } from '@/lib/format-presence'
+import { tableDurationLabel, type DurationUnits } from '@/lib/format-presence'
 import type { DurationReliability, GameSessionRow } from '@/lib/online/game-sessions'
 import { PARIS_TIME_ZONE } from '@/lib/paris-time'
 import { cn } from '@/lib/utils'
@@ -84,21 +84,6 @@ export function DurationReliabilityLegend() {
       </ul>
     </details>
   )
-}
-
-/**
- * Durée de table affichée : « ≈ » devant une fin estimée, « ? » pour une fin
- * inconnue que rien ne date (fermée à son début). Une ligne ancienne à la
- * fiabilité inconnue garde sa durée brute, le badge dit ce qu'elle vaut.
- */
-export function tableDurationLabel(
-  durationSeconds: number,
-  reliability: DurationReliability,
-  units: DurationUnits
-): string {
-  if (reliability === 'unknown' && durationSeconds === 0) return '?'
-  const label = formatPresenceDuration(durationSeconds, units)
-  return reliability === 'estimated' ? `≈ ${label}` : label
 }
 
 /**

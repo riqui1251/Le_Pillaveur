@@ -1,3 +1,5 @@
+import type { DurationReliability } from '@/lib/online/game-sessions'
+
 /**
  * Unités d'une durée. Françaises par défaut ; la Supervision, traduite en
  * 4 langues, passe les siennes (clés supervision.units.*) : « 1 j 7 h » n'a
@@ -20,4 +22,19 @@ export function formatPresenceDuration(totalSeconds: number, units: DurationUnit
   const days = Math.floor(hours / 24)
   const remHours = hours % 24
   return remHours > 0 ? `${days} ${units.d} ${remHours} ${units.h}` : `${days} ${units.d}`
+}
+
+/**
+ * Durée de table affichée : « ≈ » devant une fin estimée, « ? » pour une fin
+ * inconnue que rien ne date (fermée à son début). Une ligne ancienne à la
+ * fiabilité inconnue garde sa durée brute, le badge dit ce qu'elle vaut.
+ */
+export function tableDurationLabel(
+  durationSeconds: number,
+  reliability: DurationReliability,
+  units: DurationUnits
+): string {
+  if (reliability === 'unknown' && durationSeconds === 0) return '?'
+  const label = formatPresenceDuration(durationSeconds, units)
+  return reliability === 'estimated' ? `≈ ${label}` : label
 }

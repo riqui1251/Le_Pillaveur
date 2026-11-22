@@ -12,6 +12,7 @@ import {
 } from '@/lib/online/game-sessions'
 import { readWeeklyStreak } from '@/lib/online/streak'
 import { PARIS_TIME_ZONE, parisDayOffset, parisDayStartUtc, parisDayString } from '@/lib/paris-time'
+import { classifyVisitTracking, type VisitTrackingState } from '@/lib/supervision/visit-tracking'
 
 /**
  * ACTIVITÉ D'UN COMPTE — lecture seule, pour la fiche compte de la
@@ -52,6 +53,12 @@ const MAX_SEANCES = 10
  * dizaines en pratique ; la borne ne sert qu'à garder la requête bornée.
  */
 const MAX_WINDOW_GAMES = 1000
+
+/**
+ * Plafond des sièges lus pour une page de la liste Comptes (7 jours, 100
+ * comptes au plus) : quelques dizaines en pratique.
+ */
+const MAX_PAGE_SEATS = 2000
 
 /** Navigateurs servis (SitePresence liées au compte). */
 const MAX_BROWSERS = 10
@@ -220,6 +227,27 @@ export type AccountVisitsSummary = {
 
 /** Résumé 7 jours d'un compte pour la liste Comptes (admin et plus). */
 export type AccountVisitsDigest = { visits: number; activeSeconds: number }
+
+/**
+ * Parties en ligne d'un compte sur 7 jours (journal des parties). Durée de
+ * TABLE, la même pour tous les joueurs de la table, suivis ou non : jamais un
+ * temps de jeu personnel.
+ */
+export type AccountPlayDigest = {
+  games: number
+  /** Durées sûres et estimées ; ni les durées inconnues ni les parties en cours. */
+  tableSeconds: number
+  /** Une part du total est estimée : il s'affiche avec « ≈ ». */
+  estimated: boolean
+}
+
+/** Ligne d'un compte dans la liste Comptes : visites et parties des 7 derniers jours de Paris. */
+export type AccountWeekDigest = {
+  /** `state` absent : il ne peut pas être établi (parties illisibles), la liste n'affirme rien. */
+  visits7d: AccountVisitsDigest & { state?: VisitTrackingState }
+  /** Absent si la page porte trop de sièges pour être lue d'un trait : rien, plutôt qu'un total tronqué. */
+  play7d?: AccountPlayDigest
+}
 
 export type AccountActivity = {
   /** Premier jour du journal des parties : rien n'existe avant. */
@@ -548,6 +576,44 @@ function parisWindowStart(days: number, now: Date): Date {
   return parisDayStartUtc(parisDayOffset(days - 1, now))
 }
 
+/** Partie lue à travers un siège : ce que lisent séances, totaux et visites. */
+const PLAYED_SESSION_SELECT = {
+  id: true,
+  gameId: true,
+  startedAt: true,
+  endedAt: true,
+  endReason: true,
+  humanCount: true,
+  // Sièges HUMAINS (sans botName), rattachés ou non à un compte :
+  // `humanCount` ne compte que les rattachés au lancement.
+  _count: { select: { participants: { where: { botName: null } } } },
+} as const
+
+type PlayedSessionRow = {
+  id: string
+  gameId: string
+  startedAt: Date
+  endedAt: Date | null
+  endReason: string | null
+  humanCount: number
+  _count: { participants: number }
+}
+
+function toPlayedGame(session: PlayedSessionRow): AccountPlayedGame {
+  return {
+    id: session.id,
+    gameId: session.gameId,
+    startedAt: session.startedAt,
+    endedAt: session.endedAt,
+    // Même effectif que summarizeOnlinePlay (Vue d'ensemble) : le plus grand
+    // du compteur écrit et des sièges humains. Un humain jamais rattaché
+    // passait pour un bot, et sa partie pour du « solo contre des bots » —
+    // la fiche et la Vue d'ensemble se contredisaient sur la même partie.
+    humanCount: Math.max(session.humanCount, session._count.participants),
+    reliability: durationReliabilityOf(parseEndReason(session.endReason)),
+  }
+}
+
 /**
  * Parties du journal où le compte a un siège, lancées depuis `since`, réduites
  * à ce que lisent séances, totaux et visites.
@@ -557,21 +623,7 @@ async function readAccountGames(userId: string, since: Date): Promise<AccountPla
     where: { userId, session: { startedAt: { gte: since } } },
     orderBy: { session: { startedAt: 'desc' } },
     take: MAX_WINDOW_GAMES,
-    select: {
-      session: {
-        select: {
-          id: true,
-          gameId: true,
-          startedAt: true,
-          endedAt: true,
-          endReason: true,
-          humanCount: true,
-          // Sièges HUMAINS (sans botName), rattachés ou non à un compte :
-          // `humanCount` ne compte que les rattachés au lancement.
-          _count: { select: { participants: { where: { botName: null } } } },
-        },
-      },
-    },
+    select: { session: { select: PLAYED_SESSION_SELECT } },
   })
 
   // Un même compte n'occupe qu'un siège par partie ; on dédoublonne quand même
@@ -581,20 +633,39 @@ async function readAccountGames(userId: string, since: Date): Promise<AccountPla
   for (const { session } of seats) {
     if (seen.has(session.id)) continue
     seen.add(session.id)
-    games.push({
-      id: session.id,
-      gameId: session.gameId,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      // Même effectif que summarizeOnlinePlay (Vue d'ensemble) : le plus grand
-      // du compteur écrit et des sièges humains. Un humain jamais rattaché
-      // passait pour un bot, et sa partie pour du « solo contre des bots » —
-      // la fiche et la Vue d'ensemble se contredisaient sur la même partie.
-      humanCount: Math.max(session.humanCount, session._count.participants),
-      reliability: durationReliabilityOf(parseEndReason(session.endReason)),
-    })
+    games.push(toPlayedGame(session))
   }
   return games
+}
+
+/**
+ * Parties lancées depuis `since` pour TOUS les comptes d'une page de la liste,
+ * en une lecture. null = plafond atteint : la liste se passe de la ligne des
+ * parties plutôt que d'afficher une durée qui en oublie.
+ */
+async function readGamesByUser(
+  userIds: string[],
+  since: Date
+): Promise<Map<string, AccountPlayedGame[]> | null> {
+  const seats = await prisma.onlineGameSessionPlayer.findMany({
+    where: { userId: { in: userIds }, session: { startedAt: { gte: since } } },
+    take: MAX_PAGE_SEATS,
+    select: { userId: true, session: { select: PLAYED_SESSION_SELECT } },
+  })
+  if (seats.length >= MAX_PAGE_SEATS) return null
+
+  // Même dédoublonnage que readAccountGames, par compte.
+  const byUser = new Map<string, Map<string, AccountPlayedGame>>()
+  for (const { userId, session } of seats) {
+    if (!userId) continue
+    let games = byUser.get(userId)
+    if (!games) {
+      games = new Map()
+      byUser.set(userId, games)
+    }
+    if (!games.has(session.id)) games.set(session.id, toPlayedGame(session))
+  }
+  return new Map(Array.from(byUser, ([userId, games]) => [userId, Array.from(games.values())]))
 }
 
 const STORED_VISIT_SELECT = {
@@ -674,6 +745,76 @@ export async function summarizeRecentVisitsByUser(
       row.userId,
       { visits: row._count._all, activeSeconds: row._sum.activeSeconds ?? 0 },
     ])
+  )
+}
+
+/**
+ * Ligne « 7 j » de chaque compte d'une page de la liste Comptes : ses visites,
+ * POURQUOI il n'en a pas quand il n'en a pas (classifyVisitTracking), et ses
+ * parties du journal — la durée de table vaut pour tous les joueurs d'une
+ * table, c'est elle qui montre que le joueur sans visite suivie a joué.
+ *
+ * Trois lectures groupées pour toute la page, aucune par compte. Réservé aux
+ * admins et plus, comme summarizeRecentVisitsByUser : à la route de ne pas
+ * l'appeler pour un modérateur.
+ */
+export async function summarizeRecentActivityByUser(
+  accounts: Array<{ id: string; role: string; lastSeenAt: Date | null }>,
+  now: Date = new Date()
+): Promise<Map<string, AccountWeekDigest>> {
+  if (accounts.length === 0) return new Map()
+  const userIds = accounts.map((account) => account.id)
+  const windowStart = parisWindowStart(ACTIVITY_WINDOW_DAYS.d7, now)
+  const fromDay = parisDayOffset(ACTIVITY_WINDOW_DAYS.d7 - 1, now)
+
+  const [visits, carriedRows, gamesByUser] = await Promise.all([
+    summarizeRecentVisitsByUser(userIds, now),
+    // Visites commencées AVANT la fenêtre et poursuivies dedans : absentes du
+    // décompte ci-dessus (par jour de début), elles prouvent pourtant le suivi.
+    prisma.accountVisit.groupBy({
+      by: ['userId'],
+      where: {
+        userId: { in: userIds },
+        startedAt: { lt: windowStart },
+        lastBeatAt: { gte: windowStart },
+      },
+      _count: { _all: true },
+    }),
+    readGamesByUser(userIds, windowStart),
+  ])
+  const carried = new Set(carriedRows.map((row) => row.userId))
+
+  return new Map(
+    accounts.map((account) => {
+      const digest = visits.get(account.id) ?? { visits: 0, activeSeconds: 0 }
+      // Mêmes totaux que la tuile « 7 derniers jours » de la fiche.
+      const play = gamesByUser ? computePlayTotals(gamesByUser.get(account.id) ?? [], fromDay) : null
+      const state = classifyVisitTracking({
+        role: account.role,
+        visitsStarted: digest.visits,
+        carriedVisit: carried.has(account.id),
+        games: play?.games ?? 0,
+        lastSeenAt: account.lastSeenAt,
+        windowStart,
+      })
+      return [
+        account.id,
+        {
+          // Parties illisibles (plafond atteint) : « pas vu » ne peut plus
+          // s'affirmer, un siège le démentirait. Pas d'état, donc pas de ligne.
+          visits7d: play === null && state === 'notSeen' ? digest : { ...digest, state },
+          ...(play
+            ? {
+                play7d: {
+                  games: play.games,
+                  tableSeconds: play.reliableSeconds + play.estimatedSeconds,
+                  estimated: play.estimatedSeconds > 0,
+                },
+              }
+            : {}),
+        },
+      ]
+    })
   )
 }
 
