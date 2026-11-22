@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
-import { AlertTriangle, MessageSquare, RefreshCw, Star } from 'lucide-react'
+import { AlertTriangle, MessageSquare, RefreshCw, Star, Wine } from 'lucide-react'
 import { EmptyState, ErrorState, SectionCard, SkeletonRows } from '@/components/supervision/SupervisionLayout'
 import { BarList, type BarListRow } from '@/components/supervision/charts'
 import { GameIconById } from '@/components/hub/GameIconById'
@@ -117,12 +117,15 @@ export function FirstGameFeedbackMeta({
   rating,
   gameId,
   playMode,
+  noGameLabel,
   size = 'sm',
   className,
 }: {
   rating: number | null | undefined
   gameId: string | null | undefined
   playMode: string | null | undefined
+  /** Ce que la note juge quand elle ne porte sur aucun jeu (la soirée entière) ; « jeu inconnu » sinon. */
+  noGameLabel?: string
   size?: 'sm' | 'lg'
   className?: string
 }) {
@@ -137,7 +140,7 @@ export function FirstGameFeedbackMeta({
             <GameIconById id={gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
           </span>
         )}
-        <span className="min-w-0 truncate">{gameId ? gameTitle(gameId) : t('unknownGame')}</span>
+        <span className="min-w-0 truncate">{gameId ? gameTitle(gameId) : (noGameLabel ?? t('unknownGame'))}</span>
       </span>
       {/* Mode inconnu (valeur hors contrat) : rien plutôt qu'un identifiant brut. */}
       {isFirstGamePlayMode(playMode) && (
@@ -149,8 +152,25 @@ export function FirstGameFeedbackMeta({
   )
 }
 
-export function FirstGameFeedbackPanel() {
+/**
+ * `soiree` : les votes du Mode Soirée (POST /api/feedback/soiree), au même
+ * format. La note de la soirée entière fait le chiffre principal ; la moyenne
+ * par jeu vient des votes d'entracte. Seuls les libellés propres changent
+ * (supervision.soireeFeedback) ; le reste reprend ceux de l'avis de 1re partie.
+ */
+export type RatedFeedbackKind = 'firstGame' | 'soiree'
+
+const SUMMARY_ENDPOINT: Record<RatedFeedbackKind, string> = {
+  firstGame: '/api/admin/first-game-feedback',
+  soiree: '/api/admin/soiree-feedback',
+}
+
+export function FirstGameFeedbackPanel({ kind = 'firstGame' }: { kind?: RatedFeedbackKind }) {
   const t = useTranslations('supervision.firstGameFeedback')
+  const tSoiree = useTranslations('supervision.soireeFeedback')
+  const tFeedback = useTranslations('supervision.feedback')
+  // Libellés propres au résumé affiché ; les autres sont communs.
+  const tk = kind === 'soiree' ? tSoiree : t
   const tStates = useTranslations('supervision.states')
   const format = useFormatter()
   const gameTitle = useGameTitle()
@@ -160,9 +180,11 @@ export function FirstGameFeedbackPanel() {
   const [loading, setLoading] = useState(true)
   const [showAllComments, setShowAllComments] = useState(false)
   const commentsId = useId()
+  const endpoint = SUMMARY_ENDPOINT[kind]
+  const Icon = kind === 'soiree' ? Wine : Star
 
-  const tRef = useRef(t)
-  tRef.current = t
+  const tRef = useRef({ t, tk })
+  tRef.current = { t, tk }
   // Requête en vol : un second clic sur « Actualiser » l'annule au lieu de
   // laisser deux réponses se doubler, et le démontage (onglet quitté) aussi.
   const abortRef = useRef<AbortController | null>(null)
@@ -173,31 +195,31 @@ export function FirstGameFeedbackPanel() {
     abortRef.current = controller
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/first-game-feedback', {
+      const res = await fetch(endpoint, {
         credentials: 'include',
         cache: 'no-store',
         signal: controller.signal,
       })
       const body = await res.json().catch(() => null)
-      // Pas de `body.error` : adminErrorResponse le rédige en français quelle
+      // Pas de `body.error` : la route le rédige en français ou en code, quelle
       // que soit la langue. 403 = session expirée ou grade retiré pendant que
       // l'onglet restait ouvert.
-      if (!res.ok) throw new Error(tRef.current(res.status === 403 ? 'forbidden' : 'loadError'))
+      if (!res.ok) throw new Error(res.status === 403 ? tRef.current.t('forbidden') : tRef.current.tk('loadError'))
       // Réponse d'un serveur antérieur à la route, ou page d'erreur du proxy :
       // une erreur, jamais un résumé vide qui ferait croire à zéro avis.
       const parsed = parseFirstGameFeedbackSummary(body)
-      if (!parsed) throw new Error(tRef.current('loadError'))
+      if (!parsed) throw new Error(tRef.current.tk('loadError'))
       setSummary(parsed)
       setError(null)
     } catch (e) {
       if (controller.signal.aborted) return
       // TypeError = échec réseau de fetch (« Failed to fetch », en anglais
       // quelle que soit la langue) : le message traduit dit la même chose.
-      setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current('loadError'))
+      setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current.tk('loadError'))
     } finally {
       if (abortRef.current === controller) setLoading(false)
     }
-  }, [])
+  }, [endpoint])
 
   useEffect(() => {
     void load()
@@ -244,19 +266,19 @@ export function FirstGameFeedbackPanel() {
     : []
 
   return (
-    <SectionCard icon={Star} title={t('title')} description={t('desc')} actions={refreshButton}>
+    <SectionCard icon={Icon} title={tk('title')} description={tk('desc')} actions={refreshButton}>
       {error ? (
         <ErrorState icon={AlertTriangle} message={error} retryLabel={tStates('retry')} onRetry={() => void load()} />
       ) : !summary ? (
         <SkeletonRows rows={3} />
-      ) : summary.total === 0 ? (
-        <EmptyState icon={Star} title={t('empty')} hint={t('emptyHint')} />
+      ) : summary.total === 0 && summary.byGame.length === 0 ? (
+        <EmptyState icon={Icon} title={tk('empty')} hint={tk('emptyHint')} />
       ) : (
         <div className="space-y-5">
           {/* Le chiffre qu'on vient chercher, en grand ; la période récente à côté. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="min-w-0 rounded-2xl border border-gold/30 bg-felt-deep/60 p-4">
-              <p className={BLOCK_LABEL}>{t('averageLabel')}</p>
+              <p className={BLOCK_LABEL}>{tk('averageLabel')}</p>
               {summary.average !== null ? (
                 <>
                   {/* Valeur lue une fois, par l'aria-label des étoiles. */}
@@ -271,7 +293,7 @@ export function FirstGameFeedbackPanel() {
               ) : (
                 <p className="mt-1 font-display text-5xl font-bold text-gold">—</p>
               )}
-              <p className="mt-1.5 text-xs text-cream/70">{t('totalCount', { count: summary.total })}</p>
+              <p className="mt-1.5 text-xs text-cream/70">{tk('totalCount', { count: summary.total })}</p>
             </div>
 
             <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -304,10 +326,10 @@ export function FirstGameFeedbackPanel() {
             </div>
 
             <div className="min-w-0">
-              <h3 className={cn(BLOCK_LABEL, 'mb-1')}>{t('byGameTitle')}</h3>
-              <p className="mb-2 text-[11px] leading-snug text-cream/70">{t('byGameHint')}</p>
+              <h3 className={cn(BLOCK_LABEL, 'mb-1')}>{tk('byGameTitle')}</h3>
+              <p className="mb-2 text-[11px] leading-snug text-cream/70">{tk('byGameHint')}</p>
               {summary.byGame.length === 0 ? (
-                <p className="py-3 text-sm text-cream/70">{t('byGameEmpty')}</p>
+                <p className="py-3 text-sm text-cream/70">{tk('byGameEmpty')}</p>
               ) : (
                 <ul className="divide-y divide-white/5 rounded-xl border border-white/10 bg-black/20">
                   {summary.byGame.map((game) => (
@@ -338,7 +360,7 @@ export function FirstGameFeedbackPanel() {
           <div className="min-w-0">
             <h3 className={cn(BLOCK_LABEL, 'mb-2')}>{t('commentsTitle')}</h3>
             {comments.length === 0 ? (
-              <EmptyState icon={MessageSquare} title={t('commentsEmpty')} />
+              <EmptyState icon={MessageSquare} title={tk('commentsEmpty')} />
             ) : (
               <ul id={commentsId} className="space-y-2">
                 {visibleComments.map((comment) => (
@@ -348,6 +370,7 @@ export function FirstGameFeedbackPanel() {
                         rating={comment.rating}
                         gameId={comment.gameId}
                         playMode={comment.playMode}
+                        noGameLabel={kind === 'soiree' ? tFeedback('soireeSubject') : undefined}
                       />
                       <time dateTime={comment.createdAt} className="shrink-0 text-xs text-cream/70">
                         {formatDate(comment.createdAt)}

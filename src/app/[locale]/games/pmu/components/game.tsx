@@ -7,6 +7,9 @@ import { ArrowRight, Check, Flag, LogOut, Minus, Plus, RotateCcw, Tv, UserMinus 
 import { Player as BasePlayer } from '@/lib/players'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
+import { readSoiree } from '@/lib/soiree/storage'
+import { playingRoundOf } from '@/lib/soiree/state'
 import type { PmuCastState } from '@/lib/cast-types'
 import { GameShell } from '@/components/game/GameShell'
 import { EndActionDock } from '@/components/game/EndActionDock'
@@ -312,8 +315,12 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   const locale = useLocale()
   const reduceMotion = useReducedMotion()
   const initialHorses = useMemo(() => makeHorses((key) => t(key as 'horses.tonnerre')), [t])
-  const [phase, setPhase] = useState<Phase>('mode-select')
-  const [mode, setMode] = useState<GameMode>('paris')
+  // Mode Soirée : la course part en mode libre, sans passer par le choix du
+  // mode. Le jeu n'est monté qu'au client (la page attend les joueurs) : lire
+  // le stockage ici ne fausse aucune hydratation.
+  const [inSoiree] = useState(() => playingRoundOf(readSoiree(), 'pmu') !== null)
+  const [phase, setPhase] = useState<Phase>(inSoiree ? 'setup' : 'mode-select')
+  const [mode, setMode] = useState<GameMode>(inSoiree ? 'libre' : 'paris')
   const [horses, setHorses] = useState<Horse[]>(initialHorses)
   const [winner, setWinner] = useState<Horse | null>(null)
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null)
@@ -331,6 +338,33 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
 
   const allPlayers = initialPlayersRef.current
   const betOf = (id: string) => bets[id] ?? DEFAULT_BET
+  const { mode: ambiance } = useAmbianceMode()
+  /** Les gorgées d'une course ne se comptent qu'une fois, à l'arrivée sur l'écran des résultats. */
+  const drinksCountedRef = useRef(false)
+
+  // Mode paris : chaque cavalier a bu sa mise avant le départ, et chaque
+  // gagnant envoie le double de la sienne au joueur choisi. Le mode libre
+  // distribue à voix haute, sans cible : rien à compter (la soirée le fait
+  // vérifier à l'entracte). Gorgées seules, comme le Petit Buveur : la partie
+  // est déjà comptée à l'arrivée de la course.
+  useEffect(() => {
+    if (phase !== 'results' || !winner) {
+      drinksCountedRef.current = false
+      return
+    }
+    if (drinksCountedRef.current) return
+    drinksCountedRef.current = true
+    if (mode !== 'paris' || ambiance === 'soft') return
+    const riderIds = new Set(horses.flatMap((h) => h.players.map((p) => p.id)))
+    for (const player of initialPlayersRef.current) {
+      let drinks = riderIds.has(player.id) ? betOf(player.id) : 0
+      for (const giver of winner.players) {
+        if (payoutTargetsById[giver.id] === player.id) drinks += betOf(giver.id) * 2
+      }
+      if (drinks > 0) updatePlayerStats(player.id, 'pmu', { totalDrinks: drinks })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, winner])
   // Intl.ListFormat manque avant Safari 14.1 : sans repli, l'écran de fin plantait sur un vieil iPhone.
   const listNames = (names: string[]) =>
     typeof Intl.ListFormat === 'function'
@@ -487,6 +521,10 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     speedFactorsRef.current = horses.map(() => 0.85 + Math.random() * 0.30)
     accelerationRef.current = horses.map(() => 0)
 
+    // Les positions vivent ici, pas dans une fonction de mise à jour d'état :
+    // React peut la rejouer (deux fois en mode strict), et l'arrivée compte la
+    // partie de chacun — elle était comptée deux fois.
+    let field = horses
     const id = setInterval(() => {
       // L'accélération dérive lentement (inertie) → crée de vrais épisodes d'accélération/freinage
       accelerationRef.current = accelerationRef.current.map(a => {
@@ -498,34 +536,31 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
         Math.max(0.3, Math.min(1.9, f + accelerationRef.current[i]))
       )
 
-      setHorses(prev => {
-        const updated = prev.map((h, i) => {
-          const step = Math.random() * baseStep * (speedFactorsRef.current[i] ?? 1)
-          return { ...h, position: h.position + step }
-        })
-        const w = updated.find(h => h.position >= FINISH)
-        if (w) {
-          clearInterval(id)
-          setIntervalId(null)
-          setWinner(w)
-          w.players.forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 1 }))
-          initialPlayersRef.current
-            .filter(p => !w.players.some(x => x.id === p.id))
-            .forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 0 }))
-
-          if (mode === 'libre') {
-            setDistSips(Math.floor(Math.random() * 7) + 2) // 2-8
-            setPhase('results')
-          } else if (needsPayout(initialPlayersRef.current, w.players)) {
-            setPhase('payout')
-          } else {
-            // Personne à qui donner, ou personne pour donner : l'écran de
-            // distribution n'aurait rien à choisir (et restait bloqué).
-            setPhase('results')
-          }
-        }
-        return updated
+      field = field.map((h, i) => {
+        const step = Math.random() * baseStep * (speedFactorsRef.current[i] ?? 1)
+        return { ...h, position: h.position + step }
       })
+      setHorses(field)
+      const w = field.find(h => h.position >= FINISH)
+      if (!w) return
+      clearInterval(id)
+      setIntervalId(null)
+      setWinner(w)
+      w.players.forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 1 }))
+      initialPlayersRef.current
+        .filter(p => !w.players.some(x => x.id === p.id))
+        .forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 0 }))
+
+      if (mode === 'libre') {
+        setDistSips(Math.floor(Math.random() * 7) + 2) // 2-8
+        setPhase('results')
+      } else if (needsPayout(initialPlayersRef.current, w.players)) {
+        setPhase('payout')
+      } else {
+        // Personne à qui donner, ou personne pour donner : l'écran de
+        // distribution n'aurait rien à choisir (et restait bloqué).
+        setPhase('results')
+      }
     }, 50)
     setIntervalId(id)
   }

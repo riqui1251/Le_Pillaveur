@@ -66,6 +66,14 @@
     "chat": "Chat",
     "languageSwitcher": "Cambia lingua",
     "links": {
+      "soiree": {
+        "label": "Modalità Serata",
+        "description": "Organizzare una serata"
+      },
+      "decouvrir": {
+        "label": "Scopri Le Pillaveur",
+        "description": "La vecchia home e tutti i giochi"
+      },
       "joueurs": {
         "label": "Giocatori",
         "description": "Gestisci i giocatori"
@@ -106,6 +114,14 @@
       "analytics": "Statistiche di visita"
     },
     "pages": {
+      "soiree": {
+        "title": "Modalità Serata",
+        "subtitle": "Una serata pronta da giocare"
+      },
+      "decouvrir": {
+        "title": "Le Pillaveur",
+        "subtitle": "La casa dei giochi da serata"
+      },
       "joueurs": {
         "title": "Giocatori",
         "subtitle": "Gestisci la squadra"
@@ -2028,7 +2044,8 @@
         "goalReached": "Hai raggiunto l'obiettivo di {count} risposte corrette consecutive!",
         "fiveSame": "La carta {value} {suit} è uscita per la quinta volta.",
         "results": "Risultati",
-        "sipsResult": "{count, plural, one {# sorso} other {# sorsi}}"
+        "sipsResult": "{count, plural, one {# sorso} other {# sorsi}}",
+        "missLimit": "Tutti hanno sbagliato {count, plural, one {una volta} other {# volte}}"
       },
       "wrong": {
         "title": "Risposta sbagliata!",
@@ -2067,6 +2084,12 @@
       "traverseeExit": "{name} ha indovinato il pareggio ed esce dall'attraversamento!",
       "traverseeOut": "ha lasciato l'attraversamento",
       "nextTurnButton": "Tocca a {name}",
+      "missLimit": {
+        "rule": "Fine manche a {count, plural, one {# errore} other {# errori}} a testa",
+        "count": "{count, plural, =0 {nessun errore} one {# errore} other {# errori}} su {limit}",
+        "roundOver": "Fine della manche",
+        "seeResults": "Vedi il risultato"
+      },
       "verdict": {
         "everyone": "Tutti bevono {count, plural, one {# sorso} other {# sorsi}}!",
         "group": "{names} bevono {count, plural, one {# sorso} other {# sorsi}}!",
@@ -7696,6 +7719,7 @@
         "local": "Locale"
       },
       "unknownGame": "Gioco sconosciuto",
+      "soireeSubject": "Serata intera",
       "noComment": "Nessun commento, solo un voto."
     },
     "firstGameFeedback": {
@@ -7727,6 +7751,19 @@
       "commentsEmpty": "Ancora nessun commento scritto: i giocatori hanno solo votato.",
       "commentsShowAll": "Vedi tutti i {count} commenti",
       "commentsCollapse": "Mostra meno"
+    },
+    "soireeFeedback": {
+      "title": "Voti della Modalità Serata",
+      "desc": "Il voto del tavolo a ogni pausa («Vi è piaciuto questo gioco?») e sul conto («Vi è piaciuta la serata?»). I voti con un commento arrivano anche in Moderazione › Segnalazioni; i voti senza commento restano solo qui.",
+      "loadError": "Impossibile caricare i voti della Modalità Serata.",
+      "empty": "Ancora nessun voto della Modalità Serata.",
+      "emptyHint": "Compaiono qui appena un tavolo vota a una pausa o sul conto.",
+      "averageLabel": "Voto medio delle serate",
+      "totalCount": "{count, plural, =0 {Nessuna serata votata} one {# serata votata} other {# serate votate}}",
+      "byGameTitle": "Media per gioco, alla pausa",
+      "byGameHint": "Ordinati per numero di voti: una media su due voti dice poco.",
+      "byGameEmpty": "Ancora nessun gioco votato a una pausa.",
+      "commentsEmpty": "Ancora nessun commento scritto: i tavoli hanno solo votato."
     },
     "history": {
       "activeConnection": "Connessione attiva",
@@ -8741,6 +8778,441 @@
     },
     "feed": {
       "newer": "Nuovi messaggi"
+    }
+  },
+  "soireeBar": {
+    "label": "Serata · {number}/{total}",
+    "complete": "Manche finita!",
+    "continue": "Continua la serata",
+    "back": "Torna alla serata",
+    "nextRound": "Manche successiva",
+    "toAddition": "Vai al conto"
+  },
+  "soiree": {
+    "loading": "Caricamento della serata…",
+    "backToBande": "Torna alla compagnia",
+    "meta": {
+      "title": "Modalità Serata",
+      "description": "Una serata di giochi alcolici pronta: la compagnia, un programma che sale, la lavagna e il conto."
+    },
+    "home": {
+      "eyebrow": "Modalità Serata",
+      "title": "Quanti siete stasera?",
+      "lead": "Dite chi gioca. Le Pillaveur organizza la serata, concatena i giochi e tiene la lavagna fino al conto.",
+      "countLabel": "Numero di giocatori",
+      "players": "{count, plural, one {giocatore} other {giocatori}}",
+      "less": "Un giocatore in meno",
+      "more": "Un giocatore in più",
+      "start": "Organizza la nostra serata",
+      "single": "Gioca a un solo gioco",
+      "stats": "Quale gioco fa bere di più?",
+      "resume": {
+        "eyebrow": "Serata in corso",
+        "title": "Riprendi dalla manche {round} di {total}",
+        "cta": "Riprendi"
+      },
+      "revenge": {
+        "eyebrow": "Si ricomincia?",
+        "title": "{name} · serata n. {number}",
+        "lastPayer": "L’ultima volta {name} ha pagato il conto.",
+        "lastTie": "L’ultima volta: pareggio in testa.",
+        "ready": "La compagnia è pronta."
+      },
+      "stepsLabel": "Come funziona una serata",
+      "steps": {
+        "bande": {
+          "title": "La compagnia",
+          "text": "I nomi, una volta per tutta la serata."
+        },
+        "programme": {
+          "title": "Il programma",
+          "text": "Manche che salgono d’intensità, nell’ordine che volete."
+        },
+        "addition": {
+          "title": "Il conto",
+          "text": "I premi della serata, da mandare nel gruppo."
+        }
+      },
+      "about": {
+        "title": "Le Pillaveur, la casa dei giochi da serata",
+        "text": "{count} giochi da serata gratis, su un solo telefono o un telefono a testa: dadi, carte, quiz, bluff e sfide. La Modalità Serata li concatena per voi, dal più tranquillo al più intenso.",
+        "discover": "Scopri Le Pillaveur",
+        "allGames": "Vedi tutti i giochi"
+      },
+      "note": "Basta un telefono · gratis · senza registrazione.",
+      "health": "Bevi responsabilmente. Senza alcol, la lavagna conta le vittorie."
+    },
+    "units": {
+      "drinks": "{count, plural, one {# sorso} other {# sorsi}}",
+      "wins": "{count, plural, one {# vittoria} other {# vittorie}}"
+    },
+    "bande": {
+      "eyebrow": "Passo 1 di 3",
+      "title": "La compagnia",
+      "lead": "Un nome per giocatore. Un nome già noto riprende il suo giocatore e le sue statistiche.",
+      "bandes": "Compagnie già passate",
+      "listLabel": "Giocatori della serata",
+      "nameLabel": "Nome del giocatore {number}",
+      "placeholder": "Giocatore {number}",
+      "remove": "Togli il giocatore {number}",
+      "add": "Aggiungi un giocatore",
+      "known": "I vostri giocatori salvati",
+      "continue": "Continua con {count, plural, one {# giocatore} other {# giocatori}}",
+      "errors": {
+        "tooFew": "Servono almeno {min} giocatori per una serata.",
+        "duplicate": "Due giocatori si chiamano {name}: aggiungete un’iniziale.",
+        "refused": "Questo nome non è accettato: {name}."
+      },
+      "leadKnown": "Spuntate i giocatori di stasera. Un nome nuovo crea il giocatore.",
+      "newLabel": "Nome di un nuovo giocatore",
+      "newPlaceholder": "Nuovo giocatore",
+      "pickMore": "Scegliete almeno {min} giocatori"
+    },
+    "ambiance": {
+      "eyebrow": "Passo 2 di 3",
+      "title": "L’atmosfera",
+      "lead": "Sceglie i giochi del programma e il loro ordine.",
+      "vibeLabel": "Atmosfera della serata",
+      "vibes": {
+        "apero": {
+          "name": "Aperitivo tranquillo",
+          "pitch": "Giochi calmi per scaldarsi."
+        },
+        "monte": {
+          "name": "Si sale",
+          "pitch": "Dolce all’inizio, forte alla fine."
+        },
+        "grosse": {
+          "name": "Grande serata",
+          "pitch": "I giochi che fanno brindare di più."
+        }
+      },
+      "soft": {
+        "title": "Senza alcol",
+        "text": "I giochi passano senza alcol e la lavagna conta le vittorie invece dei sorsi."
+      },
+      "lengthTitle": "Durata",
+      "lengths": {
+        "court": "Rapida",
+        "normal": "Normale",
+        "long": "Lunga",
+        "carte": "Alla carta"
+      },
+      "rounds": "{count, plural, one {# manche} other {# manche}}",
+      "carteHint": "I vostri giochi",
+      "pick": "Scegli i miei giochi",
+      "compose": "Componi il programma"
+    },
+    "programme": {
+      "eyebrow": "Passo 3 di 3",
+      "title": "Il vostro programma",
+      "lead": "Cambiate un gioco, spostatelo su o giù: è la vostra serata.",
+      "heat": "Intensità {value} su 3",
+      "curve": "Curva d’intensità della serata, dal riscaldamento alla finale",
+      "warm": "RISCALDAMENTO",
+      "final": "FINALE",
+      "summary": "{count, plural, one {# manche} other {# manche}} · circa {minutes} min",
+      "empty": "Ancora nessun gioco: aggiungetene uno, o più.",
+      "listLabel": "Programma della serata",
+      "roundNumber": "Manche {number}",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Lavagna da controllare",
+        "manual": "Lavagna da compilare"
+      },
+      "up": "Sposta su {game}",
+      "down": "Sposta giù {game}",
+      "change": "Cambia",
+      "remove": "Togli {game}",
+      "add": "Aggiungi un gioco",
+      "reroll": "Ridistribuisci tutto",
+      "replaceTitle": "Sostituisci {game}",
+      "addTitle": "Aggiungi un gioco",
+      "launch": "Inizia la serata",
+      "launchOne": "Inizia la partita",
+      "restart": "Cambia la compagnia o l’atmosfera"
+    },
+    "picker": {
+      "lead": "Dal più tranquillo al più intenso. I giochi contano i sorsi da soli, salvo indicazione.",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Lavagna da controllare",
+        "manual": "Lavagna da compilare"
+      },
+      "inProgram": "Già nel programma",
+      "minPlayers": "Da {count} giocatori"
+    },
+    "round": {
+      "eyebrow": "Manche {number} di {total}",
+      "lead": "La partita si gioca sulla pagina del gioco. I sorsi arrivano da soli sulla lavagna alla fine.",
+      "manual": "Questo gioco non conta i sorsi: li inserirete durante la pausa.",
+      "tallyLabel": "Lavagna della manche",
+      "complete": "Fine partita ricevuta: convalidate la manche.",
+      "partial": "È arrivata una parte della lavagna.",
+      "waiting": "Ancora nessun risultato.",
+      "validate": "Convalida la manche",
+      "goToGame": "Vai al gioco",
+      "done": "Manche finita",
+      "restart": "Rigioca",
+      "skip": "Salta",
+      "howTo": "Come si gioca?"
+    },
+    "entracte": {
+      "eyebrow": "Pausa · {done} di {total}",
+      "title": "La lavagna",
+      "leadDrinks": "Sorsi bevuti dall’inizio della serata.",
+      "leadWins": "Manche vinte dall’inizio della serata.",
+      "lastLabel": "La manche appena finita",
+      "lastEyebrow": "Manche {number}",
+      "skipped": "Manche saltata.",
+      "nobodyDrank": "Nessuno ha bevuto.",
+      "nobodyWon": "Nessuno ha vinto.",
+      "correct": "Correggi",
+      "manualPrompt": "{game} non conta i sorsi: inseriteli.",
+      "partialPrompt": "{game} non conta tutto: controllate la lavagna.",
+      "correctLead": "Aggiungete ciò che è stato detto ad alta voce.",
+      "less": "Uno in meno per {name}",
+      "more": "Uno in più per {name}",
+      "correctDone": "Fatto",
+      "water": "Un bicchiere d’acqua tra una manche e l’altra: la serata dura di più.",
+      "nextLabel": "Manche successiva",
+      "nextEyebrow": "Manche {number}",
+      "minutes": "~{minutes} min",
+      "editProgram": "Modifica il resto del programma",
+      "closeProgram": "Chiudi il programma",
+      "confirmTitle": "Finire la serata adesso?",
+      "confirmBody": "Il conto conterà {count, plural, one {la # manche giocata} other {le # manche giocate}}.",
+      "confirmOk": "Vedi il conto",
+      "confirmCancel": "Continua",
+      "next": "Manche {number}: {game}",
+      "skip": "Salta",
+      "finish": "Finisci qui",
+      "addition": "Vedi il conto"
+    },
+    "addition": {
+      "eyebrow": "Fine della serata",
+      "title": "Il conto",
+      "gamesTitle": "Gioco per gioco",
+      "gameTop": "di cui {count} per {name}",
+      "awardsTitle": "I premi",
+      "momentsTitle": "I momenti della serata",
+      "stats": "Quale gioco fa bere di più?",
+      "revanche": "Si ricomincia: la rivincita",
+      "new": "Nuova serata",
+      "home": "Home",
+      "receipt": {
+        "brand": "LE PILLAVEUR",
+        "counter": "BANCONE · MODALITÀ SERATA",
+        "table": "Tavolo di stasera",
+        "night": "{bande} · serata n. {number}",
+        "short": {
+          "drinks": "{count} sorsi",
+          "wins": "{count} vitt."
+        },
+        "total": "TOTALE",
+        "rounds": "manche giocate",
+        "payer": "{name} PAGA IL CONTO",
+        "tie": "PAREGGIO IN TESTA: CONTO DIVISO",
+        "thanks": "GRAZIE DELLA VISITA · ALLA RIVINCITA"
+      },
+      "awards": {
+        "pilier": {
+          "title": "Il Pilastro del bancone",
+          "why": "{count, plural, one {# sorso} other {# sorsi}} nella serata"
+        },
+        "survivant": {
+          "title": "Il Sopravvissuto",
+          "why": "solo {count, plural, one {# sorso} other {# sorsi}}"
+        },
+        "roi": {
+          "title": "Il Re delle manche",
+          "why": "{count, plural, one {# manche vinta} other {# manche vinte}}"
+        },
+        "champion": {
+          "title": "Il Campione",
+          "why": "{count, plural, one {# vittoria} other {# vittorie}}"
+        },
+        "lanterne": {
+          "title": "La Maglia nera",
+          "why": "{count, plural, one {# vittoria} other {# vittorie}}"
+        },
+        "gros-coup": {
+          "title": "Il Colpo grosso",
+          "why": "{count} sorsi in un colpo a {game}"
+        },
+        "arrose": {
+          "title": "Il gioco più annaffiato",
+          "why": "{count, plural, one {# sorso} other {# sorsi}} stasera"
+        }
+      },
+      "moments": {
+        "roundDrinks": "{game} ha fatto bere {total, plural, one {# sorso} other {# sorsi}}, di cui {top} per {name}.",
+        "roundWin": "{name} ha vinto {game}.",
+        "streak": "{name} ha vinto {count} manche di fila.",
+        "sober": "{name} non ha bevuto una goccia per tutta la serata.",
+        "roundDrinksAll": "{game} ha fatto bere {total} sorsi, tutti per {name}."
+      },
+      "recap": {
+        "title": "Il conto · {bande} · serata n. {number}",
+        "payer": "{name} paga il conto.",
+        "footer": "Rivincita su lepillaveur.fr"
+      },
+      "share": {
+        "title": "Da mandare nel gruppo",
+        "make": "Crea l’immagine del conto",
+        "making": "Stampa del conto…",
+        "ready": "Immagine pronta.",
+        "failed": "Impossibile creare l’immagine su questo telefono.",
+        "share": "Condividi l’immagine",
+        "copy": "Copia il riepilogo in testo",
+        "copied": "Riepilogo copiato: incollatelo nel gruppo.",
+        "copyFailed": "La copia è bloccata su questo browser.",
+        "alt": "Il conto della serata"
+      },
+      "keep": {
+        "title": "Salva la compagnia",
+        "lead": "La prossima volta la rivincita parte con un tocco, con lo storico dei conti.",
+        "label": "Nome della compagnia",
+        "default": "La compagnia di {name}",
+        "save": "Salva la compagnia",
+        "known": "Serata n. {count} aggiunta allo storico di {name}."
+      },
+      "gameTopAll": "tutti per {name}"
+    },
+    "stats": {
+      "eyebrow": "Su questo telefono",
+      "title": "Quale gioco fa bere di più?",
+      "lead": "Sorsi medi per giocatore e per partita, dalle partite giocate su questo telefono.",
+      "empty": "Non ci sono ancora abbastanza partite su questo telefono per classificare i giochi. Iniziate una serata!",
+      "rankingLabel": "Giochi dal più annaffiato al meno annaffiato",
+      "perPlayUnit": "sorsi / giocatore",
+      "rowDetail": "{drinks, plural, one {# sorso} other {# sorsi}} · {plays, plural, one {# partecipazione} other {# partecipazioni}}",
+      "rowTop": "record: {name} ({count})",
+      "drinkersTitle": "Chi beve di più",
+      "drinkerDetail": "{drinks, plural, one {# sorso} other {# sorsi}} in {plays, plural, one {# partita} other {# partite}}",
+      "soireesTitle": "Le vostre serate",
+      "soireesCount": "{count, plural, one {# serata giocata} other {# serate giocate}} su questo telefono.",
+      "soireesAverage": "{value} sorsi a serata in media.",
+      "soireesRecord": "Record: {count} sorsi, il {date}.",
+      "soireesFavorite": "Gioco più in programma: {game} ({count, plural, one {# manche} other {# manche}}).",
+      "note": "Le partite senza alcol contano zero sorsi. La Coppa del Re e Il Dito del Destino contano solo ciò che è stato inserito durante una serata.",
+      "cta": "Organizza una serata"
+    },
+    "launching": "Apertura di {game}…",
+    "intro": {
+      "eyebrow": "Manche {number} di {total}",
+      "howTo": "Come si gioca",
+      "players": "Giocatori della manche",
+      "start": "Si parte!",
+      "back": "Indietro",
+      "skip": "Salta questa manche",
+      "softNote": "Senza alcol: i giochi contano punti o penitenze al posto dei sorsi.",
+      "steps": {
+        "rule": "L’idea",
+        "drinks": "I sorsi",
+        "points": "Le penalità",
+        "end": "La fine"
+      }
+    },
+    "tutorials": {
+      "1220": {
+        "a": "Ognuno fissa le sue puntate: parità della somma, una fascia (2-10, 11-20 o 21-30), un numero che fa bere e uno che fa dare.",
+        "b": "Si lanciano un dado da 12 e uno da 20. Somma uguale al tuo numero «bere»: bevi. Al tuo numero «dare», parità o fascia giusta: distribuisci.",
+        "c": "Un numero su un solo dado conta a metà: accumulate le combo. Si rilancia quanto vuole il tavolo."
+      },
+      "vue-de-nez": {
+        "a": "Una domanda con risposta numerica: ognuno scrive la sua stima in segreto, poi passa il telefono.",
+        "b": "Il più vicino distribuisce 3 sorsi (6 se fa centro), il più lontano ne beve 3.",
+        "c": "Le stime si svelano su un righello graduato, poi arriva la domanda successiva. Vince il fiuto migliore."
+      },
+      "pile-poil": {
+        "a": "Al tuo turno, avvia il cronometro e fermalo a 10 secondi esatti: le cifre spariscono dopo 3 secondi.",
+        "b": "Il più lontano dal bersaglio beve (1 sorso ogni mezzo secondo di scarto, 5 al massimo). Preciso al centesimo: distribuisci 5 sorsi.",
+        "c": "Dopo l’ultimo turno, vince lo scarto totale più piccolo."
+      },
+      "purple": {
+        "a": "Al tuo turno, punta sul colore delle prossime due carte: Rosso, Nero o Purple (una rossa e una nera).",
+        "b": "Ogni puntata vinta fa salire il contatore. Sbagliato: bevi tutto il contatore e si riparte da zero.",
+        "c": "Fermatevi quando volete: il riepilogo mostra i sorsi di ognuno."
+      },
+      "blackjack": {
+        "a": "Ognuno gioca contro il banco, non contro il tavolo: punta 1, 2 o 3 fiche prima di ogni mano.",
+        "b": "Avvicinati a 21 senza superarlo (figure 10, assi 1 o 11). Battuto o sballato: bevi la puntata; vinto: la distribuisci.",
+        "c": "Il banco pesca fino a 17. Un Black Jack paga una volta e mezzo. Giocate quante mani volete: il riepilogo fa i conti."
+      },
+      "hi-lo": {
+        "a": "Si gira una carta: annuncia se la prossima sarà più alta, più bassa o uguale.",
+        "b": "Giusto: la serie continua e la posta sale. Sbagliato: bevi la posta in gioco.",
+        "c": "Due errori a testa: tutti continuano a giocare e la manche finisce quando ognuno ha sbagliato almeno due volte."
+      },
+      "chiffre-piege": {
+        "a": "Il telefono nasconde un numero trappola: al tuo turno, proponi un numero nell’intervallo mostrato.",
+        "b": "Mancato: l’intervallo si stringe e il telefono passa. Proprio sulla trappola: BUM, bevi un sorso per ogni tentativo della manche.",
+        "c": "Un jolly a partita per saltare il turno. Alla fine vince chi ha bevuto meno."
+      },
+      "plinko": {
+        "a": "A turno, lascia cadere una pallina dall’alto del tabellone: rimbalza sui chiodi fino a una casella.",
+        "b": "Pallina rossa: bevi i sorsi della casella. Pallina verde: li dai. I chiodi speciali raddoppiano, aggiungono, tolgono o fanno partire un giro per tutti.",
+        "c": "Quando tutti hanno giocato, il riepilogo mostra i sorsi di ognuno."
+      },
+      "monsieur-3": {
+        "a": "Ognuno lancia un dado: il primo che fa 3 diventa Monsieur 3.",
+        "b": "Poi si lanciano due dadi: ogni 3 o 5, o una somma di 3, fa bere Monsieur 3. Somma 5 o 8: un gesto da fare, l’ultimo beve. Un doppio: duello.",
+        "c": "Quando Monsieur 3 lancia senza far scattare nulla, la partita finisce."
+      },
+      "pmu": {
+        "a": "Ognuno sceglie un cavallo, poi la corsa parte da sola.",
+        "b": "I fantini del cavallo vincitore distribuiscono un numero di sorsi a sorte.",
+        "c": "Una corsa per manche: durante la pausa, segnate sulla lavagna chi ha bevuto cosa."
+      },
+      "front-colle": {
+        "a": "Chi indovina si mette il telefono sulla fronte, schermo verso il tavolo.",
+        "b": "Il tavolo gli fa indovinare la parola descrivendola, mimandola o canticchiandola, senza mai dirla.",
+        "c": "Telefono verso il pavimento: indovinata; verso il soffitto: si passa. Allo scadere del tempo, il riepilogo dice chi beve e la fronte cambia."
+      },
+      "doigt-du-destin": {
+        "a": "Tutti mettono un dito sullo schermo e lo tengono lì.",
+        "b": "Il destino sceglie un dito: beve 3 sorsi. In sopravvivenza, le dita cadono una a una e l’ultima distribuisce 5 sorsi.",
+        "c": "Alzare il dito prima della fine costa 2 sorsi. La lavagna di questa manche si compila a mano durante la pausa."
+      },
+      "patate-chaude": {
+        "a": "Compare una sfida (un tema, una lettera o una sillaba) e la miccia della bomba è segreta.",
+        "b": "Di’ una parola giusta, tocca «Passo a…» e passa in fretta il telefono. Due parole rifiutate di fila: 1 sorso.",
+        "c": "BUM: chi ha la bomba beve 3 sorsi. Alla fine delle manche vince chi ha meno esplosioni."
+      },
+      "cap-ou-pas-cap": {
+        "a": "Al tuo turno, scegli Verità o Obbligo: la carta si gira con il suo prezzo, da 1 a 5.",
+        "b": "Ci sto!: lo fai e distribuisci il prezzo. Non ci stai? Bevi il prezzo.",
+        "c": "Una volta a partita, rimanda la carta a un altro giocatore al doppio del prezzo. Fermatevi quando decide il tavolo."
+      },
+      "coupe-du-roi": {
+        "a": "Telefono al centro del tavolo: al tuo turno, pesca una carta e la sua regola vale subito.",
+        "b": "Alcune carte danno un ruolo o una regola che dura: l’app tiene la lista. I sorsi si regolano al tavolo.",
+        "c": "A ogni re, un po’ del tuo bicchiere nella coppa: il quarto re la beve (o 5 sorsi). La lavagna si compila a mano."
+      },
+      "petit-buveur": {
+        "a": "Al tuo turno, lancia il dado e avanza di altrettante caselle.",
+        "b": "A seconda della casella: bevi sorsi, accetti una sfida o attivi un effetto (scambio, maledizione, protezione…).",
+        "c": "Il primo che arriva alla casella 30 vince la partita."
+      }
+    },
+    "vote": {
+      "round": "Vi è piaciuto questo gioco?",
+      "soiree": "Vi è piaciuta la serata?",
+      "faces": {
+        "1": "Per niente",
+        "2": "Così così",
+        "3": "Nella media",
+        "4": "Bene",
+        "5": "Fantastico"
+      },
+      "commentLabel": "Qualcosa da aggiungere? (facoltativo)",
+      "commentPlaceholder": "Cosa vi è piaciuto, cosa mancava…",
+      "send": "Invia",
+      "thanks": "Grazie, registrato!",
+      "error": "Voto non inviato: controllate la connessione e riprovate.",
+      "tooMany": "Troppi voti di fila: riprovate tra un momento.",
+      "note": "Il vostro voto ci aiuta a migliorare la Modalità Serata."
     }
   }
 }

@@ -36,6 +36,10 @@ const PUBLIC_PREFIXES = [
   '/hors-ligne',
   // Liens d'invitation partagés (aperçu OG + redirection vers /jeux?join=).
   '/invite',
+  // Mode Soirée (jeux locaux, tout sur l'appareil) et l'ancienne vitrine,
+  // déplacée de l'accueil : publics comme l'accueil lui-même.
+  '/soiree',
+  '/decouvrir',
   '/api/',
   '/_next',
   '/favicon.ico',
@@ -55,6 +59,7 @@ const KNOWN_SEGMENTS = new Set([
   'application',
   'classement',
   'compte',
+  'decouvrir',
   'games',
   'hors-ligne',
   'invite',
@@ -63,6 +68,7 @@ const KNOWN_SEGMENTS = new Set([
   'legal',
   'online',
   'regles',
+  'soiree',
   'stats',
   'supervision',
   'test-colors',
@@ -71,7 +77,7 @@ const KNOWN_SEGMENTS = new Set([
 
 function isPublicPath(pathname: string): boolean {
   const pathWithoutLocale = stripLocalePrefix(pathname)
-  // Racine : la page d'accueil redirige elle-même vers /jeux (public).
+  // Racine : l'accueil (Mode Soirée) est public ; il renvoie lui-même les comptes en ligne vers /jeux.
   if (pathWithoutLocale === '/') return true
   return PUBLIC_PREFIXES.some(
     (prefix) =>

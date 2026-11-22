@@ -39,6 +39,12 @@ export const DECK_SIZE = CARD_SUITS.length * CARD_VALUES.length
 /** Au-delà de 4 tirages d'une MÊME carte (5 paquets consommés), la partie s'arrête. */
 export const MAX_SAME_CARD_DRAWS = 4
 
+/**
+ * Mode Soirée : deux loupés chacun, puis la manche suivante. Sans limite, le
+ * standard ne s'arrête qu'à la 5e carte identique (quelque 250 tirages).
+ */
+export const HI_LO_SOIREE_MISS_LIMIT = 2
+
 /** Jeu complet de 52 cartes, couleur par couleur (♠, ♥, ♦, ♣), du 2 à l'As. */
 export function createDeck(): HiLoCard[] {
   const deck: HiLoCard[] = []
@@ -100,6 +106,15 @@ export type HiLoState = {
   /** Le dernier tirage était une égalité que le joueur n'a pas annoncée. */
   isUnguessedEqual: boolean
   gameOver: boolean
+  /**
+   * Loupés que chacun doit faire (standard seulement), null sans limite.
+   * Tout le monde joue jusqu'au bout (choix de l'utilisateur, 22/11/2026) ;
+   * quand toute la table a atteint la limite, la partie s'arrête au tour
+   * suivant.
+   */
+  missLimit: number | null
+  /** Loupés par joueur, comptés seulement sous une limite. */
+  misses: Record<string, number>
 }
 
 export type HiLoPlayerResult = { playerId: string; drinks: number; won: boolean }
@@ -113,18 +128,30 @@ export function currentHiLoPlayerId(state: HiLoState): string | null {
   return ids[state.currentPlayerIndex] ?? null
 }
 
+/** Toute la table a atteint la limite de loupés : la partie s'arrête au tour suivant. */
+export function hiLoMissLimitReached(state: Pick<HiLoState, 'missLimit' | 'misses' | 'playerIds'>): boolean {
+  const limit = state.missLimit
+  return limit !== null && state.playerIds.length > 0 && state.playerIds.every((id) => (state.misses[id] ?? 0) >= limit)
+}
+
+function normalizeMissLimit(mode: HiLoMode, missLimit: number | null | undefined): number | null {
+  return mode === 'standard' && typeof missLimit === 'number' && missLimit > 0 ? Math.floor(missLimit) : null
+}
+
 /**
  * Nouvelle partie. Ordre des tirages : le mélange (51), puis — en standard
  * seulement — le premier joueur. La traversée commence toujours au premier.
  * `previous` : partie qu'on relance (bouton « Rejouer »). Comme l'ancien
  * composant, la relance ne remet PAS à zéro le drapeau d'égalité non annoncée
  * (lu au tirage suivant, voir resolveHiLoGuess).
+ * `missLimit` : loupés que chacun doit faire (Mode Soirée), ignoré en traversée.
  */
 export function startHiLoGame(options: {
   mode: HiLoMode
   playerIds: string[]
   random?: RandomSource
   previous?: Pick<HiLoState, 'isUnguessedEqual'> | null
+  missLimit?: number | null
 }): HiLoState {
   const { mode, playerIds, random = Math.random, previous } = options
   const shuffled = shuffleDeck(createDeck(), random)
@@ -148,6 +175,8 @@ export function startHiLoGame(options: {
     showResult: false,
     isUnguessedEqual: previous?.isUnguessedEqual ?? false,
     gameOver: false,
+    missLimit: normalizeMissLimit(mode, options.missLimit),
+    misses: {},
   }
 }
 
@@ -278,7 +307,10 @@ export function resolveHiLoGuess(
     }
     // Le joueur boit le cumul ; la mise repart à 1 à la fermeture de la fenêtre.
     const loserId = state.playerIds[state.currentPlayerIndex]
-    if (loserId) resolved.gameResults = addDrinks(state.gameResults, [loserId], state.drinkCounter)
+    if (loserId) {
+      resolved.gameResults = addDrinks(state.gameResults, [loserId], state.drinkCounter)
+      if (state.missLimit !== null) resolved.misses = { ...state.misses, [loserId]: (state.misses[loserId] || 0) + 1 }
+    }
     const penalty = loserId ? { playerIds: [loserId], drinks: state.drinkCounter } : null
     return { drawn, resolved, missDialog: true, end: null, penalty }
   }
@@ -344,6 +376,10 @@ export function advanceHiLoTurn(state: HiLoState, missDialogOpen = false): HiLoT
   let currentPlayerIndex: number
   let drinkCounter = state.drinkCounter
   if (state.mode === 'standard') {
+    // Le dernier loupé attendu vient de tomber : le verdict a été lu, la partie s'arrête là.
+    if (hiLoMissLimitReached(state)) {
+      return { state: { ...state, gameOver: true }, advanced: false, end: hiLoFinalResults(state) }
+    }
     currentPlayerIndex = (state.currentPlayerIndex + 1) % state.playerIds.length
     if (!state.isCorrect && !missDialogOpen) drinkCounter = 1
   } else {
@@ -411,12 +447,15 @@ export type HiLoSave = {
   activePlayerIds: string[]
   correctGuessesInRow: number
   targetGuesses: number
+  /** Loupés par joueur, présents seulement sous une limite (Mode Soirée). */
+  misses?: Record<string, number>
 }
 
 /**
  * Ce qu'on sauvegarde : paquet, carte visible et compteurs suffisent à
  * reprendre la main là où la table s'est arrêtée. La carte en cours de
- * retournement n'en fait pas partie (état d'animation).
+ * retournement n'en fait pas partie (état d'animation). Sans limite de
+ * loupés, la forme reste exactement l'historique.
  */
 export function toHiLoSave(state: HiLoState): HiLoSave {
   return {
@@ -431,6 +470,7 @@ export function toHiLoSave(state: HiLoState): HiLoSave {
     activePlayerIds: state.activePlayerIds,
     correctGuessesInRow: state.correctGuessesInRow,
     targetGuesses: state.targetGuesses,
+    ...(state.missLimit !== null ? { misses: state.misses } : {}),
   }
 }
 
@@ -462,8 +502,16 @@ function isCountMap(value: unknown): value is Record<string, number> {
  * inconnu est ignoré). Null si la sauvegarde est illisible : on repart alors
  * sur une partie neuve au lieu de planter. Le contrôle « même mode, même
  * table » reste à l'appelant (il décide de jeter la sauvegarde).
+ *
+ * `missLimit` : celle de la partie qui reprend (la soirée en cours ou pas),
+ * jamais celle de la sauvegarde. Sauvegarde prise sur le tout dernier loupé
+ * attendu : la partie revient finie (à l'appelant d'en tirer le bilan).
  */
-export function restoreHiLoSave(save: unknown, playerIds: string[]): HiLoState | null {
+export function restoreHiLoSave(
+  save: unknown,
+  playerIds: string[],
+  options: { missLimit?: number | null } = {}
+): HiLoState | null {
   if (!save || typeof save !== 'object') return null
   const s = save as Record<string, unknown>
   if (s.gameMode !== 'standard' && s.gameMode !== 'traversee') return null
@@ -474,7 +522,8 @@ export function restoreHiLoSave(save: unknown, playerIds: string[]): HiLoState |
   if (!isCountMap(s.gameResults) || !isCountMap(s.sameCardCount)) return null
   if (!Array.isArray(s.activePlayerIds)) return null
 
-  return {
+  const missLimit = normalizeMissLimit(s.gameMode, options.missLimit)
+  const state: HiLoState = {
     mode: s.gameMode,
     playerIds: [...playerIds],
     deck: s.deck,
@@ -492,5 +541,8 @@ export function restoreHiLoSave(save: unknown, playerIds: string[]): HiLoState |
     showResult: false,
     isUnguessedEqual: false,
     gameOver: false,
+    missLimit,
+    misses: missLimit !== null && isCountMap(s.misses) ? s.misses : {},
   }
+  return hiLoMissLimitReached(state) ? { ...state, gameOver: true } : state
 }

@@ -13,18 +13,33 @@ export type FeedbackType = (typeof FEEDBACK_TYPES)[number]
 export const FIRST_GAME_FEEDBACK_TYPE = 'first-game'
 
 /**
+ * Votes du Mode Soirée (POST /api/feedback/soiree) : « Ce jeu vous a plu ? »
+ * à chaque entracte (note 1..5 et jeu), puis « La soirée vous a plu ? » sur
+ * l'addition (note, commentaire facultatif, sans jeu). Hors de FEEDBACK_TYPES
+ * pour la même raison que l'avis de 1re partie.
+ */
+export const SOIREE_FEEDBACK_TYPE = 'soiree'
+
+/** Types de retour qui portent une note 1..5 (résumés à part dans la Supervision). */
+export const RATED_FEEDBACK_TYPES = [FIRST_GAME_FEEDBACK_TYPE, SOIREE_FEEDBACK_TYPE] as const
+
+export function isRatedFeedbackType(type: string): boolean {
+  return (RATED_FEEDBACK_TYPES as readonly string[]).includes(type)
+}
+
+/**
  * Filtre de la BOÎTE DE TRI des retours : liste admin, compteurs
- * activeCount / resolvedCount, file de la vue d'ensemble. Un avis de 1re
- * partie SANS commentaire n'est qu'une note : rien à lire, rien à traiter — et
- * il en arrive un par nouveau joueur, de quoi noyer les vrais signalements.
- * Il reste en base et nourrit le résumé (/api/admin/first-game-feedback) ;
- * avec un commentaire, il entre dans la boîte comme les autres.
+ * activeCount / resolvedCount, file de la vue d'ensemble. Une note SANS
+ * commentaire (avis de 1re partie, vote de soirée) n'a rien à lire ni à
+ * traiter — et il en arrive une par nouveau joueur et par manche, de quoi
+ * noyer les vrais signalements. Elle reste en base et nourrit son résumé ;
+ * avec un commentaire, elle entre dans la boîte comme les autres retours.
  * `message` et `type` sont NOT NULL : le NOT n'a pas de piège de NULL en SQL.
  * Import de TYPE seulement : ce module est aussi chargé côté client
  * (FeedbackDialog), Prisma n'y entre pas.
  */
 export const FEEDBACK_INBOX_WHERE: Prisma.UserFeedbackWhereInput = {
-  NOT: { type: FIRST_GAME_FEEDBACK_TYPE, message: '' },
+  NOT: { type: { in: [...RATED_FEEDBACK_TYPES] }, message: '' },
 }
 
 export const FEEDBACK_STATUSES = ['open', 'read', 'resolved'] as const
@@ -60,6 +75,8 @@ export function feedbackTypeLabel(type: string): string {
       return 'Commentaire'
     case FIRST_GAME_FEEDBACK_TYPE:
       return 'Avis 1re partie'
+    case SOIREE_FEEDBACK_TYPE:
+      return 'Avis Mode Soirée'
     default:
       return type
   }

@@ -66,6 +66,14 @@
     "chat": "Chat",
     "languageSwitcher": "Change language",
     "links": {
+      "soiree": {
+        "label": "Party Mode",
+        "description": "Plan a party night"
+      },
+      "decouvrir": {
+        "label": "Discover Le Pillaveur",
+        "description": "The former home page and every game"
+      },
       "joueurs": {
         "label": "Players",
         "description": "Manage players"
@@ -106,6 +114,14 @@
       "analytics": "Visit statistics"
     },
     "pages": {
+      "soiree": {
+        "title": "Party Mode",
+        "subtitle": "A ready-made party night"
+      },
+      "decouvrir": {
+        "title": "Le Pillaveur",
+        "subtitle": "The house of party games"
+      },
       "joueurs": {
         "title": "Players",
         "subtitle": "Manage the team"
@@ -2028,7 +2044,8 @@
         "goalReached": "You have reached the objective of {count} consecutive correct answers!",
         "fiveSame": "The {value} {suit} came up for the 5th time.",
         "results": "Results",
-        "sipsResult": "{count, plural, one {# sip} other {# sips}}"
+        "sipsResult": "{count, plural, one {# sip} other {# sips}}",
+        "missLimit": "Everyone has missed {count, plural, one {once} other {# times}}"
       },
       "wrong": {
         "title": "Wrong answer!",
@@ -2067,6 +2084,12 @@
       "traverseeExit": "{name} called the tie and leaves the crossing!",
       "traverseeOut": "has left the crossing",
       "nextTurnButton": "{name}'s turn",
+      "missLimit": {
+        "rule": "Round over at {count, plural, one {# miss} other {# misses}} each",
+        "count": "{count, plural, =0 {no misses} one {# miss} other {# misses}} out of {limit}",
+        "roundOver": "End of the round",
+        "seeResults": "See the results"
+      },
       "verdict": {
         "everyone": "Everyone drinks {count, plural, one {# sip} other {# sips}}!",
         "group": "{names} drink {count, plural, one {# sip} other {# sips}}!",
@@ -7696,6 +7719,7 @@
         "local": "Local"
       },
       "unknownGame": "Unknown game",
+      "soireeSubject": "Whole night",
       "noComment": "No comment, just a rating."
     },
     "firstGameFeedback": {
@@ -7727,6 +7751,19 @@
       "commentsEmpty": "No written comments yet: players have only rated.",
       "commentsShowAll": "Show all {count} comments",
       "commentsCollapse": "Show less"
+    },
+    "soireeFeedback": {
+      "title": "Party Mode votes",
+      "desc": "The table’s vote at each break (“Did you enjoy this game?”) and on the bill (“Did you enjoy the night?”). Votes with a comment also land in Moderation › Reports; bare ratings only live here.",
+      "loadError": "Could not load the Party Mode votes.",
+      "empty": "No Party Mode votes yet.",
+      "emptyHint": "They show up here as soon as a table votes at a break or on the bill.",
+      "averageLabel": "Average night rating",
+      "totalCount": "{count, plural, =0 {No night rated} one {# night rated} other {# nights rated}}",
+      "byGameTitle": "Average by game, at the break",
+      "byGameHint": "Sorted by number of votes: an average over two votes says little.",
+      "byGameEmpty": "No game rated at a break yet.",
+      "commentsEmpty": "No written comments yet: tables have only voted."
     },
     "history": {
       "activeConnection": "Active sign-in",
@@ -8741,6 +8778,441 @@
     },
     "feed": {
       "newer": "New messages"
+    }
+  },
+  "soireeBar": {
+    "label": "Party · {number}/{total}",
+    "complete": "Round over!",
+    "continue": "Back to the party",
+    "back": "Back to the party",
+    "nextRound": "Next round",
+    "toAddition": "On to the bill"
+  },
+  "soiree": {
+    "loading": "Loading the party…",
+    "backToBande": "Back to the crew",
+    "meta": {
+      "title": "Party Mode",
+      "description": "A ready-made night of drinking games: the crew, a lineup that builds up, the tab and the bill."
+    },
+    "home": {
+      "eyebrow": "Party Mode",
+      "title": "How many of you tonight?",
+      "lead": "Say who’s playing. Le Pillaveur plans the night, chains the games and keeps the tab until the bill.",
+      "countLabel": "Number of players",
+      "players": "{count, plural, one {player} other {players}}",
+      "less": "One player fewer",
+      "more": "One more player",
+      "start": "Plan our night",
+      "single": "Play a single game",
+      "stats": "Which game makes you drink most?",
+      "resume": {
+        "eyebrow": "Party in progress",
+        "title": "Resume at round {round} of {total}",
+        "cta": "Resume"
+      },
+      "revenge": {
+        "eyebrow": "Same again?",
+        "title": "{name} · night #{number}",
+        "lastPayer": "Last time, {name} paid the bill.",
+        "lastTie": "Last time: a tie at the top.",
+        "ready": "The crew is ready."
+      },
+      "stepsLabel": "How a party night works",
+      "steps": {
+        "bande": {
+          "title": "The crew",
+          "text": "Everyone’s name, once for the whole night."
+        },
+        "programme": {
+          "title": "The lineup",
+          "text": "Rounds that build up, in the order you want."
+        },
+        "addition": {
+          "title": "The bill",
+          "text": "The night’s awards, ready to send to the group chat."
+        }
+      },
+      "about": {
+        "title": "Le Pillaveur, the house of party games",
+        "text": "{count} free party games, on one phone or one phone each: dice, cards, quizzes, bluffing and dares. Party Mode chains them for you, from the calmest to the wildest.",
+        "discover": "Discover Le Pillaveur",
+        "allGames": "See every game"
+      },
+      "note": "One phone is enough · free · no sign-up.",
+      "health": "Drink responsibly. Without alcohol, the tab counts wins."
+    },
+    "units": {
+      "drinks": "{count, plural, one {# sip} other {# sips}}",
+      "wins": "{count, plural, one {# win} other {# wins}}"
+    },
+    "bande": {
+      "eyebrow": "Step 1 of 3",
+      "title": "The crew",
+      "lead": "One name per player. A name you already know picks up that player and their stats.",
+      "bandes": "Crews who came before",
+      "listLabel": "Tonight’s players",
+      "nameLabel": "Name of player {number}",
+      "placeholder": "Player {number}",
+      "remove": "Remove player {number}",
+      "add": "Add a player",
+      "known": "Your saved players",
+      "continue": "Continue with {count, plural, one {# player} other {# players}}",
+      "errors": {
+        "tooFew": "A party needs at least {min} players.",
+        "duplicate": "Two players are called {name}: add an initial.",
+        "refused": "This name isn’t allowed: {name}."
+      },
+      "leadKnown": "Tick tonight’s players. A new name creates the player.",
+      "newLabel": "New player’s name",
+      "newPlaceholder": "New player",
+      "pickMore": "Pick at least {min} players"
+    },
+    "ambiance": {
+      "eyebrow": "Step 2 of 3",
+      "title": "The vibe",
+      "lead": "It picks the lineup’s games and their order.",
+      "vibeLabel": "Vibe of the night",
+      "vibes": {
+        "apero": {
+          "name": "Easy drinks",
+          "pitch": "Calm games to warm up."
+        },
+        "monte": {
+          "name": "Building up",
+          "pitch": "Gentle at first, wild at the end."
+        },
+        "grosse": {
+          "name": "Big night",
+          "pitch": "The games that make you drink most."
+        }
+      },
+      "soft": {
+        "title": "Alcohol-free",
+        "text": "Games switch to alcohol-free and the tab counts wins instead of sips."
+      },
+      "lengthTitle": "Length",
+      "lengths": {
+        "court": "Quick",
+        "normal": "Normal",
+        "long": "Long",
+        "carte": "Your pick"
+      },
+      "rounds": "{count, plural, one {# round} other {# rounds}}",
+      "carteHint": "Your games",
+      "pick": "Pick my games",
+      "compose": "Build the lineup"
+    },
+    "programme": {
+      "eyebrow": "Step 3 of 3",
+      "title": "Your lineup",
+      "lead": "Swap a game, move it up or down: it’s your night.",
+      "heat": "Intensity {value} of 3",
+      "curve": "Intensity curve of the night, from warm-up to finale",
+      "warm": "WARM-UP",
+      "final": "FINALE",
+      "summary": "{count, plural, one {# round} other {# rounds}} · about {minutes} min",
+      "empty": "No games yet: add one, or several.",
+      "listLabel": "Lineup of the night",
+      "roundNumber": "Round {number}",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Check the tab",
+        "manual": "Enter the tab"
+      },
+      "up": "Move {game} up",
+      "down": "Move {game} down",
+      "change": "Swap",
+      "remove": "Remove {game}",
+      "add": "Add a game",
+      "reroll": "Deal again",
+      "replaceTitle": "Replace {game}",
+      "addTitle": "Add a game",
+      "launch": "Start the party",
+      "launchOne": "Start the game",
+      "restart": "Change the crew or the vibe"
+    },
+    "picker": {
+      "lead": "From the calmest to the wildest. Games count sips by themselves unless stated.",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Check the tab",
+        "manual": "Enter the tab"
+      },
+      "inProgram": "Already in the lineup",
+      "minPlayers": "From {count} players"
+    },
+    "round": {
+      "eyebrow": "Round {number} of {total}",
+      "lead": "The game is played on its own page. Sips reach the tab by themselves at the end.",
+      "manual": "This game doesn’t count sips: you’ll enter them at the break.",
+      "tallyLabel": "Round tab",
+      "complete": "Game over received: validate the round.",
+      "partial": "Part of the tab has arrived.",
+      "waiting": "No result yet.",
+      "validate": "Validate the round",
+      "goToGame": "Go to the game",
+      "done": "Round over",
+      "restart": "Restart",
+      "skip": "Skip",
+      "howTo": "How to play?"
+    },
+    "entracte": {
+      "eyebrow": "Break · {done} of {total}",
+      "title": "The tab",
+      "leadDrinks": "Sips drunk since the start of the night.",
+      "leadWins": "Rounds won since the start of the night.",
+      "lastLabel": "The round that just ended",
+      "lastEyebrow": "Round {number}",
+      "skipped": "Round skipped.",
+      "nobodyDrank": "Nobody drank.",
+      "nobodyWon": "Nobody won.",
+      "correct": "Fix",
+      "manualPrompt": "{game} doesn’t count sips: enter them.",
+      "partialPrompt": "{game} doesn’t count everything: check the tab.",
+      "correctLead": "Add what was called out loud.",
+      "less": "One fewer for {name}",
+      "more": "One more for {name}",
+      "correctDone": "Done",
+      "water": "A glass of water between rounds: the night lasts longer.",
+      "nextLabel": "Next round",
+      "nextEyebrow": "Round {number}",
+      "minutes": "~{minutes} min",
+      "editProgram": "Edit the rest of the lineup",
+      "closeProgram": "Close the lineup",
+      "confirmTitle": "End the night now?",
+      "confirmBody": "The bill will count {count, plural, one {the # round played} other {the # rounds played}}.",
+      "confirmOk": "See the bill",
+      "confirmCancel": "Keep going",
+      "next": "Round {number}: {game}",
+      "skip": "Skip",
+      "finish": "End here",
+      "addition": "See the bill"
+    },
+    "addition": {
+      "eyebrow": "End of the night",
+      "title": "The bill",
+      "gamesTitle": "Game by game",
+      "gameTop": "including {count} for {name}",
+      "awardsTitle": "The awards",
+      "momentsTitle": "Moments of the night",
+      "stats": "Which game makes you drink most?",
+      "revanche": "Same again: the rematch",
+      "new": "New party",
+      "home": "Home",
+      "receipt": {
+        "brand": "LE PILLAVEUR",
+        "counter": "BAR · PARTY MODE",
+        "table": "Tonight’s table",
+        "night": "{bande} · night #{number}",
+        "short": {
+          "drinks": "{count} sips",
+          "wins": "{count} wins"
+        },
+        "total": "TOTAL",
+        "rounds": "rounds played",
+        "payer": "{name} PAYS THE BILL",
+        "tie": "TIE AT THE TOP: BILL SPLIT",
+        "thanks": "THANKS FOR COMING · SEE YOU AT THE REMATCH"
+      },
+      "awards": {
+        "pilier": {
+          "title": "The Barfly",
+          "why": "{count, plural, one {# sip} other {# sips}} over the night"
+        },
+        "survivant": {
+          "title": "The Survivor",
+          "why": "only {count, plural, one {# sip} other {# sips}}"
+        },
+        "roi": {
+          "title": "The Round King",
+          "why": "{count, plural, one {# round won} other {# rounds won}}"
+        },
+        "champion": {
+          "title": "The Champion",
+          "why": "{count, plural, one {# win} other {# wins}}"
+        },
+        "lanterne": {
+          "title": "The Wooden Spoon",
+          "why": "{count, plural, one {# win} other {# wins}}"
+        },
+        "gros-coup": {
+          "title": "The Big Gulp",
+          "why": "{count} sips in one go at {game}"
+        },
+        "arrose": {
+          "title": "The wettest game",
+          "why": "{count, plural, one {# sip} other {# sips}} tonight"
+        }
+      },
+      "moments": {
+        "roundDrinks": "{game} made you drink {total, plural, one {# sip} other {# sips}}, including {top} for {name}.",
+        "roundWin": "{name} won {game}.",
+        "streak": "{name} won {count} rounds in a row.",
+        "sober": "{name} didn’t drink a drop all night.",
+        "roundDrinksAll": "{game} made you drink {total} sips, all of them for {name}."
+      },
+      "recap": {
+        "title": "The bill · {bande} · night #{number}",
+        "payer": "{name} pays the bill.",
+        "footer": "Rematch at lepillaveur.fr"
+      },
+      "share": {
+        "title": "Send it to the group",
+        "make": "Create the bill image",
+        "making": "Printing the bill…",
+        "ready": "Image ready.",
+        "failed": "The image couldn’t be created on this phone.",
+        "share": "Share the image",
+        "copy": "Copy the text recap",
+        "copied": "Recap copied: paste it in the group.",
+        "copyFailed": "Copying is blocked on this browser.",
+        "alt": "The night’s bill"
+      },
+      "keep": {
+        "title": "Keep the crew",
+        "lead": "Next time, the rematch starts in one tap, with the history of bills.",
+        "label": "Crew name",
+        "default": "{name}’s crew",
+        "save": "Keep the crew",
+        "known": "Night #{count} added to {name}’s history."
+      },
+      "gameTopAll": "all for {name}"
+    },
+    "stats": {
+      "eyebrow": "On this phone",
+      "title": "Which game makes you drink most?",
+      "lead": "Average sips per player per game, from the games played on this phone.",
+      "empty": "Not enough games on this phone yet to rank them. Start a party!",
+      "rankingLabel": "Games ranked from wettest to driest",
+      "perPlayUnit": "sips / player",
+      "rowDetail": "{drinks, plural, one {# sip} other {# sips}} · {plays, plural, one {# play} other {# plays}}",
+      "rowTop": "record: {name} ({count})",
+      "drinkersTitle": "The biggest drinkers",
+      "drinkerDetail": "{drinks, plural, one {# sip} other {# sips}} in {plays, plural, one {# game} other {# games}}",
+      "soireesTitle": "Your party nights",
+      "soireesCount": "{count, plural, one {# night played} other {# nights played}} on this phone.",
+      "soireesAverage": "{value} sips per night on average.",
+      "soireesRecord": "Record: {count} sips, on {date}.",
+      "soireesFavorite": "Most scheduled game: {game} ({count, plural, one {# round} other {# rounds}}).",
+      "note": "Alcohol-free games count zero sips. King’s Cup and Finger of Fate only count what was entered during a party.",
+      "cta": "Plan a party"
+    },
+    "launching": "Opening {game}…",
+    "intro": {
+      "eyebrow": "Round {number} of {total}",
+      "howTo": "How to play",
+      "players": "Players this round",
+      "start": "Let’s go",
+      "back": "Back",
+      "skip": "Skip this round",
+      "softNote": "Alcohol-free: the games count points or forfeits instead of sips.",
+      "steps": {
+        "rule": "The idea",
+        "drinks": "The sips",
+        "points": "The penalties",
+        "end": "The end"
+      }
+    },
+    "tutorials": {
+      "1220": {
+        "a": "Everyone sets their bets: the sum’s parity, a range (2-10, 11-20 or 21-30), a “drink” number and a “give” number.",
+        "b": "Roll a 12-sided and a 20-sided die. Sum equals your “drink” number: you drink. Your “give” number, the right parity or the right range: you hand out sips.",
+        "c": "A number on just one die counts half: stack the combos. Roll again as often as the table wants."
+      },
+      "vue-de-nez": {
+        "a": "A question whose answer is a number: everyone types an estimate in secret, then passes the phone.",
+        "b": "The closest hands out 3 sips (6 for a bullseye), the furthest drinks 3.",
+        "c": "Estimates are revealed on a ruler, then comes the next question. The best guesser wins."
+      },
+      "pile-poil": {
+        "a": "On your turn, start the stopwatch and stop it at exactly 10 seconds: the digits vanish after 3 seconds.",
+        "b": "The furthest from the target drinks (1 sip per half-second off, 5 at most). Spot on: you hand out 5 sips.",
+        "c": "After the last turn, the smallest total gap wins."
+      },
+      "purple": {
+        "a": "On your turn, bet on the colours of the next two cards: Red, Black, or Purple (one red and one black).",
+        "b": "Every winning bet raises the counter. Wrong: you drink the whole counter and it resets to zero.",
+        "c": "Stop whenever you like: the summary shows everyone’s sips."
+      },
+      "blackjack": {
+        "a": "Everyone plays against the dealer, not the table: bet 1, 2 or 3 chips before each hand.",
+        "b": "Get close to 21 without going over (face cards 10, aces 1 or 11). Beaten or bust: you drink your bet; win: you hand it out.",
+        "c": "The dealer draws to 17. A blackjack pays one and a half times. Play as many hands as you like; the summary keeps count."
+      },
+      "hi-lo": {
+        "a": "A card is turned over: call whether the next one will be higher, lower or equal.",
+        "b": "Right: the streak goes on and the stake rises. Wrong: you drink the stake.",
+        "c": "Two misses each: everyone keeps playing, and the round ends once everyone has missed at least twice."
+      },
+      "chiffre-piege": {
+        "a": "The phone hides a trap number: on your turn, guess a number within the range shown.",
+        "b": "Miss: the range narrows and the phone moves on. Bang on it: BOOM, you drink one sip per guess this round.",
+        "c": "One joker per game lets you skip your turn. At the end, whoever drank least wins."
+      },
+      "plinko": {
+        "a": "Taking turns, drop a ball from the top of the board: it bounces off the pegs down to a slot.",
+        "b": "Red ball: you drink the slot’s sips. Green ball: you give them. Special pegs double, add, remove or call a round for everyone.",
+        "c": "Once everyone has played, the summary shows everyone’s sips."
+      },
+      "monsieur-3": {
+        "a": "Everyone rolls one die: the first to roll a 3 becomes Monsieur 3.",
+        "b": "Then roll two dice: every 3 or 5, or a sum of 3, makes Monsieur 3 drink. A sum of 5 or 8: a gesture to make, last one drinks. A double: duel.",
+        "c": "When Monsieur 3 rolls without triggering anything, the game ends."
+      },
+      "pmu": {
+        "a": "Everyone picks a horse, then the race runs by itself.",
+        "b": "The winning horse’s riders hand out a random number of sips.",
+        "c": "One race per round: at the break, note on the tab who drank what."
+      },
+      "front-colle": {
+        "a": "The guesser holds the phone on their forehead, screen facing the table.",
+        "b": "The table gets them to guess the word by describing, miming or humming it, without ever saying it.",
+        "c": "Tilt the phone down: found; up: pass. When time’s up, the summary says who drinks and the forehead changes."
+      },
+      "doigt-du-destin": {
+        "a": "Everyone puts a finger on the screen and keeps it there.",
+        "b": "Fate picks one finger: it drinks 3 sips. In survival, fingers fall one by one and the last one hands out 5 sips.",
+        "c": "Lifting your finger before the end costs 2 sips. This round’s tab is filled in by hand at the break."
+      },
+      "patate-chaude": {
+        "a": "A challenge appears (a theme, a letter or a syllable) and the bomb’s fuse is secret.",
+        "b": "Say a matching word, tap “Pass to…” and hand the phone over fast. Two rejected words in a row: 1 sip.",
+        "c": "BOOM: whoever holds the bomb drinks 3 sips. After the rounds, fewest explosions wins."
+      },
+      "cap-ou-pas-cap": {
+        "a": "On your turn, pick Truth or Dare: the card flips over with its price, from 1 to 5.",
+        "b": "Game on! You do it and hand out the price. Chicken out? You drink the price.",
+        "c": "Once per game, send the card to another player at double the price. Stop when the table decides."
+      },
+      "coupe-du-roi": {
+        "a": "Phone in the middle of the table: on your turn, draw a card and its rule applies at once.",
+        "b": "Some cards give a role or a rule that lasts: the app keeps the list. Sips are settled at the table.",
+        "c": "At each king, pour a little of your drink into the cup: the fourth king drinks it (or 5 sips). The tab is filled in by hand."
+      },
+      "petit-buveur": {
+        "a": "On your turn, roll the die and move that many squares.",
+        "b": "Depending on the square: drink sips, take up a challenge or trigger an effect (swap, curse, shield…).",
+        "c": "The first to reach square 30 wins."
+      }
+    },
+    "vote": {
+      "round": "Did you enjoy this game?",
+      "soiree": "Did you enjoy the night?",
+      "faces": {
+        "1": "Not at all",
+        "2": "Meh",
+        "3": "It was OK",
+        "4": "Good",
+        "5": "Loved it"
+      },
+      "commentLabel": "Anything to add? (optional)",
+      "commentPlaceholder": "What you liked, what was missing…",
+      "send": "Send",
+      "thanks": "Thanks, noted!",
+      "error": "Vote not sent: check your connection and try again.",
+      "tooMany": "Too many votes at once: try again in a moment.",
+      "note": "Your vote helps us improve Party Mode."
     }
   }
 }

@@ -113,7 +113,7 @@ import { accountsCoverageSince, weekFigures } from '@/lib/supervision/week'
 import { methodGroups, resolveMessage, type MethodGroup, type MethodParams } from '@/lib/supervision/method'
 import { parisDayToDate } from '@/lib/supervision/paris-day'
 import { RETENTION_RUN_STALE_MS, retentionRunStatus } from '@/lib/supervision/retention-run'
-import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
+import { FIRST_GAME_FEEDBACK_TYPE, SOIREE_FEEDBACK_TYPE, isRatedFeedbackType } from '@/lib/feedback'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -1091,6 +1091,8 @@ function feedbackTypeBadgeClass(type: string): string {
       return 'border-amber-500/30 bg-amber-500/[0.15] text-amber-200'
     case FIRST_GAME_FEEDBACK_TYPE:
       return 'border-violet-400/30 bg-violet-500/[0.15] text-violet-200'
+    case SOIREE_FEEDBACK_TYPE:
+      return 'border-rose-400/30 bg-rose-500/[0.15] text-rose-200'
     default:
       return 'border-chip-blue/50 bg-chip-blue/20 text-sky-200'
   }
@@ -1129,13 +1131,15 @@ function FeedbackListSection({
               {format.dateTime(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })}
             </span>
           </div>
-          {/* Avis de 1re partie : la note, le jeu et le mode d'abord — c'est
-              ce qu'on trie ; le commentaire suit comme pour tout retour. */}
-          {item.type === FIRST_GAME_FEEDBACK_TYPE && (
+          {/* Avis noté (1re partie, soirée) : la note, le jeu et le mode
+              d'abord — c'est ce qu'on trie ; le commentaire suit comme pour
+              tout retour. */}
+          {isRatedFeedbackType(item.type) && (
             <FirstGameFeedbackMeta
               rating={item.rating}
               gameId={item.gameId}
               playMode={item.playMode}
+              noGameLabel={item.type === SOIREE_FEEDBACK_TYPE ? t('feedback.soireeSubject') : undefined}
               className="mt-2"
             />
           )}
@@ -3175,6 +3179,7 @@ function StatsQualityView({
           l'ouverture de la vue. */}
       <ClientErrorsPanel />
       <FirstGameFeedbackPanel />
+      <FirstGameFeedbackPanel kind="soiree" />
 
       <StatsFooter
         freshness={footerAt ? freshness(footerAt, cacheSeconds) : undefined}
@@ -5745,7 +5750,10 @@ function SupervisionDashboard() {
               Statistiques les lit dans la vue Qualité ; les autres ici, au-dessus
               des retours où arrivent ceux qui portent un commentaire. */}
           {moderationView === 'reports' && moderationViews.includes('reports') && !showAnalytics && (
-            <FirstGameFeedbackPanel />
+            <>
+              <FirstGameFeedbackPanel />
+              <FirstGameFeedbackPanel kind="soiree" />
+            </>
           )}
           {moderationView === 'reports' && moderationViews.includes('reports') && (
             <SectionCard
@@ -6169,18 +6177,19 @@ function SupervisionDashboard() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                {selectedFeedback.type === FIRST_GAME_FEEDBACK_TYPE && (
+                {isRatedFeedbackType(selectedFeedback.type) && (
                   <FirstGameFeedbackMeta
                     rating={selectedFeedback.rating}
                     gameId={selectedFeedback.gameId}
                     playMode={selectedFeedback.playMode}
+                    noGameLabel={selectedFeedback.type === SOIREE_FEEDBACK_TYPE ? t('feedback.soireeSubject') : undefined}
                     size="lg"
                   />
                 )}
-                {/* Un avis de 1re partie peut n'être qu'une note : le dire
-                    plutôt que laisser un paragraphe vide. */}
+                {/* Un avis noté peut n'être qu'une note : le dire plutôt que
+                    laisser un paragraphe vide. */}
                 {(selectedFeedback.message ?? selectedFeedback.messagePreview) ||
-                selectedFeedback.type !== FIRST_GAME_FEEDBACK_TYPE ? (
+                !isRatedFeedbackType(selectedFeedback.type) ? (
                   <p className="whitespace-pre-wrap text-sm text-white/80">
                     {selectedFeedback.message ?? selectedFeedback.messagePreview}
                   </p>

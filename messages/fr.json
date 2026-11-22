@@ -66,6 +66,14 @@
     "chat": "Chat",
     "languageSwitcher": "Changer de langue",
     "links": {
+      "soiree": {
+        "label": "Mode Soirée",
+        "description": "Composer une soirée"
+      },
+      "decouvrir": {
+        "label": "Découvrir Le Pillaveur",
+        "description": "L’ancien accueil et tous les jeux"
+      },
       "joueurs": {
         "label": "Joueurs",
         "description": "Gérer les joueurs"
@@ -106,6 +114,14 @@
       "analytics": "Statistiques de visite"
     },
     "pages": {
+      "soiree": {
+        "title": "Mode Soirée",
+        "subtitle": "Une soirée clé en main"
+      },
+      "decouvrir": {
+        "title": "Le Pillaveur",
+        "subtitle": "La maison des jeux de soirée"
+      },
       "joueurs": {
         "title": "Joueurs",
         "subtitle": "Gérer l'équipe"
@@ -2028,7 +2044,8 @@
         "goalReached": "Vous avez atteint l'objectif de {count} bonnes réponses consécutives !",
         "fiveSame": "La carte {value} {suit} est sortie pour la 5e fois.",
         "results": "Résultats",
-        "sipsResult": "{count, plural, one {# gorgée} other {# gorgées}}"
+        "sipsResult": "{count, plural, one {# gorgée} other {# gorgées}}",
+        "missLimit": "Tout le monde a loupé {count} fois"
       },
       "wrong": {
         "title": "Mauvaise réponse !",
@@ -2067,6 +2084,12 @@
       "traverseeExit": "{name} a trouvé l'égalité et quitte la traversée !",
       "traverseeOut": "a quitté la traversée",
       "nextTurnButton": "Au tour de {name}",
+      "missLimit": {
+        "rule": "Fin de manche à {count, plural, one {# loupé} other {# loupés}} chacun",
+        "count": "{count, plural, =0 {aucun loupé} one {# loupé} other {# loupés}} sur {limit}",
+        "roundOver": "Fin de la manche",
+        "seeResults": "Voir le bilan"
+      },
       "verdict": {
         "everyone": "Tout le monde boit {count, plural, one {# gorgée} other {# gorgées}} !",
         "group": "{names} boivent {count, plural, one {# gorgée} other {# gorgées}} !",
@@ -7696,6 +7719,7 @@
         "local": "Local"
       },
       "unknownGame": "Jeu inconnu",
+      "soireeSubject": "Soirée entière",
       "noComment": "Pas de commentaire, seulement une note."
     },
     "firstGameFeedback": {
@@ -7727,6 +7751,19 @@
       "commentsEmpty": "Aucun commentaire écrit pour l'instant : les joueurs ont seulement noté.",
       "commentsShowAll": "Voir les {count} commentaires",
       "commentsCollapse": "Replier"
+    },
+    "soireeFeedback": {
+      "title": "Votes du Mode Soirée",
+      "desc": "Le vote de la table à chaque entracte (« Ce jeu vous a plu ? ») et sur l’addition (« La soirée vous a plu ? »). Les votes avec un commentaire arrivent aussi dans Modération › Signalements ; les notes seules ne vivent qu’ici.",
+      "loadError": "Impossible de charger les votes du Mode Soirée.",
+      "empty": "Aucun vote de soirée pour l’instant.",
+      "emptyHint": "Ils apparaissent ici dès qu’une table vote à un entracte ou sur l’addition.",
+      "averageLabel": "Note moyenne des soirées",
+      "totalCount": "{count, plural, =0 {Aucune soirée notée} one {# soirée notée} other {# soirées notées}}",
+      "byGameTitle": "Moyenne par jeu, à l’entracte",
+      "byGameHint": "Classés par nombre de votes : une moyenne sur deux votes ne dit pas grand-chose.",
+      "byGameEmpty": "Aucun jeu noté à l’entracte pour l’instant.",
+      "commentsEmpty": "Aucun commentaire écrit pour l’instant : les tables ont seulement voté."
     },
     "history": {
       "activeConnection": "Connexion active",
@@ -8741,6 +8778,441 @@
     },
     "feed": {
       "newer": "Nouvelles paroles"
+    }
+  },
+  "soireeBar": {
+    "label": "Soirée · {number}/{total}",
+    "complete": "Manche terminée !",
+    "continue": "Continuer la soirée",
+    "back": "Retour à la soirée",
+    "nextRound": "Manche suivante",
+    "toAddition": "Vers l’addition"
+  },
+  "soiree": {
+    "loading": "Chargement de la soirée…",
+    "backToBande": "Revenir à la bande",
+    "meta": {
+      "title": "Mode Soirée",
+      "description": "Une soirée de jeux à boire clé en main : la bande, un programme qui monte en intensité, l’ardoise et l’addition."
+    },
+    "home": {
+      "eyebrow": "Mode Soirée",
+      "title": "Vous êtes combien ce soir ?",
+      "lead": "Dites qui joue. Le Pillaveur compose la soirée, enchaîne les jeux et tient l’ardoise jusqu’à l’addition.",
+      "countLabel": "Nombre de joueurs",
+      "players": "{count, plural, one {joueur} other {joueurs}}",
+      "less": "Un joueur de moins",
+      "more": "Un joueur de plus",
+      "start": "Composer notre soirée",
+      "single": "Jouer à un seul jeu",
+      "stats": "Quel jeu fait le plus boire ?",
+      "resume": {
+        "eyebrow": "Soirée en cours",
+        "title": "Reprendre à la manche {round} sur {total}",
+        "cta": "Reprendre"
+      },
+      "revenge": {
+        "eyebrow": "On remet ça ?",
+        "title": "{name} · soirée n°{number}",
+        "lastPayer": "La dernière fois, {name} a payé l’addition.",
+        "lastTie": "La dernière fois : égalité en tête.",
+        "ready": "La bande est prête."
+      },
+      "stepsLabel": "Comment se passe une soirée",
+      "steps": {
+        "bande": {
+          "title": "La bande",
+          "text": "Les prénoms, une fois pour toute la soirée."
+        },
+        "programme": {
+          "title": "Le programme",
+          "text": "Des manches qui montent en intensité, dans l’ordre que vous voulez."
+        },
+        "addition": {
+          "title": "L’addition",
+          "text": "Le palmarès de la soirée, à envoyer dans le groupe."
+        }
+      },
+      "about": {
+        "title": "Le Pillaveur, la maison des jeux de soirée",
+        "text": "{count} jeux de soirée gratuits, sur un seul téléphone ou un téléphone chacun : dés, cartes, quiz, bluff et défis. Le Mode Soirée les enchaîne pour vous, du plus calme au plus intense.",
+        "discover": "Découvrir Le Pillaveur",
+        "allGames": "Voir tous les jeux"
+      },
+      "note": "Un seul téléphone suffit · gratuit · sans inscription.",
+      "health": "L’abus d’alcool est dangereux pour la santé. Sans alcool, l’ardoise compte les victoires."
+    },
+    "units": {
+      "drinks": "{count, plural, one {# gorgée} other {# gorgées}}",
+      "wins": "{count, plural, one {# victoire} other {# victoires}}"
+    },
+    "bande": {
+      "eyebrow": "Étape 1 sur 3",
+      "title": "La bande",
+      "lead": "Un prénom par joueur. Un prénom déjà connu reprend son joueur et ses stats.",
+      "bandes": "Bandes déjà venues",
+      "listLabel": "Joueurs de la soirée",
+      "nameLabel": "Prénom du joueur {number}",
+      "placeholder": "Joueur {number}",
+      "remove": "Retirer le joueur {number}",
+      "add": "Ajouter un joueur",
+      "known": "Vos joueurs enregistrés",
+      "continue": "Continuer avec {count, plural, one {# joueur} other {# joueurs}}",
+      "errors": {
+        "tooFew": "Il faut au moins {min} joueurs pour une soirée.",
+        "duplicate": "Deux joueurs s’appellent {name} : ajoutez une initiale.",
+        "refused": "Ce prénom n’est pas accepté : {name}."
+      },
+      "leadKnown": "Cochez les joueurs de ce soir. Un nouveau prénom crée le joueur.",
+      "newLabel": "Prénom d’un nouveau joueur",
+      "newPlaceholder": "Nouveau joueur",
+      "pickMore": "Choisissez au moins {min} joueurs"
+    },
+    "ambiance": {
+      "eyebrow": "Étape 2 sur 3",
+      "title": "L’ambiance",
+      "lead": "Elle choisit les jeux du programme et leur ordre.",
+      "vibeLabel": "Ambiance de la soirée",
+      "vibes": {
+        "apero": {
+          "name": "Apéro tranquille",
+          "pitch": "Des jeux calmes pour se chauffer."
+        },
+        "monte": {
+          "name": "Ça monte",
+          "pitch": "Doux au début, ça finit fort."
+        },
+        "grosse": {
+          "name": "Grosse soirée",
+          "pitch": "Les jeux qui font le plus trinquer."
+        }
+      },
+      "soft": {
+        "title": "Sans alcool",
+        "text": "Les jeux passent sans alcool et l’ardoise compte les victoires au lieu des gorgées."
+      },
+      "lengthTitle": "Durée",
+      "lengths": {
+        "court": "Rapide",
+        "normal": "Normale",
+        "long": "Longue",
+        "carte": "À la carte"
+      },
+      "rounds": "{count, plural, one {# manche} other {# manches}}",
+      "carteHint": "Vos jeux",
+      "pick": "Choisir mes jeux",
+      "compose": "Composer le programme"
+    },
+    "programme": {
+      "eyebrow": "Étape 3 sur 3",
+      "title": "Votre programme",
+      "lead": "Changez un jeu, montez-le, descendez-le : c’est votre soirée.",
+      "heat": "Intensité {value} sur 3",
+      "curve": "Courbe d’intensité de la soirée, de la chauffe au final",
+      "warm": "CHAUFFE",
+      "final": "FINAL",
+      "summary": "{count, plural, one {# manche} other {# manches}} · environ {minutes} min",
+      "empty": "Aucun jeu pour l’instant : ajoutez-en un, ou plusieurs.",
+      "listLabel": "Programme de la soirée",
+      "roundNumber": "Manche {number}",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Ardoise à vérifier",
+        "manual": "Ardoise à saisir"
+      },
+      "up": "Monter {game}",
+      "down": "Descendre {game}",
+      "change": "Changer",
+      "remove": "Retirer {game}",
+      "add": "Ajouter un jeu",
+      "reroll": "Tout redistribuer",
+      "replaceTitle": "Remplacer {game}",
+      "addTitle": "Ajouter un jeu",
+      "launch": "Lancer la soirée",
+      "launchOne": "Lancer la partie",
+      "restart": "Changer la bande ou l’ambiance"
+    },
+    "picker": {
+      "lead": "Du plus calme au plus intense. Les jeux comptent les gorgées tout seuls, sauf mention.",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Ardoise à vérifier",
+        "manual": "Ardoise à saisir"
+      },
+      "inProgram": "Déjà au programme",
+      "minPlayers": "Dès {count} joueurs"
+    },
+    "round": {
+      "eyebrow": "Manche {number} sur {total}",
+      "lead": "La partie se joue sur la page du jeu. Les gorgées arrivent toutes seules sur l’ardoise à la fin.",
+      "manual": "Ce jeu ne compte pas les gorgées : vous les saisirez à l’entracte.",
+      "tallyLabel": "Ardoise de la manche",
+      "complete": "Fin de partie reçue : validez la manche.",
+      "partial": "Une partie de l’ardoise est arrivée.",
+      "waiting": "Pas encore de résultat.",
+      "validate": "Valider la manche",
+      "goToGame": "Aller au jeu",
+      "done": "Manche finie",
+      "restart": "Relancer",
+      "skip": "Passer",
+      "howTo": "Comment on joue ?"
+    },
+    "entracte": {
+      "eyebrow": "Entracte · {done} sur {total}",
+      "title": "L’ardoise",
+      "leadDrinks": "Gorgées bues depuis le début de la soirée.",
+      "leadWins": "Manches gagnées depuis le début de la soirée.",
+      "lastLabel": "La manche qui vient de finir",
+      "lastEyebrow": "Manche {number}",
+      "skipped": "Manche passée.",
+      "nobodyDrank": "Personne n’a bu.",
+      "nobodyWon": "Personne n’a gagné.",
+      "correct": "Corriger",
+      "manualPrompt": "{game} ne compte pas les gorgées : saisissez-les.",
+      "partialPrompt": "{game} ne compte pas tout : vérifiez l’ardoise.",
+      "correctLead": "Ajoutez ce qui s’est dit à voix haute.",
+      "less": "Une de moins pour {name}",
+      "more": "Une de plus pour {name}",
+      "correctDone": "C’est bon",
+      "water": "Un verre d’eau entre deux manches : la soirée dure plus longtemps.",
+      "nextLabel": "Manche suivante",
+      "nextEyebrow": "Manche {number}",
+      "minutes": "~{minutes} min",
+      "editProgram": "Modifier la suite du programme",
+      "closeProgram": "Fermer le programme",
+      "confirmTitle": "Finir la soirée maintenant ?",
+      "confirmBody": "L’addition comptera {count, plural, one {la # manche jouée} other {les # manches jouées}}.",
+      "confirmOk": "Voir l’addition",
+      "confirmCancel": "Continuer",
+      "next": "Manche {number} : {game}",
+      "skip": "Passer",
+      "finish": "Finir ici",
+      "addition": "Voir l’addition"
+    },
+    "addition": {
+      "eyebrow": "Fin de la soirée",
+      "title": "L’addition",
+      "gamesTitle": "Jeu par jeu",
+      "gameTop": "dont {count} pour {name}",
+      "awardsTitle": "Le palmarès",
+      "momentsTitle": "Les moments de la soirée",
+      "stats": "Quel jeu fait le plus boire ?",
+      "revanche": "On remet ça : la revanche",
+      "new": "Nouvelle soirée",
+      "home": "Accueil",
+      "receipt": {
+        "brand": "LE PILLAVEUR",
+        "counter": "COMPTOIR · MODE SOIRÉE",
+        "table": "Table du soir",
+        "night": "{bande} · soirée n°{number}",
+        "short": {
+          "drinks": "{count} gorg.",
+          "wins": "{count} vict."
+        },
+        "total": "TOTAL",
+        "rounds": "manches jouées",
+        "payer": "{name} PAYE L’ADDITION",
+        "tie": "ÉGALITÉ EN TÊTE : ADDITION PARTAGÉE",
+        "thanks": "MERCI DE VOTRE VISITE · À LA REVANCHE"
+      },
+      "awards": {
+        "pilier": {
+          "title": "Le Pilier de comptoir",
+          "why": "{count, plural, one {# gorgée} other {# gorgées}} sur la soirée"
+        },
+        "survivant": {
+          "title": "Le Survivant",
+          "why": "seulement {count, plural, one {# gorgée} other {# gorgées}}"
+        },
+        "roi": {
+          "title": "Le Roi des manches",
+          "why": "{count, plural, one {# manche gagnée} other {# manches gagnées}}"
+        },
+        "champion": {
+          "title": "Le Champion",
+          "why": "{count, plural, one {# victoire} other {# victoires}}"
+        },
+        "lanterne": {
+          "title": "La Lanterne rouge",
+          "why": "{count, plural, one {# victoire} other {# victoires}}"
+        },
+        "gros-coup": {
+          "title": "Le Gros Coup",
+          "why": "{count} gorgées d’un coup à {game}"
+        },
+        "arrose": {
+          "title": "Le jeu le plus arrosé",
+          "why": "{count, plural, one {# gorgée} other {# gorgées}} ce soir"
+        }
+      },
+      "moments": {
+        "roundDrinks": "{game} a fait boire {total, plural, one {# gorgée} other {# gorgées}}, dont {top} pour {name}.",
+        "roundWin": "{name} a remporté {game}.",
+        "streak": "{name} a gagné {count} manches d’affilée.",
+        "sober": "{name} n’a pas bu une goutte de la soirée.",
+        "roundDrinksAll": "{game} a fait boire {total} gorgées, toutes pour {name}."
+      },
+      "recap": {
+        "title": "L’addition · {bande} · soirée n°{number}",
+        "payer": "{name} paye l’addition.",
+        "footer": "Revanche sur lepillaveur.fr"
+      },
+      "share": {
+        "title": "À envoyer dans le groupe",
+        "make": "Créer l’image de l’addition",
+        "making": "Impression de l’addition…",
+        "ready": "Image prête.",
+        "failed": "L’image n’a pas pu être créée sur ce téléphone.",
+        "share": "Partager l’image",
+        "copy": "Copier le récap en texte",
+        "copied": "Récap copié : collez-le dans le groupe.",
+        "copyFailed": "La copie est bloquée sur ce navigateur.",
+        "alt": "L’addition de la soirée"
+      },
+      "keep": {
+        "title": "Garder la bande",
+        "lead": "La prochaine fois, la revanche se lance en un toucher, avec l’historique des additions.",
+        "label": "Nom de la bande",
+        "default": "La bande de {name}",
+        "save": "Garder la bande",
+        "known": "Soirée n°{count} ajoutée à l’historique de {name}."
+      },
+      "gameTopAll": "toutes pour {name}"
+    },
+    "stats": {
+      "eyebrow": "Sur ce téléphone",
+      "title": "Quel jeu fait le plus boire ?",
+      "lead": "Gorgées moyennes par joueur et par partie, d’après les parties jouées sur ce téléphone.",
+      "empty": "Pas encore assez de parties sur ce téléphone pour classer les jeux. Lancez une soirée !",
+      "rankingLabel": "Jeux classés du plus arrosé au moins arrosé",
+      "perPlayUnit": "gorgées / joueur",
+      "rowDetail": "{drinks, plural, one {# gorgée} other {# gorgées}} · {plays, plural, one {# participation} other {# participations}}",
+      "rowTop": "record : {name} ({count})",
+      "drinkersTitle": "Les plus gros buveurs",
+      "drinkerDetail": "{drinks, plural, one {# gorgée} other {# gorgées}} en {plays, plural, one {# partie} other {# parties}}",
+      "soireesTitle": "Vos soirées",
+      "soireesCount": "{count, plural, one {# soirée jouée} other {# soirées jouées}} sur ce téléphone.",
+      "soireesAverage": "{value} gorgées par soirée en moyenne.",
+      "soireesRecord": "Record : {count} gorgées, le {date}.",
+      "soireesFavorite": "Jeu le plus programmé : {game} ({count, plural, one {# manche} other {# manches}}).",
+      "note": "Les parties sans alcool comptent zéro gorgée. Coupe du Roi et Doigt du Destin ne comptent que ce qui a été saisi pendant une soirée.",
+      "cta": "Composer une soirée"
+    },
+    "launching": "Ouverture de {game}…",
+    "intro": {
+      "eyebrow": "Manche {number} sur {total}",
+      "howTo": "Comment on joue",
+      "players": "Joueurs de la manche",
+      "start": "C’est parti",
+      "back": "Retour",
+      "skip": "Passer cette manche",
+      "softNote": "Sans alcool : les jeux comptent des points ou des gages à la place des gorgées.",
+      "steps": {
+        "rule": "Le principe",
+        "drinks": "Les gorgées",
+        "points": "Les pénalités",
+        "end": "La fin"
+      }
+    },
+    "tutorials": {
+      "1220": {
+        "a": "Chacun règle ses paris : parité de la somme, une plage (2-10, 11-20 ou 21-30), un chiffre qui fait boire et un qui fait donner.",
+        "b": "On lance un dé 12 et un dé 20. Somme égale à ton chiffre « boire » : tu bois. À ton chiffre « donner », bonne parité ou bonne plage : tu distribues.",
+        "c": "Un chiffre sur un seul dé compte à moitié : cumulez les combos. On relance autant que la table veut."
+      },
+      "vue-de-nez": {
+        "a": "Une question dont la réponse est un nombre : chacun tape son estimation en secret, puis passe le téléphone.",
+        "b": "Le plus proche distribue 3 gorgées (6 s’il tombe dans le mille), le plus loin en boit 3.",
+        "c": "Les estimations se révèlent sur une règle graduée, puis vient la question suivante. Le meilleur nez gagne."
+      },
+      "pile-poil": {
+        "a": "À ton tour, lance le chrono et arrête-le pile à 10 secondes : les chiffres s’effacent au bout de 3 secondes.",
+        "b": "Le plus loin de la cible boit (1 gorgée par demi-seconde d’écart, 5 au plus). Pile poil : tu distribues 5 gorgées.",
+        "c": "Après le dernier tour, le plus petit écart cumulé l’emporte."
+      },
+      "purple": {
+        "a": "À ton tour, parie sur la couleur des deux prochaines cartes : Rouge, Noir, ou Purple (une rouge et une noire).",
+        "b": "Chaque pari réussi fait grimper le compteur. Raté : tu bois tout le compteur et il repart à zéro.",
+        "c": "Arrêtez quand vous voulez : le bilan affiche les gorgées de chacun."
+      },
+      "blackjack": {
+        "a": "Chacun joue contre le croupier, pas contre la table : mise 1, 2 ou 3 jetons avant chaque manche.",
+        "b": "Approche 21 sans le dépasser (figures 10, as 1 ou 11). Battu ou sauté : tu bois ta mise ; gagné : tu la distribues.",
+        "c": "Le croupier tire jusqu’à 17. Un Black Jack paie une fois et demie. Enchaînez les manches, le bilan fait les comptes."
+      },
+      "hi-lo": {
+        "a": "Une carte est retournée : annonce si la suivante sera plus haute, plus basse ou égale.",
+        "b": "Juste : la série continue et la mise monte. Faux : tu bois la mise en jeu.",
+        "c": "Deux loupés chacun : tout le monde continue de jouer, et la manche s’arrête quand chacun a loupé au moins deux fois."
+      },
+      "chiffre-piege": {
+        "a": "Le téléphone cache un nombre piège : à ton tour, propose un nombre dans l’intervalle affiché.",
+        "b": "Raté : l’intervalle se resserre et le téléphone passe. Pile dessus : BOUM, tu bois une gorgée par essai de la manche.",
+        "c": "Un joker par partie pour passer ton tour. À la fin, celui qui a le moins bu gagne."
+      },
+      "plinko": {
+        "a": "Chacun son tour lâche une bille en haut du plateau : elle rebondit sur les clous jusqu’à une case du bas.",
+        "b": "Bille rouge : tu bois les gorgées de la case. Bille verte : tu les donnes. Les clous spéciaux doublent, ajoutent, retirent ou lancent une tournée générale.",
+        "c": "Quand tout le monde a joué, le bilan affiche les gorgées de chacun."
+      },
+      "monsieur-3": {
+        "a": "Chacun lance un dé : le premier qui fait 3 devient Monsieur 3.",
+        "b": "Ensuite, on lance deux dés : chaque 3 ou 5, ou une somme de 3, fait boire Monsieur 3. Somme 5 ou 8 : un geste à faire, le dernier boit. Un double : duel.",
+        "c": "Quand Monsieur 3 lance sans rien déclencher, la partie s’arrête."
+      },
+      "pmu": {
+        "a": "Chacun choisit son cheval, puis la course part toute seule.",
+        "b": "Les cavaliers du cheval gagnant distribuent un nombre de gorgées tiré au sort.",
+        "c": "Une course par manche : à l’entracte, notez sur l’ardoise qui a bu quoi."
+      },
+      "front-colle": {
+        "a": "Le devineur colle le téléphone sur son front, écran tourné vers la table.",
+        "b": "La table fait deviner le mot en le décrivant, en le mimant ou en le fredonnant, sans jamais le dire.",
+        "c": "Téléphone vers le sol : trouvé ; vers le plafond : on passe. Au bout du chrono, le bilan dit qui boit et le front change."
+      },
+      "doigt-du-destin": {
+        "a": "Tout le monde pose un doigt sur l’écran et le garde posé.",
+        "b": "Le destin choisit un doigt : il boit 3 gorgées. En survie, les doigts tombent un à un et le dernier distribue 5 gorgées.",
+        "c": "Lever son doigt avant la fin coûte 2 gorgées. L’ardoise de cette manche se remplit à la main, à l’entracte."
+      },
+      "patate-chaude": {
+        "a": "Un défi s’affiche (un thème, une lettre ou une syllabe) et la mèche de la bombe est secrète.",
+        "b": "Dis un mot qui colle, touche « Je passe » et tends vite le téléphone. Deux mots refusés de suite : 1 gorgée.",
+        "c": "BOUM : qui tient la bombe boit 3 gorgées. À la fin des manches, le moins d’explosions gagne."
+      },
+      "cap-ou-pas-cap": {
+        "a": "À ton tour, choisis Vérité ou Action : la carte se retourne avec son prix, de 1 à 5.",
+        "b": "Cap ! Tu relèves et tu distribues le prix. Pas cap ? Tu bois le prix.",
+        "c": "Une fois par partie, renvoie la carte à un autre joueur au double du prix. Arrêtez quand la table le décide."
+      },
+      "coupe-du-roi": {
+        "a": "Le téléphone au centre de la table : à ton tour, tire une carte, sa règle s’applique tout de suite.",
+        "b": "Certaines cartes donnent un rôle ou une règle qui dure : l’appli tient la liste. Les gorgées se règlent à la table.",
+        "c": "À chaque roi, un peu de ton verre dans la coupe : le quatrième roi la boit (ou 5 gorgées). L’ardoise se remplit à la main."
+      },
+      "petit-buveur": {
+        "a": "À ton tour, lance le dé et avance d’autant de cases.",
+        "b": "Selon la case : bois des gorgées, relève un défi ou déclenche un effet (échange, malédiction, protection…).",
+        "c": "Le premier sur la case 30 gagne la partie."
+      }
+    },
+    "vote": {
+      "round": "Ce jeu vous a plu ?",
+      "soiree": "La soirée vous a plu ?",
+      "faces": {
+        "1": "Pas du tout",
+        "2": "Bof",
+        "3": "Moyen",
+        "4": "Bien",
+        "5": "Génial"
+      },
+      "commentLabel": "Un mot à ajouter ? (facultatif)",
+      "commentPlaceholder": "Ce qui vous a plu, ce qui manquait…",
+      "send": "Envoyer",
+      "thanks": "Merci, c’est noté !",
+      "error": "Vote non envoyé : vérifiez la connexion et réessayez.",
+      "tooMany": "Trop de votes d’un coup : réessayez dans un moment.",
+      "note": "Votre vote nous aide à améliorer le Mode Soirée."
     }
   }
 }

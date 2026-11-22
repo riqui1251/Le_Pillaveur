@@ -1,7 +1,15 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+
+/**
+ * Actions imposées par la page autour du jeu, à la place des siennes : le
+ * Mode Soirée y met « Manche suivante » au lieu de « Rejouer » et « Quitter »
+ * (SoireeEndActions, posé par le layout des jeux en mode local). Null
+ * partout ailleurs : en ligne, le dock ne change pas.
+ */
+export const EndActionsOverride = createContext<ReactNode>(null)
 
 /**
  * DOCK D'ACTIONS DE FIN DE PARTIE — partagé par l'écran de fin en ligne
@@ -82,6 +90,7 @@ export function EndActionDock({
   const dockRef = useRef<HTMLDivElement>(null)
   const [reserved, setReserved] = useState(0)
   const fixed = mode === 'fixed'
+  const override = useContext(EndActionsOverride)
 
   // Hauteur réelle du dock (zone sûre, libellés sur deux lignes, bandeau
   // d'avis, ligne d'erreur) : une réserve calculée en rem se trompait dès
@@ -127,7 +136,7 @@ export function EndActionDock({
   const inner = (
     <div className={cn('mx-auto flex w-full max-w-sm flex-col gap-2', DOCK_FOCUS)}>
       {feedback ? <div className="empty:hidden">{feedback}</div> : null}
-      {children}
+      {override ?? children}
     </div>
   )
 

@@ -1,4 +1,5 @@
 import { createHash } from 'crypto'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
 import { isFirstGameFeedbackEligible, isLocalFirstGameFeedbackEligible } from '@/lib/first-game-feedback'
@@ -115,6 +116,22 @@ export async function summarizeFirstGameFeedback(
   now: Date = new Date()
 ): Promise<FirstGameFeedbackSummary> {
   const rated = { type: FIRST_GAME_FEEDBACK_TYPE, rating: { not: null } }
+  return summarizeRatedFeedback({ overall: rated, byGame: rated }, now)
+}
+
+/**
+ * Le même résumé pour tout retour noté 1..5 (avis de 1re partie, votes du
+ * Mode Soirée) : `overall` nourrit total, 30 jours, répartition et
+ * commentaires ; `byGame` la moyenne par jeu (lignes sans jeu écartées).
+ * Les deux coïncident pour l'avis de 1re partie ; la soirée les sépare — la
+ * note de la soirée entière d'un côté, celle de chaque jeu à l'entracte de
+ * l'autre.
+ */
+export async function summarizeRatedFeedback(
+  where: { overall: Prisma.UserFeedbackWhereInput; byGame: Prisma.UserFeedbackWhereInput },
+  now: Date = new Date()
+): Promise<FirstGameFeedbackSummary> {
+  const rated = where.overall
   const recentSince = new Date(now.getTime() - FIRST_GAME_SUMMARY_RECENT_DAYS * DAY_MS)
 
   const [all, recent, byRating, byGame, comments] = await Promise.all([
@@ -135,7 +152,7 @@ export async function summarizeFirstGameFeedback(
     }),
     prisma.userFeedback.groupBy({
       by: ['gameId'],
-      where: { ...rated, gameId: { not: null } },
+      where: { ...where.byGame, gameId: { not: null } },
       _count: { _all: true },
       _avg: { rating: true },
     }),

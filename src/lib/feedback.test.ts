@@ -3,8 +3,10 @@ import {
   FEEDBACK_INBOX_WHERE,
   FEEDBACK_TYPES,
   FIRST_GAME_FEEDBACK_TYPE,
+  SOIREE_FEEDBACK_TYPE,
   feedbackTypeLabel,
   isFeedbackType,
+  isRatedFeedbackType,
 } from '@/lib/feedback'
 
 /**
@@ -24,6 +26,14 @@ describe('FIRST_GAME_FEEDBACK_TYPE', () => {
   it('les trois types du formulaire restent acceptés', () => {
     for (const type of ['bug', 'improvement', 'comment']) expect(isFeedbackType(type)).toBe(true)
   })
+
+  it('les votes du Mode Soirée non plus ne passent pas par le formulaire générique', () => {
+    expect(SOIREE_FEEDBACK_TYPE).toBe('soiree')
+    expect(isFeedbackType(SOIREE_FEEDBACK_TYPE)).toBe(false)
+    expect(isRatedFeedbackType(SOIREE_FEEDBACK_TYPE)).toBe(true)
+    expect(isRatedFeedbackType(FIRST_GAME_FEEDBACK_TYPE)).toBe(true)
+    expect(isRatedFeedbackType('bug')).toBe(false)
+  })
 })
 
 describe('feedbackTypeLabel', () => {
@@ -32,6 +42,7 @@ describe('feedbackTypeLabel', () => {
     expect(feedbackTypeLabel('improvement')).toBe('Amélioration')
     expect(feedbackTypeLabel('comment')).toBe('Commentaire')
     expect(feedbackTypeLabel(FIRST_GAME_FEEDBACK_TYPE)).toBe('Avis 1re partie')
+    expect(feedbackTypeLabel(SOIREE_FEEDBACK_TYPE)).toBe('Avis Mode Soirée')
   })
 
   it('type inconnu (colonne brute) : renvoyé tel quel, jamais une exception', () => {
@@ -40,7 +51,7 @@ describe('feedbackTypeLabel', () => {
 })
 
 describe('FEEDBACK_INBOX_WHERE', () => {
-  it('écarte exactement « 1re partie ET message vide » — rien d’autre', () => {
-    expect(FEEDBACK_INBOX_WHERE).toEqual({ NOT: { type: 'first-game', message: '' } })
+  it('écarte exactement « note sans commentaire » (1re partie, soirée) — rien d’autre', () => {
+    expect(FEEDBACK_INBOX_WHERE).toEqual({ NOT: { type: { in: ['first-game', 'soiree'] }, message: '' } })
   })
 })

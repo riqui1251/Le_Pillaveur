@@ -18,6 +18,7 @@ import {
 } from '../lib/players';
 import { useAuth } from '@/hooks/useAuth';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
+import { noteSoireeStats } from '@/lib/soiree/storage';
 import { syncLocalPlayersNow } from '@/lib/visit-ping-client';
 import {
   markCloudBehind,
@@ -212,6 +213,9 @@ export function usePlayers() {
 
   const updatePlayerStats = useCallback((playerId: string, gameId: string, stats: Partial<PlayerStats>) => {
     const updatedPlayers = updatePlayerStatsInStorage(playerId, gameId, stats);
+    // Le seul passage commun aux jeux locaux en fin de partie : la manche en
+    // cours du Mode Soirée y prend ses gorgées (src/lib/soiree/storage.ts).
+    noteSoireeStats(playerId, gameId, stats);
     setPlayers(updatedPlayers);
     setTopPlayers(getTopPlayers());
     setMostActivePlayers(getMostActivePlayers());

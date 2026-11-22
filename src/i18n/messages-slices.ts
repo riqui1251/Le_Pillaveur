@@ -165,8 +165,11 @@ export function mergeMessages(base: AbstractIntlMessages, extra: AbstractIntlMes
 export function coreMessages(all: AbstractIntlMessages): AbstractIntlMessages {
   let trimmed = all
   for (const path of [...SERVER_ONLY_PATHS, ...ON_DEMAND_PATHS]) trimmed = omitPath(trimmed, path.split('.'))
-  const { supervision: _supervision, games, ...rest } = trimmed
+  // `soiree` (Mode Soirée) n'arrive que sur ses pages (soireeSlice) ; le
+  // bandeau des pages de jeu vit dans le petit `soireeBar`, resté au socle.
+  const { supervision: _supervision, soiree: _soiree, games, ...rest } = trimmed
   void _supervision
+  void _soiree
   if (!isNode(games)) return rest
   const shared: AbstractIntlMessages = {}
   for (const [key, value] of Object.entries(games)) {
@@ -211,6 +214,11 @@ export function supervisionSlice(all: AbstractIntlMessages): AbstractIntlMessage
   return isNode(all.supervision) ? { supervision: all.supervision } : {}
 }
 
+/** La tranche du Mode Soirée : `soiree` seul, pour l'accueil et les pages /soiree. */
+export function soireeSlice(all: AbstractIntlMessages): AbstractIntlMessages {
+  return isNode(all.soiree) ? { soiree: all.soiree } : {}
+}
+
 /** La tranche du tuto des nouveaux joueurs : `tour` seul, servie à la demande (ON_DEMAND_PATHS). */
 export function tourSlice(all: AbstractIntlMessages): AbstractIntlMessages {
   return isNode(all.tour) ? { tour: all.tour } : {}
@@ -234,6 +242,11 @@ export function gameMessages(all: AbstractIntlMessages, gameId: string): Abstrac
 /** Catalogue effectif de l'espace staff : socle + supervision. */
 export function supervisionMessages(all: AbstractIntlMessages): AbstractIntlMessages {
   return mergeMessages(coreMessages(all), supervisionSlice(all))
+}
+
+/** Catalogue effectif de l'accueil et des pages /soiree : socle + Mode Soirée. */
+export function soireeMessages(all: AbstractIntlMessages): AbstractIntlMessages {
+  return mergeMessages(coreMessages(all), soireeSlice(all))
 }
 
 /** Catalogue effectif de l'écran TV : socle + tous les jeux. */

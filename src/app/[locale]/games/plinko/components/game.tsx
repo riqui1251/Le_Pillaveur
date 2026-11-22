@@ -13,6 +13,7 @@ import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
 import { EndActionDock } from '@/components/game/EndActionDock'
 import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
 import { FirstGameFeedbackCard } from '@/components/feedback/FirstGameFeedbackCard'
+import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { cn } from '@/lib/utils'
 import { playGameSound, isSoundMuted, setSoundMuted as persistSoundMuted } from '@/lib/sound/game-sounds'
 import { useCastRoom } from '@/hooks/useCastRoom'
@@ -47,6 +48,7 @@ interface GameProps {
   onRestartGame: () => void
   difficulty: DifficultyLevel
   isCumulativeMode: boolean
+  updatePlayerStats: (playerId: string, gameId: string, stats: { gamesPlayed: number; totalDrinks?: number }) => void
 }
 
 // --- AJOUT: Définition des settings de difficulté ici pour l'utiliser dans le setup ---
@@ -372,7 +374,10 @@ function tooltipPosition(x: number, y: number): CSSProperties {
   return { left: `${x}%`, top, transform: `translate(-50%, ${ty})` };
 }
 
-export default function Game({ players, onGameEnd, onRestartGame, difficulty, isCumulativeMode }: GameProps) {
+export default function Game({ players, onGameEnd, onRestartGame, difficulty, isCumulativeMode, updatePlayerStats }: GameProps) {
+  const { mode: ambiance } = useAmbianceMode()
+  /** Une partie n'est créditée qu'une fois. */
+  const gameCountedRef = useRef(false)
   const t = useTranslations('games.plinko')
   const tc = useTranslations('common')
   const tTv = useTranslations('tv')
@@ -1374,6 +1379,18 @@ export default function Game({ players, onGameEnd, onRestartGame, difficulty, is
   // L'écran « Tournées générales » n'est présenté que s'il y en a eu ; posé ici,
   // au même rendu que la fin, pour ne pas montrer une image de « — » avant de sauter.
   const showResults = () => {
+    if (!gameCountedRef.current) {
+      gameCountedRef.current = true
+      // Même total que l'écran final : gorgées rouges de chacun + tournées générales.
+      for (const player of players) {
+        const red = (playerResults[player.id] ?? []).reduce((sum, r) => sum + r.redSips, 0)
+        updatePlayerStats(player.id, 'plinko', {
+          gamesPlayed: 1,
+          // Sans alcool, rien n'est bu : aucune gorgée au compteur.
+          totalDrinks: ambiance === 'soft' ? 0 : red + roundDrinksCount,
+        })
+      }
+    }
     setResultDisplayPhase(roundDrinksCount > 0 ? 'tournees' : 'details')
     setGameOver(true)
   }

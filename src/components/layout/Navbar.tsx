@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2, BookOpen, GraduationCap } from 'lucide-react'
+import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2, BookOpen, GraduationCap, Wine, Sparkles } from 'lucide-react'
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useLocale, useTranslations } from 'next-intl'
@@ -84,6 +84,10 @@ const ChatPanel = dynamic<ChatPanelProps>(
 )
 
 const NAV_LINK_KEYS = [
+  // Le Mode Soirée est l'accueil depuis le 22/11/2026 ; l'ancienne vitrine
+  // reste à portée de menu (« Découvrir Le Pillaveur », plus bas). /soiree
+  // et non / : l'accueil renvoie les comptes en mode en ligne vers /jeux.
+  { href: '/soiree', key: 'soiree', icon: Wine },
   { href: '/joueurs', key: 'joueurs', icon: User },
   { href: '/jeux', key: 'jeux', icon: Gamepad2 },
   // Français seulement : les articles de /regles n'existent qu'en français
@@ -92,6 +96,7 @@ const NAV_LINK_KEYS = [
   { href: '/regles', key: 'regles', icon: BookOpen },
   { href: '/classement', key: 'classement', icon: Trophy },
   { href: '/compte', key: 'compte', icon: Home },
+  { href: '/decouvrir', key: 'decouvrir', icon: Sparkles },
   // Masquée dans la coquille Capacitor (on n'envoie pas vers les stores
   // quelqu'un qui est déjà dans l'app).
   { href: '/application', key: 'application', icon: Smartphone },
