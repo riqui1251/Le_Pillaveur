@@ -7696,7 +7696,8 @@
         "local": "Local"
       },
       "unknownGame": "Unknown game",
-      "noComment": "No comment, just a rating."
+      "noComment": "No comment, just a rating.",
+      "ratingValue": "{rating}/5"
     },
     "firstGameFeedback": {
       "title": "First-game ratings",
@@ -7720,13 +7721,21 @@
       "colCount": "Ratings",
       "colShare": "Share",
       "byGameTitle": "Average by game",
-      "byGameHint": "Sorted by number of ratings: an average over two ratings says little.",
+      "byGameHint": "Sorted by number of ratings: an average over two ratings says little. Pick a game to see who rated it.",
       "byGameEmpty": "No game identified in these ratings.",
       "ratingCount": "{count, plural, one {# rating} other {# ratings}}",
-      "commentsTitle": "Latest comments",
-      "commentsEmpty": "No written comments yet: players have only rated.",
-      "commentsShowAll": "Show all {count} comments",
-      "commentsCollapse": "Show less"
+      "reviewsTitle": "Who rated what",
+      "reviewsHint": "Every rating with its author, stars and comment, newest first. The name opens the account file.",
+      "reviewsFilterLabel": "Game",
+      "reviewsAllGames": "All games ({count})",
+      "reviewsGameOption": "{game} ({count})",
+      "reviewsCount": "{count, plural, =0 {No ratings} one {# rating} other {# ratings}}",
+      "reviewsCountFor": "{count, plural, =0 {No ratings for {game}} one {# rating for {game}} other {# ratings for {game}}}",
+      "reviewsEmpty": "No ratings to show.",
+      "reviewsLoadError": "Couldn't load the list of ratings.",
+      "authorGuest": "Guest",
+      "authorAnonymous": "No account (local game)",
+      "authorDeleted": "Deleted account"
     },
     "history": {
       "activeConnection": "Active sign-in",

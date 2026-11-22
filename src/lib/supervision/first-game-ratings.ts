@@ -1,10 +1,11 @@
 /**
  * Lecture, côté Supervision, du résumé des avis de 1re partie
- * (GET /api/admin/first-game-feedback) et des notes en étoiles.
+ * (GET /api/admin/first-game-feedback), de la liste des avis un par un
+ * (GET /api/admin/first-game-feedback/reviews) et des notes en étoiles.
  *
  * Module PUR, sans React ni Prisma : le panneau et la boîte des retours
- * l'importent côté navigateur, et la route qui produit le résumé vit dans un
- * module serveur qu'on ne veut pas tirer dans le paquet client.
+ * l'importent côté navigateur, et les routes vivent dans un module serveur
+ * qu'on ne veut pas tirer dans le paquet client.
  */
 
 /** Ordre d'affichage de la répartition : 5 étoiles en haut, comme partout ailleurs. */
@@ -17,23 +18,36 @@ export type FirstGamePlayMode = 'online' | 'local'
 
 export type FirstGameByGame = { gameId: string; count: number; average: number }
 
-export type FirstGameComment = {
-  id: string
-  rating: number
-  gameId: string | null
-  playMode: string | null
-  comment: string
-  createdAt: string
-}
-
 export type FirstGameFeedbackSummary = {
   total: number
   average: number | null
   last30d: { count: number; average: number | null }
   distribution: Record<`${FirstGameRating}`, number>
   byGame: FirstGameByGame[]
-  recentComments: FirstGameComment[]
 }
+
+/**
+ * Auteur d'un avis : le compte (pseudo, jamais l'e-mail), un compte supprimé
+ * depuis, ou personne — partie locale jouée sans connexion.
+ */
+export type FirstGameReviewAuthor =
+  | { kind: 'account'; userId: string; name: string; isGuest: boolean }
+  | { kind: 'deleted' }
+  | { kind: 'anonymous' }
+
+export type FirstGameReview = {
+  id: string
+  /** Note entière 1..5. */
+  rating: number
+  gameId: string | null
+  playMode: string | null
+  /** '' quand le joueur a seulement noté. */
+  comment: string
+  createdAt: string
+  author: FirstGameReviewAuthor
+}
+
+export type FirstGameReviewsPage = { reviews: FirstGameReview[]; total: number }
 
 export function isFirstGamePlayMode(value: unknown): value is FirstGamePlayMode {
   return value === 'online' || value === 'local'
@@ -70,12 +84,17 @@ export function sortByGameVolume(rows: FirstGameByGame[]): FirstGameByGame[] {
   )
 }
 
+/** Note d'UN avis : entière, 1..5 ; null sinon (pas de 0, qui n'existe pas). */
+function ratingOf(value: unknown): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= STAR_COUNT ? value : null
+}
+
 /**
  * Valide la réponse de la route et la remet d'aplomb. null = réponse
  * inexploitable (serveur antérieur à la route, page d'erreur du proxy) : le
  * panneau affiche alors son erreur plutôt qu'un 0 qui mentirait.
- * Une rangée ou un commentaire mal formé est écarté seul, sans faire tomber
- * le reste du résumé.
+ * Une rangée mal formée est écartée seule, sans faire tomber le reste du
+ * résumé.
  */
 export function parseFirstGameFeedbackSummary(body: unknown): FirstGameFeedbackSummary | null {
   if (!isRecord(body) || !isRecord(body.summary)) return null
@@ -102,32 +121,53 @@ export function parseFirstGameFeedbackSummary(body: unknown): FirstGameFeedbackS
     byGame.push({ gameId: row.gameId, count, average })
   }
 
-  const recentComments: FirstGameComment[] = []
-  for (const row of Array.isArray(raw.recentComments) ? raw.recentComments : []) {
-    if (!isRecord(row) || typeof row.id !== 'string' || typeof row.comment !== 'string') continue
-    if (typeof row.createdAt !== 'string' || !Number.isFinite(Date.parse(row.createdAt))) continue
-    const rating = averageOf(row.rating)
-    // Commentaire vide : la route ne devrait pas en renvoyer (avis sans
-    // commentaire = note seule) ; s'il en vient un, il n'a rien à lire.
-    if (rating === null || row.comment.trim() === '') continue
-    recentComments.push({
-      id: row.id,
-      rating,
-      gameId: nullableString(row.gameId),
-      playMode: nullableString(row.playMode),
-      comment: row.comment,
-      createdAt: row.createdAt,
-    })
-  }
-
   return {
     total: countOf(raw.total),
     average: averageOf(raw.average),
     last30d: { count: countOf(rawLast30d.count), average: averageOf(rawLast30d.average) },
     distribution,
     byGame: sortByGameVolume(byGame),
-    recentComments,
   }
+}
+
+function parseReviewAuthor(value: unknown): FirstGameReviewAuthor | null {
+  if (!isRecord(value)) return null
+  if (value.kind === 'account') {
+    if (typeof value.userId !== 'string' || value.userId === '' || typeof value.name !== 'string') return null
+    return { kind: 'account', userId: value.userId, name: value.name, isGuest: value.isGuest === true }
+  }
+  if (value.kind === 'deleted' || value.kind === 'anonymous') return { kind: value.kind }
+  return null
+}
+
+/**
+ * Page d'avis un par un. null = réponse inexploitable (même règle que le
+ * résumé). Un avis sans note lisible ou sans auteur reconnu est écarté seul :
+ * l'afficher « sans compte » mentirait sur qui l'a donné.
+ */
+export function parseFirstGameReviewsPage(body: unknown): FirstGameReviewsPage | null {
+  if (!isRecord(body) || !Array.isArray(body.reviews)) return null
+  if (typeof body.total !== 'number' || !Number.isFinite(body.total)) return null
+
+  const reviews: FirstGameReview[] = []
+  for (const row of body.reviews) {
+    if (!isRecord(row) || typeof row.id !== 'string' || row.id === '') continue
+    if (typeof row.createdAt !== 'string' || !Number.isFinite(Date.parse(row.createdAt))) continue
+    const rating = ratingOf(row.rating)
+    const author = parseReviewAuthor(row.author)
+    if (rating === null || author === null) continue
+    reviews.push({
+      id: row.id,
+      rating,
+      gameId: nullableString(row.gameId),
+      playMode: nullableString(row.playMode),
+      comment: typeof row.comment === 'string' ? row.comment : '',
+      createdAt: row.createdAt,
+      author,
+    })
+  }
+
+  return { reviews, total: countOf(body.total) }
 }
 
 /** Répartition dans l'ordre d'affichage (5 → 1), chaque note avec son effectif. */

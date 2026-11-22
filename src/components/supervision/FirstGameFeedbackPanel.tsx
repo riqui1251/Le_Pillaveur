@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
-import { AlertTriangle, MessageSquare, RefreshCw, Star } from 'lucide-react'
-import { EmptyState, ErrorState, SectionCard, SkeletonRows } from '@/components/supervision/SupervisionLayout'
+import { AlertTriangle, RefreshCw, Star, Users } from 'lucide-react'
+import { EmptyState, ErrorState, Pager, SectionCard, SkeletonRows } from '@/components/supervision/SupervisionLayout'
 import { BarList, type BarListRow } from '@/components/supervision/charts'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Link } from '@/i18n/navigation'
 import { GAMES } from '@/lib/games'
 import { PARIS_TIME_ZONE } from '@/lib/paris-time'
 import {
@@ -14,20 +16,24 @@ import {
   filledStars,
   isFirstGamePlayMode,
   parseFirstGameFeedbackSummary,
+  parseFirstGameReviewsPage,
   type FirstGameFeedbackSummary,
+  type FirstGameReviewAuthor,
+  type FirstGameReviewsPage,
 } from '@/lib/supervision/first-game-ratings'
 import { cn } from '@/lib/utils'
 
 /**
  * « Avis après la 1re partie » : la note en un geste demandée à chaque
  * joueur à la fin de sa toute première partie (POST /api/feedback/first-game),
- * résumée par GET /api/admin/first-game-feedback.
+ * résumée par GET /api/admin/first-game-feedback, puis listée avis par avis,
+ * auteur compris, par GET /api/admin/first-game-feedback/reviews.
  *
  * Pourquoi un panneau à part plutôt que la boîte des retours : la plupart de
  * ces avis n'ont PAS de commentaire — une note seule n'a rien à trier, et dix
  * « 4 étoiles » sans texte noieraient les vrais bugs. Ils sont donc exclus de
- * la boîte (FEEDBACK_INBOX_WHERE) et ne vivent qu'ici, agrégés ; ceux qui
- * portent un commentaire restent AUSSI dans la boîte, pour être lus et traités.
+ * la boîte (FEEDBACK_INBOX_WHERE) et ne vivent qu'ici ; ceux qui portent un
+ * commentaire restent AUSSI dans la boîte, pour être lus et traités.
  *
  * Panneau AUTONOME, hors de la boucle de rafraîchissement de 15 s (F40),
  * comme les plantages côté joueur : il se charge à l'ouverture de l'onglet
@@ -39,11 +45,14 @@ import { cn } from '@/lib/utils'
 const BLOCK_LABEL = 'text-[11px] font-semibold uppercase tracking-wide text-cream/70'
 
 /**
- * Commentaires visibles avant le dépli. Le panneau est posé AU-DESSUS de la
- * boîte de tri : dix commentaires de 1 000 caractères repousseraient les
- * retours à traiter à plusieurs écrans de téléphone.
+ * Avis par page dans « Qui a noté quoi ». Le panneau est posé AU-DESSUS de
+ * la boîte de tri : une page plus longue repousserait les retours à traiter
+ * de plusieurs écrans de téléphone.
  */
-const COMMENTS_PREVIEW = 3
+const REVIEWS_PAGE_SIZE = 10
+
+/** Valeur du filtre « tous les jeux » : Radix Select refuse la chaîne vide. */
+const ALL_GAMES = 'all'
 
 /**
  * Titre traduit d'un jeu ; repli sur le catalogue puis sur l'identifiant —
@@ -109,28 +118,42 @@ export function RatingStars({
 
 /**
  * Ligne « note · jeu · mode » d'un avis de 1re partie : partagée par la boîte
- * des retours (liste et détail) et par les commentaires du panneau. Que des
+ * des retours (liste et détail) et par la liste des avis du panneau. Que des
  * `span` : la ligne se pose aussi DANS le bouton d'une entrée de liste, où un
- * `div` n'a pas sa place.
+ * `div` n'a pas sa place. `showValue` écrit la note en chiffres à côté des
+ * étoiles (« 4/5 ») : cinq glyphes se comptent mal d'un coup d'œil.
  */
 export function FirstGameFeedbackMeta({
   rating,
   gameId,
   playMode,
   size = 'sm',
+  showValue = false,
   className,
 }: {
   rating: number | null | undefined
   gameId: string | null | undefined
   playMode: string | null | undefined
   size?: 'sm' | 'lg'
+  showValue?: boolean
   className?: string
 }) {
   const t = useTranslations('supervision.feedback')
   const gameTitle = useGameTitle()
   return (
     <span className={cn('flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1', className)}>
-      {typeof rating === 'number' && <RatingStars rating={rating} size={size} />}
+      {typeof rating === 'number' &&
+        (showValue ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5">
+            <RatingStars rating={rating} size={size} />
+            {/* Valeur lue une fois, par l'aria-label des étoiles. */}
+            <span aria-hidden className="text-sm font-semibold tabular-nums text-cream">
+              {t('ratingValue', { rating })}
+            </span>
+          </span>
+        ) : (
+          <RatingStars rating={rating} size={size} />
+        ))}
       <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-cream/90">
         {gameId && (
           <span aria-hidden>
@@ -149,17 +172,172 @@ export function FirstGameFeedbackMeta({
   )
 }
 
-export function FirstGameFeedbackPanel() {
+/**
+ * Auteur d'un avis : le pseudo du compte, lien vers sa fiche (seul l'id
+ * voyage dans l'URL) ; sinon ce qu'on sait de son absence, en italique.
+ */
+function ReviewAuthor({ author }: { author: FirstGameReviewAuthor }) {
+  const t = useTranslations('supervision.firstGameFeedback')
+  const tSupervision = useTranslations('supervision')
+  if (author.kind !== 'account') {
+    return (
+      <span className="min-w-0 text-sm italic text-cream/70">
+        {t(author.kind === 'deleted' ? 'authorDeleted' : 'authorAnonymous')}
+      </span>
+    )
+  }
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <Link
+        href={`/supervision/comptes/${encodeURIComponent(author.userId)}`}
+        title={tSupervision('accounts.openFileOf', { name: author.name })}
+        className="min-w-0 break-words text-sm font-semibold text-cream underline decoration-cream/30 underline-offset-2 transition-colors hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+      >
+        {author.name}
+      </Link>
+      {author.isGuest && (
+        <span className="inline-flex shrink-0 items-center rounded-md border border-white/10 bg-white/5 px-1.5 py-px text-[11px] font-medium text-cream/80">
+          {t('authorGuest')}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * « Qui a noté quoi » : chaque avis avec son auteur, sa note, son jeu et son
+ * commentaire, le plus récent d'abord, une page à la fois. Monté sous une clé
+ * égale au filtre : changer de jeu repart d'une page 1 vierge. `refreshToken`
+ * change quand l'exploitant clique « Actualiser » : la page en cours se relit.
+ */
+function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null; refreshToken: number }) {
   const t = useTranslations('supervision.firstGameFeedback')
   const tStates = useTranslations('supervision.states')
   const format = useFormatter()
+  const gameTitle = useGameTitle()
+  const [page, setPage] = useState(1)
+  const [data, setData] = useState<FirstGameReviewsPage | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const tRef = useRef(t)
+  tRef.current = t
+  const abortRef = useRef<AbortController | null>(null)
+
+  const load = useCallback(
+    async (target: number) => {
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      setLoading(true)
+      try {
+        const params = new URLSearchParams({ page: String(target), pageSize: String(REVIEWS_PAGE_SIZE) })
+        if (gameId) params.set('gameId', gameId)
+        const res = await fetch(`/api/admin/first-game-feedback/reviews?${params.toString()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const body = await res.json().catch(() => null)
+        if (!res.ok) throw new Error(tRef.current(res.status === 403 ? 'forbidden' : 'reviewsLoadError'))
+        const parsed = parseFirstGameReviewsPage(body)
+        if (!parsed) throw new Error(tRef.current('reviewsLoadError'))
+        // Page vidée entre deux lectures (compte invité purgé, par exemple) :
+        // on retombe sur la dernière page qui existe, pas sur « aucun avis ».
+        const lastPage = Math.max(1, Math.ceil(parsed.total / REVIEWS_PAGE_SIZE))
+        if (target > lastPage) {
+          setPage(lastPage)
+          return
+        }
+        setData(parsed)
+        setError(null)
+      } catch (e) {
+        if (controller.signal.aborted) return
+        setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current('reviewsLoadError'))
+      } finally {
+        if (abortRef.current === controller) setLoading(false)
+      }
+    },
+    [gameId]
+  )
+
+  useEffect(() => {
+    void load(page)
+    return () => {
+      const pending = abortRef.current
+      abortRef.current = null
+      pending?.abort()
+    }
+  }, [load, page, refreshToken])
+
+  if (error) {
+    return <ErrorState icon={AlertTriangle} message={error} retryLabel={tStates('retry')} onRetry={() => void load(page)} />
+  }
+  if (!data) return <SkeletonRows rows={3} />
+
+  const total = data.total
+  const pages = Math.max(1, Math.ceil(total / REVIEWS_PAGE_SIZE))
+  const formatDate = (iso: string) =>
+    format.dateTime(new Date(iso), { dateStyle: 'short', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+
+  return (
+    <div className="space-y-2">
+      <p aria-live="polite" className="text-xs text-cream/70">
+        {gameId ? t('reviewsCountFor', { count: total, game: gameTitle(gameId) }) : t('reviewsCount', { count: total })}
+      </p>
+      {data.reviews.length === 0 ? (
+        <EmptyState icon={Users} title={t('reviewsEmpty')} />
+      ) : (
+        <ul className="space-y-2" aria-busy={loading}>
+          {data.reviews.map((review) => (
+            <li key={review.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                <ReviewAuthor author={review.author} />
+                <time dateTime={review.createdAt} className="shrink-0 text-xs text-cream/70">
+                  {formatDate(review.createdAt)}
+                </time>
+              </div>
+              <FirstGameFeedbackMeta
+                rating={review.rating}
+                gameId={review.gameId}
+                playMode={review.playMode}
+                showValue
+                className="mt-1.5"
+              />
+              {review.comment.trim() !== '' && (
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-cream/90">{review.comment}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Pager
+        page={page}
+        pageSize={REVIEWS_PAGE_SIZE}
+        total={total}
+        onPage={setPage}
+        busy={loading}
+        summary={tStates('pageSummary', { page, pages, total })}
+        previousLabel={tStates('previousPage')}
+        nextLabel={tStates('nextPage')}
+      />
+    </div>
+  )
+}
+
+export function FirstGameFeedbackPanel() {
+  const t = useTranslations('supervision.firstGameFeedback')
+  const tStates = useTranslations('supervision.states')
   const gameTitle = useGameTitle()
   const formatRating = useRatingFormatter()
   const [summary, setSummary] = useState<FirstGameFeedbackSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showAllComments, setShowAllComments] = useState(false)
-  const commentsId = useId()
+  const [gameFilter, setGameFilter] = useState<string | null>(null)
+  const [refreshToken, setRefreshToken] = useState(0)
+  const filterLabelId = useId()
+  const filterTriggerId = useId()
+  const reviewsHeadingRef = useRef<HTMLHeadingElement>(null)
 
   const tRef = useRef(t)
   tRef.current = t
@@ -208,14 +386,36 @@ export function FirstGameFeedbackPanel() {
     }
   }, [load])
 
-  // Langue de la Supervision et heure de Paris, comme le reste de la page.
-  const formatDate = (iso: string) =>
-    format.dateTime(new Date(iso), { dateStyle: 'short', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+  const refresh = () => {
+    void load()
+    setRefreshToken((n) => n + 1)
+  }
+
+  // Jeu choisi qui n'a plus d'avis après « Actualiser » : retour à tous les
+  // jeux, plutôt qu'une liste vide sous un choix absent du menu.
+  const activeGameFilter =
+    gameFilter !== null && summary?.byGame.some((game) => game.gameId === gameFilter) ? gameFilter : null
+
+  /**
+   * Un jeu touché dans « Moyenne par jeu » filtre la liste des avis (un second
+   * toucher la rend à tous les jeux). Au téléphone la liste est plus bas : on
+   * l'amène en vue, sans bouger la page si son titre est déjà à l'écran.
+   */
+  const showGameReviews = (gameId: string) => {
+    const next = activeGameFilter === gameId ? null : gameId
+    setGameFilter(next)
+    const heading = reviewsHeadingRef.current
+    if (next === null || !heading) return
+    const top = heading.getBoundingClientRect().top
+    if (top >= 0 && top <= window.innerHeight * 0.6) return
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    heading.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' })
+  }
 
   const refreshButton = (
     <button
       type="button"
-      onClick={() => void load()}
+      onClick={refresh}
       aria-busy={loading}
       // 44 px au doigt (téléphone), le gabarit compact des autres panneaux au-delà.
       className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-3 text-xs font-medium text-cream/80 transition-colors hover:bg-white/10 hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 sm:h-8 sm:px-2.5"
@@ -224,9 +424,6 @@ export function FirstGameFeedbackPanel() {
       {t('refresh')}
     </button>
   )
-
-  const comments = summary?.recentComments ?? []
-  const visibleComments = showAllComments ? comments : comments.slice(0, COMMENTS_PREVIEW)
 
   const distribution: BarListRow[] = summary
     ? distributionRows(summary.distribution).map(({ rating, count }) => ({
@@ -309,66 +506,88 @@ export function FirstGameFeedbackPanel() {
               {summary.byGame.length === 0 ? (
                 <p className="py-3 text-sm text-cream/70">{t('byGameEmpty')}</p>
               ) : (
-                <ul className="divide-y divide-white/5 rounded-xl border border-white/10 bg-black/20">
-                  {summary.byGame.map((game) => (
-                    <li
-                      key={game.gameId}
-                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2.5"
-                    >
-                      <span className="inline-flex min-w-0 items-center gap-1.5 text-sm text-cream/90">
-                        <span aria-hidden>
-                          <GameIconById id={game.gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
-                        </span>
-                        <span className="min-w-0 truncate">{gameTitle(game.gameId)}</span>
-                      </span>
-                      <span className="inline-flex shrink-0 items-center gap-2 text-sm tabular-nums">
-                        <RatingStars rating={game.average} />
-                        <span aria-hidden className="font-semibold text-cream">
-                          {formatRating(game.average)}
-                        </span>
-                        <span className="text-xs text-cream/70">{t('ratingCount', { count: game.count })}</span>
-                      </span>
-                    </li>
-                  ))}
+                <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                  {summary.byGame.map((game) => {
+                    const selected = activeGameFilter === game.gameId
+                    return (
+                      <li key={game.gameId}>
+                        <button
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => showGameReviews(game.gameId)}
+                          className={cn(
+                            'flex min-h-[44px] w-full flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold/50',
+                            selected && 'bg-gold/10'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'inline-flex min-w-0 items-center gap-1.5 text-sm',
+                              selected ? 'font-semibold text-gold' : 'text-cream/90'
+                            )}
+                          >
+                            <span aria-hidden>
+                              <GameIconById id={game.gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
+                            </span>
+                            <span className="min-w-0 truncate">{gameTitle(game.gameId)}</span>
+                          </span>
+                          <span className="inline-flex shrink-0 items-center gap-2 text-sm tabular-nums">
+                            <RatingStars rating={game.average} />
+                            <span aria-hidden className="font-semibold text-cream">
+                              {formatRating(game.average)}
+                            </span>
+                            <span className="text-xs text-cream/70">{t('ratingCount', { count: game.count })}</span>
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </div>
           </div>
 
           <div className="min-w-0">
-            <h3 className={cn(BLOCK_LABEL, 'mb-2')}>{t('commentsTitle')}</h3>
-            {comments.length === 0 ? (
-              <EmptyState icon={MessageSquare} title={t('commentsEmpty')} />
-            ) : (
-              <ul id={commentsId} className="space-y-2">
-                {visibleComments.map((comment) => (
-                  <li key={comment.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-                      <FirstGameFeedbackMeta
-                        rating={comment.rating}
-                        gameId={comment.gameId}
-                        playMode={comment.playMode}
-                      />
-                      <time dateTime={comment.createdAt} className="shrink-0 text-xs text-cream/70">
-                        {formatDate(comment.createdAt)}
-                      </time>
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-cream/90">{comment.comment}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {comments.length > COMMENTS_PREVIEW && (
-              <button
-                type="button"
-                aria-expanded={showAllComments}
-                aria-controls={commentsId}
-                onClick={() => setShowAllComments((open) => !open)}
-                className="mt-2 inline-flex min-h-[44px] items-center rounded-lg px-2 text-xs font-semibold text-gold transition-colors hover:bg-cream/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
-              >
-                {showAllComments ? t('commentsCollapse') : t('commentsShowAll', { count: comments.length })}
-              </button>
-            )}
+            <div className="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+              <div className="min-w-0">
+                <h3 ref={reviewsHeadingRef} className={cn(BLOCK_LABEL, 'scroll-mt-24')}>
+                  {t('reviewsTitle')}
+                </h3>
+                <p className="mt-1 text-[11px] leading-snug text-cream/70">{t('reviewsHint')}</p>
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <span id={filterLabelId} className="shrink-0 text-xs text-cream/70">
+                  {t('reviewsFilterLabel')}
+                </span>
+                <Select
+                  value={activeGameFilter ?? ALL_GAMES}
+                  onValueChange={(value) => setGameFilter(value === ALL_GAMES ? null : value)}
+                >
+                  {/* Nom = libellé + choix en cours (« Jeu Loup-Garou (3) ») :
+                      le bouton de Radix n'expose pas sa valeur autrement. */}
+                  <SelectTrigger
+                    id={filterTriggerId}
+                    aria-labelledby={`${filterLabelId} ${filterTriggerId}`}
+                    className="h-11 w-auto min-w-[11rem] max-w-full gap-2 border-white/15 bg-white/[0.06] text-cream sm:h-8"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_GAMES}>{t('reviewsAllGames', { count: summary.total })}</SelectItem>
+                    {summary.byGame.map((game) => (
+                      <SelectItem key={game.gameId} value={game.gameId}>
+                        {t('reviewsGameOption', { game: gameTitle(game.gameId), count: game.count })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <FirstGameReviewsList
+              key={activeGameFilter ?? ALL_GAMES}
+              gameId={activeGameFilter}
+              refreshToken={refreshToken}
+            />
           </div>
         </div>
       )}

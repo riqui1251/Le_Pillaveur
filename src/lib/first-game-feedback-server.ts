@@ -2,12 +2,15 @@ import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
 import { isFirstGameFeedbackEligible, isLocalFirstGameFeedbackEligible } from '@/lib/first-game-feedback'
+import type { FirstGameReview, FirstGameReviewAuthor } from '@/lib/supervision/first-game-ratings'
 
 /**
  * AVIS DE 1RE PARTIE, côté serveur : l'éligibilité d'un compte (lue en base
- * puis tranchée par la fonction pure), l'identifiant de son avis et le résumé
- * de la Supervision.
+ * puis tranchée par la fonction pure), l'identifiant de son avis, le résumé
+ * de la Supervision et la liste des avis un par un.
  */
+
+const ACCOUNT_FEEDBACK_ID_PREFIX = 'first-game-'
 
 /**
  * Identifiant de l'avis de 1re partie d'un COMPTE : déterministe, pour que
@@ -22,14 +25,11 @@ import { isFirstGameFeedbackEligible, isLocalFirstGameFeedbackEligible } from '@
  * 128 bits, sans caractère à échapper dans /api/admin/feedback/[id].
  */
 export function firstGameFeedbackId(userId: string): string {
-  return `first-game-${createHash('sha256').update(userId).digest('hex').slice(0, 32)}`
+  return `${ACCOUNT_FEEDBACK_ID_PREFIX}${createHash('sha256').update(userId).digest('hex').slice(0, 32)}`
 }
 
 /** Fenêtre « récente » du résumé. */
 export const FIRST_GAME_SUMMARY_RECENT_DAYS = 30
-
-/** Commentaires affichés dans le résumé (non vides, les plus récents). */
-export const FIRST_GAME_SUMMARY_COMMENTS = 10
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -82,15 +82,6 @@ export type FirstGameFeedbackSummary = {
   distribution: Record<FirstGameRatingKey, number>
   /** Par jeu, depuis toujours : le plus noté d'abord. */
   byGame: Array<{ gameId: string; count: number; average: number }>
-  /** Les 10 derniers commentaires non vides — sans auteur (minimisation). */
-  recentComments: Array<{
-    id: string
-    rating: number
-    gameId: string | null
-    playMode: string | null
-    comment: string
-    createdAt: string
-  }>
 }
 
 /** Moyenne lisible : deux décimales suffisent à une note sur 5. */
@@ -106,10 +97,11 @@ function roundAverage(value: number | null | undefined): number | null {
  * Total, répartition et par-jeu portent sur TOUT l'historique : le site est
  * jeune, les volumes sont petits, une fenêtre de 30 j les rendrait muets. La
  * tendance se lit dans `last30d`. Tout passe par aggregate / groupBy : aucune
- * ligne n'est rapatriée sauf les 10 commentaires, et l'index (type,
- * createdAt) sert chaque requête. `rating: { not: null }` : une ligne
- * 'first-game' a toujours sa note (la route l'exige), le filtre ne coûte rien
- * et garde les comptes justes si une ligne bricolée arrivait sans.
+ * ligne n'est rapatriée (les avis un par un ont leur route paginée,
+ * listFirstGameReviews), et l'index (type, createdAt) sert chaque requête.
+ * `rating: { not: null }` : une ligne 'first-game' a toujours sa note (la
+ * route l'exige), le filtre ne coûte rien et garde les comptes justes si une
+ * ligne bricolée arrivait sans.
  */
 export async function summarizeFirstGameFeedback(
   now: Date = new Date()
@@ -117,7 +109,7 @@ export async function summarizeFirstGameFeedback(
   const rated = { type: FIRST_GAME_FEEDBACK_TYPE, rating: { not: null } }
   const recentSince = new Date(now.getTime() - FIRST_GAME_SUMMARY_RECENT_DAYS * DAY_MS)
 
-  const [all, recent, byRating, byGame, comments] = await Promise.all([
+  const [all, recent, byRating, byGame] = await Promise.all([
     prisma.userFeedback.aggregate({
       where: rated,
       _count: { _all: true },
@@ -138,14 +130,6 @@ export async function summarizeFirstGameFeedback(
       where: { ...rated, gameId: { not: null } },
       _count: { _all: true },
       _avg: { rating: true },
-    }),
-    prisma.userFeedback.findMany({
-      where: { ...rated, message: { not: '' } },
-      orderBy: { createdAt: 'desc' },
-      take: FIRST_GAME_SUMMARY_COMMENTS,
-      // Ni auteur ni e-mail : le résumé dit CE QUE pensent les nouveaux
-      // joueurs, pas QUI. Le retour complet reste ouvrable dans la boîte.
-      select: { id: true, rating: true, gameId: true, playMode: true, message: true, createdAt: true },
     }),
   ])
 
@@ -168,13 +152,77 @@ export async function summarizeFirstGameFeedback(
         average: roundAverage(group._avg.rating) ?? 0,
       }))
       .sort((a, b) => b.count - a.count || a.gameId.localeCompare(b.gameId)),
-    recentComments: comments.map((row) => ({
+  }
+}
+
+/**
+ * Un avis sans compte rattaché : soit un compte supprimé depuis (userId remis
+ * à null, la clé first-game-<empreinte> reste — cf. firstGameFeedbackId),
+ * soit une partie locale jouée sans connexion (cuid par défaut).
+ */
+function reviewAuthor(row: {
+  id: string
+  userId: string | null
+  user: { displayName: string; isGuest: boolean } | null
+}): FirstGameReviewAuthor {
+  if (row.userId && row.user) {
+    return { kind: 'account', userId: row.userId, name: row.user.displayName, isGuest: row.user.isGuest }
+  }
+  return row.id.startsWith(ACCOUNT_FEEDBACK_ID_PREFIX) ? { kind: 'deleted' } : { kind: 'anonymous' }
+}
+
+/**
+ * Avis de 1re partie UN PAR UN, pour savoir qui a noté quoi : le plus récent
+ * d'abord, filtrés par jeu si demandé, une page à la fois. L'auteur est le
+ * PSEUDO du compte, jamais son e-mail — ce que la boîte des retours montre
+ * déjà au même grade. L'id départage deux avis de la même milliseconde :
+ * sans lui, l'ordre d'une page à l'autre n'est pas garanti (doublon ou trou).
+ */
+export async function listFirstGameReviews({
+  gameId,
+  skip,
+  take,
+}: {
+  gameId: string | null
+  skip: number
+  take: number
+}): Promise<{ reviews: FirstGameReview[]; total: number }> {
+  const where = {
+    type: FIRST_GAME_FEEDBACK_TYPE,
+    rating: { not: null },
+    ...(gameId ? { gameId } : {}),
+  }
+
+  const [rows, total] = await Promise.all([
+    prisma.userFeedback.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip,
+      take,
+      select: {
+        id: true,
+        rating: true,
+        gameId: true,
+        playMode: true,
+        message: true,
+        createdAt: true,
+        userId: true,
+        user: { select: { displayName: true, isGuest: true } },
+      },
+    }),
+    prisma.userFeedback.count({ where }),
+  ])
+
+  return {
+    reviews: rows.map((row) => ({
       id: row.id,
       rating: row.rating ?? 0,
       gameId: row.gameId,
       playMode: row.playMode,
       comment: row.message,
       createdAt: row.createdAt.toISOString(),
+      author: reviewAuthor(row),
     })),
+    total,
   }
 }

@@ -5,13 +5,12 @@ import { adminErrorResponse, requireRole } from '../_guard'
 
 /**
  * Résumé des avis de 1re partie pour la Supervision : total, moyenne, 30
- * derniers jours, répartition des notes, par jeu, 10 derniers commentaires.
- * Panneau AUTONOME, hors de la boucle de 15 s de la vue d'ensemble (F40) — il
- * se charge à l'ouverture.
+ * derniers jours, répartition des notes, par jeu. Les avis un par un, avec
+ * leur auteur, ont leur route paginée (./reviews). Panneau AUTONOME, hors de
+ * la boucle de 15 s de la vue d'ensemble (F40) — il se charge à l'ouverture.
  *
  * Garde : celle de la LECTURE des retours (canViewUserFeedback, modérateur+) :
- * ce sont les mêmes données, agrégées. Les commentaires n'y portent ni
- * auteur ni e-mail.
+ * ce sont les mêmes données, agrégées.
  */
 export async function GET() {
   try {

@@ -4,6 +4,7 @@ import {
   filledStars,
   isFirstGamePlayMode,
   parseFirstGameFeedbackSummary,
+  parseFirstGameReviewsPage,
   sortByGameVolume,
 } from '@/lib/supervision/first-game-ratings'
 
@@ -20,9 +21,6 @@ function validBody() {
         { gameId: 'quiz', count: 2, average: 5 },
         { gameId: 'petit-buveur', count: 7, average: 4.1 },
         { gameId: 'tabou', count: 3, average: 3.7 },
-      ],
-      recentComments: [
-        { id: 'f1', rating: 5, gameId: 'quiz', playMode: 'online', comment: 'Top !', createdAt: CREATED_AT },
       ],
     },
   }
@@ -41,9 +39,6 @@ describe('parseFirstGameFeedbackSummary', () => {
         { gameId: 'tabou', count: 3, average: 3.7 },
         { gameId: 'quiz', count: 2, average: 5 },
       ],
-      recentComments: [
-        { id: 'f1', rating: 5, gameId: 'quiz', playMode: 'online', comment: 'Top !', createdAt: CREATED_AT },
-      ],
     })
   })
 
@@ -55,7 +50,7 @@ describe('parseFirstGameFeedbackSummary', () => {
     expect(parseFirstGameFeedbackSummary({ summary: { total: Number.NaN } })).toBeNull()
   })
 
-  it('aucun avis : moyennes nulles, répartition à 0, listes vides', () => {
+  it('aucun avis : moyennes nulles, répartition à 0, liste vide', () => {
     const summary = parseFirstGameFeedbackSummary({
       summary: {
         total: 0,
@@ -63,7 +58,6 @@ describe('parseFirstGameFeedbackSummary', () => {
         last30d: { count: 0, average: null },
         distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
         byGame: [],
-        recentComments: [],
       },
     })
     expect(summary).toEqual({
@@ -72,7 +66,6 @@ describe('parseFirstGameFeedbackSummary', () => {
       last30d: { count: 0, average: null },
       distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
       byGame: [],
-      recentComments: [],
     })
   })
 
@@ -86,7 +79,6 @@ describe('parseFirstGameFeedbackSummary', () => {
       last30d: { count: 0, average: null },
       distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 3 },
       byGame: [],
-      recentComments: [],
     })
   })
 
@@ -96,7 +88,7 @@ describe('parseFirstGameFeedbackSummary', () => {
     expect(parseFirstGameFeedbackSummary(body)?.average).toBe(5)
   })
 
-  it('écarte seules les rangées et commentaires mal formés', () => {
+  it('écarte seules les rangées mal formées', () => {
     const body = validBody() as { summary: Record<string, unknown> }
     body.summary.byGame = [
       { gameId: 'quiz', count: 2, average: 5 },
@@ -105,18 +97,95 @@ describe('parseFirstGameFeedbackSummary', () => {
       { gameId: 'pendu', count: 3, average: null },
       'pmu',
     ]
-    body.summary.recentComments = [
-      { id: 'ok', rating: 4, gameId: null, playMode: null, comment: 'Bien', createdAt: CREATED_AT },
-      { id: 'vide', rating: 4, gameId: 'quiz', playMode: 'local', comment: '   ', createdAt: CREATED_AT },
-      { id: 'sans-date', rating: 4, gameId: 'quiz', playMode: 'local', comment: 'x', createdAt: 'hier' },
-      { id: 'sans-note', rating: null, gameId: 'quiz', playMode: 'local', comment: 'x', createdAt: CREATED_AT },
-      { rating: 3, comment: 'sans id', createdAt: CREATED_AT },
-    ]
-    const summary = parseFirstGameFeedbackSummary(body)
-    expect(summary?.byGame).toEqual([{ gameId: 'quiz', count: 2, average: 5 }])
-    expect(summary?.recentComments).toEqual([
-      { id: 'ok', rating: 4, gameId: null, playMode: null, comment: 'Bien', createdAt: CREATED_AT },
-    ])
+    expect(parseFirstGameFeedbackSummary(body)?.byGame).toEqual([{ gameId: 'quiz', count: 2, average: 5 }])
+  })
+})
+
+describe('parseFirstGameReviewsPage', () => {
+  const alice = { kind: 'account', userId: 'u-alice', name: 'Alice', isGuest: false }
+
+  it('réponse conforme : chaque avis recopié avec son auteur', () => {
+    const page = parseFirstGameReviewsPage({
+      reviews: [
+        { id: 'a', rating: 5, gameId: 'quiz', playMode: 'online', comment: 'Top !', createdAt: CREATED_AT, author: alice },
+        {
+          id: 'b',
+          rating: 2,
+          gameId: 'tabou',
+          playMode: 'online',
+          comment: '',
+          createdAt: CREATED_AT,
+          author: { kind: 'account', userId: 'u-zed', name: 'Zed', isGuest: true },
+        },
+        { id: 'c', rating: 3, gameId: null, playMode: null, comment: '', createdAt: CREATED_AT, author: { kind: 'deleted' } },
+        { id: 'd', rating: 1, gameId: 'pmu', playMode: 'local', comment: '', createdAt: CREATED_AT, author: { kind: 'anonymous' } },
+      ],
+      total: 14,
+      page: 1,
+      pageSize: 10,
+    })
+    expect(page).toEqual({
+      total: 14,
+      reviews: [
+        { id: 'a', rating: 5, gameId: 'quiz', playMode: 'online', comment: 'Top !', createdAt: CREATED_AT, author: alice },
+        {
+          id: 'b',
+          rating: 2,
+          gameId: 'tabou',
+          playMode: 'online',
+          comment: '',
+          createdAt: CREATED_AT,
+          author: { kind: 'account', userId: 'u-zed', name: 'Zed', isGuest: true },
+        },
+        { id: 'c', rating: 3, gameId: null, playMode: null, comment: '', createdAt: CREATED_AT, author: { kind: 'deleted' } },
+        { id: 'd', rating: 1, gameId: 'pmu', playMode: 'local', comment: '', createdAt: CREATED_AT, author: { kind: 'anonymous' } },
+      ],
+    })
+  })
+
+  it('réponse inexploitable (route absente, refus, page d’erreur) : null, jamais une liste vide', () => {
+    expect(parseFirstGameReviewsPage(null)).toBeNull()
+    expect(parseFirstGameReviewsPage('<html>502</html>')).toBeNull()
+    expect(parseFirstGameReviewsPage({ error: 'forbidden', code: 'forbidden' })).toBeNull()
+    expect(parseFirstGameReviewsPage({ reviews: [] })).toBeNull()
+    expect(parseFirstGameReviewsPage({ reviews: 'aucun', total: 0 })).toBeNull()
+  })
+
+  it('écarte seuls les avis mal formés : note hors 1..5, date illisible, auteur inconnu', () => {
+    const ok = { id: 'ok', rating: 4, gameId: 'quiz', playMode: 'local', comment: 'Bien', createdAt: CREATED_AT, author: alice }
+    const page = parseFirstGameReviewsPage({
+      total: 6,
+      reviews: [
+        ok,
+        { ...ok, id: 'zero', rating: 0 },
+        { ...ok, id: 'demi', rating: 3.5 },
+        { ...ok, id: 'sans-date', createdAt: 'hier' },
+        { ...ok, id: 'auteur-inconnu', author: { kind: 'robot' } },
+        { ...ok, id: 'compte-sans-id', author: { kind: 'account', name: 'X' } },
+        { ...ok, id: '' },
+        'avis',
+      ],
+    })
+    expect(page?.reviews.map((r) => r.id)).toEqual(['ok'])
+    expect(page?.total).toBe(6)
+  })
+
+  it('commentaire absent : chaîne vide ; invité absent : faux', () => {
+    const page = parseFirstGameReviewsPage({
+      total: 1,
+      reviews: [
+        {
+          id: 'x',
+          rating: 5,
+          gameId: 'quiz',
+          playMode: 'online',
+          createdAt: CREATED_AT,
+          author: { kind: 'account', userId: 'u1', name: 'Bob' },
+        },
+      ],
+    })
+    expect(page?.reviews[0].comment).toBe('')
+    expect(page?.reviews[0].author).toEqual({ kind: 'account', userId: 'u1', name: 'Bob', isGuest: false })
   })
 })
 

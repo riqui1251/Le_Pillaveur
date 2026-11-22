@@ -7,15 +7,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  */
 const { userMock, feedbackMock } = vi.hoisted(() => ({
   userMock: { findUnique: vi.fn() },
-  feedbackMock: { aggregate: vi.fn(), groupBy: vi.fn(), findMany: vi.fn() },
+  feedbackMock: { aggregate: vi.fn(), groupBy: vi.fn(), findMany: vi.fn(), count: vi.fn() },
 }))
 vi.mock('@/lib/prisma', () => ({ prisma: { user: userMock, userFeedback: feedbackMock } }))
 
 import {
-  FIRST_GAME_SUMMARY_COMMENTS,
   firstGameFeedbackId,
   isFirstGameFeedbackDue,
   isLocalFirstGameFeedbackDue,
+  listFirstGameReviews,
   summarizeFirstGameFeedback,
 } from '@/lib/first-game-feedback-server'
 
@@ -112,7 +112,6 @@ describe('firstGameFeedbackId', () => {
 function mockEmptySummary() {
   feedbackMock.aggregate.mockResolvedValue({ _count: { _all: 0 }, _avg: { rating: null } })
   feedbackMock.groupBy.mockResolvedValue([])
-  feedbackMock.findMany.mockResolvedValue([])
 }
 
 describe('summarizeFirstGameFeedback', () => {
@@ -125,7 +124,6 @@ describe('summarizeFirstGameFeedback', () => {
       last30d: { count: 0, average: null },
       distribution: { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 },
       byGame: [],
-      recentComments: [],
     })
   })
 
@@ -147,16 +145,6 @@ describe('summarizeFirstGameFeedback', () => {
         // Ligne sans jeu (ne devrait pas exister) : écartée, pas d'id null.
         { gameId: null, _count: { _all: 1 }, _avg: { rating: 1 } },
       ])
-    feedbackMock.findMany.mockResolvedValue([
-      {
-        id: 'f1',
-        rating: 5,
-        gameId: 'quiz',
-        playMode: 'online',
-        message: 'Génial',
-        createdAt: new Date('2026-10-07T20:00:00.000Z'),
-      },
-    ])
 
     const summary = await summarizeFirstGameFeedback(NOW)
 
@@ -169,19 +157,9 @@ describe('summarizeFirstGameFeedback', () => {
       { gameId: 'bluff', count: 2, average: 4 },
       { gameId: 'quiz', count: 2, average: 4.5 },
     ])
-    expect(summary.recentComments).toEqual([
-      {
-        id: 'f1',
-        rating: 5,
-        gameId: 'quiz',
-        playMode: 'online',
-        comment: 'Génial',
-        createdAt: '2026-10-07T20:00:00.000Z',
-      },
-    ])
   })
 
-  it('requêtes : type first-game noté, fenêtre de 30 j, 10 commentaires non vides SANS auteur', async () => {
+  it('requêtes : type first-game noté, fenêtre de 30 j, aucune ligne rapatriée', async () => {
     mockEmptySummary()
 
     await summarizeFirstGameFeedback(NOW)
@@ -197,13 +175,88 @@ describe('summarizeFirstGameFeedback', () => {
       _count: { _all: true },
       _avg: { rating: true },
     })
-    const comments = feedbackMock.findMany.mock.calls[0][0]
-    expect(comments.where).toEqual({ ...rated, message: { not: '' } })
-    expect(comments.take).toBe(FIRST_GAME_SUMMARY_COMMENTS)
-    expect(comments.orderBy).toEqual({ createdAt: 'desc' })
-    // Minimisation : ni compte, ni e-mail, ni UA dans le résumé.
-    expect(Object.keys(comments.select).sort()).toEqual(
-      ['createdAt', 'gameId', 'id', 'message', 'playMode', 'rating'].sort()
-    )
+    // Les avis un par un ont leur route paginée : le résumé n'agrège que.
+    expect(feedbackMock.findMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('listFirstGameReviews', () => {
+  const row = (over: Record<string, unknown>) => ({
+    id: 'cm-anonyme',
+    rating: 4,
+    gameId: 'quiz',
+    playMode: 'local',
+    message: '',
+    createdAt: new Date('2026-11-20T21:00:00.000Z'),
+    userId: null,
+    user: null,
+    ...over,
+  })
+
+  it('chaque avis avec son auteur : compte (pseudo, invité ou non), compte supprimé, sans compte', async () => {
+    feedbackMock.findMany.mockResolvedValue([
+      row({
+        id: firstGameFeedbackId('u-alice'),
+        rating: 5,
+        playMode: 'online',
+        message: 'Trop bien',
+        userId: 'u-alice',
+        user: { displayName: 'Alice', isGuest: false },
+      }),
+      row({ id: firstGameFeedbackId('u-invite'), rating: 2, userId: 'u-invite', user: { displayName: 'Zed', isGuest: true } }),
+      // Compte supprimé depuis : userId remis à null, la clé d'empreinte reste.
+      row({ id: firstGameFeedbackId('u-parti'), rating: 3 }),
+      // Partie locale sans connexion : cuid par défaut, jamais de compte.
+      row({ id: 'cm-anonyme', rating: 1 }),
+    ])
+    feedbackMock.count.mockResolvedValue(4)
+
+    const { reviews, total } = await listFirstGameReviews({ gameId: null, skip: 0, take: 10 })
+
+    expect(total).toBe(4)
+    expect(reviews.map((r) => [r.rating, r.author])).toEqual([
+      [5, { kind: 'account', userId: 'u-alice', name: 'Alice', isGuest: false }],
+      [2, { kind: 'account', userId: 'u-invite', name: 'Zed', isGuest: true }],
+      [3, { kind: 'deleted' }],
+      [1, { kind: 'anonymous' }],
+    ])
+    expect(reviews[0]).toEqual({
+      id: firstGameFeedbackId('u-alice'),
+      rating: 5,
+      gameId: 'quiz',
+      playMode: 'online',
+      comment: 'Trop bien',
+      createdAt: '2026-11-20T21:00:00.000Z',
+      author: { kind: 'account', userId: 'u-alice', name: 'Alice', isGuest: false },
+    })
+  })
+
+  it('requêtes : avis notés seulement, du plus récent au plus ancien (id départage), page demandée, pseudo sans e-mail', async () => {
+    feedbackMock.findMany.mockResolvedValue([])
+    feedbackMock.count.mockResolvedValue(0)
+
+    await listFirstGameReviews({ gameId: null, skip: 20, take: 10 })
+
+    const where = { type: 'first-game', rating: { not: null } }
+    const query = feedbackMock.findMany.mock.calls[0][0]
+    expect(query.where).toEqual(where)
+    expect(query.orderBy).toEqual([{ createdAt: 'desc' }, { id: 'desc' }])
+    expect(query.skip).toBe(20)
+    expect(query.take).toBe(10)
+    expect(query.select.user).toEqual({ select: { displayName: true, isGuest: true } })
+    expect(query.select).not.toHaveProperty('contactEmail')
+    expect(query.select).not.toHaveProperty('userAgent')
+    expect(feedbackMock.count).toHaveBeenCalledWith({ where })
+  })
+
+  it('filtre par jeu : la liste ET le total portent sur ce jeu seul', async () => {
+    feedbackMock.findMany.mockResolvedValue([])
+    feedbackMock.count.mockResolvedValue(0)
+
+    await listFirstGameReviews({ gameId: 'loup-garou', skip: 0, take: 10 })
+
+    const where = { type: 'first-game', rating: { not: null }, gameId: 'loup-garou' }
+    expect(feedbackMock.findMany.mock.calls[0][0].where).toEqual(where)
+    expect(feedbackMock.count).toHaveBeenCalledWith({ where })
   })
 })

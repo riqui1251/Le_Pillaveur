@@ -7696,7 +7696,8 @@
         "local": "Locale"
       },
       "unknownGame": "Gioco sconosciuto",
-      "noComment": "Nessun commento, solo un voto."
+      "noComment": "Nessun commento, solo un voto.",
+      "ratingValue": "{rating}/5"
     },
     "firstGameFeedback": {
       "title": "Voti dopo la prima partita",
@@ -7720,13 +7721,21 @@
       "colCount": "Voti",
       "colShare": "Quota",
       "byGameTitle": "Media per gioco",
-      "byGameHint": "Ordinati per numero di voti: una media su due voti dice poco.",
+      "byGameHint": "Ordinati per numero di voti: una media su due voti dice poco. Scegli un gioco per vedere chi l'ha votato.",
       "byGameEmpty": "Nessun gioco identificato in questi voti.",
       "ratingCount": "{count, plural, one {# voto} other {# voti}}",
-      "commentsTitle": "Ultimi commenti",
-      "commentsEmpty": "Ancora nessun commento scritto: i giocatori hanno solo votato.",
-      "commentsShowAll": "Vedi tutti i {count} commenti",
-      "commentsCollapse": "Mostra meno"
+      "reviewsTitle": "Chi ha votato cosa",
+      "reviewsHint": "Ogni voto con il suo autore, le stelle e il commento, dal più recente. Il nome apre la scheda dell'account.",
+      "reviewsFilterLabel": "Gioco",
+      "reviewsAllGames": "Tutti i giochi ({count})",
+      "reviewsGameOption": "{game} ({count})",
+      "reviewsCount": "{count, plural, =0 {Nessun voto} one {# voto} other {# voti}}",
+      "reviewsCountFor": "{count, plural, =0 {Nessun voto per {game}} one {# voto per {game}} other {# voti per {game}}}",
+      "reviewsEmpty": "Nessun voto da mostrare.",
+      "reviewsLoadError": "Impossibile caricare l'elenco dei voti.",
+      "authorGuest": "Ospite",
+      "authorAnonymous": "Senza account (partita locale)",
+      "authorDeleted": "Account eliminato"
     },
     "history": {
       "activeConnection": "Connessione attiva",

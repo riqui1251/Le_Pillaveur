@@ -7696,7 +7696,8 @@
         "local": "Local"
       },
       "unknownGame": "Juego desconocido",
-      "noComment": "Sin comentario, solo una nota."
+      "noComment": "Sin comentario, solo una nota.",
+      "ratingValue": "{rating}/5"
     },
     "firstGameFeedback": {
       "title": "Valoraciones tras la 1.ª partida",
@@ -7720,13 +7721,21 @@
       "colCount": "Valoraciones",
       "colShare": "Porcentaje",
       "byGameTitle": "Media por juego",
-      "byGameHint": "Ordenados por número de valoraciones: una media de dos valoraciones dice poco.",
+      "byGameHint": "Ordenados por número de valoraciones: una media de dos valoraciones dice poco. Elige un juego para ver quién lo ha puntuado.",
       "byGameEmpty": "Ningún juego identificado en estas valoraciones.",
       "ratingCount": "{count, plural, one {# valoración} other {# valoraciones}}",
-      "commentsTitle": "Últimos comentarios",
-      "commentsEmpty": "Aún no hay comentarios escritos: los jugadores solo han puntuado.",
-      "commentsShowAll": "Ver los {count} comentarios",
-      "commentsCollapse": "Mostrar menos"
+      "reviewsTitle": "Quién puntuó qué",
+      "reviewsHint": "Cada valoración con su autor, sus estrellas y su comentario, de la más reciente a la más antigua. El nombre abre la ficha de la cuenta.",
+      "reviewsFilterLabel": "Juego",
+      "reviewsAllGames": "Todos los juegos ({count})",
+      "reviewsGameOption": "{game} ({count})",
+      "reviewsCount": "{count, plural, =0 {Ninguna valoración} one {# valoración} other {# valoraciones}}",
+      "reviewsCountFor": "{count, plural, =0 {Ninguna valoración de {game}} one {# valoración de {game}} other {# valoraciones de {game}}}",
+      "reviewsEmpty": "No hay valoraciones que mostrar.",
+      "reviewsLoadError": "No se pudo cargar la lista de valoraciones.",
+      "authorGuest": "Invitado",
+      "authorAnonymous": "Sin cuenta (partida local)",
+      "authorDeleted": "Cuenta eliminada"
     },
     "history": {
       "activeConnection": "Conexión activa",

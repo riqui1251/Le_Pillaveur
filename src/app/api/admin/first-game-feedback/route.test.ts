@@ -22,7 +22,6 @@ const SUMMARY = {
   last30d: { count: 2, average: 4.5 },
   distribution: { '1': 0, '2': 0, '3': 0, '4': 1, '5': 1 },
   byGame: [{ gameId: 'quiz', count: 2, average: 4.5 }],
-  recentComments: [],
 }
 
 beforeEach(() => {
