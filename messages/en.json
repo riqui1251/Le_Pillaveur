@@ -8786,7 +8786,16 @@
     "continue": "Back to the party",
     "back": "Back to the party",
     "nextRound": "Next round",
-    "toAddition": "On to the bill"
+    "toAddition": "On to the bill",
+    "cap": {
+      "hands": "Hand {current} of {max}",
+      "tableRounds": "Round {current} of {max}",
+      "rolls": "Roll {current} of {max}",
+      "draws": "Draw {current} of {max}"
+    },
+    "nextHand": "Next hand",
+    "capReached": "End of the round: that was the last turn.",
+    "seeResults": "See the results"
   },
   "soiree": {
     "loading": "Loading the party…",
@@ -8928,6 +8937,7 @@
       "reroll": "Deal again",
       "replaceTitle": "Replace {game}",
       "addTitle": "Add a game",
+      "full": "Lineup full: {max} rounds at most per night.",
       "launch": "Start the party",
       "launchOne": "Start the game",
       "restart": "Change the crew or the vibe"
@@ -9118,7 +9128,7 @@
       "1220": {
         "a": "Everyone sets their bets: the sum’s parity, a range (2-10, 11-20 or 21-30), a “drink” number and a “give” number.",
         "b": "Roll a 12-sided and a 20-sided die. Sum equals your “drink” number: you drink. Your “give” number, the right parity or the right range: you hand out sips.",
-        "c": "A number on just one die counts half: stack the combos. Roll again as often as the table wants."
+        "c": "A number on just one die counts half: stack the combos. Ten rolls, then the summary."
       },
       "vue-de-nez": {
         "a": "A question whose answer is a number: everyone types an estimate in secret, then passes the phone.",
@@ -9133,12 +9143,12 @@
       "purple": {
         "a": "On your turn, bet on the colours of the next two cards: Red, Black, or Purple (one red and one black).",
         "b": "Every winning bet raises the counter. Wrong: you drink the whole counter and it resets to zero.",
-        "c": "Stop whenever you like: the summary shows everyone’s sips."
+        "c": "Three rounds of the table, then the summary shows everyone’s sips."
       },
       "blackjack": {
         "a": "Everyone plays against the dealer, not the table: bet 1, 2 or 3 chips before each hand.",
         "b": "Get close to 21 without going over (face cards 10, aces 1 or 11). Beaten or bust: you drink your bet; win: you hand it out.",
-        "c": "The dealer draws to 17. A blackjack pays one and a half times. Play as many hands as you like; the summary keeps count."
+        "c": "The dealer draws to 17. A blackjack pays one and a half times. Five hands, then the summary keeps count."
       },
       "hi-lo": {
         "a": "A card is turned over: call whether the next one will be higher, lower or equal.",
@@ -9173,7 +9183,7 @@
       "doigt-du-destin": {
         "a": "Everyone puts a finger on the screen and keeps it there.",
         "b": "Fate picks one finger: it drinks 3 sips. In survival, fingers fall one by one and the last one hands out 5 sips.",
-        "c": "Lifting your finger before the end costs 2 sips. This round’s tab is filled in by hand at the break."
+        "c": "Lifting your finger before the end costs 2 sips. Three draws, then this round’s tab is filled in by hand at the break."
       },
       "patate-chaude": {
         "a": "A challenge appears (a theme, a letter or a syllable) and the bomb’s fuse is secret.",
@@ -9183,7 +9193,7 @@
       "cap-ou-pas-cap": {
         "a": "On your turn, pick Truth or Dare: the card flips over with its price, from 1 to 5.",
         "b": "Game on! You do it and hand out the price. Chicken out? You drink the price.",
-        "c": "Once per game, send the card to another player at double the price. Stop when the table decides."
+        "c": "Once per game, send the card to another player at double the price. Three rounds of the table, then the summary."
       },
       "coupe-du-roi": {
         "a": "Phone in the middle of the table: on your turn, draw a card and its rule applies at once.",

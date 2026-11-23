@@ -8786,7 +8786,16 @@
     "continue": "Continua la serata",
     "back": "Torna alla serata",
     "nextRound": "Manche successiva",
-    "toAddition": "Vai al conto"
+    "toAddition": "Vai al conto",
+    "cap": {
+      "hands": "Mano {current} di {max}",
+      "tableRounds": "Giro {current} di {max}",
+      "rolls": "Lancio {current} di {max}",
+      "draws": "Estrazione {current} di {max}"
+    },
+    "nextHand": "Mano successiva",
+    "capReached": "Fine della manche: era l’ultimo turno.",
+    "seeResults": "Vedi il risultato"
   },
   "soiree": {
     "loading": "Caricamento della serata…",
@@ -8928,6 +8937,7 @@
       "reroll": "Ridistribuisci tutto",
       "replaceTitle": "Sostituisci {game}",
       "addTitle": "Aggiungi un gioco",
+      "full": "Programma completo: al massimo {max} manche per serata.",
       "launch": "Inizia la serata",
       "launchOne": "Inizia la partita",
       "restart": "Cambia la compagnia o l’atmosfera"
@@ -9118,7 +9128,7 @@
       "1220": {
         "a": "Ognuno fissa le sue puntate: parità della somma, una fascia (2-10, 11-20 o 21-30), un numero che fa bere e uno che fa dare.",
         "b": "Si lanciano un dado da 12 e uno da 20. Somma uguale al tuo numero «bere»: bevi. Al tuo numero «dare», parità o fascia giusta: distribuisci.",
-        "c": "Un numero su un solo dado conta a metà: accumulate le combo. Si rilancia quanto vuole il tavolo."
+        "c": "Un numero su un solo dado conta a metà: accumulate le combo. Dieci lanci, poi il riepilogo."
       },
       "vue-de-nez": {
         "a": "Una domanda con risposta numerica: ognuno scrive la sua stima in segreto, poi passa il telefono.",
@@ -9133,12 +9143,12 @@
       "purple": {
         "a": "Al tuo turno, punta sul colore delle prossime due carte: Rosso, Nero o Purple (una rossa e una nera).",
         "b": "Ogni puntata vinta fa salire il contatore. Sbagliato: bevi tutto il contatore e si riparte da zero.",
-        "c": "Fermatevi quando volete: il riepilogo mostra i sorsi di ognuno."
+        "c": "Tre giri di tavolo, poi il riepilogo mostra i sorsi di ognuno."
       },
       "blackjack": {
         "a": "Ognuno gioca contro il banco, non contro il tavolo: punta 1, 2 o 3 fiche prima di ogni mano.",
         "b": "Avvicinati a 21 senza superarlo (figure 10, assi 1 o 11). Battuto o sballato: bevi la puntata; vinto: la distribuisci.",
-        "c": "Il banco pesca fino a 17. Un Black Jack paga una volta e mezzo. Giocate quante mani volete: il riepilogo fa i conti."
+        "c": "Il banco pesca fino a 17. Un Black Jack paga una volta e mezzo. Cinque mani, poi il riepilogo fa i conti."
       },
       "hi-lo": {
         "a": "Si gira una carta: annuncia se la prossima sarà più alta, più bassa o uguale.",
@@ -9173,7 +9183,7 @@
       "doigt-du-destin": {
         "a": "Tutti mettono un dito sullo schermo e lo tengono lì.",
         "b": "Il destino sceglie un dito: beve 3 sorsi. In sopravvivenza, le dita cadono una a una e l’ultima distribuisce 5 sorsi.",
-        "c": "Alzare il dito prima della fine costa 2 sorsi. La lavagna di questa manche si compila a mano durante la pausa."
+        "c": "Alzare il dito prima della fine costa 2 sorsi. Tre estrazioni, poi la lavagna di questa manche si compila a mano durante la pausa."
       },
       "patate-chaude": {
         "a": "Compare una sfida (un tema, una lettera o una sillaba) e la miccia della bomba è segreta.",
@@ -9183,7 +9193,7 @@
       "cap-ou-pas-cap": {
         "a": "Al tuo turno, scegli Verità o Obbligo: la carta si gira con il suo prezzo, da 1 a 5.",
         "b": "Ci sto!: lo fai e distribuisci il prezzo. Non ci stai? Bevi il prezzo.",
-        "c": "Una volta a partita, rimanda la carta a un altro giocatore al doppio del prezzo. Fermatevi quando decide il tavolo."
+        "c": "Una volta a partita, rimanda la carta a un altro giocatore al doppio del prezzo. Tre giri di tavolo, poi il riepilogo."
       },
       "coupe-du-roi": {
         "a": "Telefono al centro del tavolo: al tuo turno, pesca una carta e la sua regola vale subito.",

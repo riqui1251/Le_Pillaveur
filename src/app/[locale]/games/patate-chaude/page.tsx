@@ -18,6 +18,7 @@ import { OnlineGameSkeleton } from '@/components/online/OnlineGameSkeleton'
 import { OnlineGameStage } from '@/components/online/OnlineGameStage'
 import { GameShowcase } from '@/components/online/GameShowcase'
 import { Button } from '@/components/ui/button'
+import { useSoireeRound } from '@/components/soiree/useSoiree'
 import {
   PC_CHALLENGE_MODES,
   PC_DEFAULT_SETTINGS,
@@ -71,6 +72,8 @@ export default function PatateChaudePage() {
   const [bank, setBank] = useState<PcChallengeSource | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  // Mode Soirée : pas d'« Illimité », la manche doit se terminer (le défaut de 10 manches à la place).
+  const inSoiree = useSoireeRound('patate-chaude') !== null
 
   // Défis de la langue de la page, chargés dès le pré-lobby : « Commencer » attend qu'ils soient là.
   // En ligne, le serveur tire les défis : rien à charger ici.
@@ -93,6 +96,9 @@ export default function PatateChaudePage() {
 
   // Ordre de la table = ordre du stockage (création des joueurs), pas l'ordre de sélection.
   const selectedPlayers = players.filter((p) => selectedIds.includes(p.id))
+  const roundsOptions = inSoiree ? PC_ROUNDS_OPTIONS.filter((value) => value !== PC_UNLIMITED_ROUNDS) : PC_ROUNDS_OPTIONS
+  const playedSettings: PcSettings =
+    inSoiree && settings.rounds === PC_UNLIMITED_ROUNDS ? { ...settings, rounds: PC_DEFAULT_SETTINGS.rounds } : settings
 
   // Compte pas encore connu : la vitrine du jeu (le HTML du build, celui que lit Googlebot).
   if (loading) return <GameShowcase gameId="patate-chaude" pending />
@@ -110,7 +116,7 @@ export default function PatateChaudePage() {
     return (
       <Game
         players={selectedPlayers}
-        settings={settings}
+        settings={playedSettings}
         ambiance={ambiance}
         bank={bank}
         onGameEnd={() => setGameStarted(false)}
@@ -179,12 +185,12 @@ export default function PatateChaudePage() {
       </PrelobbySection>
 
       <PrelobbySection label={t('page.rounds')}>
-        <div className="grid grid-cols-3 gap-2">
-          {PC_ROUNDS_OPTIONS.map((value) =>
+        <div className={inSoiree ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-3 gap-2'}>
+          {roundsOptions.map((value) =>
             value === PC_UNLIMITED_ROUNDS ? (
               <PrelobbyChoice
                 key={value}
-                active={settings.rounds === value}
+                active={playedSettings.rounds === value}
                 onClick={() => update({ rounds: value })}
                 icon={<InfinityIcon className="h-5 w-5 text-gold" />}
                 title={t('page.unlimited')}
@@ -193,7 +199,7 @@ export default function PatateChaudePage() {
             ) : (
               <PrelobbyChoice
                 key={value}
-                active={settings.rounds === value}
+                active={playedSettings.rounds === value}
                 onClick={() => update({ rounds: value })}
                 title={format.number(value)}
                 description={t('page.roundsUnit', { count: value })}

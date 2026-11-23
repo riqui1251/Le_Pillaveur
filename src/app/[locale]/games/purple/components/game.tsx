@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { GameMode } from '../page'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { useSoireeCap } from '@/components/soiree/useSoiree'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 import {
   PURPLE_BET_META,
@@ -66,6 +67,8 @@ type PurpleSave = {
   gameResults: Record<string, number>
   cardHistory: PlayingCard[]
   totalCardsDrawn: number
+  /** Tours finis (main passée ou perdue) : borne du Mode Soirée. Absent des sauvegardes plus anciennes. */
+  turnsDone?: number
 }
 
 // Barre de décision : ligne d'enjeu, « Continuer » (56) et « Passer » (48),
@@ -96,6 +99,7 @@ function checkBetResult(bet: BetType, cards: PlayingCard[]): boolean {
 export default function Game({ players, onGameEnd, updatePlayerStats }: GameProps) {
   const t = useTranslations('games.purple')
   const tCommon = useTranslations('common')
+  const tSoiree = useTranslations('soireeBar')
   const [confirmDialog, confirm] = useConfirmAction()
   const [isMounted, setIsMounted] = useState(false)
   const [deck, setDeck] = useState<PlayingCard[]>([])
@@ -111,6 +115,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
   const [canContinue, setCanContinue] = useState(false)
   const [cardHistory, setCardHistory] = useState<PlayingCard[]>([])
   const [totalCardsDrawn, setTotalCardsDrawn] = useState(0)
+  const [turnsDone, setTurnsDone] = useState(0)
+  // Mode Soirée : la manche s'arrête au bout de `soireeCap` tours de table (le paquet, lui, se recharge sans fin).
+  const soireeCap = useSoireeCap('purple')
+  const turnLimit = soireeCap !== null ? soireeCap * Math.max(1, players.length) : null
+  const lastTurn = turnLimit !== null && turnsDone + 1 >= turnLimit
   // Flash « nouveau paquet mélangé » quand le paquet épuisé est rebouclé.
   const [newDeckFlash, setNewDeckFlash] = useState(false)
   const [started, setStarted] = useState(false)
@@ -144,8 +153,9 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
       gameResults,
       cardHistory,
       totalCardsDrawn,
+      turnsDone,
     })
-  }, [started, deck, currentPlayerIndex, drinkCounter, gameResults, cardHistory, totalCardsDrawn])
+  }, [started, deck, currentPlayerIndex, drinkCounter, gameResults, cardHistory, totalCardsDrawn, turnsDone])
 
   const resumeSavedGame = () => {
     const saved = session.accept()
@@ -162,6 +172,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     setGameResults(saved.gameResults)
     setCardHistory(saved.cardHistory)
     setTotalCardsDrawn(saved.totalCardsDrawn)
+    setTurnsDone(saved.turnsDone ?? 0)
     setShowResult(false)
     setDrawnCards([])
     setLastBet(null)
@@ -203,6 +214,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     setCanContinue(false)
     setCardHistory([])
     setTotalCardsDrawn(0)
+    setTurnsDone(0)
   }
 
   const handleBet = (bet: BetType) => {
@@ -250,16 +262,29 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
   }
 
+  /** Le tour du joueur se termine : la main passe, sauf au dernier tour de table d'une soirée (bilan). */
+  const endTurn = () => {
+    const done = turnsDone + 1
+    setTurnsDone(done)
+    if (turnLimit !== null && done >= turnLimit) {
+      creditGame()
+      session.clear()
+      setEnded(true)
+      return
+    }
+    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+  }
+
   const handlePass = () => {
     if (!canContinue) return
-    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+    endTurn()
     setDrawnCards([]); setLastBet(null); setIsCorrect(null); setCanContinue(false)
   }
 
   const closeResult = () => {
     if (!showResult) return
     setShowResult(false)
-    setCurrentPlayerIndex(prev => (prev + 1) % Math.max(1, players.length))
+    endTurn()
     setDrawnCards([]); setLastBet(null)
   }
 
@@ -404,7 +429,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
         className="w-full whitespace-normal leading-tight"
         onClick={handlePass}
       >
-        {t('decision.pass', { name: nextPlayer?.name ?? '', count: drinkCounter })}
+        {lastTurn ? tSoiree('seeResults') : t('decision.pass', { name: nextPlayer?.name ?? '', count: drinkCounter })}
       </Button>
     </div>
   ) : undefined
@@ -422,6 +447,16 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
       />
       <GameShell
         title={t('title')}
+        headerSubtitle={
+          soireeCap !== null ? (
+            <span className="text-xs text-cream/70">
+              {tSoiree('cap.tableRounds', {
+                current: Math.min(Math.floor(turnsDone / Math.max(1, players.length)) + 1, soireeCap),
+                max: soireeCap,
+              })}
+            </span>
+          ) : undefined
+        }
         onBack={() => void askFinish()}
         maxWidth={700}
         headerRight={
@@ -518,7 +553,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
           className="w-full whitespace-normal leading-tight"
           onClick={closeResult}
         >
-          {t('nextTurn', { name: nextPlayer?.name ?? '' })}
+          {lastTurn ? tSoiree('seeResults') : t('nextTurn', { name: nextPlayer?.name ?? '' })}
         </Button>
       </PurpleVerdictDialog>
     </>

@@ -37,29 +37,33 @@ type Picking = { mode: 'add' } | { mode: 'replace'; index: number } | null
 
 /**
  * Le programme modifiable : monter, descendre, changer, retirer, ajouter.
- * `firstNumber` numérote la suite d'une soirée déjà commencée (entracte).
+ * `firstNumber` numérote la suite d'une soirée déjà commencée (entracte) ;
+ * `maxRounds` y est ce qu'il reste sous le plafond de la soirée.
  */
 export function ProgrammeEditor({
   program,
   onChange,
   playerCount,
   firstNumber = 1,
+  maxRounds = SOIREE_MAX_ROUNDS,
   onReroll,
 }: {
   program: string[]
   onChange: (next: string[]) => void
   playerCount: number
   firstNumber?: number
+  maxRounds?: number
   onReroll?: () => void
 }) {
   const t = useTranslations('soiree.programme')
   const games = useLocalizedGames()
   const title = (id: string) => games.find((g) => g.id === id)?.title ?? id
   const [picking, setPicking] = useState<Picking>(null)
+  const full = program.length >= maxRounds
 
   const pick = (gameId: string) => {
     if (picking?.mode === 'replace') onChange(replaceRound(program, picking.index, gameId))
-    else onChange(addRound(program, gameId))
+    else onChange(addRound(program, gameId, maxRounds))
     setPicking(null)
   }
 
@@ -117,7 +121,7 @@ export function ProgrammeEditor({
       </ol>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="quiet" size="game" onClick={() => setPicking({ mode: 'add' })} disabled={program.length >= SOIREE_MAX_ROUNDS}>
+        <Button variant="quiet" size="game" onClick={() => setPicking({ mode: 'add' })} disabled={full}>
           <Plus aria-hidden className="mr-1.5 h-4 w-4" />
           {t('add')}
         </Button>
@@ -128,6 +132,7 @@ export function ProgrammeEditor({
           </Button>
         )}
       </div>
+      {full && <p className="text-sm text-cream/70">{t('full', { max: SOIREE_MAX_ROUNDS })}</p>}
 
       <GamePickerDialog
         open={picking !== null}

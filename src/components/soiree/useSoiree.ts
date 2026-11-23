@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { readSoiree, SOIREE_EVENT, SOIREE_STORAGE_KEY, writeSoiree } from '@/lib/soiree/storage'
+import { soireeCap } from '@/lib/soiree/catalog'
 import { playingRoundOf, type Soiree, type SoireeRound } from '@/lib/soiree/state'
 
 /**
@@ -40,4 +41,9 @@ export function useSoiree() {
 export function useSoireeRound(gameId: string): SoireeRound | null {
   const { soiree } = useSoiree()
   return playingRoundOf(soiree, gameId)
+}
+
+/** Mode Soirée : la borne qui clôt une partie de ce jeu (soireeCap), seulement pendant une de ses manches. */
+export function useSoireeCap(gameId: string): number | null {
+  return useSoireeRound(gameId) ? soireeCap(gameId) : null
 }

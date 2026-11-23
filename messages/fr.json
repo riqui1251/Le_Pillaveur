@@ -8786,7 +8786,16 @@
     "continue": "Continuer la soirée",
     "back": "Retour à la soirée",
     "nextRound": "Manche suivante",
-    "toAddition": "Vers l’addition"
+    "toAddition": "Vers l’addition",
+    "cap": {
+      "hands": "Main {current} sur {max}",
+      "tableRounds": "Tour de table {current} sur {max}",
+      "rolls": "Lancer {current} sur {max}",
+      "draws": "Tirage {current} sur {max}"
+    },
+    "nextHand": "Main suivante",
+    "capReached": "Fin de la manche : c’était le dernier tour.",
+    "seeResults": "Voir le bilan"
   },
   "soiree": {
     "loading": "Chargement de la soirée…",
@@ -8928,6 +8937,7 @@
       "reroll": "Tout redistribuer",
       "replaceTitle": "Remplacer {game}",
       "addTitle": "Ajouter un jeu",
+      "full": "Programme complet : {max} manches au plus par soirée.",
       "launch": "Lancer la soirée",
       "launchOne": "Lancer la partie",
       "restart": "Changer la bande ou l’ambiance"
@@ -9118,7 +9128,7 @@
       "1220": {
         "a": "Chacun règle ses paris : parité de la somme, une plage (2-10, 11-20 ou 21-30), un chiffre qui fait boire et un qui fait donner.",
         "b": "On lance un dé 12 et un dé 20. Somme égale à ton chiffre « boire » : tu bois. À ton chiffre « donner », bonne parité ou bonne plage : tu distribues.",
-        "c": "Un chiffre sur un seul dé compte à moitié : cumulez les combos. On relance autant que la table veut."
+        "c": "Un chiffre sur un seul dé compte à moitié : cumulez les combos. Dix lancers, puis le bilan."
       },
       "vue-de-nez": {
         "a": "Une question dont la réponse est un nombre : chacun tape son estimation en secret, puis passe le téléphone.",
@@ -9133,12 +9143,12 @@
       "purple": {
         "a": "À ton tour, parie sur la couleur des deux prochaines cartes : Rouge, Noir, ou Purple (une rouge et une noire).",
         "b": "Chaque pari réussi fait grimper le compteur. Raté : tu bois tout le compteur et il repart à zéro.",
-        "c": "Arrêtez quand vous voulez : le bilan affiche les gorgées de chacun."
+        "c": "Trois tours de table, puis le bilan affiche les gorgées de chacun."
       },
       "blackjack": {
         "a": "Chacun joue contre le croupier, pas contre la table : mise 1, 2 ou 3 jetons avant chaque manche.",
         "b": "Approche 21 sans le dépasser (figures 10, as 1 ou 11). Battu ou sauté : tu bois ta mise ; gagné : tu la distribues.",
-        "c": "Le croupier tire jusqu’à 17. Un Black Jack paie une fois et demie. Enchaînez les manches, le bilan fait les comptes."
+        "c": "Le croupier tire jusqu’à 17. Un Black Jack paie une fois et demie. Cinq mains, puis le bilan fait les comptes."
       },
       "hi-lo": {
         "a": "Une carte est retournée : annonce si la suivante sera plus haute, plus basse ou égale.",
@@ -9173,7 +9183,7 @@
       "doigt-du-destin": {
         "a": "Tout le monde pose un doigt sur l’écran et le garde posé.",
         "b": "Le destin choisit un doigt : il boit 3 gorgées. En survie, les doigts tombent un à un et le dernier distribue 5 gorgées.",
-        "c": "Lever son doigt avant la fin coûte 2 gorgées. L’ardoise de cette manche se remplit à la main, à l’entracte."
+        "c": "Lever son doigt avant la fin coûte 2 gorgées. Trois tirages, puis l’ardoise de la manche se remplit à la main, à l’entracte."
       },
       "patate-chaude": {
         "a": "Un défi s’affiche (un thème, une lettre ou une syllabe) et la mèche de la bombe est secrète.",
@@ -9183,7 +9193,7 @@
       "cap-ou-pas-cap": {
         "a": "À ton tour, choisis Vérité ou Action : la carte se retourne avec son prix, de 1 à 5.",
         "b": "Cap ! Tu relèves et tu distribues le prix. Pas cap ? Tu bois le prix.",
-        "c": "Une fois par partie, renvoie la carte à un autre joueur au double du prix. Arrêtez quand la table le décide."
+        "c": "Une fois par partie, renvoie la carte à un autre joueur au double du prix. Trois tours de table, puis le bilan."
       },
       "coupe-du-roi": {
         "a": "Le téléphone au centre de la table : à ton tour, tire une carte, sa règle s’applique tout de suite.",

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { soireeCounting, soireeMinutes } from '@/lib/soiree/catalog'
-import { soireeMetric, soireeStandings, upcomingProgram, type Soiree } from '@/lib/soiree/state'
+import { soireeMetric, soireeStandings, upcomingProgram, upcomingRoom, type Soiree } from '@/lib/soiree/state'
 import { cn } from '@/lib/utils'
 import { GameBadge, MEDALS, SoireeCta, StepHeader, gameGradient, playerBarClass, useSoireePlayer, useSoireeUnits } from './soiree-ui'
 import { ProgrammeEditor } from './ProgrammeEditor'
@@ -176,6 +176,7 @@ export function EntracteView({
               onChange={onEditUpcoming}
               playerCount={soiree.playerIds.length}
               firstNumber={soiree.current + 1}
+              maxRounds={upcomingRoom(soiree)}
             />
           )}
         </section>

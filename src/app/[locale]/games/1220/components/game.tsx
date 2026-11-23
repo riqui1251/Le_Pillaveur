@@ -24,6 +24,7 @@ import { ResumeGamePrompt } from "@/components/game/ResumeGamePrompt"
 import { isSameLocalTable, useResumableLocalGame } from "@/lib/game-session"
 import { usePlayers } from "@/hooks/usePlayers"
 import { useAmbianceMode } from "@/components/providers/AmbianceAttribute"
+import { useSoireeCap } from "@/components/soiree/useSoiree"
 import { DiceBoard } from "./dice"
 import { BetsEditor, TableBets } from "./bets"
 import { DRINK_CHIP, GIVE_CHIP, RollHistory, VerdictPanel, VerdictRow, type Verdict1220 } from "./verdict"
@@ -85,6 +86,7 @@ function isValidChoices(c: Choices1220 | undefined): boolean {
 export default function Game1220({ players, onGameEnd }: GameProps) {
   const t = useTranslations('games.1220')
   const tc = useTranslations('common')
+  const tSoiree = useTranslations('soireeBar')
   const [confirmDialog, confirm] = useConfirmAction()
   const [phase, setPhase] = useState<Phase>("setup")
   const [draft, setDraft] = useState<Record<string, Choices1220>>(() => {
@@ -107,6 +109,9 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
   )
   const { updatePlayerStats } = usePlayers()
   const { mode: ambiance } = useAmbianceMode()
+  // Mode Soirée : la manche s'arrête au bout de `soireeCap` lancers (ils sont illimités sinon).
+  const soireeCap = useSoireeCap('1220')
+  const capReached = soireeCap !== null && rollCount >= soireeCap
 
   useEffect(() => () => {
     if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
@@ -233,8 +238,16 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
     setPhase("play")
   }
 
+  /** Dernier lancer de la soirée vu : le bilan, sans confirmation (la fin était annoncée). */
+  const finishCapped = () => {
+    if (rolling) return
+    countGame()
+    session.clear()
+    setPhase("ended")
+  }
+
   const roll = () => {
-    if (rolling || !configs) return
+    if (rolling || !configs || capReached) return
     setRolling(true)
     rollTimerRef.current = setTimeout(() => {
       rollTimerRef.current = null
@@ -398,10 +411,14 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
       {confirmDialog}
       <GameShell
         title={t('title')}
-        headerSubtitle={t('rollsCount', { count: rollCount })}
+        headerSubtitle={
+          soireeCap !== null
+            ? tSoiree('cap.rolls', { current: capReached ? soireeCap : rollCount + 1, max: soireeCap })
+            : t('rollsCount', { count: rollCount })
+        }
         onBack={() => void askFinish()}
         maxWidth={576}
-        contentClassName="gap-4"
+        contentClassName={cn("gap-4", capReached && gameActionBarPadding("tall"))}
         headerRight={
           <Button
             variant="ghost"
@@ -415,10 +432,19 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
           </Button>
         }
         actionBar={
-          <Button variant="primary" size="gameLg" className="w-full" onClick={roll} disabled={rolling}>
-            <Dices aria-hidden className="mr-2 h-5 w-5" />
-            {rolling ? t('rolling') : t('rollDice')}
-          </Button>
+          capReached && !rolling ? (
+            <div className="flex w-full flex-col gap-2">
+              <p className="text-center text-sm font-semibold text-gold">{tSoiree('capReached')}</p>
+              <Button variant="primary" size="gameLg" className="w-full" onClick={finishCapped}>
+                {tSoiree('seeResults')}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="primary" size="gameLg" className="w-full" onClick={roll} disabled={rolling}>
+              <Dices aria-hidden className="mr-2 h-5 w-5" />
+              {rolling ? t('rolling') : t('rollDice')}
+            </Button>
+          )
         }
       >
         <DiceBoard

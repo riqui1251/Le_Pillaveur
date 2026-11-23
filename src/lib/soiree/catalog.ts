@@ -46,6 +46,31 @@ const SOIREE_GAME_META: Readonly<Record<string, SoireeGameMeta>> = {
   'petit-buveur': { heat: 3, minutes: 25, counting: 'auto' },
 }
 
+/**
+ * Mode Soirée : la borne des jeux sans fin naturelle, pour que chaque manche
+ * se termine. L'unité est celle du jeu :
+ * - Purple, Cap ou pas Cap : tours de table (chacun a la main autant de fois) ;
+ * - Blackjack : mains ;
+ * - 1220 : lancers ;
+ * - Doigt du Destin : tirages.
+ * Ailleurs : Hi-Lo a sa propre borne (HI_LO_SOIREE_MISS_LIMIT), PMU une seule
+ * course, Patate Chaude perd son option « Illimité » (10 manches à la place).
+ * Les tutos de soirée (soiree.tutorials.<jeu>.c) annoncent ces nombres en
+ * toutes lettres : les changer ensemble.
+ */
+const SOIREE_GAME_CAPS: Readonly<Record<string, number>> = {
+  purple: 3,
+  blackjack: 5,
+  '1220': 10,
+  'cap-ou-pas-cap': 3,
+  'doigt-du-destin': 3,
+}
+
+/** Borne du jeu en soirée (SOIREE_GAME_CAPS), null s'il se termine tout seul. */
+export function soireeCap(gameId: string): number | null {
+  return SOIREE_GAME_CAPS[gameId] ?? null
+}
+
 /** Dans l'ordre du catalogue (src/lib/games.ts), jeux masqués et « en ligne uniquement » exclus. */
 export const SOIREE_GAME_IDS: readonly string[] = GAMES.filter(
   (game) => !game.hidden && !game.onlineOnly && game.id in SOIREE_GAME_META
