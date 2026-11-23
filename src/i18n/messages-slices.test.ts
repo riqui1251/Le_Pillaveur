@@ -12,6 +12,7 @@ import {
   gameSlice,
   mergeMessages,
   serverOnlySlice,
+  soireeSlice,
   tourSlice,
   supervisionMessages,
   supervisionSlice,
@@ -219,12 +220,15 @@ describe('sur le vrai catalogue français', () => {
     }
   })
 
-  it('socle + tranche TV + supervision + textes serveur + tuto = le catalogue entier', () => {
+  it('socle + tranche TV + supervision + soirée + textes serveur + tuto = le catalogue entier', () => {
     // Rien ne tombe entre les tranches : tout ce qui existe est servi quelque
     // part — les textes serveur, par les pages qui les rendent ; le tuto, par
-    // /api/tour/messages.
+    // /api/tour/messages ; le Mode Soirée, par l'accueil et /soiree.
     const rebuilt = mergeMessages(
-      mergeMessages(mergeMessages(tvMessages(FR), supervisionSlice(FR)), serverOnlySlice(FR)),
+      mergeMessages(
+        mergeMessages(mergeMessages(tvMessages(FR), supervisionSlice(FR)), soireeSlice(FR)),
+        serverOnlySlice(FR)
+      ),
       tourSlice(FR)
     )
     expect(rebuilt).toEqual(FR)

@@ -66,6 +66,14 @@
     "chat": "Chat",
     "languageSwitcher": "Cambiar idioma",
     "links": {
+      "soiree": {
+        "label": "Modo Fiesta",
+        "description": "Preparar una noche de fiesta"
+      },
+      "decouvrir": {
+        "label": "Descubrir Le Pillaveur",
+        "description": "La antigua portada y todos los juegos"
+      },
       "joueurs": {
         "label": "Jugadores",
         "description": "Administrar jugadores"
@@ -106,6 +114,14 @@
       "analytics": "Estadísticas de visita"
     },
     "pages": {
+      "soiree": {
+        "title": "Modo Fiesta",
+        "subtitle": "Una noche de fiesta lista"
+      },
+      "decouvrir": {
+        "title": "Le Pillaveur",
+        "subtitle": "La casa de los juegos de fiesta"
+      },
       "joueurs": {
         "title": "Jugadores",
         "subtitle": "Gestionar el equipo"
@@ -2028,7 +2044,8 @@
         "goalReached": "¡Has alcanzado el objetivo de {count} respuestas correctas consecutivas!",
         "fiveSame": "La carta {value} {suit} ha salido por quinta vez.",
         "results": "Resultados",
-        "sipsResult": "{count, plural, one {# sorbo} other {# sorbos}}"
+        "sipsResult": "{count, plural, one {# sorbo} other {# sorbos}}",
+        "missLimit": "Todos han fallado {count, plural, one {una vez} other {# veces}}"
       },
       "wrong": {
         "title": "¡Respuesta incorrecta!",
@@ -2067,6 +2084,12 @@
       "traverseeExit": "¡{name} acertó el empate y sale de la travesía!",
       "traverseeOut": "ha salido de la travesía",
       "nextTurnButton": "Turno de {name}",
+      "missLimit": {
+        "rule": "Fin de ronda con {count, plural, one {# fallo} other {# fallos}} cada uno",
+        "count": "{count, plural, =0 {ningún fallo} one {# fallo} other {# fallos}} de {limit}",
+        "roundOver": "Fin de la ronda",
+        "seeResults": "Ver el resultado"
+      },
       "verdict": {
         "everyone": "¡Todos beben {count, plural, one {# sorbo} other {# sorbos}}!",
         "group": "¡{names} beben {count, plural, one {# sorbo} other {# sorbos}}!",
@@ -7701,6 +7724,7 @@
         "local": "Local"
       },
       "unknownGame": "Juego desconocido",
+      "soireeSubject": "Noche entera",
       "noComment": "Sin comentario, solo una nota.",
       "ratingValue": "{rating}/5"
     },
@@ -7732,7 +7756,7 @@
       "reviewsTitle": "Quién puntuó qué",
       "reviewsHint": "Cada valoración con su autor, sus estrellas y su comentario, de la más reciente a la más antigua. El nombre abre la ficha de la cuenta.",
       "reviewsFilterLabel": "Juego",
-      "reviewsAllGames": "Todos los juegos ({count})",
+      "reviewsAll": "Todos los juegos ({count})",
       "reviewsGameOption": "{game} ({count})",
       "reviewsCount": "{count, plural, =0 {Ninguna valoración} one {# valoración} other {# valoraciones}}",
       "reviewsCountFor": "{count, plural, =0 {Ninguna valoración de {game}} one {# valoración de {game}} other {# valoraciones de {game}}}",
@@ -7741,6 +7765,28 @@
       "authorGuest": "Invitado",
       "authorAnonymous": "Sin cuenta (partida local)",
       "authorDeleted": "Cuenta eliminada"
+    },
+    "soireeFeedback": {
+      "title": "Votos del Modo Fiesta",
+      "desc": "El voto de la mesa en cada descanso («¿Os ha gustado este juego?») y en la cuenta («¿Os ha gustado la noche?»). Los votos con comentario también llegan a Moderación › Reportes; las notas solas solo aparecen aquí.",
+      "loadError": "No se pudieron cargar los votos del Modo Fiesta.",
+      "empty": "Aún no hay votos del Modo Fiesta.",
+      "emptyHint": "Aparecen aquí en cuanto una mesa vota en un descanso o en la cuenta.",
+      "averageLabel": "Nota media de las noches",
+      "totalCount": "{count, plural, =0 {Ninguna noche puntuada} one {# noche puntuada} other {# noches puntuadas}}",
+      "byGameTitle": "Media por juego, en el descanso",
+      "byGameHint": "Ordenados por número de votos: una media de dos votos dice poco. Elige un juego para ver sus votos.",
+      "byGameEmpty": "Aún no se ha puntuado ningún juego en un descanso.",
+      "reviewsHint": "Cada voto con sus estrellas, su juego y su comentario, del más reciente al más antiguo. Un voto vale por toda la mesa: la cuenta mostrada es la que tenía la sesión iniciada en el dispositivo de la noche, si había una y si aún existe.",
+      "reviewsFilterLabel": "Mostrar",
+      "reviewsAll": "Todos los votos ({count})",
+      "reviewsNight": "La noche entera ({count})",
+      "reviewsCount": "{count, plural, =0 {Ningún voto} one {# voto} other {# votos}}",
+      "reviewsCountFor": "{count, plural, =0 {Ningún voto de {game}} one {# voto de {game}} other {# votos de {game}}}",
+      "reviewsCountNight": "{count, plural, =0 {Ningún voto de la noche entera} one {# voto de la noche entera} other {# votos de la noche entera}}",
+      "reviewsEmpty": "No hay votos que mostrar.",
+      "reviewsLoadError": "No se pudo cargar la lista de votos.",
+      "authorAnonymous": "Sin cuenta"
     },
     "history": {
       "activeConnection": "Conexión activa",
@@ -8759,6 +8805,441 @@
     },
     "feed": {
       "newer": "Mensajes nuevos"
+    }
+  },
+  "soireeBar": {
+    "label": "Fiesta · {number}/{total}",
+    "complete": "¡Ronda terminada!",
+    "continue": "Seguir la fiesta",
+    "back": "Volver a la fiesta",
+    "nextRound": "Siguiente ronda",
+    "toAddition": "Ir a la cuenta"
+  },
+  "soiree": {
+    "loading": "Cargando la fiesta…",
+    "backToBande": "Volver al grupo",
+    "meta": {
+      "title": "Modo Fiesta",
+      "description": "Una noche de juegos de beber lista: el grupo, un programa que va subiendo, la pizarra y la cuenta."
+    },
+    "home": {
+      "eyebrow": "Modo Fiesta",
+      "title": "¿Cuántos sois esta noche?",
+      "lead": "Decid quién juega. Le Pillaveur prepara la noche, encadena los juegos y lleva la pizarra hasta la cuenta.",
+      "countLabel": "Número de jugadores",
+      "players": "{count, plural, one {jugador} other {jugadores}}",
+      "less": "Un jugador menos",
+      "more": "Un jugador más",
+      "start": "Preparar nuestra noche",
+      "single": "Jugar a un solo juego",
+      "stats": "¿Qué juego hace beber más?",
+      "resume": {
+        "eyebrow": "Fiesta en curso",
+        "title": "Seguir en la ronda {round} de {total}",
+        "cta": "Seguir"
+      },
+      "revenge": {
+        "eyebrow": "¿Otra vez?",
+        "title": "{name} · noche n.º {number}",
+        "lastPayer": "La última vez, {name} pagó la cuenta.",
+        "lastTie": "La última vez: empate en cabeza.",
+        "ready": "El grupo está listo."
+      },
+      "stepsLabel": "Cómo va una noche de fiesta",
+      "steps": {
+        "bande": {
+          "title": "El grupo",
+          "text": "Los nombres, una vez para toda la noche."
+        },
+        "programme": {
+          "title": "El programa",
+          "text": "Rondas que van subiendo, en el orden que queráis."
+        },
+        "addition": {
+          "title": "La cuenta",
+          "text": "Los premios de la noche, para enviar al grupo."
+        }
+      },
+      "about": {
+        "title": "Le Pillaveur, la casa de los juegos de fiesta",
+        "text": "{count} juegos de fiesta gratis, en un solo móvil o un móvil cada uno: dados, cartas, quiz, faroles y retos. El Modo Fiesta los encadena por vosotros, del más tranquilo al más intenso.",
+        "discover": "Descubrir Le Pillaveur",
+        "allGames": "Ver todos los juegos"
+      },
+      "note": "Basta con un móvil · gratis · sin registro.",
+      "health": "Bebe con moderación. Sin alcohol, la pizarra cuenta las victorias."
+    },
+    "units": {
+      "drinks": "{count, plural, one {# trago} other {# tragos}}",
+      "wins": "{count, plural, one {# victoria} other {# victorias}}"
+    },
+    "bande": {
+      "eyebrow": "Paso 1 de 3",
+      "title": "El grupo",
+      "lead": "Un nombre por jugador. Un nombre ya conocido recupera a su jugador y sus estadísticas.",
+      "bandes": "Grupos que ya vinieron",
+      "listLabel": "Jugadores de la noche",
+      "nameLabel": "Nombre del jugador {number}",
+      "placeholder": "Jugador {number}",
+      "remove": "Quitar al jugador {number}",
+      "add": "Añadir un jugador",
+      "known": "Vuestros jugadores guardados",
+      "continue": "Seguir con {count, plural, one {# jugador} other {# jugadores}}",
+      "errors": {
+        "tooFew": "Hacen falta al menos {min} jugadores para una fiesta.",
+        "duplicate": "Dos jugadores se llaman {name}: añadid una inicial.",
+        "refused": "Este nombre no está permitido: {name}."
+      },
+      "leadKnown": "Marcad a los jugadores de esta noche. Un nombre nuevo crea al jugador.",
+      "newLabel": "Nombre de un jugador nuevo",
+      "newPlaceholder": "Jugador nuevo",
+      "pickMore": "Elegid al menos {min} jugadores"
+    },
+    "ambiance": {
+      "eyebrow": "Paso 2 de 3",
+      "title": "El ambiente",
+      "lead": "Elige los juegos del programa y su orden.",
+      "vibeLabel": "Ambiente de la noche",
+      "vibes": {
+        "apero": {
+          "name": "Aperitivo tranquilo",
+          "pitch": "Juegos tranquilos para calentar."
+        },
+        "monte": {
+          "name": "Va subiendo",
+          "pitch": "Suave al principio, fuerte al final."
+        },
+        "grosse": {
+          "name": "Gran fiesta",
+          "pitch": "Los juegos que más hacen brindar."
+        }
+      },
+      "soft": {
+        "title": "Sin alcohol",
+        "text": "Los juegos pasan a sin alcohol y la pizarra cuenta victorias en lugar de tragos."
+      },
+      "lengthTitle": "Duración",
+      "lengths": {
+        "court": "Rápida",
+        "normal": "Normal",
+        "long": "Larga",
+        "carte": "A la carta"
+      },
+      "rounds": "{count, plural, one {# ronda} other {# rondas}}",
+      "carteHint": "Vuestros juegos",
+      "pick": "Elegir mis juegos",
+      "compose": "Preparar el programa"
+    },
+    "programme": {
+      "eyebrow": "Paso 3 de 3",
+      "title": "Vuestro programa",
+      "lead": "Cambiad un juego, subidlo o bajadlo: es vuestra noche.",
+      "heat": "Intensidad {value} de 3",
+      "curve": "Curva de intensidad de la noche, del calentamiento a la final",
+      "warm": "CALENTAMIENTO",
+      "final": "FINAL",
+      "summary": "{count, plural, one {# ronda} other {# rondas}} · unos {minutes} min",
+      "empty": "Todavía no hay juegos: añadid uno, o varios.",
+      "listLabel": "Programa de la noche",
+      "roundNumber": "Ronda {number}",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Pizarra por revisar",
+        "manual": "Pizarra por rellenar"
+      },
+      "up": "Subir {game}",
+      "down": "Bajar {game}",
+      "change": "Cambiar",
+      "remove": "Quitar {game}",
+      "add": "Añadir un juego",
+      "reroll": "Repartir de nuevo",
+      "replaceTitle": "Sustituir {game}",
+      "addTitle": "Añadir un juego",
+      "launch": "Empezar la fiesta",
+      "launchOne": "Empezar la partida",
+      "restart": "Cambiar el grupo o el ambiente"
+    },
+    "picker": {
+      "lead": "Del más tranquilo al más intenso. Los juegos cuentan los tragos solos, salvo que se indique.",
+      "minutes": "~{minutes} min",
+      "counting": {
+        "partial": "Pizarra por revisar",
+        "manual": "Pizarra por rellenar"
+      },
+      "inProgram": "Ya en el programa",
+      "minPlayers": "Desde {count} jugadores"
+    },
+    "round": {
+      "eyebrow": "Ronda {number} de {total}",
+      "lead": "La partida se juega en la página del juego. Los tragos llegan solos a la pizarra al final.",
+      "manual": "Este juego no cuenta los tragos: los apuntaréis en el descanso.",
+      "tallyLabel": "Pizarra de la ronda",
+      "complete": "Fin de partida recibido: validad la ronda.",
+      "partial": "Ha llegado una parte de la pizarra.",
+      "waiting": "Todavía no hay resultado.",
+      "validate": "Validar la ronda",
+      "goToGame": "Ir al juego",
+      "done": "Ronda acabada",
+      "restart": "Repetir",
+      "skip": "Saltar",
+      "howTo": "¿Cómo se juega?"
+    },
+    "entracte": {
+      "eyebrow": "Descanso · {done} de {total}",
+      "title": "La pizarra",
+      "leadDrinks": "Tragos bebidos desde el principio de la noche.",
+      "leadWins": "Rondas ganadas desde el principio de la noche.",
+      "lastLabel": "La ronda que acaba de terminar",
+      "lastEyebrow": "Ronda {number}",
+      "skipped": "Ronda saltada.",
+      "nobodyDrank": "Nadie ha bebido.",
+      "nobodyWon": "Nadie ha ganado.",
+      "correct": "Corregir",
+      "manualPrompt": "{game} no cuenta los tragos: apuntadlos.",
+      "partialPrompt": "{game} no lo cuenta todo: revisad la pizarra.",
+      "correctLead": "Añadid lo que se dijo en voz alta.",
+      "less": "Uno menos para {name}",
+      "more": "Uno más para {name}",
+      "correctDone": "Listo",
+      "water": "Un vaso de agua entre rondas: la noche dura más.",
+      "nextLabel": "Siguiente ronda",
+      "nextEyebrow": "Ronda {number}",
+      "minutes": "~{minutes} min",
+      "editProgram": "Cambiar el resto del programa",
+      "closeProgram": "Cerrar el programa",
+      "confirmTitle": "¿Terminar la noche ahora?",
+      "confirmBody": "La cuenta contará {count, plural, one {la # ronda jugada} other {las # rondas jugadas}}.",
+      "confirmOk": "Ver la cuenta",
+      "confirmCancel": "Seguir",
+      "next": "Ronda {number}: {game}",
+      "skip": "Saltar",
+      "finish": "Terminar aquí",
+      "addition": "Ver la cuenta"
+    },
+    "addition": {
+      "eyebrow": "Fin de la noche",
+      "title": "La cuenta",
+      "gamesTitle": "Juego a juego",
+      "gameTop": "de ellos {count} para {name}",
+      "awardsTitle": "Los premios",
+      "momentsTitle": "Los momentos de la noche",
+      "stats": "¿Qué juego hace beber más?",
+      "revanche": "Otra vez: la revancha",
+      "new": "Nueva fiesta",
+      "home": "Inicio",
+      "receipt": {
+        "brand": "LE PILLAVEUR",
+        "counter": "BARRA · MODO FIESTA",
+        "table": "Mesa de esta noche",
+        "night": "{bande} · noche n.º {number}",
+        "short": {
+          "drinks": "{count} trag.",
+          "wins": "{count} vict."
+        },
+        "total": "TOTAL",
+        "rounds": "rondas jugadas",
+        "payer": "{name} PAGA LA CUENTA",
+        "tie": "EMPATE EN CABEZA: CUENTA A MEDIAS",
+        "thanks": "GRACIAS POR VENIR · HASTA LA REVANCHA"
+      },
+      "awards": {
+        "pilier": {
+          "title": "El Pilar de la barra",
+          "why": "{count, plural, one {# trago} other {# tragos}} en la noche"
+        },
+        "survivant": {
+          "title": "El Superviviente",
+          "why": "solo {count, plural, one {# trago} other {# tragos}}"
+        },
+        "roi": {
+          "title": "El Rey de las rondas",
+          "why": "{count, plural, one {# ronda ganada} other {# rondas ganadas}}"
+        },
+        "champion": {
+          "title": "El Campeón",
+          "why": "{count, plural, one {# victoria} other {# victorias}}"
+        },
+        "lanterne": {
+          "title": "El Farolillo rojo",
+          "why": "{count, plural, one {# victoria} other {# victorias}}"
+        },
+        "gros-coup": {
+          "title": "El Gran Trago",
+          "why": "{count} tragos de golpe en {game}"
+        },
+        "arrose": {
+          "title": "El juego más regado",
+          "why": "{count, plural, one {# trago} other {# tragos}} esta noche"
+        }
+      },
+      "moments": {
+        "roundDrinks": "{game} hizo beber {total, plural, one {# trago} other {# tragos}}, de ellos {top} para {name}.",
+        "roundWin": "{name} ganó {game}.",
+        "streak": "{name} ganó {count} rondas seguidas.",
+        "sober": "{name} no bebió ni una gota en toda la noche.",
+        "roundDrinksAll": "{game} hizo beber {total} tragos, todos para {name}."
+      },
+      "recap": {
+        "title": "La cuenta · {bande} · noche n.º {number}",
+        "payer": "{name} paga la cuenta.",
+        "footer": "Revancha en lepillaveur.fr"
+      },
+      "share": {
+        "title": "Para enviar al grupo",
+        "make": "Crear la imagen de la cuenta",
+        "making": "Imprimiendo la cuenta…",
+        "ready": "Imagen lista.",
+        "failed": "No se pudo crear la imagen en este móvil.",
+        "share": "Compartir la imagen",
+        "copy": "Copiar el resumen en texto",
+        "copied": "Resumen copiado: pegadlo en el grupo.",
+        "copyFailed": "La copia está bloqueada en este navegador.",
+        "alt": "La cuenta de la noche"
+      },
+      "keep": {
+        "title": "Guardar el grupo",
+        "lead": "La próxima vez, la revancha empieza con un toque, con el historial de cuentas.",
+        "label": "Nombre del grupo",
+        "default": "El grupo de {name}",
+        "save": "Guardar el grupo",
+        "known": "Noche n.º {count} añadida al historial de {name}."
+      },
+      "gameTopAll": "todos para {name}"
+    },
+    "stats": {
+      "eyebrow": "En este móvil",
+      "title": "¿Qué juego hace beber más?",
+      "lead": "Tragos medios por jugador y por partida, según las partidas jugadas en este móvil.",
+      "empty": "Todavía no hay suficientes partidas en este móvil para clasificar los juegos. ¡Empezad una fiesta!",
+      "rankingLabel": "Juegos del más regado al menos regado",
+      "perPlayUnit": "tragos / jugador",
+      "rowDetail": "{drinks, plural, one {# trago} other {# tragos}} · {plays, plural, one {# participación} other {# participaciones}}",
+      "rowTop": "récord: {name} ({count})",
+      "drinkersTitle": "Los que más beben",
+      "drinkerDetail": "{drinks, plural, one {# trago} other {# tragos}} en {plays, plural, one {# partida} other {# partidas}}",
+      "soireesTitle": "Vuestras fiestas",
+      "soireesCount": "{count, plural, one {# noche jugada} other {# noches jugadas}} en este móvil.",
+      "soireesAverage": "{value} tragos por noche de media.",
+      "soireesRecord": "Récord: {count} tragos, el {date}.",
+      "soireesFavorite": "Juego más programado: {game} ({count, plural, one {# ronda} other {# rondas}}).",
+      "note": "Las partidas sin alcohol cuentan cero tragos. La Copa del Rey y El Dedo del Destino solo cuentan lo apuntado durante una fiesta.",
+      "cta": "Preparar una fiesta"
+    },
+    "launching": "Abriendo {game}…",
+    "intro": {
+      "eyebrow": "Ronda {number} de {total}",
+      "howTo": "Cómo se juega",
+      "players": "Jugadores de la ronda",
+      "start": "¡Vamos!",
+      "back": "Volver",
+      "skip": "Saltar esta ronda",
+      "softNote": "Sin alcohol: los juegos cuentan puntos o prendas en lugar de tragos.",
+      "steps": {
+        "rule": "La idea",
+        "drinks": "Los tragos",
+        "points": "Las penalizaciones",
+        "end": "El final"
+      }
+    },
+    "tutorials": {
+      "1220": {
+        "a": "Cada uno fija sus apuestas: paridad de la suma, un rango (2-10, 11-20 o 21-30), un número que hace beber y otro que hace dar.",
+        "b": "Se lanza un dado de 12 y uno de 20. Si la suma es tu número de «beber», bebes. Tu número de «dar», la paridad o el rango correctos: repartes.",
+        "c": "Un número en un solo dado cuenta la mitad: acumulad combos. Se relanza tantas veces como quiera la mesa."
+      },
+      "vue-de-nez": {
+        "a": "Una pregunta cuya respuesta es un número: cada uno escribe su estimación en secreto y pasa el móvil.",
+        "b": "El más cercano reparte 3 tragos (6 si da en el blanco); el más lejano bebe 3.",
+        "c": "Las estimaciones se revelan en una regla graduada y llega la siguiente pregunta. Gana el mejor olfato."
+      },
+      "pile-poil": {
+        "a": "En tu turno, pon en marcha el cronómetro y páralo justo a los 10 segundos: las cifras se borran a los 3 segundos.",
+        "b": "El más alejado del objetivo bebe (1 trago por cada medio segundo de diferencia, 5 como máximo). Clavado: repartes 5 tragos.",
+        "c": "Tras el último turno, gana la menor diferencia acumulada."
+      },
+      "purple": {
+        "a": "En tu turno, apuesta por el color de las dos próximas cartas: Rojo, Negro o Purple (una roja y una negra).",
+        "b": "Cada apuesta acertada hace subir el contador. Fallo: te bebes todo el contador y vuelve a cero.",
+        "c": "Parad cuando queráis: el resumen muestra los tragos de cada uno."
+      },
+      "blackjack": {
+        "a": "Cada uno juega contra el crupier, no contra la mesa: apuesta 1, 2 o 3 fichas antes de cada mano.",
+        "b": "Acércate a 21 sin pasarte (figuras 10, ases 1 u 11). Si pierdes o te pasas, bebes tu apuesta; si ganas, la repartes.",
+        "c": "El crupier pide hasta 17. Un Black Jack paga una vez y media. Encadenad manos: el resumen lleva la cuenta."
+      },
+      "hi-lo": {
+        "a": "Se gira una carta: anuncia si la siguiente será más alta, más baja o igual.",
+        "b": "Si aciertas, la racha sigue y la apuesta sube. Si fallas, te bebes la apuesta.",
+        "c": "Dos fallos cada uno: todos siguen jugando y la ronda termina cuando todos han fallado al menos dos veces."
+      },
+      "chiffre-piege": {
+        "a": "El móvil esconde un número trampa: en tu turno, propón un número dentro del intervalo mostrado.",
+        "b": "Fallo: el intervalo se estrecha y el móvil pasa. Justo en la trampa: ¡BUM!, bebes un trago por cada intento de la ronda.",
+        "c": "Un comodín por partida para saltar tu turno. Al final, gana quien menos ha bebido."
+      },
+      "plinko": {
+        "a": "Por turnos, suelta una bola desde arriba del tablero: rebota en los clavos hasta una casilla.",
+        "b": "Bola roja: bebes los tragos de la casilla. Bola verde: los das. Los clavos especiales duplican, suman, restan o lanzan una ronda para todos.",
+        "c": "Cuando todos han jugado, el resumen muestra los tragos de cada uno."
+      },
+      "monsieur-3": {
+        "a": "Cada uno lanza un dado: el primero que saca un 3 se convierte en Monsieur 3.",
+        "b": "Luego se lanzan dos dados: cada 3 o 5, o una suma de 3, hace beber a Monsieur 3. Suma 5 u 8: un gesto que hacer, el último bebe. Un doble: duelo.",
+        "c": "Cuando Monsieur 3 lanza sin provocar nada, la partida termina."
+      },
+      "pmu": {
+        "a": "Cada uno elige un caballo y la carrera arranca sola.",
+        "b": "Los jinetes del caballo ganador reparten un número de tragos al azar.",
+        "c": "Una carrera por ronda: en el descanso, apuntad en la pizarra quién bebió qué."
+      },
+      "front-colle": {
+        "a": "El que adivina se pega el móvil en la frente, con la pantalla hacia la mesa.",
+        "b": "La mesa le hace adivinar la palabra describiéndola, imitándola o tarareándola, sin decirla nunca.",
+        "c": "Móvil hacia el suelo: acertada; hacia el techo: se pasa. Al acabar el tiempo, el resumen dice quién bebe y cambia la frente."
+      },
+      "doigt-du-destin": {
+        "a": "Todos ponen un dedo en la pantalla y lo dejan ahí.",
+        "b": "El destino elige un dedo: bebe 3 tragos. En supervivencia, los dedos caen uno a uno y el último reparte 5 tragos.",
+        "c": "Levantar el dedo antes del final cuesta 2 tragos. La pizarra de esta ronda se rellena a mano en el descanso."
+      },
+      "patate-chaude": {
+        "a": "Aparece un reto (un tema, una letra o una sílaba) y la mecha de la bomba es secreta.",
+        "b": "Di una palabra que encaje, toca «Paso a…» y pasa rápido el móvil. Dos palabras rechazadas seguidas: 1 trago.",
+        "c": "¡BUM!: quien tiene la bomba bebe 3 tragos. Al final de las rondas, gana quien menos explosiones tenga."
+      },
+      "cap-ou-pas-cap": {
+        "a": "En tu turno, elige Verdad o Reto: la carta se gira con su precio, de 1 a 5.",
+        "b": "¡Me atrevo!: lo haces y repartes el precio. ¿No te atreves? Bebes el precio.",
+        "c": "Una vez por partida, devuelve la carta a otro jugador al doble del precio. Parad cuando la mesa lo decida."
+      },
+      "coupe-du-roi": {
+        "a": "El móvil en el centro de la mesa: en tu turno, saca una carta y su regla se aplica al instante.",
+        "b": "Algunas cartas dan un rol o una regla que dura: la app lleva la lista. Los tragos se arreglan en la mesa.",
+        "c": "Con cada rey, un poco de tu vaso en la copa: el cuarto rey se la bebe (o 5 tragos). La pizarra se rellena a mano."
+      },
+      "petit-buveur": {
+        "a": "En tu turno, tira el dado y avanza esas casillas.",
+        "b": "Según la casilla: bebe tragos, acepta un reto o activa un efecto (intercambio, maldición, protección…).",
+        "c": "El primero en llegar a la casilla 30 gana la partida."
+      }
+    },
+    "vote": {
+      "round": "¿Os ha gustado este juego?",
+      "soiree": "¿Os ha gustado la noche?",
+      "faces": {
+        "1": "Nada",
+        "2": "Flojo",
+        "3": "Normal",
+        "4": "Bien",
+        "5": "¡Genial!"
+      },
+      "commentLabel": "¿Algo que añadir? (opcional)",
+      "commentPlaceholder": "Lo que os gustó, lo que faltó…",
+      "send": "Enviar",
+      "thanks": "¡Gracias, apuntado!",
+      "error": "Voto no enviado: comprobad la conexión y volved a intentarlo.",
+      "tooMany": "Demasiados votos seguidos: volved a intentarlo en un momento.",
+      "note": "Vuestro voto nos ayuda a mejorar el Modo Fiesta."
     }
   }
 }

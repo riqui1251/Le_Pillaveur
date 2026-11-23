@@ -1,4 +1,5 @@
 import { createHash } from 'crypto'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { FIRST_GAME_FEEDBACK_TYPE } from '@/lib/feedback'
 import { isFirstGameFeedbackEligible, isLocalFirstGameFeedbackEligible } from '@/lib/first-game-feedback'
@@ -98,7 +99,7 @@ function roundAverage(value: number | null | undefined): number | null {
  * jeune, les volumes sont petits, une fenêtre de 30 j les rendrait muets. La
  * tendance se lit dans `last30d`. Tout passe par aggregate / groupBy : aucune
  * ligne n'est rapatriée (les avis un par un ont leur route paginée,
- * listFirstGameReviews), et l'index (type, createdAt) sert chaque requête.
+ * listRatedReviews), et l'index (type, createdAt) sert chaque requête.
  * `rating: { not: null }` : une ligne 'first-game' a toujours sa note (la
  * route l'exige), le filtre ne coûte rien et garde les comptes justes si une
  * ligne bricolée arrivait sans.
@@ -107,6 +108,22 @@ export async function summarizeFirstGameFeedback(
   now: Date = new Date()
 ): Promise<FirstGameFeedbackSummary> {
   const rated = { type: FIRST_GAME_FEEDBACK_TYPE, rating: { not: null } }
+  return summarizeRatedFeedback({ overall: rated, byGame: rated }, now)
+}
+
+/**
+ * Le même résumé pour tout retour noté 1..5 (avis de 1re partie, votes du
+ * Mode Soirée) : `overall` nourrit total, 30 jours et répartition ; `byGame`
+ * la moyenne par jeu (lignes sans jeu écartées).
+ * Les deux coïncident pour l'avis de 1re partie ; la soirée les sépare — la
+ * note de la soirée entière d'un côté, celle de chaque jeu à l'entracte de
+ * l'autre.
+ */
+export async function summarizeRatedFeedback(
+  where: { overall: Prisma.UserFeedbackWhereInput; byGame: Prisma.UserFeedbackWhereInput },
+  now: Date = new Date()
+): Promise<FirstGameFeedbackSummary> {
+  const rated = where.overall
   const recentSince = new Date(now.getTime() - FIRST_GAME_SUMMARY_RECENT_DAYS * DAY_MS)
 
   const [all, recent, byRating, byGame] = await Promise.all([
@@ -127,7 +144,7 @@ export async function summarizeFirstGameFeedback(
     }),
     prisma.userFeedback.groupBy({
       by: ['gameId'],
-      where: { ...rated, gameId: { not: null } },
+      where: { ...where.byGame, gameId: { not: null } },
       _count: { _all: true },
       _avg: { rating: true },
     }),
@@ -158,7 +175,9 @@ export async function summarizeFirstGameFeedback(
 /**
  * Un avis sans compte rattaché : soit un compte supprimé depuis (userId remis
  * à null, la clé first-game-<empreinte> reste — cf. firstGameFeedbackId),
- * soit une partie locale jouée sans connexion (cuid par défaut).
+ * soit personne — partie locale ou soirée jouée sans connexion (cuid par
+ * défaut, clé soiree-<soirée>-…). Une clé de soirée ne porte pas le compte :
+ * celui qui a voté connecté puis supprimé son compte ressort « sans compte ».
  */
 function reviewAuthor(row: {
   id: string
@@ -172,27 +191,22 @@ function reviewAuthor(row: {
 }
 
 /**
- * Avis de 1re partie UN PAR UN, pour savoir qui a noté quoi : le plus récent
- * d'abord, filtrés par jeu si demandé, une page à la fois. L'auteur est le
- * PSEUDO du compte, jamais son e-mail — ce que la boîte des retours montre
- * déjà au même grade. L'id départage deux avis de la même milliseconde :
- * sans lui, l'ordre d'une page à l'autre n'est pas garanti (doublon ou trou).
+ * Retours notés UN PAR UN, pour savoir qui a noté quoi : le plus récent
+ * d'abord, une page à la fois. Commun aux avis de 1re partie et aux votes du
+ * Mode Soirée, comme summarizeRatedFeedback. L'auteur est le PSEUDO du compte,
+ * jamais son e-mail — ce que la boîte des retours montre déjà au même grade.
+ * L'id départage deux avis de la même milliseconde : sans lui, l'ordre d'une
+ * page à l'autre n'est pas garanti (doublon ou trou).
  */
-export async function listFirstGameReviews({
-  gameId,
+export async function listRatedReviews({
+  where,
   skip,
   take,
 }: {
-  gameId: string | null
+  where: Prisma.UserFeedbackWhereInput
   skip: number
   take: number
 }): Promise<{ reviews: FirstGameReview[]; total: number }> {
-  const where = {
-    type: FIRST_GAME_FEEDBACK_TYPE,
-    rating: { not: null },
-    ...(gameId ? { gameId } : {}),
-  }
-
   const [rows, total] = await Promise.all([
     prisma.userFeedback.findMany({
       where,
@@ -225,4 +239,25 @@ export async function listFirstGameReviews({
     })),
     total,
   }
+}
+
+/** Avis de 1re partie un par un, filtrés par jeu si demandé. */
+export async function listFirstGameReviews({
+  gameId,
+  skip,
+  take,
+}: {
+  gameId: string | null
+  skip: number
+  take: number
+}): Promise<{ reviews: FirstGameReview[]; total: number }> {
+  return listRatedReviews({
+    where: {
+      type: FIRST_GAME_FEEDBACK_TYPE,
+      rating: { not: null },
+      ...(gameId ? { gameId } : {}),
+    },
+    skip,
+    take,
+  })
 }

@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { AbstractIntlMessages } from 'next-intl'
-import { GAME_IDS, ON_DEMAND_PATHS, coreMessages, gameMessages, supervisionMessages, tvMessages } from './messages-slices'
+import { GAME_IDS, ON_DEMAND_PATHS, coreMessages, gameMessages, soireeMessages, supervisionMessages, tvMessages } from './messages-slices'
 
 /**
  * Couverture des tranches de messages, route par route.
@@ -79,13 +79,14 @@ const SPECIAL_FILES = ['layout.tsx', 'error.tsx', 'not-found.tsx', 'loading.tsx'
 // Tranche fournie par le layout le plus proche
 // ---------------------------------------------------------------------------
 
-type SliceRef = { kind: 'core' } | { kind: 'game'; gameId: string } | { kind: 'supervision' } | { kind: 'tv' }
+type SliceRef = { kind: 'core' } | { kind: 'game'; gameId: string } | { kind: 'supervision' } | { kind: 'tv' } | { kind: 'soiree' }
 
 /** La tranche que déclare un layout (via ClientMessages ou un provider posé à la main), ou null. */
 function sliceDeclaredIn(layoutFile: string): SliceRef | null {
   const source = stripComments(readFileSync(layoutFile, 'utf8'))
   if (/\btv(?:Slice|Messages)\(/.test(source)) return { kind: 'tv' }
   if (/\bsupervision(?:Slice|Messages)\(/.test(source)) return { kind: 'supervision' }
+  if (/\bsoiree(?:Slice|Messages)\(/.test(source)) return { kind: 'soiree' }
   const game = source.match(/\bgame(?:Slice|Messages)\(\s*[^,()]+?(?:\([^)]*\))?\s*,\s*(?:'([^']+)'|"([^"]+)"|(\w+))\s*\)/)
   if (!game) return null
   const literal = game[1] ?? game[2]
@@ -97,8 +98,16 @@ function sliceDeclaredIn(layoutFile: string): SliceRef | null {
   return { kind: 'game', gameId: constant[1] }
 }
 
-/** Remonte de `dir` jusqu'à la racine [locale] : le premier layout qui déclare une tranche l'emporte. */
+/**
+ * La page elle-même d'abord (l'accueil s'enveloppe de sa tranche sans layout
+ * propre : un groupe de routes changerait sa clé de manifeste, que le
+ * précache hors ligne attend), puis on remonte de `dir` jusqu'à la racine
+ * [locale] : le premier layout qui déclare une tranche l'emporte.
+ */
 function sliceForDir(dir: string): SliceRef {
+  const page = join(dir, 'page.tsx')
+  const ownSlice = existsSync(page) ? sliceDeclaredIn(page) : null
+  if (ownSlice) return ownSlice
   let current = dir
   for (;;) {
     const layout = join(current, 'layout.tsx')
@@ -121,6 +130,8 @@ function messagesOf(ref: SliceRef): AbstractIntlMessages {
       return supervisionMessages(CATALOGUE)
     case 'tv':
       return tvMessages(CATALOGUE)
+    case 'soiree':
+      return soireeMessages(CATALOGUE)
   }
 }
 

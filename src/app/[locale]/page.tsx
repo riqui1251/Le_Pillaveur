@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import { redirect } from '@/i18n/navigation'
+import { Link, redirect } from '@/i18n/navigation'
 import { isAppLocale } from '@/lib/locale-utils'
-import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { LOCAL_PLAY_COOKIE, SESSION_COOKIE } from '@/lib/auth-cookies'
-import { LandingPage } from '@/components/landing/LandingPage'
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server'
+import { SESSION_COOKIE } from '@/lib/auth-cookies'
+import { getCurrentUser } from '@/lib/auth-server'
+import { soireeSlice } from '@/i18n/messages-slices'
+import { ClientMessages } from '@/components/i18n/ClientMessages'
+import { SoireeHome } from '@/components/soiree/SoireeHome'
+import { SoireeShell } from '@/components/soiree/soiree-ui'
 import { GAMES } from '@/lib/games'
 import { buildAlternates, buildOpenGraphLocale, siteOgImage } from '@/lib/seo/alternates'
 
@@ -59,14 +63,44 @@ export default async function Home({
   // (Intl.DateTimeFormat) levait un RangeError — 500 au lieu de 404.
   if (!isAppLocale(locale)) notFound()
   const jar = await cookies()
-  // Les habitués (session ou mode local déjà choisi) entrent directement
-  // dans l'app ; les nouveaux visiteurs — et les moteurs de recherche —
-  // découvrent la vitrine.
-  const isReturning =
-    Boolean(jar.get(SESSION_COOKIE)?.value) || jar.get(LOCAL_PLAY_COOKIE)?.value === '1'
-  if (isReturning) {
-    redirect({ href: '/jeux', locale })
+  // Le Mode Soirée (jeux locaux) est l'accueil depuis le 22/11/2026, pour les
+  // nouveaux visiteurs comme pour les habitués du mode local. Les comptes en
+  // MODE EN LIGNE gardent leur entrée d'avant, le hub des tables : la partie
+  // en ligne ne change pas. L'ancienne vitrine vit sur /decouvrir.
+  if (jar.get(SESSION_COOKIE)?.value) {
+    const user = await getCurrentUser()
+    if (user?.playMode === 'online') redirect({ href: '/jeux', locale })
   }
   setRequestLocale(locale)
-  return <LandingPage locale={locale} />
+  const t = await getTranslations({ locale, namespace: 'soiree.home' })
+  const steps = ['bande', 'programme', 'addition'] as const
+  return (
+    <ClientMessages messages={soireeSlice(await getMessages({ locale }))}>
+      <SoireeShell>
+        <SoireeHome />
+        <ol className="grid gap-2 sm:grid-cols-3" aria-label={t('stepsLabel')}>
+          {steps.map((step, i) => (
+            <li key={step} className="grid grid-cols-[1.25rem_1fr] gap-x-2 rounded-2xl border border-gold/20 bg-black/10 px-3 py-2.5 sm:block">
+              <span className="row-span-2 font-display font-bold text-gold">{i + 1}</span>
+              <span className="block font-display font-bold text-cream">{t(`steps.${step}.title`)}</span>
+              <span className="block text-sm text-cream/70">{t(`steps.${step}.text`)}</span>
+            </li>
+          ))}
+        </ol>
+        <section className="space-y-2 text-sm text-cream/70">
+          <h2 className="font-display text-lg font-bold text-cream">{t('about.title')}</h2>
+          <p>{t('about.text', { count: GAMES.filter((g) => !g.hidden).length })}</p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1 font-bold">
+            <Link href="/decouvrir" className="text-amber-200 underline underline-offset-4 hover:text-amber-100">{t('about.discover')}</Link>
+            <Link href="/jeux" className="text-amber-200 underline underline-offset-4 hover:text-amber-100">{t('about.allGames')}</Link>
+          </p>
+        </section>
+        <p className="text-center text-xs text-cream/50">
+          {t('note')}
+          <br />
+          {t('health')}
+        </p>
+      </SoireeShell>
+    </ClientMessages>
+  )
 }

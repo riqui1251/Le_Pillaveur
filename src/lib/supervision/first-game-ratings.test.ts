@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  REVIEWS_PAGING,
   distributionRows,
   filledStars,
   isFirstGamePlayMode,
+  isGameIdShape,
   parseFirstGameFeedbackSummary,
   parseFirstGameReviewsPage,
   sortByGameVolume,
@@ -242,6 +244,23 @@ describe('filledStars', () => {
     expect(filledStars(null)).toBe(0)
     expect(filledStars(undefined)).toBe(0)
     expect(filledStars(Number.NaN)).toBe(0)
+  })
+})
+
+describe('isGameIdShape', () => {
+  it('identifiants du catalogue, chiffre en tête compris', () => {
+    for (const id of ['loup-garou', '1220', 'hi-lo', 'a']) expect(isGameIdShape(id)).toBe(true)
+  })
+
+  it('refuse majuscules, tiret en tête, caractères à échapper, vide et trop long', () => {
+    for (const id of ['LOUP', '-tiret', "';--", '*night', '', 'a'.repeat(65)]) expect(isGameIdShape(id)).toBe(false)
+    expect(isGameIdShape('a'.repeat(64))).toBe(true)
+  })
+})
+
+describe('REVIEWS_PAGING', () => {
+  it('dix avis par défaut, cinquante au plus', () => {
+    expect(REVIEWS_PAGING).toEqual({ defaultSize: 10, maxSize: 50 })
   })
 })
 

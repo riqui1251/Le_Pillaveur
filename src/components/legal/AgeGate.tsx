@@ -362,8 +362,12 @@ export function AgeGate() {
   // d'une messagerie, souvent sans le cookie d'âge, et une modale « Accès
   // réservé aux majeurs » y ferait croire que le geste demande une étape de
   // plus, ou a échoué. Ni jeu ni donnée : rien à certifier.
+  // L'accueil (Mode Soirée) et l'ancienne vitrine déplacée sur /decouvrir
+  // restent des pages de lecture : le portail arrive à « Composer notre
+  // soirée » (/soiree) ou au premier jeu, comme avant.
   const readingPage =
     pathname === '/' ||
+    pathname === '/decouvrir' ||
     pathname.startsWith('/legal') ||
     pathname.startsWith('/regles') ||
     pathname === '/compte/rappel' ||

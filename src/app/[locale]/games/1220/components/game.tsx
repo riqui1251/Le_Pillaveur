@@ -23,6 +23,7 @@ import { FirstGameFeedbackCard } from "@/components/feedback/FirstGameFeedbackCa
 import { ResumeGamePrompt } from "@/components/game/ResumeGamePrompt"
 import { isSameLocalTable, useResumableLocalGame } from "@/lib/game-session"
 import { usePlayers } from "@/hooks/usePlayers"
+import { useAmbianceMode } from "@/components/providers/AmbianceAttribute"
 import { DiceBoard } from "./dice"
 import { BetsEditor, TableBets } from "./bets"
 import { DRINK_CHIP, GIVE_CHIP, RollHistory, VerdictPanel, VerdictRow, type Verdict1220 } from "./verdict"
@@ -105,6 +106,7 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
     isSameLocalTable(s.playerIds, players)
   )
   const { updatePlayerStats } = usePlayers()
+  const { mode: ambiance } = useAmbianceMode()
 
   useEffect(() => () => {
     if (rollTimerRef.current) clearTimeout(rollTimerRef.current)
@@ -155,7 +157,9 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
     gameCountedRef.current = true
     players.forEach(p => {
       try {
-        updatePlayerStats(p.id, '1220', { gamesPlayed: 1 })
+        // Gorgées BUES (tally.drink) ; celles à donner se distribuent à voix
+        // haute, sans cible enregistrée. Sans alcool, rien n'est bu.
+        updatePlayerStats(p.id, '1220', { gamesPlayed: 1, totalDrinks: ambiance === 'soft' ? 0 : (tally[p.id]?.drink ?? 0) })
       } catch (error) {
         console.error('Erreur lors du comptage de la partie:', error)
       }

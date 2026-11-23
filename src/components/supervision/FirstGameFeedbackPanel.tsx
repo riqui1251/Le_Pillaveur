@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useFormatter, useTranslations } from 'next-intl'
-import { AlertTriangle, RefreshCw, Star, Users } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Star, Users, Wine } from 'lucide-react'
 import { EmptyState, ErrorState, Pager, SectionCard, SkeletonRows } from '@/components/supervision/SupervisionLayout'
 import { BarList, type BarListRow } from '@/components/supervision/charts'
 import { GameIconById } from '@/components/hub/GameIconById'
@@ -41,6 +41,21 @@ import { cn } from '@/lib/utils'
  * moyenne qui bouge d'un avis par jour n'a pas à être relue toutes les 15 s.
  */
 
+/**
+ * `soiree` : les votes du Mode Soirée (POST /api/feedback/soiree), au même
+ * format. La note de la soirée entière fait le chiffre principal, la moyenne
+ * par jeu vient des votes d'entracte, et « Qui a noté quoi » liste les deux.
+ * Seuls les libellés propres changent (supervision.soireeFeedback) ; le reste
+ * reprend ceux de l'avis de 1re partie.
+ */
+export type RatedFeedbackKind = 'firstGame' | 'soiree'
+
+/** Résumé de chaque panneau ; sa liste d'avis un par un est servie par `<résumé>/reviews`. */
+const SUMMARY_ENDPOINT: Record<RatedFeedbackKind, string> = {
+  firstGame: '/api/admin/first-game-feedback',
+  soiree: '/api/admin/soiree-feedback',
+}
+
 /** Libellé de bloc : petites capitales crème, comme les plaques de la Salle. */
 const BLOCK_LABEL = 'text-[11px] font-semibold uppercase tracking-wide text-cream/70'
 
@@ -51,8 +66,13 @@ const BLOCK_LABEL = 'text-[11px] font-semibold uppercase tracking-wide text-crea
  */
 const REVIEWS_PAGE_SIZE = 10
 
-/** Valeur du filtre « tous les jeux » : Radix Select refuse la chaîne vide. */
-const ALL_GAMES = 'all'
+/**
+ * Choix du filtre qui ne sont pas un jeu : tout, ou les votes de la soirée
+ * entière (sans jeu). Radix Select refuse la chaîne vide, et l'astérisque
+ * n'entre dans aucun identifiant de jeu.
+ */
+const ALL_SUBJECTS = '*'
+const NIGHT_SUBJECT = '*night'
 
 /**
  * Titre traduit d'un jeu ; repli sur le catalogue puis sur l'identifiant —
@@ -117,8 +137,8 @@ export function RatingStars({
 }
 
 /**
- * Ligne « note · jeu · mode » d'un avis de 1re partie : partagée par la boîte
- * des retours (liste et détail) et par la liste des avis du panneau. Que des
+ * Ligne « note · jeu · mode » d'un avis noté : partagée par la boîte des
+ * retours (liste et détail) et par la liste des avis du panneau. Que des
  * `span` : la ligne se pose aussi DANS le bouton d'une entrée de liste, où un
  * `div` n'a pas sa place. `showValue` écrit la note en chiffres à côté des
  * étoiles (« 4/5 ») : cinq glyphes se comptent mal d'un coup d'œil.
@@ -127,6 +147,7 @@ export function FirstGameFeedbackMeta({
   rating,
   gameId,
   playMode,
+  noGameLabel,
   size = 'sm',
   showValue = false,
   className,
@@ -134,6 +155,8 @@ export function FirstGameFeedbackMeta({
   rating: number | null | undefined
   gameId: string | null | undefined
   playMode: string | null | undefined
+  /** Ce que la note juge quand elle ne porte sur aucun jeu (la soirée entière) ; « jeu inconnu » sinon. */
+  noGameLabel?: string
   size?: 'sm' | 'lg'
   showValue?: boolean
   className?: string
@@ -160,7 +183,7 @@ export function FirstGameFeedbackMeta({
             <GameIconById id={gameId} surface="feltGold" className="h-5 w-5 shrink-0" />
           </span>
         )}
-        <span className="min-w-0 truncate">{gameId ? gameTitle(gameId) : t('unknownGame')}</span>
+        <span className="min-w-0 truncate">{gameId ? gameTitle(gameId) : (noGameLabel ?? t('unknownGame'))}</span>
       </span>
       {/* Mode inconnu (valeur hors contrat) : rien plutôt qu'un identifiant brut. */}
       {isFirstGamePlayMode(playMode) && (
@@ -176,13 +199,13 @@ export function FirstGameFeedbackMeta({
  * Auteur d'un avis : le pseudo du compte, lien vers sa fiche (seul l'id
  * voyage dans l'URL) ; sinon ce qu'on sait de son absence, en italique.
  */
-function ReviewAuthor({ author }: { author: FirstGameReviewAuthor }) {
+function ReviewAuthor({ author, anonymousLabel }: { author: FirstGameReviewAuthor; anonymousLabel: string }) {
   const t = useTranslations('supervision.firstGameFeedback')
   const tSupervision = useTranslations('supervision')
   if (author.kind !== 'account') {
     return (
       <span className="min-w-0 text-sm italic text-cream/70">
-        {t(author.kind === 'deleted' ? 'authorDeleted' : 'authorAnonymous')}
+        {author.kind === 'deleted' ? t('authorDeleted') : anonymousLabel}
       </span>
     )
   }
@@ -206,12 +229,25 @@ function ReviewAuthor({ author }: { author: FirstGameReviewAuthor }) {
 
 /**
  * « Qui a noté quoi » : chaque avis avec son auteur, sa note, son jeu et son
- * commentaire, le plus récent d'abord, une page à la fois. Monté sous une clé
- * égale au filtre : changer de jeu repart d'une page 1 vierge. `refreshToken`
- * change quand l'exploitant clique « Actualiser » : la page en cours se relit.
+ * commentaire, le plus récent d'abord, une page à la fois. `subject` : tout
+ * (ALL_SUBJECTS), la soirée entière (NIGHT_SUBJECT) ou l'identifiant d'un jeu.
+ * Monté sous une clé égale au filtre : en changer repart d'une page 1 vierge.
+ * `refreshToken` change quand l'exploitant clique « Actualiser » : la page en
+ * cours se relit.
  */
-function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null; refreshToken: number }) {
+function RatedReviewsList({
+  kind,
+  subject,
+  refreshToken,
+}: {
+  kind: RatedFeedbackKind
+  subject: string
+  refreshToken: number
+}) {
   const t = useTranslations('supervision.firstGameFeedback')
+  const tSoiree = useTranslations('supervision.soireeFeedback')
+  const tFeedback = useTranslations('supervision.feedback')
+  const tk = kind === 'soiree' ? tSoiree : t
   const tStates = useTranslations('supervision.states')
   const format = useFormatter()
   const gameTitle = useGameTitle()
@@ -219,9 +255,10 @@ function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null;
   const [data, setData] = useState<FirstGameReviewsPage | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const endpoint = `${SUMMARY_ENDPOINT[kind]}/reviews`
 
-  const tRef = useRef(t)
-  tRef.current = t
+  const tRef = useRef({ t, tk })
+  tRef.current = { t, tk }
   const abortRef = useRef<AbortController | null>(null)
 
   const load = useCallback(
@@ -232,16 +269,19 @@ function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null;
       setLoading(true)
       try {
         const params = new URLSearchParams({ page: String(target), pageSize: String(REVIEWS_PAGE_SIZE) })
-        if (gameId) params.set('gameId', gameId)
-        const res = await fetch(`/api/admin/first-game-feedback/reviews?${params.toString()}`, {
+        if (subject === NIGHT_SUBJECT) params.set('scope', 'night')
+        else if (subject !== ALL_SUBJECTS) params.set('gameId', subject)
+        const res = await fetch(`${endpoint}?${params.toString()}`, {
           credentials: 'include',
           cache: 'no-store',
           signal: controller.signal,
         })
         const body = await res.json().catch(() => null)
-        if (!res.ok) throw new Error(tRef.current(res.status === 403 ? 'forbidden' : 'reviewsLoadError'))
+        if (!res.ok) {
+          throw new Error(res.status === 403 ? tRef.current.t('forbidden') : tRef.current.tk('reviewsLoadError'))
+        }
         const parsed = parseFirstGameReviewsPage(body)
-        if (!parsed) throw new Error(tRef.current('reviewsLoadError'))
+        if (!parsed) throw new Error(tRef.current.tk('reviewsLoadError'))
         // Page vidée entre deux lectures (compte invité purgé, par exemple) :
         // on retombe sur la dernière page qui existe, pas sur « aucun avis ».
         const lastPage = Math.max(1, Math.ceil(parsed.total / REVIEWS_PAGE_SIZE))
@@ -253,12 +293,12 @@ function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null;
         setError(null)
       } catch (e) {
         if (controller.signal.aborted) return
-        setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current('reviewsLoadError'))
+        setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current.tk('reviewsLoadError'))
       } finally {
         if (abortRef.current === controller) setLoading(false)
       }
     },
-    [gameId]
+    [endpoint, subject]
   )
 
   useEffect(() => {
@@ -279,20 +319,26 @@ function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null;
   const pages = Math.max(1, Math.ceil(total / REVIEWS_PAGE_SIZE))
   const formatDate = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'short', timeStyle: 'short', timeZone: PARIS_TIME_ZONE })
+  const countLabel =
+    subject === ALL_SUBJECTS
+      ? tk('reviewsCount', { count: total })
+      : subject === NIGHT_SUBJECT
+        ? tSoiree('reviewsCountNight', { count: total })
+        : tk('reviewsCountFor', { count: total, game: gameTitle(subject) })
 
   return (
     <div className="space-y-2">
       <p aria-live="polite" className="text-xs text-cream/70">
-        {gameId ? t('reviewsCountFor', { count: total, game: gameTitle(gameId) }) : t('reviewsCount', { count: total })}
+        {countLabel}
       </p>
       {data.reviews.length === 0 ? (
-        <EmptyState icon={Users} title={t('reviewsEmpty')} />
+        <EmptyState icon={Users} title={tk('reviewsEmpty')} />
       ) : (
         <ul className="space-y-2" aria-busy={loading}>
           {data.reviews.map((review) => (
             <li key={review.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
               <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-                <ReviewAuthor author={review.author} />
+                <ReviewAuthor author={review.author} anonymousLabel={tk('authorAnonymous')} />
                 <time dateTime={review.createdAt} className="shrink-0 text-xs text-cream/70">
                   {formatDate(review.createdAt)}
                 </time>
@@ -300,7 +346,9 @@ function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null;
               <FirstGameFeedbackMeta
                 rating={review.rating}
                 gameId={review.gameId}
-                playMode={review.playMode}
+                // Une soirée se joue toujours en local : le mode n'apprendrait rien.
+                playMode={kind === 'soiree' ? null : review.playMode}
+                noGameLabel={kind === 'soiree' ? tFeedback('soireeSubject') : undefined}
                 showValue
                 className="mt-1.5"
               />
@@ -325,22 +373,27 @@ function FirstGameReviewsList({ gameId, refreshToken }: { gameId: string | null;
   )
 }
 
-export function FirstGameFeedbackPanel() {
+export function FirstGameFeedbackPanel({ kind = 'firstGame' }: { kind?: RatedFeedbackKind }) {
   const t = useTranslations('supervision.firstGameFeedback')
+  const tSoiree = useTranslations('supervision.soireeFeedback')
+  // Libellés propres au résumé affiché ; les autres sont communs.
+  const tk = kind === 'soiree' ? tSoiree : t
   const tStates = useTranslations('supervision.states')
   const gameTitle = useGameTitle()
   const formatRating = useRatingFormatter()
   const [summary, setSummary] = useState<FirstGameFeedbackSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [gameFilter, setGameFilter] = useState<string | null>(null)
+  const [subject, setSubject] = useState(ALL_SUBJECTS)
   const [refreshToken, setRefreshToken] = useState(0)
   const filterLabelId = useId()
   const filterTriggerId = useId()
   const reviewsHeadingRef = useRef<HTMLHeadingElement>(null)
+  const endpoint = SUMMARY_ENDPOINT[kind]
+  const Icon = kind === 'soiree' ? Wine : Star
 
-  const tRef = useRef(t)
-  tRef.current = t
+  const tRef = useRef({ t, tk })
+  tRef.current = { t, tk }
   // Requête en vol : un second clic sur « Actualiser » l'annule au lieu de
   // laisser deux réponses se doubler, et le démontage (onglet quitté) aussi.
   const abortRef = useRef<AbortController | null>(null)
@@ -351,31 +404,31 @@ export function FirstGameFeedbackPanel() {
     abortRef.current = controller
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/first-game-feedback', {
+      const res = await fetch(endpoint, {
         credentials: 'include',
         cache: 'no-store',
         signal: controller.signal,
       })
       const body = await res.json().catch(() => null)
-      // Pas de `body.error` : adminErrorResponse le rédige en français quelle
+      // Pas de `body.error` : la route le rédige en français ou en code, quelle
       // que soit la langue. 403 = session expirée ou grade retiré pendant que
       // l'onglet restait ouvert.
-      if (!res.ok) throw new Error(tRef.current(res.status === 403 ? 'forbidden' : 'loadError'))
+      if (!res.ok) throw new Error(res.status === 403 ? tRef.current.t('forbidden') : tRef.current.tk('loadError'))
       // Réponse d'un serveur antérieur à la route, ou page d'erreur du proxy :
       // une erreur, jamais un résumé vide qui ferait croire à zéro avis.
       const parsed = parseFirstGameFeedbackSummary(body)
-      if (!parsed) throw new Error(tRef.current('loadError'))
+      if (!parsed) throw new Error(tRef.current.tk('loadError'))
       setSummary(parsed)
       setError(null)
     } catch (e) {
       if (controller.signal.aborted) return
       // TypeError = échec réseau de fetch (« Failed to fetch », en anglais
       // quelle que soit la langue) : le message traduit dit la même chose.
-      setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current('loadError'))
+      setError(e instanceof Error && e.name !== 'TypeError' ? e.message : tRef.current.tk('loadError'))
     } finally {
       if (abortRef.current === controller) setLoading(false)
     }
-  }, [])
+  }, [endpoint])
 
   useEffect(() => {
     void load()
@@ -391,21 +444,32 @@ export function FirstGameFeedbackPanel() {
     setRefreshToken((n) => n + 1)
   }
 
-  // Jeu choisi qui n'a plus d'avis après « Actualiser » : retour à tous les
-  // jeux, plutôt qu'une liste vide sous un choix absent du menu.
-  const activeGameFilter =
-    gameFilter !== null && summary?.byGame.some((game) => game.gameId === gameFilter) ? gameFilter : null
+  // Côté soirée, `total` ne compte que les votes de la soirée entière : ceux
+  // d'entracte sont dans `byGame`. L'avis de 1re partie porte toujours sur une
+  // partie, et son `total` les compte tous.
+  const nightCount = kind === 'soiree' ? (summary?.total ?? 0) : 0
+  const allCount =
+    kind === 'soiree'
+      ? nightCount + (summary?.byGame.reduce((sum, game) => sum + game.count, 0) ?? 0)
+      : (summary?.total ?? 0)
+
+  // Choix qui n'a plus d'avis après « Actualiser » : retour à tout, plutôt
+  // qu'une liste vide sous un choix absent du menu.
+  const subjectListed =
+    subject === ALL_SUBJECTS ||
+    (subject === NIGHT_SUBJECT ? nightCount > 0 : Boolean(summary?.byGame.some((game) => game.gameId === subject)))
+  const activeSubject = subjectListed ? subject : ALL_SUBJECTS
 
   /**
    * Un jeu touché dans « Moyenne par jeu » filtre la liste des avis (un second
-   * toucher la rend à tous les jeux). Au téléphone la liste est plus bas : on
+   * toucher la rend à tous les avis). Au téléphone la liste est plus bas : on
    * l'amène en vue, sans bouger la page si son titre est déjà à l'écran.
    */
   const showGameReviews = (gameId: string) => {
-    const next = activeGameFilter === gameId ? null : gameId
-    setGameFilter(next)
+    const next = activeSubject === gameId ? ALL_SUBJECTS : gameId
+    setSubject(next)
     const heading = reviewsHeadingRef.current
-    if (next === null || !heading) return
+    if (next === ALL_SUBJECTS || !heading) return
     const top = heading.getBoundingClientRect().top
     if (top >= 0 && top <= window.innerHeight * 0.6) return
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -441,19 +505,19 @@ export function FirstGameFeedbackPanel() {
     : []
 
   return (
-    <SectionCard icon={Star} title={t('title')} description={t('desc')} actions={refreshButton}>
+    <SectionCard icon={Icon} title={tk('title')} description={tk('desc')} actions={refreshButton}>
       {error ? (
         <ErrorState icon={AlertTriangle} message={error} retryLabel={tStates('retry')} onRetry={() => void load()} />
       ) : !summary ? (
         <SkeletonRows rows={3} />
-      ) : summary.total === 0 ? (
-        <EmptyState icon={Star} title={t('empty')} hint={t('emptyHint')} />
+      ) : summary.total === 0 && summary.byGame.length === 0 ? (
+        <EmptyState icon={Icon} title={tk('empty')} hint={tk('emptyHint')} />
       ) : (
         <div className="space-y-5">
           {/* Le chiffre qu'on vient chercher, en grand ; la période récente à côté. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="min-w-0 rounded-2xl border border-gold/30 bg-felt-deep/60 p-4">
-              <p className={BLOCK_LABEL}>{t('averageLabel')}</p>
+              <p className={BLOCK_LABEL}>{tk('averageLabel')}</p>
               {summary.average !== null ? (
                 <>
                   {/* Valeur lue une fois, par l'aria-label des étoiles. */}
@@ -468,7 +532,7 @@ export function FirstGameFeedbackPanel() {
               ) : (
                 <p className="mt-1 font-display text-5xl font-bold text-gold">—</p>
               )}
-              <p className="mt-1.5 text-xs text-cream/70">{t('totalCount', { count: summary.total })}</p>
+              <p className="mt-1.5 text-xs text-cream/70">{tk('totalCount', { count: summary.total })}</p>
             </div>
 
             <div className="min-w-0 rounded-2xl border border-white/10 bg-black/20 p-4">
@@ -501,14 +565,14 @@ export function FirstGameFeedbackPanel() {
             </div>
 
             <div className="min-w-0">
-              <h3 className={cn(BLOCK_LABEL, 'mb-1')}>{t('byGameTitle')}</h3>
-              <p className="mb-2 text-[11px] leading-snug text-cream/70">{t('byGameHint')}</p>
+              <h3 className={cn(BLOCK_LABEL, 'mb-1')}>{tk('byGameTitle')}</h3>
+              <p className="mb-2 text-[11px] leading-snug text-cream/70">{tk('byGameHint')}</p>
               {summary.byGame.length === 0 ? (
-                <p className="py-3 text-sm text-cream/70">{t('byGameEmpty')}</p>
+                <p className="py-3 text-sm text-cream/70">{tk('byGameEmpty')}</p>
               ) : (
                 <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-black/20">
                   {summary.byGame.map((game) => {
-                    const selected = activeGameFilter === game.gameId
+                    const selected = activeSubject === game.gameId
                     return (
                       <li key={game.gameId}>
                         <button
@@ -553,16 +617,13 @@ export function FirstGameFeedbackPanel() {
                 <h3 ref={reviewsHeadingRef} className={cn(BLOCK_LABEL, 'scroll-mt-24')}>
                   {t('reviewsTitle')}
                 </h3>
-                <p className="mt-1 text-[11px] leading-snug text-cream/70">{t('reviewsHint')}</p>
+                <p className="mt-1 text-[11px] leading-snug text-cream/70">{tk('reviewsHint')}</p>
               </div>
               <div className="flex min-w-0 items-center gap-2">
                 <span id={filterLabelId} className="shrink-0 text-xs text-cream/70">
-                  {t('reviewsFilterLabel')}
+                  {tk('reviewsFilterLabel')}
                 </span>
-                <Select
-                  value={activeGameFilter ?? ALL_GAMES}
-                  onValueChange={(value) => setGameFilter(value === ALL_GAMES ? null : value)}
-                >
+                <Select value={activeSubject} onValueChange={setSubject}>
                   {/* Nom = libellé + choix en cours (« Jeu Loup-Garou (3) ») :
                       le bouton de Radix n'expose pas sa valeur autrement. */}
                   <SelectTrigger
@@ -573,7 +634,10 @@ export function FirstGameFeedbackPanel() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_GAMES}>{t('reviewsAllGames', { count: summary.total })}</SelectItem>
+                    <SelectItem value={ALL_SUBJECTS}>{tk('reviewsAll', { count: allCount })}</SelectItem>
+                    {nightCount > 0 && (
+                      <SelectItem value={NIGHT_SUBJECT}>{tSoiree('reviewsNight', { count: nightCount })}</SelectItem>
+                    )}
                     {summary.byGame.map((game) => (
                       <SelectItem key={game.gameId} value={game.gameId}>
                         {t('reviewsGameOption', { game: gameTitle(game.gameId), count: game.count })}
@@ -583,11 +647,7 @@ export function FirstGameFeedbackPanel() {
                 </Select>
               </div>
             </div>
-            <FirstGameReviewsList
-              key={activeGameFilter ?? ALL_GAMES}
-              gameId={activeGameFilter}
-              refreshToken={refreshToken}
-            />
+            <RatedReviewsList key={activeSubject} kind={kind} subject={activeSubject} refreshToken={refreshToken} />
           </div>
         </div>
       )}

@@ -24,6 +24,8 @@ import {
   HI_LO_SAVE_ID,
   HI_LO_SAVE_VERSION,
   hiLoCardsPlayed,
+  hiLoFinalResults,
+  hiLoMissLimitReached,
   MAX_SAME_CARD_DRAWS,
   resolveHiLoGuess,
   restoreHiLoSave,
@@ -51,6 +53,8 @@ interface GameProps {
   onGameEnd: () => void
   updatePlayerStats: (playerId: string, gameId: string, stats: { gamesPlayed: number, totalDrinks?: number, wins?: number }) => void
   gameMode: GameMode
+  /** Mode Soirée : loupés permis à chacun avant la fin de la manche (standard), sinon illimité. */
+  missLimit?: number | null
 }
 
 // Fonction pour obtenir la classe CSS de l'effet spécial du joueur
@@ -132,6 +136,54 @@ function HiLoCardFace({ card, className }: { card: HiLoCard; className?: string 
   )
 }
 
+/**
+ * Mode Soirée : les loupés de chacun, jusqu'à la limite qui clôt la manche.
+ * Qui l'a atteinte continue de jouer : ses pastilles pleines disent seulement
+ * qu'on n'attend plus que les autres.
+ */
+function MissTracker({ players, limit, misses, turnId }: {
+  players: Player[]
+  limit: number
+  misses: Record<string, number>
+  turnId: string | null
+}) {
+  const t = useTranslations('games.hi-lo')
+  return (
+    <>
+      <p className="mb-2 text-center font-display text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+        {t('missLimit.rule', { count: limit })}
+      </p>
+      <ul className="mb-4 flex flex-wrap justify-center gap-2">
+        {players.map(player => {
+          const count = Math.min(misses[player.id] ?? 0, limit)
+          const isTurn = player.id === turnId
+          return (
+            <li
+              key={player.id}
+              aria-current={isTurn ? 'true' : undefined}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border border-gold/60 bg-gold/[0.15] px-3 py-1 text-sm text-cream',
+                isTurn && 'ring-2 ring-gold'
+              )}
+            >
+              <PlayerName player={player} />
+              <span aria-hidden className="flex gap-0.5">
+                {Array.from({ length: limit }, (_, index) => (
+                  <span
+                    key={index}
+                    className={cn('h-2 w-2 rounded-full', index < count ? 'bg-red-400' : 'border border-cream/50')}
+                  />
+                ))}
+              </span>
+              <span className="sr-only">{t('missLimit.count', { count, limit })}</span>
+            </li>
+          )
+        })}
+      </ul>
+    </>
+  )
+}
+
 function PlayerAvatar({ player, className, glyphClassName }: { player: Player; className?: string; glyphClassName?: string }) {
   return (
     <Avatar className={cn(className, isSpecialPlayer(player) && 'border-2 border-red-500 shadow-lg shadow-red-500/50')}>
@@ -143,7 +195,7 @@ function PlayerAvatar({ player, className, glyphClassName }: { player: Player; c
   )
 }
 
-export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }: GameProps) {
+export default function Game({ players, onGameEnd, updatePlayerStats, gameMode, missLimit = null }: GameProps) {
   const t = useTranslations('games.hi-lo')
   const tc = useTranslations('common')
   const format = useFormatter()
@@ -215,7 +267,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     }
     // Réhydratation : les profils viennent de la prop, la sauvegarde ne
     // connaît que des identifiants. Illisible → partie neuve, pas d'écran planté.
-    const restored = restoreHiLoSave(saved, players.map(p => p.id))
+    const restored = restoreHiLoSave(saved, players.map(p => p.id), { missLimit })
     if (!restored) {
       session.discard()
       return
@@ -225,6 +277,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     setIsFlipping(false)
     setIsProcessing(false)
     setStarted(true)
+    // Sauvegarde prise sur le tout dernier loupé permis : il ne reste que le bilan.
+    if (restored.gameOver) endGame(hiLoFinalResults(restored))
   }
 
   // Bonne réponse : la main passe toute seule après un court délai (le verdict
@@ -279,7 +333,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
     // Nouvelle partie : elle a le droit d'être comptée à son tour.
     gameCountedRef.current = false
     cancelReveal()
-    setGame(startHiLoGame({ mode: gameMode, playerIds: players.map(p => p.id), previous: game }))
+    setGame(startHiLoGame({ mode: gameMode, playerIds: players.map(p => p.id), previous: game, missLimit }))
     setLastTurn(null)
     setIsFlipping(false)
     setIsProcessing(false)
@@ -439,6 +493,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const fiveSameKey = nextCard ? `${nextCard.value}-${nextCard.suit}` : null
   const fiveSame = fiveSameKey !== null && (sameCardCount[fiveSameKey] ?? 0) > MAX_SAME_CARD_DRAWS
   const goalReached = gameMode === 'traversee' && correctGuessesInRow >= targetGuesses
+  // Mode Soirée : toute la table a épuisé ses loupés, la manche s'arrête.
+  const missLimitReached = hiLoMissLimitReached(game)
 
   const missed = showResult && isCorrect === false && !gameOver
   const guessedRight = showResult && isCorrect === true && !gameOver
@@ -447,6 +503,8 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
   const missReason = [
     isUnguessedEqual ? t('wrong.unguessedEqual') : t('wrong.title'),
     lastTurn?.streakReset ? t('verdict.streakReset') : null,
+    // Le dernier loupé attendu : la manche s'arrête après ce verdict.
+    missed && missLimitReached ? t('missLimit.roundOver') : null,
   ].filter(Boolean).join(' · ')
   const missVerdict = describePenalty(lastTurn?.penalty)
   const rightVerdict = upcomingPlayer ? t('correctNext', { name: upcomingPlayer.name }) : ''
@@ -462,7 +520,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
 
   // ─── Écran de fin ──────────────────────────────────────────────────────────
   if (gameOver) {
-    const endTitle = goalReached ? t('gameOver.congrats') : fiveSame ? t('gameOver.fiveCards') : t('gameOver.end')
+    const endTitle = goalReached
+      ? t('gameOver.congrats')
+      : fiveSame
+        ? t('gameOver.fiveCards')
+        : missLimitReached
+          ? t('gameOver.missLimit', { count: game.missLimit ?? 0 })
+          : t('gameOver.end')
     const finalVerdict = fiveSame ? describePenalty(lastTurn?.penalty) : ''
     return (
       <>
@@ -565,7 +629,11 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
           className="w-full whitespace-normal leading-tight"
           onClick={nextTurn}
         >
-          {upcomingPlayer ? t('nextTurnButton', { name: upcomingPlayer.name }) : tc('next')}
+          {upcomingPlayer
+            ? t('nextTurnButton', { name: upcomingPlayer.name })
+            : missLimitReached
+              ? t('missLimit.seeResults')
+              : tc('next')}
           <ArrowRight aria-hidden className="ml-2 h-5 w-5 shrink-0" />
         </Button>
       </div>
@@ -688,6 +756,10 @@ export default function Game({ players, onGameEnd, updatePlayerStats, gameMode }
               })}
             </ul>
           </>
+        )}
+
+        {game.missLimit !== null && (
+          <MissTracker players={players} limit={game.missLimit} misses={game.misses} turnId={shownPlayerId} />
         )}
 
         <div className="flex flex-col items-center gap-5">

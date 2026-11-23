@@ -39,9 +39,10 @@ function entry(path: string, priority: number, changeFrequency: Freq): MetadataR
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
-    // Landing publique (les habitués sont redirigés vers /jeux, mais les
-    // moteurs — sans cookies — voient toujours la vitrine).
+    // Accueil = Mode Soirée (seuls les comptes en ligne sont redirigés vers
+    // /jeux) ; l'ancienne vitrine vit sur /decouvrir.
     entry('', 1, 'weekly'),
+    entry('/decouvrir', 0.9, 'weekly'),
     entry('/jeux', 1, 'weekly'),
     ...COLLECTION_PATHS.map((path) => entry(path, 0.6, 'weekly')),
     entry('/classement', 0.6, 'daily'),

@@ -8,8 +8,10 @@ import {
   currentHiLoPlayerId,
   DECK_SIZE,
   HI_LO_SAVE_VERSION,
+  HI_LO_SOIREE_MISS_LIMIT,
   hiLoCardsPlayed,
   hiLoFinalResults,
+  hiLoMissLimitReached,
   isGuessCorrect,
   resolveHiLoGuess,
   restoreHiLoSave,
@@ -545,5 +547,121 @@ describe('reprise (useResumableLocalGame)', () => {
 
   it('carte visible absente (null) reste acceptée', () => {
     expect(restoreHiLoSave({ ...LEGACY_SAVE, currentCard: null }, TABLE)?.currentCard).toBeNull()
+  })
+})
+
+describe('limite de loupés (Mode Soirée)', () => {
+  const LIMIT = HI_LO_SOIREE_MISS_LIMIT
+
+  it('deux loupés chacun ; sans limite rien n’est compté, en traversée elle est ignorée', () => {
+    expect(LIMIT).toBe(2)
+    expect(startHiLoGame({ mode: 'standard', playerIds: TABLE, missLimit: LIMIT }).missLimit).toBe(2)
+    expect(startHiLoGame({ mode: 'traversee', playerIds: TABLE, missLimit: LIMIT }).missLimit).toBeNull()
+    const free = resolveHiLoGuess(standard(), 'lower')!
+    expect(free.resolved.misses).toEqual({})
+    expect(hiLoMissLimitReached(free.resolved)).toBe(false)
+  })
+
+  it('un loupé compte pour le joueur au tour, une bonne réponse non', () => {
+    expect(resolveHiLoGuess(standard({ missLimit: LIMIT }), 'higher')!.resolved.misses).toEqual({})
+    const miss = resolveHiLoGuess(standard({ missLimit: LIMIT, misses: { bob: 1 } }), 'lower')!
+    expect(miss.resolved.misses).toEqual({ alice: 1, bob: 1 })
+    expect(miss.penalty).toEqual({ playerIds: ['alice'], drinks: 1 })
+  })
+
+  it('à la limite, le joueur continue de jouer : la manche attend les autres', () => {
+    const miss = resolveHiLoGuess(standard({ missLimit: LIMIT, misses: { alice: 1 } }), 'lower')!
+    expect(miss.resolved.misses).toEqual({ alice: 2 })
+    expect(miss.end).toBeNull()
+    expect(hiLoMissLimitReached(miss.resolved)).toBe(false)
+    expect(currentHiLoPlayerId(advanceHiLoTurn(acknowledgeHiLoMiss(miss.resolved)).state)).toBe('bob')
+    // Tour de chloe : la main revient à alice, qui a pourtant ses deux loupés.
+    const fromChloe = resolveHiLoGuess(standard({ missLimit: LIMIT, misses: { alice: 2 }, currentPlayerIndex: 2 }), 'higher')!
+    expect(upcomingHiLoPlayerId(fromChloe.resolved)).toBe('alice')
+    // Elle peut louper encore et boit la mise ; la manche attend toujours bob et chloe.
+    const again = resolveHiLoGuess(standard({ missLimit: LIMIT, misses: { alice: 2 }, drinkCounter: 3 }), 'lower')!
+    expect(again.resolved.misses).toEqual({ alice: 3 })
+    expect(again.penalty).toEqual({ playerIds: ['alice'], drinks: 3 })
+    expect(hiLoMissLimitReached(again.resolved)).toBe(false)
+  })
+
+  it('dernier loupé attendu : le verdict se lit, la partie s’arrête au tour suivant avec ses gorgées', () => {
+    const state = standard({
+      missLimit: LIMIT,
+      misses: { alice: 1, bob: 2, chloe: 3 },
+      gameResults: { alice: 1, bob: 3, chloe: 5 },
+      drinkCounter: 4,
+    })
+    const outcome = resolveHiLoGuess(state, 'lower')!
+    expect(outcome.resolved.gameOver).toBe(false)
+    expect(outcome.end).toBeNull()
+    expect(outcome.penalty).toEqual({ playerIds: ['alice'], drinks: 4 })
+    expect(hiLoMissLimitReached(outcome.resolved)).toBe(true)
+    expect(upcomingHiLoPlayerId(outcome.resolved)).toBeNull()
+
+    const turn = advanceHiLoTurn(acknowledgeHiLoMiss(outcome.resolved))
+    expect(turn.advanced).toBe(false)
+    expect(turn.state.gameOver).toBe(true)
+    expect(turn.end).toEqual({
+      winnerId: 'bob',
+      results: [
+        { playerId: 'alice', drinks: 5, won: false },
+        { playerId: 'bob', drinks: 3, won: true },
+        { playerId: 'chloe', drinks: 5, won: false },
+      ],
+    })
+  })
+
+  it('partie complète : chacun finit avec au moins deux loupés, bien avant la 5e carte identique', () => {
+    const random = createRng('soirée-hi-lo').next
+    let state = startHiLoGame({ mode: 'standard', playerIds: TABLE, random, missLimit: LIMIT })
+    let end = null
+    let turns = 0
+    while (!state.gameOver && turns < 5000) {
+      const current = state.currentCard!
+      const guess: HiLoGuess = ['2', '3', '4', '5', '6', '7', '8'].includes(current.value) ? 'higher' : 'lower'
+      const outcome = resolveHiLoGuess(state, guess, random)!
+      state = outcome.resolved
+      if (outcome.missDialog) state = acknowledgeHiLoMiss(state)
+      const turn = advanceHiLoTurn(state)
+      state = turn.state
+      end = turn.end ?? end
+      turns += 1
+    }
+    expect(state.gameOver).toBe(true)
+    // Tous à la limite ou au-delà ; le dernier attendu vient tout juste de l'atteindre.
+    expect(Math.min(...TABLE.map((id) => state.misses[id]))).toBe(LIMIT)
+    expect(end?.results.map((r) => r.drinks)).toEqual(TABLE.map((id) => state.gameResults[id]))
+    // Sans limite, il faut au moins quatre paquets (voir « partie complète » plus haut).
+    expect(turns).toBeLessThan(4 * (DECK_SIZE - 1))
+  })
+
+  it('reprise : les loupés suivent la sauvegarde, la limite est celle de la partie qui reprend', () => {
+    const save = toHiLoSave(standard({ missLimit: LIMIT, misses: { alice: 1 } }))
+    expect(save.misses).toEqual({ alice: 1 })
+    const resumed = restoreHiLoSave(save, TABLE, { missLimit: LIMIT })!
+    expect(resumed.missLimit).toBe(LIMIT)
+    expect(resumed.misses).toEqual({ alice: 1 })
+    // Reprise hors soirée : plus de limite, plus de compte.
+    const outside = restoreHiLoSave(save, TABLE)!
+    expect(outside.missLimit).toBeNull()
+    expect(outside.misses).toEqual({})
+    // Partie commencée hors soirée, reprise dans la soirée : on compte depuis zéro.
+    const legacy = restoreHiLoSave(toHiLoSave(standard()), TABLE, { missLimit: LIMIT })!
+    expect(legacy.missLimit).toBe(LIMIT)
+    expect(legacy.misses).toEqual({})
+  })
+
+  it('reprise sur le tout dernier loupé attendu : la partie revient finie ; avant, la main ne bouge pas', () => {
+    const midSave = toHiLoSave(standard({ missLimit: LIMIT, misses: { alice: 2 } }))
+    const mid = restoreHiLoSave(midSave, TABLE, { missLimit: LIMIT })!
+    expect(mid.gameOver).toBe(false)
+    expect(currentHiLoPlayerId(mid)).toBe('alice')
+    const lastSave = toHiLoSave(
+      standard({ missLimit: LIMIT, misses: { alice: 2, bob: 2, chloe: 2 }, gameResults: { alice: 2, bob: 4, chloe: 3 } })
+    )
+    const over = restoreHiLoSave(lastSave, TABLE, { missLimit: LIMIT })!
+    expect(over.gameOver).toBe(true)
+    expect(hiLoFinalResults(over).winnerId).toBe('alice')
   })
 })

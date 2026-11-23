@@ -13,7 +13,7 @@ const DIFFICULTY_ICONS: Record<DifficultyLevel, ComponentType<{ className?: stri
 
 export default function PlinkoPage() {
   const t = useTranslations('games.plinko')
-  const { players } = usePlayers()
+  const { players, updatePlayerStats } = usePlayers()
   const { selectedIds } = useSelectedPlayers()
   const [gameStarted, setGameStarted] = useState(false)
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('medium')
@@ -31,6 +31,7 @@ export default function PlinkoPage() {
         onRestartGame={() => setGameKey(k => k + 1)}
         difficulty={difficulty}
         isCumulativeMode={cumulative}
+        updatePlayerStats={updatePlayerStats}
       />
     )
   }

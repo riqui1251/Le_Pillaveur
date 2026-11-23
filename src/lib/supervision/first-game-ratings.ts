@@ -1,7 +1,8 @@
 /**
- * Lecture, côté Supervision, du résumé des avis de 1re partie
- * (GET /api/admin/first-game-feedback), de la liste des avis un par un
- * (GET /api/admin/first-game-feedback/reviews) et des notes en étoiles.
+ * Lecture, côté Supervision, du résumé des avis notés — avis de 1re partie
+ * (GET /api/admin/first-game-feedback) et votes du Mode Soirée
+ * (GET /api/admin/soiree-feedback) —, de leur liste un par un (…/reviews) et
+ * des notes en étoiles.
  *
  * Module PUR, sans React ni Prisma : le panneau et la boîte des retours
  * l'importent côté navigateur, et les routes vivent dans un module serveur
@@ -28,7 +29,7 @@ export type FirstGameFeedbackSummary = {
 
 /**
  * Auteur d'un avis : le compte (pseudo, jamais l'e-mail), un compte supprimé
- * depuis, ou personne — partie locale jouée sans connexion.
+ * depuis, ou personne — partie locale ou soirée jouée sans connexion.
  */
 export type FirstGameReviewAuthor =
   | { kind: 'account'; userId: string; name: string; isGuest: boolean }
@@ -48,6 +49,19 @@ export type FirstGameReview = {
 }
 
 export type FirstGameReviewsPage = { reviews: FirstGameReview[]; total: number }
+
+/** Bornes de pagination des routes …/reviews (1re partie, soirée). */
+export const REVIEWS_PAGING = { defaultSize: 10, maxSize: 50 } as const
+
+/**
+ * Forme d'un identifiant de jeu (src/lib/games.ts : « loup-garou », « 1220 »),
+ * pour le filtre par jeu des routes …/reviews. Pas de contrôle contre le
+ * catalogue : un jeu retiré depuis garde ses avis, et son filtre doit encore
+ * les montrer.
+ */
+export function isGameIdShape(value: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{0,63}$/.test(value)
+}
 
 export function isFirstGamePlayMode(value: unknown): value is FirstGamePlayMode {
   return value === 'online' || value === 'local'

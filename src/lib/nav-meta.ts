@@ -21,6 +21,8 @@ type StaticPageKey =
   | 'stats'
   | 'application'
   | 'regles'
+  | 'soiree'
+  | 'decouvrir'
 
 const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/joueurs': 'joueurs',
@@ -32,6 +34,8 @@ const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/stats': 'stats',
   '/application': 'application',
   '/regles': 'regles',
+  '/soiree': 'soiree',
+  '/decouvrir': 'decouvrir',
 }
 
 /**
@@ -41,6 +45,7 @@ const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
  */
 const SECTION_PREFIXES: ReadonlyArray<readonly [prefix: string, key: StaticPageKey]> = [
   ['/regles/', 'regles'],
+  ['/soiree/', 'soiree'],
 ]
 
 /**
