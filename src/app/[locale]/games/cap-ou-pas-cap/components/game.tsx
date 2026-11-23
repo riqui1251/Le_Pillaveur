@@ -15,6 +15,7 @@ import { GameShell } from '@/components/game/GameShell'
 import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
 import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
 import { useConfirmAction } from '@/components/game/ConfirmActionDialog'
+import { useSoireeCap } from '@/components/soiree/useSoiree'
 import { useResumableLocalGame } from '@/lib/game-session'
 import { randomSeed } from '@/lib/petit-buveur/rng'
 import { playGameSound } from '@/lib/sound/game-sounds'
@@ -82,6 +83,7 @@ const CARD_HEIGHT = 'min-h-[min(21rem,45dvh)] w-full'
 export default function Game({ players, settings, ambiance, onGameEnd, updatePlayerStats }: GameProps) {
   const t = useTranslations('games.cap-ou-pas-cap')
   const tc = useTranslations('common')
+  const tSoiree = useTranslations('soireeBar')
   const locale = useLocale()
   const reduceMotion = useReducedMotion()
   const [confirmDialog, confirm] = useConfirmAction()
@@ -97,6 +99,8 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
   const [last, setLast] = useState<LastOutcome | null>(null)
   const [flipping, setFlipping] = useState(false)
   const [jokerOpen, setJokerOpen] = useState(false)
+  // Mode Soirée : la manche s'arrête au bout de `soireeCap` tours de table (le paquet, lui, se recycle sans fin).
+  const soireeCap = useSoireeCap('cap-ou-pas-cap')
   // La table seule, pas les réglages : la pré-partie revient aux défauts après un rechargement,
   // la partie reprend donc avec ceux de sa sauvegarde.
   const session = useResumableLocalGame<CapSave>(CAP_SAVE_ID, CAP_SAVE_VERSION, (s) =>
@@ -276,6 +280,16 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
     setGame(ended)
   }
 
+  /** Dernier tour de table de la soirée joué : le bilan, sans confirmation (la fin était annoncée). */
+  const finishCapped = () => {
+    if (!game || game.ended) return
+    const ended = endGame(game)
+    resetScreen()
+    creditGame(ended)
+    session.clear()
+    setGame(ended)
+  }
+
   const askRestart = async () => {
     const ok = await confirm({
       title: tc('confirmRestart.title'),
@@ -333,9 +347,13 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
   const levelLabel = t(`levels.${currentLevel(game)}`)
   // Le niveau vit dans l'en-tête, comme sur la maquette : en pastille à côté du joueur au tour,
   // il coupait son prénom en deux à 375 px. En Progressif, une flèche remplace « Progressif : ».
+  const capReached = soireeCap !== null && !game.current && game.turn >= soireeCap * Math.max(1, game.playerIds.length)
   const headerSubtitle = (
     <>
-      {t('game.round', { round: game.round })} ·{' '}
+      {soireeCap !== null
+        ? tSoiree('cap.tableRounds', { current: Math.min(game.round, soireeCap), max: soireeCap })
+        : t('game.round', { round: game.round })}{' '}
+      ·{' '}
       {game.settings.level === 'progressif' ? (
         <span className="font-semibold text-gold">
           <TrendingUp aria-hidden className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
@@ -348,7 +366,7 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
     </>
   )
   const levelUp = capLevelUp(game)
-  const levelUpText = levelUp ? t('game.levelUp', { level: t(`levels.${levelUp}`) }) : ''
+  const levelUpText = levelUp && !capReached ? t('game.levelUp', { level: t(`levels.${levelUp}`) }) : ''
   const lastPlayer = last ? playerById(last.playerId) : undefined
   const lastText =
     last && lastPlayer
@@ -446,7 +464,7 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
         playerKey={started ? holderId : null}
         name={holder?.name ?? ''}
         avatar={holder ? <PlayerIcon player={holder} size="lg" className="h-20 w-20 text-6xl" /> : undefined}
-        enabled={!jokerOpen}
+        enabled={!jokerOpen && !capReached}
       />
       <GameShell
         title={t('title')}
@@ -518,7 +536,7 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
           </div>
         ) : (
           <div className="flex flex-1 flex-col gap-4">
-            {turnHeader}
+            {!capReached && turnHeader}
             {levelUpText && (
               <p className="rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 text-center font-display text-base font-bold text-gold">
                 {levelUpText}
@@ -534,7 +552,15 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
                 {lastText}
               </p>
             )}
-            {/* Les deux dos de carte, poussés vers le bas de l'écran : en zone pouce. */}
+            {capReached ? (
+              <section className="mt-auto flex flex-col items-center gap-3 pt-2">
+                <p className="text-center font-display text-lg font-bold text-gold">{tSoiree('capReached')}</p>
+                <Button variant="primary" size="gameLg" className="w-full max-w-sm" onClick={finishCapped}>
+                  {tSoiree('seeResults')}
+                </Button>
+              </section>
+            ) : (
+            /* Les deux dos de carte, poussés vers le bas de l'écran : en zone pouce. */
             <section className="mt-auto flex flex-col items-center gap-3 pt-2">
               <h2 className="font-display text-xl font-bold text-gold">{t('game.choose')}</h2>
               <div ref={choiceRef} className="grid w-full max-w-sm grid-cols-2 gap-3">
@@ -549,7 +575,8 @@ export default function Game({ players, settings, ambiance, onGameEnd, updatePla
                 {jokerReady ? t('game.jokerReady') : t('game.jokerUsed')}
               </p>
             </section>
-            {finishLink}
+            )}
+            {!capReached && finishLink}
           </div>
         )}
       </GameShell>

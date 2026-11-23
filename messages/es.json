@@ -8815,7 +8815,16 @@
     "continue": "Seguir la fiesta",
     "back": "Volver a la fiesta",
     "nextRound": "Siguiente ronda",
-    "toAddition": "Ir a la cuenta"
+    "toAddition": "Ir a la cuenta",
+    "cap": {
+      "hands": "Mano {current} de {max}",
+      "tableRounds": "Vuelta {current} de {max}",
+      "rolls": "Tirada {current} de {max}",
+      "draws": "Sorteo {current} de {max}"
+    },
+    "nextHand": "Siguiente mano",
+    "capReached": "Fin de la ronda: era el último turno.",
+    "seeResults": "Ver el resultado"
   },
   "soiree": {
     "loading": "Cargando la fiesta…",
@@ -8957,6 +8966,7 @@
       "reroll": "Repartir de nuevo",
       "replaceTitle": "Sustituir {game}",
       "addTitle": "Añadir un juego",
+      "full": "Programa completo: {max} rondas como máximo por noche.",
       "launch": "Empezar la fiesta",
       "launchOne": "Empezar la partida",
       "restart": "Cambiar el grupo o el ambiente"
@@ -9147,7 +9157,7 @@
       "1220": {
         "a": "Cada uno fija sus apuestas: paridad de la suma, un rango (2-10, 11-20 o 21-30), un número que hace beber y otro que hace dar.",
         "b": "Se lanza un dado de 12 y uno de 20. Si la suma es tu número de «beber», bebes. Tu número de «dar», la paridad o el rango correctos: repartes.",
-        "c": "Un número en un solo dado cuenta la mitad: acumulad combos. Se relanza tantas veces como quiera la mesa."
+        "c": "Un número en un solo dado cuenta la mitad: acumulad combos. Diez tiradas y luego el resumen."
       },
       "vue-de-nez": {
         "a": "Una pregunta cuya respuesta es un número: cada uno escribe su estimación en secreto y pasa el móvil.",
@@ -9162,12 +9172,12 @@
       "purple": {
         "a": "En tu turno, apuesta por el color de las dos próximas cartas: Rojo, Negro o Purple (una roja y una negra).",
         "b": "Cada apuesta acertada hace subir el contador. Fallo: te bebes todo el contador y vuelve a cero.",
-        "c": "Parad cuando queráis: el resumen muestra los tragos de cada uno."
+        "c": "Tres vueltas a la mesa y luego el resumen muestra los tragos de cada uno."
       },
       "blackjack": {
         "a": "Cada uno juega contra el crupier, no contra la mesa: apuesta 1, 2 o 3 fichas antes de cada mano.",
         "b": "Acércate a 21 sin pasarte (figuras 10, ases 1 u 11). Si pierdes o te pasas, bebes tu apuesta; si ganas, la repartes.",
-        "c": "El crupier pide hasta 17. Un Black Jack paga una vez y media. Encadenad manos: el resumen lleva la cuenta."
+        "c": "El crupier pide hasta 17. Un Black Jack paga una vez y media. Cinco manos y el resumen lleva la cuenta."
       },
       "hi-lo": {
         "a": "Se gira una carta: anuncia si la siguiente será más alta, más baja o igual.",
@@ -9202,7 +9212,7 @@
       "doigt-du-destin": {
         "a": "Todos ponen un dedo en la pantalla y lo dejan ahí.",
         "b": "El destino elige un dedo: bebe 3 tragos. En supervivencia, los dedos caen uno a uno y el último reparte 5 tragos.",
-        "c": "Levantar el dedo antes del final cuesta 2 tragos. La pizarra de esta ronda se rellena a mano en el descanso."
+        "c": "Levantar el dedo antes del final cuesta 2 tragos. Tres sorteos y luego la pizarra de esta ronda se rellena a mano en el descanso."
       },
       "patate-chaude": {
         "a": "Aparece un reto (un tema, una letra o una sílaba) y la mecha de la bomba es secreta.",
@@ -9212,7 +9222,7 @@
       "cap-ou-pas-cap": {
         "a": "En tu turno, elige Verdad o Reto: la carta se gira con su precio, de 1 a 5.",
         "b": "¡Me atrevo!: lo haces y repartes el precio. ¿No te atreves? Bebes el precio.",
-        "c": "Una vez por partida, devuelve la carta a otro jugador al doble del precio. Parad cuando la mesa lo decida."
+        "c": "Una vez por partida, devuelve la carta a otro jugador al doble del precio. Tres vueltas a la mesa y luego el resumen."
       },
       "coupe-du-roi": {
         "a": "El móvil en el centro de la mesa: en tu turno, saca una carta y su regla se aplica al instante.",

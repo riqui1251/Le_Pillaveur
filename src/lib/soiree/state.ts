@@ -1,5 +1,5 @@
 import { isSoireeGame } from './catalog'
-import type { SoireeLength, SoireeVibe } from './program'
+import { SOIREE_MAX_ROUNDS, type SoireeLength, type SoireeVibe } from './program'
 
 export type SoireeTally = { drinks: number; wins: number; played: number }
 
@@ -238,9 +238,15 @@ export function setSoireeVote(soiree: Soiree, rating: number): Soiree {
   return { ...soiree, vote: voteValue(rating) }
 }
 
-/** Remplace les manches pas encore jouées par `program` (programme modifié à l'entracte). */
+/** Manches qu'on peut encore programmer : SOIREE_MAX_ROUNDS moins celles déjà jouées ou passées. */
+export function upcomingRoom(soiree: Pick<Soiree, 'current'>): number {
+  return Math.max(0, SOIREE_MAX_ROUNDS - soiree.current)
+}
+
+/** Remplace les manches pas encore jouées par `program` (programme modifié à l'entracte), dans la limite de la soirée. */
 export function replaceUpcoming(soiree: Soiree, program: readonly string[]): Soiree {
-  return { ...soiree, rounds: [...soiree.rounds.slice(0, soiree.current), ...program.map(newRound)] }
+  const kept = program.slice(0, upcomingRoom(soiree))
+  return { ...soiree, rounds: [...soiree.rounds.slice(0, soiree.current), ...kept.map(newRound)] }
 }
 
 export function upcomingProgram(soiree: Soiree): string[] {
@@ -256,5 +262,17 @@ export function withoutRetiredGames(soiree: Soiree): Soiree {
   const rounds = soiree.rounds.filter(
     (round, index) => index < soiree.current || round.status !== 'pending' || isSoireeGame(round.gameId)
   )
+  return rounds.length === soiree.rounds.length ? soiree : { ...soiree, rounds }
+}
+
+/**
+ * Une soirée enregistrée avant que le plafond compte toute la soirée (le
+ * 23/11/2026) a pu être rallongée à chaque entracte : ses manches à venir
+ * au-delà de SOIREE_MAX_ROUNDS tombent ; celles jouées ou lancées restent.
+ */
+export function withinRoundCap(soiree: Soiree): Soiree {
+  const cap = Math.max(SOIREE_MAX_ROUNDS, soiree.current)
+  if (soiree.rounds.length <= cap) return soiree
+  const rounds = soiree.rounds.filter((round, index) => index < cap || round.status !== 'pending')
   return rounds.length === soiree.rounds.length ? soiree : { ...soiree, rounds }
 }

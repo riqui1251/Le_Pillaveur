@@ -10,7 +10,11 @@ export type SoireeLength = (typeof SOIREE_LENGTHS)[number]
 /** Manches d'un programme composé. */
 export const SOIREE_LENGTH_ROUNDS: Readonly<Record<SoireeLength, number>> = { court: 3, normal: 5, long: 7 }
 
-/** Plafond d'un programme composé à la main : au-delà, la soirée ne se termine plus. */
+/**
+ * Plafond d'une soirée, manches jouées, passées et à venir comprises : sans
+ * lui, chaque entracte pouvait rallonger le programme et la soirée ne se
+ * terminait jamais.
+ */
 export const SOIREE_MAX_ROUNDS = 12
 
 const VIBE_WEIGHTS: Readonly<Record<SoireeVibe, Readonly<Record<SoireeHeat, number>>>> = {
@@ -84,9 +88,9 @@ export function replaceRound<T>(program: readonly T[], index: number, item: T): 
   return program.map((current, i) => (i === index ? item : current))
 }
 
-/** Ajoute un jeu en fin de programme, dans la limite de SOIREE_MAX_ROUNDS. */
-export function addRound(program: readonly string[], gameId: string): string[] {
-  if (program.length >= SOIREE_MAX_ROUNDS) return program.slice()
+/** Ajoute un jeu en fin de programme, dans la limite de `max` manches (SOIREE_MAX_ROUNDS par défaut). */
+export function addRound(program: readonly string[], gameId: string, max: number = SOIREE_MAX_ROUNDS): string[] {
+  if (program.length >= max) return program.slice()
   return [...program, gameId]
 }
 

@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -14,6 +15,8 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, Fingerprint, RotateCcw, Volume2, VolumeX } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
+import { EndActionsOverride } from '@/components/game/EndActionDock'
+import { useSoireeCap } from '@/components/soiree/useSoiree'
 import { useAmbianceMode, type AmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { isSoundMuted, playGameSound, setSoundMuted, type GameSound } from '@/lib/sound/game-sounds'
 import { randomSeed } from '@/lib/petit-buveur/rng'
@@ -109,6 +112,7 @@ function verdictSound(state: DoigtState): GameSound {
 export default function Game() {
   const t = useTranslations('games.doigt-du-destin')
   const tc = useTranslations('common')
+  const tSoiree = useTranslations('soireeBar')
   const format = useFormatter()
   const reduced = useReducedMotion() ?? false
   const { mode: ambiance } = useAmbianceMode()
@@ -124,6 +128,14 @@ export default function Game() {
   const [zoneWidth, setZoneWidth] = useState(0)
   /** `<body>`, une fois hydraté : l'arène y est portée (voir le rendu). */
   const [host, setHost] = useState<HTMLElement | null>(null)
+  // Mode Soirée : `soireeCap` tirages, puis « Manche suivante » (le bouton de la
+  // soirée, SoireeEndActions) : le jeu n'a ni fin ni écran de fin, et l'arène
+  // plein écran cache le bandeau de la soirée.
+  const soireeCap = useSoireeCap('doigt-du-destin')
+  const nextRoundAction = useContext(EndActionsOverride)
+  const [draws, setDraws] = useState(0)
+  const capReached = soireeCap !== null && draws >= soireeCap
+  const capReachedRef = useRef(capReached)
 
   // Les gestes s'enchaînent plus vite que les rendus : la vérité est dans la
   // ref, l'état React n'en est que l'affichage.
@@ -151,6 +163,10 @@ export default function Game() {
   useEffect(() => {
     ambianceRef.current = ambiance
   }, [ambiance])
+
+  useEffect(() => {
+    capReachedRef.current = capReached
+  }, [capReached])
 
   const sound = useCallback((name: GameSound) => {
     if (audioReadyRef.current) playGameSound(name)
@@ -305,6 +321,11 @@ export default function Game() {
     if (seconds !== null) sound('tick')
   }, [seconds, sound])
 
+  const resultKey = state.phase === 'result' && round ? round.startedAt : null
+  useEffect(() => {
+    if (resultKey !== null) setDraws((n) => n + 1)
+  }, [resultKey])
+
   const verdictKey =
     (state.phase === 'between' || state.phase === 'result') && round ? `${state.phase}:${round.startedAt}` : null
   useEffect(() => {
@@ -330,7 +351,7 @@ export default function Game() {
       if (event.button !== 0) return
       armed = armAudio()
     }
-    if (pointersRef.current.has(event.pointerId)) return
+    if (pointersRef.current.has(event.pointerId) || capReachedRef.current) return
     const zone = zoneRef.current
     const current = stateRef.current
     if (!zone || fingerAdmission(current) !== 'open') return
@@ -421,7 +442,11 @@ export default function Game() {
   const gathering = state.phase === 'gathering' || state.phase === 'countdown'
   const deviceMax = touchPoints !== null && touchPoints >= MIN_FINGERS ? Math.min(MAX_FINGERS, touchPoints) : MAX_FINGERS
   const limitReached = gathering && (fingerAdmission(state) === 'full' || fingers.length >= deviceMax)
-  const modesLocked = state.phase === 'selecting' || state.phase === 'between'
+  const modesLocked = state.phase === 'selecting' || state.phase === 'between' || capReached
+  const drawLabel =
+    soireeCap !== null
+      ? tSoiree('cap.draws', { current: state.phase === 'result' ? Math.min(draws, soireeCap) : Math.min(draws + 1, soireeCap), max: soireeCap })
+      : null
 
   const modeHint = (() => {
     const hintSoft = ambiance === 'soft'
@@ -589,6 +614,7 @@ export default function Game() {
     case 'countdown':
       panel = (
         <>
+          {drawLabel && <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold">{drawLabel}</p>}
           <p className="max-w-md text-sm leading-snug text-cream/80">{modeHint}</p>
           {limitReached && (
             <p className="text-xs font-semibold text-gold">{t('arena.limit', { count: deviceMax })}</p>
@@ -617,20 +643,26 @@ export default function Game() {
     case 'result':
       panel = (
         <>
-          <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">{t('result.chosen')}</p>
+          <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-gold">
+            {drawLabel ? `${drawLabel} · ${t('result.chosen')}` : t('result.chosen')}
+          </p>
           {verdict && <p className="font-display text-xl font-bold leading-tight text-cream">{verdict.main}</p>}
           {verdict?.detail && <p className="text-sm leading-snug text-cream/80">{verdict.detail}</p>}
           {liftedLine && <p className="text-xs font-semibold text-red-300">{liftedLine}</p>}
-          <Button variant="primary" size="gameLg" className="mt-1 w-full max-w-xs" onClick={replay}>
-            <RotateCcw aria-hidden className="mr-2 h-5 w-5" />
-            {tc('replay')}
-          </Button>
+          {capReached && nextRoundAction ? (
+            <div className="mt-1 w-full max-w-xs">{nextRoundAction}</div>
+          ) : (
+            <Button variant="primary" size="gameLg" className="mt-1 w-full max-w-xs" onClick={replay}>
+              <RotateCcw aria-hidden className="mr-2 h-5 w-5" />
+              {tc('replay')}
+            </Button>
+          )}
         </>
       )
       break
   }
 
-  const restartHint = state.phase === 'result' && state.down.length === 0
+  const restartHint = state.phase === 'result' && state.down.length === 0 && !capReached
 
   const arena = (
     // Calque plein écran au-dessus de la Navbar (z-40), dont les 56 px
@@ -659,7 +691,7 @@ export default function Game() {
         )}
       >
         <Button asChild variant="ghost" size="gameIcon" className={HEADER_BUTTON}>
-          <Link href="/jeux" aria-label={tc('back')}>
+          <Link href={soireeCap !== null ? '/soiree' : '/jeux'} aria-label={tc('back')}>
             <ArrowLeft aria-hidden className="h-5 w-5" />
           </Link>
         </Button>

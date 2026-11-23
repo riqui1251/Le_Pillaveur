@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getGameById } from '@/lib/games'
 import type { Player } from '@/lib/players'
-import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeHeat } from './catalog'
+import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeCap, soireeHeat } from './catalog'
 import { SOIREE_MAX_ROUNDS, addRound, buildProgram, moveRound, removeRound, replaceRound } from './program'
 import {
   closeRound,
@@ -17,6 +17,9 @@ import {
   skipRound,
   soireeStandings,
   startRound,
+  upcomingProgram,
+  upcomingRoom,
+  withinRoundCap,
   withoutRetiredGames,
   type Soiree,
 } from './state'
@@ -80,6 +83,27 @@ describe('catalogue de la soirée', () => {
   it('écarte les jeux qui demandent plus de joueurs que la bande', () => {
     expect(playableSoireeGameIds(1)).toEqual(['blackjack'])
     expect(playableSoireeGameIds(4)).toHaveLength(16)
+  })
+
+  it('borne chaque jeu sans fin naturelle, et lui seul', () => {
+    const capped = SOIREE_GAME_IDS.filter((id) => soireeCap(id) !== null)
+    expect(capped.sort()).toEqual(['1220', 'blackjack', 'cap-ou-pas-cap', 'doigt-du-destin', 'purple'])
+    for (const id of capped) expect(soireeCap(id)).toBeGreaterThan(0)
+    expect(soireeCap('vue-de-nez')).toBeNull()
+  })
+
+  it('annonce la borne dans les quatre langues', async () => {
+    for (const locale of ['fr', 'en', 'es', 'it']) {
+      const messages = (await import(`../../../messages/${locale}.json`)).default as {
+        soireeBar: { cap: Record<string, string>; nextHand: string; capReached: string; seeResults: string }
+        soiree: { programme: { full: string } }
+      }
+      for (const key of ['hands', 'tableRounds', 'rolls', 'draws']) {
+        expect(messages.soireeBar.cap[key], `${locale} cap.${key}`).toMatch(/\{current\}.*\{max\}/)
+      }
+      expect(messages.soireeBar.seeResults, locale).toBeTruthy()
+      expect(messages.soiree.programme.full, locale).toContain('{max}')
+    }
   })
 })
 
@@ -207,6 +231,31 @@ describe('ardoise', () => {
     s = finishSoiree(s, 6000)
     expect(s.phase).toBe('finished')
     expect(s.rounds[2].status).toBe('skipped')
+  })
+
+  it('l’entracte ne rallonge pas la soirée au-delà du plafond', () => {
+    const full = () => Array.from({ length: SOIREE_MAX_ROUNDS }, () => 'hi-lo')
+    let s = play(soiree(full()), {})
+    s = skipRound(s)
+    expect(upcomingRoom(s)).toBe(SOIREE_MAX_ROUNDS - 2)
+    s = replaceUpcoming(s, full())
+    expect(s.rounds).toHaveLength(SOIREE_MAX_ROUNDS)
+    expect(addRound(upcomingProgram(s), 'purple', upcomingRoom(s))).toHaveLength(SOIREE_MAX_ROUNDS - 2)
+    for (let i = 2; i < SOIREE_MAX_ROUNDS; i++) s = skipRound(s)
+    expect(upcomingRoom(s)).toBe(0)
+    expect(replaceUpcoming(s, ['purple']).rounds).toHaveLength(SOIREE_MAX_ROUNDS)
+  })
+
+  it('une soirée déjà rallongée au-delà du plafond perd ses manches à venir en trop', () => {
+    const long = soiree(Array.from({ length: SOIREE_MAX_ROUNDS + 6 }, () => 'hi-lo'))
+    expect(withinRoundCap(long).rounds).toHaveLength(SOIREE_MAX_ROUNDS)
+    let past = long
+    for (let i = 0; i < SOIREE_MAX_ROUNDS + 2; i++) past = skipRound(past)
+    expect(withinRoundCap(past).rounds).toHaveLength(SOIREE_MAX_ROUNDS + 2)
+    const running = startRound(past, 3000)
+    expect(withinRoundCap(running).rounds).toHaveLength(SOIREE_MAX_ROUNDS + 3)
+    const short = soiree(['hi-lo'])
+    expect(withinRoundCap(short)).toBe(short)
   })
 })
 

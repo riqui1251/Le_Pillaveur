@@ -13,6 +13,7 @@ import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
+import { useSoireeCap } from '@/components/soiree/useSoiree'
 import { isSameLocalTable, useResumableLocalGame } from '@/lib/game-session'
 import {
   BjEngineError,
@@ -55,8 +56,11 @@ function newGame(players: Player[]): BjState {
 export default function Game({ players, onGameEnd, updatePlayerStats }: GameProps) {
   const t = useTranslations('games.blackjack')
   const tCommon = useTranslations('common')
+  const tSoiree = useTranslations('soireeBar')
   const [confirmDialog, confirm] = useConfirmAction()
   const [state, setState] = useState<BjState | null>(null)
+  // Mode Soirée : la manche s'arrête au bout de `soireeCap` mains, sans quoi le blackjack ne finit jamais.
+  const soireeCap = useSoireeCap('blackjack')
   const [ended, setEnded] = useState(false)
   const session = useResumableLocalGame<BlackjackSave>(SAVE_ID, SAVE_VERSION, (s) =>
     isSameLocalTable(s.playerIds, players)
@@ -130,6 +134,13 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
       tone: 'primary',
     })
     if (!ok) return
+    creditGame()
+    session.clear()
+    setEnded(true)
+  }
+
+  /** Dernière main de la soirée jouée : le bilan, sans confirmation (la fin était annoncée). */
+  const finishCapped = () => {
     creditGame()
     session.clear()
     setEnded(true)
@@ -243,15 +254,20 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     />
   ) : null
 
+  const capReached = soireeCap !== null && state.phase === 'results' && state.round >= soireeCap
+  const roundLabel =
+    soireeCap !== null ? tSoiree('cap.hands', { current: Math.min(state.round, soireeCap), max: soireeCap }) : t('round', { count: state.round })
+
+  // En soirée, « Manche suivante » est le bouton qui quitte le jeu : celui du blackjack dit « Main suivante ».
   const nextButton =
     state.phase === 'results' ? (
       <Button
         variant="primary"
         size={landscape ? 'game' : 'gameLg'}
         className="w-full"
-        onClick={() => dispatch({ type: 'NEXT_ROUND', playerId: state.players[0].id })}
+        onClick={capReached ? finishCapped : () => dispatch({ type: 'NEXT_ROUND', playerId: state.players[0].id })}
       >
-        {t('nextRound')}
+        {capReached ? tSoiree('seeResults') : soireeCap !== null ? tSoiree('nextHand') : t('nextRound')}
       </Button>
     ) : null
 
@@ -289,7 +305,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
           onExit={() => void switcher.exit()}
           status={
             <>
-              <span className="block text-gold">{t('round', { count: state.round })}</span>
+              <span className="block text-gold">{roundLabel}</span>
               <span className="flex items-center justify-center gap-1.5 text-sm text-cream">
                 {bettorPlayer && <PlayerAvatarGlyph value={bettorPlayer.preferences.icon ?? '👤'} />}
                 {prompt}
@@ -339,7 +355,7 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
       <BjLandscapeHint show={switcher.hint} />
       <GameShell
         title={t('title')}
-        headerSubtitle={<span className="text-xs text-cream/70">{t('round', { count: state.round })}</span>}
+        headerSubtitle={<span className="text-xs text-cream/70">{roundLabel}</span>}
         onBack={() => void askFinish()}
         maxWidth={700}
         headerRight={

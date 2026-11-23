@@ -1,6 +1,6 @@
 import { getSafeStorage } from '@/lib/storage'
 import { isSoireeLength, isSoireeVibe } from './program'
-import { recordRoundStats, SOIREE_STATE_VERSION, withoutRetiredGames, type Soiree } from './state'
+import { recordRoundStats, SOIREE_STATE_VERSION, withinRoundCap, withoutRetiredGames, type Soiree } from './state'
 import type { SoireeHistoryEntry } from './summary'
 
 // La soirée vit sur l'appareil : un seul téléphone tourne autour de la table,
@@ -67,7 +67,7 @@ export function isSoiree(value: unknown): value is Soiree {
 
 export function readSoiree(): Soiree | null {
   const value = readJson(SOIREE_STORAGE_KEY)
-  return isSoiree(value) ? withoutRetiredGames(value) : null
+  return isSoiree(value) ? withinRoundCap(withoutRetiredGames(value)) : null
 }
 
 export function writeSoiree(soiree: Soiree | null): void {
