@@ -7726,7 +7726,9 @@
       "unknownGame": "Unknown game",
       "soireeSubject": "Whole night",
       "noComment": "No comment, just a rating.",
-      "ratingValue": "{rating}/5"
+      "ratingValue": "{rating}/5",
+      "ratingsElsewhere": "Ratings without a comment (first game, Party Mode) are not listed here: they are under {stats} › {quality}, with their author and game.",
+      "ratingsElsewhereAction": "See who rated what"
     },
     "firstGameFeedback": {
       "title": "First-game ratings",

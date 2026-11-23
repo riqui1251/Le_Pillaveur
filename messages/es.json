@@ -7726,7 +7726,9 @@
       "unknownGame": "Juego desconocido",
       "soireeSubject": "Noche entera",
       "noComment": "Sin comentario, solo una nota.",
-      "ratingValue": "{rating}/5"
+      "ratingValue": "{rating}/5",
+      "ratingsElsewhere": "Las notas sin comentario (1.ª partida, Modo Fiesta) no aparecen en esta lista: están en {stats} › {quality}, con su autor y su juego.",
+      "ratingsElsewhereAction": "Ver quién puntuó qué"
     },
     "firstGameFeedback": {
       "title": "Valoraciones tras la 1.ª partida",

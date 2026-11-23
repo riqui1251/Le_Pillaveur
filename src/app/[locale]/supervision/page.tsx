@@ -5762,6 +5762,27 @@ function SupervisionDashboard() {
               description={t(feedbackScope === 'active' ? 'feedback.activeDesc' : 'feedback.resolvedDesc')}
               bodyClassName="space-y-4"
             >
+              {/* Qui voit les Statistiques n'a pas les panneaux d'avis au-dessus
+                  de cette boîte : sans ce renvoi, les notes sans commentaire
+                  semblent n'exister nulle part. */}
+              {showAnalytics && (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/70">
+                  <span className="min-w-0">
+                    {t('feedback.ratingsElsewhere', {
+                      stats: t('tabs.stats'),
+                      quality: t('method.groups.quality'),
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => selectTab('stats', 'quality', { reveal: true })}
+                    className="-mx-1 inline-flex min-h-[32px] items-center gap-1 rounded-md px-1 text-xs font-semibold text-amber-200 transition-colors hover:text-amber-100 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                  >
+                    {t('feedback.ratingsElsewhereAction')}
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </p>
+              )}
               {/* Le filtre choisit ce que le serveur renvoie ; ses deux
                   compteurs viennent de la même réponse. */}
               <SegmentedControl

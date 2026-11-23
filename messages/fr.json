@@ -7726,7 +7726,9 @@
       "unknownGame": "Jeu inconnu",
       "soireeSubject": "Soirée entière",
       "noComment": "Pas de commentaire, seulement une note.",
-      "ratingValue": "{rating}/5"
+      "ratingValue": "{rating}/5",
+      "ratingsElsewhere": "Les notes sans commentaire (1re partie, Mode Soirée) ne sont pas listées ici : elles sont dans {stats} › {quality}, avec leur auteur et leur jeu.",
+      "ratingsElsewhereAction": "Voir qui a noté quoi"
     },
     "firstGameFeedback": {
       "title": "Avis après la 1re partie",

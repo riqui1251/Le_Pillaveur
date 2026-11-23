@@ -7726,7 +7726,9 @@
       "unknownGame": "Gioco sconosciuto",
       "soireeSubject": "Serata intera",
       "noComment": "Nessun commento, solo un voto.",
-      "ratingValue": "{rating}/5"
+      "ratingValue": "{rating}/5",
+      "ratingsElsewhere": "I voti senza commento (prima partita, Modalità Serata) non compaiono in questo elenco: sono in {stats} › {quality}, con autore e gioco.",
+      "ratingsElsewhereAction": "Vedi chi ha votato cosa"
     },
     "firstGameFeedback": {
       "title": "Voti dopo la prima partita",
