@@ -9,8 +9,7 @@ import { useKeepScreenAwake } from "@/components/tv/use-keep-screen-awake"
 import { ConnectionBanner, ConnectionLiveRegion } from "@/components/online/ConnectionBanner"
 import { gameIdOf, SoireeRoundBar } from "@/components/soiree/SoireeRoundBar"
 import { SoireeEndActions } from "@/components/soiree/SoireeEndActions"
-import { SoireeBackdrop } from "@/components/soiree/soiree-ui"
-import { cn } from "@/lib/utils"
+import { useSiteBackdrop } from "@/components/soiree/site-backdrop"
 // Feuille servie SEULEMENT sous /games (App Router : un import CSS dans un
 // layout imbriqué ne part qu'avec ses routes). Elle était dans globals.css,
 // donc téléchargée par la vitrine et les 13 pages de règles qui n'en
@@ -57,15 +56,12 @@ export default function GamesLayout({
   // écran de fin, portail) retrouve sa mise en veille. Repris au geste suivant.
   useKeepScreenAwake({ idleReleaseMs: GAME_SCREEN_IDLE_RELEASE_MS })
   const local = !loading && user?.playMode !== "online"
+  // Le fond animé du site (SiteBackdrop) prend la teinte du jeu local, et sa
+  // version renforcée : le feutre du panneau n'en laisse passer que 30 %.
+  useSiteBackdrop(local ? gameIdOf(pathname) ?? undefined : undefined, local)
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-1 px-2 py-1 sm:px-4">
-      {/* Fond animé des jeux locaux (comme les écrans Soirée), teinté du jeu.
-          Fixe et sans z-index : le panneau ci-dessous, positionné et plus
-          loin dans l'arbre, se peint par-dessus sans créer de contexte
-          d'empilement — les arènes plein écran (z-[45]) passent toujours
-          devant la barre du site. Rien en ligne. */}
-      {local && <SoireeBackdrop accent={gameIdOf(pathname) ?? undefined} strong />}
       {/* Coquille « Cartes sur Table » : le visiteur séduit par la vitrine
           (feutre, or, crème) tombait sur un plateau gris anthracite au moment
           décisif et croyait changer de site. Feutre profond, filet or et
@@ -77,7 +73,7 @@ export default function GamesLayout({
           plateau ou ouvrait le menu contextuel iOS/Android en pleine partie.
           Les champs de saisie restent sélectionnables (règle `user-select:
           text` dans globals.css) ; le code de table se copie par son bouton. */}
-      <div className={cn("flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md border border-gold/20 bg-felt-deep/70 p-2 text-cream shadow-[0_18px_50px_-24px_rgba(0,0,0,0.85)] select-none [-webkit-touch-callout:none] [&_h1]:font-display sm:space-y-6 sm:rounded-xl sm:p-6", local && "relative")}>
+      <div className="flex min-h-0 w-full flex-1 flex-col space-y-3 rounded-md border border-gold/20 bg-felt-deep/70 p-2 text-cream shadow-[0_18px_50px_-24px_rgba(0,0,0,0.85)] select-none [-webkit-touch-callout:none] [&_h1]:font-display sm:space-y-6 sm:rounded-xl sm:p-6">
         {/* Coupure réseau dite au joueur — filet de secours de la coquille :
             les jeux en ligne vivent dans un calque fixe hors de ce flux, le
             bandeau à leur place est celui que porte leur cadre (placement
