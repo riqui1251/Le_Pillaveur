@@ -4,7 +4,6 @@ import { GAMES } from '@/lib/games'
 export type GamePlayStat = {
   gameId: string
   title: string
-  emoji: string
   partiesPlayed: number
 }
 
@@ -109,7 +108,6 @@ export async function getGlobalGamePlayStats(): Promise<GlobalGamePlayStats> {
       return {
         gameId,
         title: meta?.title ?? gameId,
-        emoji: meta?.emoji ?? '🎮',
         partiesPlayed,
       }
     })

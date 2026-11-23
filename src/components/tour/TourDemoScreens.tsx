@@ -48,6 +48,9 @@ import {
 } from 'lucide-react'
 import { BrandMark } from '@/components/brand/BrandLogo'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { isGameListed } from '@/lib/game-catalog'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { cn } from '@/lib/utils'
@@ -137,12 +140,15 @@ function DemoCard({ game, online, anchor }: { game: LocalizedGameMeta; online: b
           <GameIconById id={game.id} surface="card" className="h-9 w-9" />
           <p className="mt-1 line-clamp-2 font-display text-[13px] font-bold leading-tight text-[#24201A]">{game.title}</p>
           <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.3] text-[#4A443A]">{game.description}</p>
-          {players && (
-            <span className="mt-auto inline-flex items-center gap-0.5 pt-0.5 text-[11px] font-bold leading-[14px] text-[#4A443A]">
-              <Users className="h-3 w-3 shrink-0" aria-hidden />
-              {players}
-            </span>
-          )}
+          <span className="mt-auto flex items-center justify-center gap-1.5 pt-0.5">
+            {players && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold leading-[14px] text-[#4A443A]">
+                <Users className="h-3 w-3 shrink-0" aria-hidden />
+                {players}
+              </span>
+            )}
+            <DifficultyBadge level={game.difficulty} tone="card" variant={players ? 'bars' : 'label'} />
+          </span>
         </div>
       </PlayingCard>
     </div>
@@ -190,10 +196,19 @@ function HubView({ state, me }: { state: DemoState; me: string }) {
   const t = useTranslations('hub')
   const tCommon = useTranslations('common')
   const games = useLocalizedGames()
+  const { hiddenIds } = useGameCatalog()
+  // Même visibilité que le vrai hub : un jeu caché par l'équipe n'apparaît pas non plus dans la démonstration.
   const byId = (ids: string[]) =>
-    ids.map((id) => games.find((g) => g.id === id)).filter((g): g is LocalizedGameMeta => Boolean(g))
-  const visible = games.filter((g) => !g.hidden)
+    ids
+      .map((id) => games.find((g) => g.id === id))
+      .filter((g): g is LocalizedGameMeta => Boolean(g) && isGameListed(g as LocalizedGameMeta, hiddenIds))
+  const visible = games.filter((g) => isGameListed(g, hiddenIds))
   const local = visible.filter((g) => !g.onlineOnly)
+  const roles = byId(HIDDEN_ROLES)
+  // Si l'équipe cache le jeu de démonstration, l'étape « choisir un jeu » garde
+  // une cible : la première carte listée de la section (les écrans suivants
+  // montrent toujours `DEMO_GAME`, dont les textes du tuto parlent).
+  const anchorId = roles.some((g) => g.id === DEMO_GAME) ? DEMO_GAME : roles[0]?.id
   const segments = state.online
     ? [
         { Icon: Globe, label: t('partyBar.mode.online') },
@@ -249,8 +264,8 @@ function HubView({ state, me }: { state: DemoState; me: string }) {
           <section>
             {family(<>♠ {t('jeux.families.spade')}</>)}
             <div className="grid grid-cols-3 gap-2">
-              {byId(HIDDEN_ROLES).map((g) => (
-                <DemoCard key={g.id} game={g} online anchor={g.id === DEMO_GAME ? 'd-game' : undefined} />
+              {roles.map((g) => (
+                <DemoCard key={g.id} game={g} online anchor={g.id === anchorId ? 'd-game' : undefined} />
               ))}
             </div>
           </section>

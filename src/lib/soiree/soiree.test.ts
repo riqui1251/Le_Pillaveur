@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getGameById } from '@/lib/games'
 import type { Player } from '@/lib/players'
-import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeHeat } from './catalog'
-import { SOIREE_MAX_ROUNDS, addRound, buildProgram, moveRound, removeRound, replaceRound } from './program'
+import { revancheOf } from './actions'
+import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeDifficulty, soireeHeat } from './catalog'
+import { SOIREE_LENGTH_ROUNDS, SOIREE_MAX_ROUNDS, addRound, buildProgram, moveRound, removeRound, replaceRound } from './program'
 import {
   closeRound,
   createSoiree,
@@ -17,6 +18,7 @@ import {
   skipRound,
   soireeStandings,
   startRound,
+  withoutHiddenGames,
   withoutRetiredGames,
   type Soiree,
 } from './state'
@@ -81,6 +83,19 @@ describe('catalogue de la soirée', () => {
     expect(playableSoireeGameIds(1)).toEqual(['blackjack'])
     expect(playableSoireeGameIds(4)).toHaveLength(16)
   })
+
+  it('ne propose pas un jeu que l’équipe a caché', () => {
+    const ids = playableSoireeGameIds(4, ['hi-lo', 'purple'])
+    expect(ids).toHaveLength(14)
+    expect(ids).not.toContain('hi-lo')
+    expect(ids).not.toContain('purple')
+    expect(playableSoireeGameIds(4, [])).toEqual(playableSoireeGameIds(4))
+  })
+
+  it('donne à chaque jeu une difficulté de 1 à 3, distincte de l’intensité', () => {
+    for (const id of SOIREE_GAME_IDS) expect([1, 2, 3]).toContain(soireeDifficulty(id))
+    expect(soireeDifficulty('inconnu')).toBe(2)
+  })
 })
 
 describe('tuto des jeux de la soirée', () => {
@@ -108,6 +123,47 @@ describe('programme', () => {
       const heats = program.map(soireeHeat)
       expect(heats).toEqual([...heats].sort((a, b) => a - b))
     }
+  })
+
+  it('ne tire jamais un jeu caché, même sur toutes les ambiances', () => {
+    const hiddenIds = SOIREE_GAME_IDS.filter((_, i) => i % 2 === 0)
+    for (const vibe of ['apero', 'monte', 'grosse'] as const) {
+      for (const seed of [1, 5, 9]) {
+        const program = buildProgram({ rounds: 7, vibe, playerCount: 4, hiddenIds, rng: seeded(seed) })
+        expect(program).toHaveLength(7)
+        for (const id of program) expect(hiddenIds).not.toContain(id)
+      }
+    }
+  })
+
+  it('plus court quand presque tout est caché', () => {
+    const all = [...SOIREE_GAME_IDS]
+    const keep = all.slice(0, 2)
+    const program = buildProgram({ rounds: 5, vibe: 'monte', playerCount: 4, hiddenIds: all.slice(2), rng: seeded() })
+    expect(program.slice().sort()).toEqual(keep.slice().sort())
+    expect(buildProgram({ rounds: 5, vibe: 'monte', playerCount: 4, hiddenIds: all, rng: seeded() })).toEqual([])
+  })
+
+  it('une revanche ne reprend ni ne tire un jeu caché, et garde la longueur demandée', () => {
+    const hiddenIds = SOIREE_GAME_IDS.filter((_, i) => i % 2 === 0)
+    const carte = createSoiree({
+      id: 's',
+      now: 1,
+      bandeId: null,
+      bandeName: '',
+      players: ['lea', 'sam', 'theo', 'nina'].map((id) => ({ id, name: id })),
+      vibe: 'monte',
+      soft: false,
+      length: 'carte',
+      program: [hiddenIds[0], SOIREE_GAME_IDS[1], hiddenIds[1], SOIREE_GAME_IDS[3]],
+    })
+    const rematch = revancheOf(carte, 2, hiddenIds)
+    expect(rematch.rounds.map((r) => r.gameId)).toEqual([SOIREE_GAME_IDS[1], SOIREE_GAME_IDS[3]])
+
+    const courte = { ...carte, length: 'normal' as const }
+    const tire = revancheOf(courte, 2, hiddenIds)
+    expect(tire.rounds).toHaveLength(SOIREE_LENGTH_ROUNDS.normal)
+    for (const r of tire.rounds) expect(hiddenIds).not.toContain(r.gameId)
   })
 
   it('plus court quand la bande ne peut pas jouer assez de jeux', () => {
@@ -192,6 +248,29 @@ describe('ardoise', () => {
     expect(withoutRetiredGames(running).rounds.map((r) => r.gameId)).toEqual(['degaine', 'hi-lo'])
     const clean = soiree(['hi-lo', 'purple'])
     expect(withoutRetiredGames(clean)).toBe(clean)
+  })
+
+  it('un jeu caché quitte la suite de la soirée, pas l’ardoise ni la manche en cours', () => {
+    const pending = play(soiree(['hi-lo', 'purple', 'plinko', 'purple']), { lea: [2, 0] })
+    const cleaned = withoutHiddenGames(pending, ['purple'])
+    expect(cleaned.rounds.map((r) => r.gameId)).toEqual(['hi-lo', 'plinko'])
+    expect(cleaned.current).toBe(1)
+    expect(cleaned.rounds[0].results.lea.drinks).toBe(2)
+    // Même soirée rendue si rien n'est concerné.
+    expect(withoutHiddenGames(pending, [])).toBe(pending)
+    expect(withoutHiddenGames(pending, ['monsieur-3'])).toBe(pending)
+    // Manche déjà jouée : elle reste.
+    const played = play(soiree(['purple', 'hi-lo']), { lea: [3, 0] })
+    expect(withoutHiddenGames(played, ['purple'])).toBe(played)
+    // Manche en cours : elle va au bout.
+    const running = startRound(soiree(['purple', 'hi-lo']), 2000)
+    expect(withoutHiddenGames(running, ['purple']).rounds.map((r) => r.gameId)).toEqual(['purple', 'hi-lo'])
+    // Une soirée finie garde son programme.
+    const finished = finishSoiree(soiree(['purple', 'hi-lo']), 5000)
+    expect(withoutHiddenGames(finished, ['hi-lo'])).toBe(finished)
+    // En phase « programme », rien n'est lancé : tout ce qui est caché tombe.
+    const programme = soiree(['purple', 'hi-lo'])
+    expect(withoutHiddenGames(programme, ['purple']).rounds.map((r) => r.gameId)).toEqual(['hi-lo'])
   })
 
   it('corrige une manche à la main, saute, remplace la suite et ferme la soirée', () => {

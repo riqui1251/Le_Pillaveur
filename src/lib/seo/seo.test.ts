@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import robots from '@/app/robots'
 import sitemap from '@/app/sitemap'
 import { locales } from '@/i18n/routing'
@@ -22,6 +22,12 @@ import { SITE_URL } from '@/lib/site'
  * ce que Google mesure en pixels — 60 et 160 sont les seuils usuels au-delà
  * desquels la troncature est quasi certaine.
  */
+
+// Le sitemap lit les jeux cachés par l'équipe en base : le test en fixe la liste.
+const staffHidden = vi.hoisted(() => ({ ids: [] as string[] }))
+vi.mock('@/lib/game-catalog-server', () => ({
+  getStaffHiddenGameIds: async () => staffHidden.ids,
+}))
 
 const ROOT = resolve(fileURLToPath(new URL('../../../', import.meta.url)))
 const TITLE_MAX = 60
@@ -142,10 +148,30 @@ describe('metadata lue dans le catalogue — titres et extraits, par langue', ()
 })
 
 describe('sitemap.xml', () => {
-  const entries = sitemap()
-  const urls = entries.map((entry) => entry.url)
-  const languagesOf = (entry: (typeof entries)[number]) =>
+  type Entries = Awaited<ReturnType<typeof sitemap>>
+  let entries: Entries
+  let urls: string[]
+  beforeAll(async () => {
+    staffHidden.ids = []
+    entries = await sitemap()
+    urls = entries.map((entry) => entry.url)
+  })
+  const languagesOf = (entry: Entries[number]) =>
     (entry.alternates?.languages ?? {}) as Record<string, string>
+
+  it("retire un jeu caché par l'équipe, mais garde son article de règles", async () => {
+    const target = visible.find((g) => (RULES_GAME_IDS as readonly string[]).includes(g.id))
+    expect(target).toBeDefined()
+    staffHidden.ids = [target!.id]
+    try {
+      const after = (await sitemap()).map((entry) => entry.url)
+      expect(after).not.toContain(`${SITE_URL}/fr/games/${target!.id}`)
+      expect(after).toContain(`${SITE_URL}/fr/regles/${target!.id}`)
+      expect(after.length).toBe(urls.length - 1)
+    } finally {
+      staffHidden.ids = []
+    }
+  })
 
   it('ne liste aucun jeu masqué', () => {
     const hidden = GAMES.filter((g) => g.hidden)

@@ -32,16 +32,18 @@ export function isSoireeLength(value: unknown): value is SoireeLength {
 /**
  * Compose un programme : des jeux tirés au sort selon l'ambiance (sans
  * doublon), rangés de la chauffe au plus intense. À moins de jeux jouables
- * que de manches, le programme est simplement plus court.
+ * que de manches, le programme est simplement plus court. Les jeux cachés
+ * par l'équipe (`hiddenIds`) ne sont jamais tirés.
  */
 export function buildProgram(options: {
   rounds: number
   vibe: SoireeVibe
   playerCount: number
+  hiddenIds?: readonly string[]
   rng?: Rng
 }): string[] {
   const rng = options.rng ?? Math.random
-  const left = playableSoireeGameIds(options.playerCount)
+  const left = playableSoireeGameIds(options.playerCount, options.hiddenIds)
   const wanted = Math.max(0, Math.min(left.length, options.rounds))
   const weights = VIBE_WEIGHTS[options.vibe]
 

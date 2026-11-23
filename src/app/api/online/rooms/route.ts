@@ -6,6 +6,7 @@ import { buildRoomDto, cleanupAbandonedRooms, createUniqueRoomCode, leaveOtherRo
 import { GAMES, hasContentIn } from '@/lib/games'
 import { LOCALE_COOKIE } from '@/lib/locale-cookies'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { isGameHiddenByStaff } from '@/lib/game-catalog-server'
 import { awardAchievement } from '@/lib/online/achievements'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import {
@@ -73,6 +74,11 @@ export async function POST(request: Request) {
     const game = GAMES.find((g) => g.id === gameId && !g.hidden && g.onlineReady)
     if (!game) {
       return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
+    }
+    // Jeu caché par l'équipe depuis la Supervision : plus de NOUVELLE table
+    // (les tables déjà ouvertes, elles, vont au bout).
+    if (await isGameHiddenByStaff(game.id)) {
+      return NextResponse.json(onlineErrorBody('game_unavailable'), { status: 409 })
     }
 
     // Langue de la SALLE (contenu localisé côté serveur, ex. mots de

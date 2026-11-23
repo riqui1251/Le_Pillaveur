@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { usePlayers } from '@/hooks/usePlayers'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { enterLocalPlay } from '@/lib/local-play-client'
@@ -27,6 +28,7 @@ import { closeCurrentRound, finishWithHistory, keepBande, launchCurrentRound, re
 import { newSoireeId, readSoiree } from '@/lib/soiree/storage'
 import { scrollPageTop, SoireeCta, SoireeShell, StepHeader } from './soiree-ui'
 import { useSoiree } from './useSoiree'
+import { useHiddenGamesPurge } from './useHiddenGamesPurge'
 import { BandeStep, type BandeChoice } from './BandeStep'
 import { AmbianceStep, type AmbianceChoice } from './AmbianceStep'
 import { ProgrammeEditor } from './ProgrammeEditor'
@@ -49,6 +51,8 @@ export function SoireeApp() {
   const { user, setPlayMode } = useAuth()
   const { mode, setMode } = useAmbianceMode()
   const { updatePlayerStats } = usePlayers()
+  const { hiddenIds } = useGameCatalog()
+  useHiddenGamesPurge(soiree, save)
   const [step, setStep] = useState<'bande' | 'ambiance'>('bande')
   const [choice, setChoice] = useState<BandeChoice | null>(null)
   const [ambiance, setAmbiance] = useState<AmbianceChoice>({ vibe: 'monte', soft: false, length: 'normal' })
@@ -140,7 +144,7 @@ export function SoireeApp() {
     const program =
       ambiance.length === 'carte'
         ? []
-        : buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[ambiance.length], vibe: ambiance.vibe, playerCount: choice.players.length })
+        : buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[ambiance.length], vibe: ambiance.vibe, playerCount: choice.players.length, hiddenIds })
     const created = createSoiree({
       id: newSoireeId(),
       now: Date.now(),
@@ -197,7 +201,7 @@ export function SoireeApp() {
           onReroll={
             soiree.length === 'carte'
               ? undefined
-              : () => save(replaceUpcoming(soiree, buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[soiree.length as keyof typeof SOIREE_LENGTH_ROUNDS], vibe: soiree.vibe, playerCount: soiree.playerIds.length })))
+              : () => save(replaceUpcoming(soiree, buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[soiree.length as keyof typeof SOIREE_LENGTH_ROUNDS], vibe: soiree.vibe, playerCount: soiree.playerIds.length, hiddenIds })))
           }
         />
         <SoireeCta>
@@ -252,7 +256,7 @@ export function SoireeApp() {
           soiree={soiree}
           onKeepBande={(name) => save(keepBande(soiree, name, Date.now()))}
           onVote={(rating) => saveVote(soiree, (s) => setSoireeVote(s, rating))}
-          onRevanche={() => save(revancheOf(soiree, Date.now()))}
+          onRevanche={() => save(revancheOf(soiree, Date.now(), hiddenIds))}
           onNew={() => {
             save(null)
             setStep('bande')

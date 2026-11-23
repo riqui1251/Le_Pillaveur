@@ -20,6 +20,8 @@ import {
   type FridayTableSeat,
 } from '@/lib/friday-table'
 import { GAMES } from '@/lib/games'
+import { isGameListed } from '@/lib/game-catalog'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { getSafeStorage } from '@/lib/storage'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
@@ -117,6 +119,10 @@ export function FridayTableBanner({
   const router = useRouter()
   const { user, refresh, setPlayMode } = useAuth()
   const { room, createRoom, joinRoom, error: roomError } = useOnlineRoom()
+  const { hiddenIds } = useGameCatalog()
+  // Jeu de la Table du vendredi caché par l'équipe : le rendez-vous disparaît
+  // en entier (bandeau, ligne « prochaine table », sondage).
+  const gameListed = GAME ? isGameListed(GAME, hiddenIds) : !hiddenIds.includes(FRIDAY_TABLE.gameId)
 
   const [now, setNow] = useState<Date | null>(null)
   const [dismissedKey, setDismissedKey] = useState<string | null>(null)
@@ -156,7 +162,7 @@ export function FridayTableBanner({
   const status = now ? fridayTableStatus(now) : null
   const live = status?.live === true
   const weekKey = status ? fridayTableWeekKey(status) : null
-  const hidden = !status || isTvPath(pathname) || dismissedKey === weekKey
+  const hidden = !status || !gameListed || isTvPath(pathname) || dismissedKey === weekKey
   const shown = show === 'all' || (show === 'live') === live
 
   useEffect(() => {
@@ -210,6 +216,7 @@ export function FridayTableBanner({
     }
   }, [live, hidden, shown, fetchTable])
 
+  if (!gameListed) return null
   if (justDismissed && hidden) {
     return (
       <p ref={dismissedRef} tabIndex={-1} role="status" className="sr-only">

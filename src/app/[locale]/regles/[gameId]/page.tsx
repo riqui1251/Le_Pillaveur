@@ -11,6 +11,9 @@ import {
   loadRulesDoc,
 } from '@/lib/rules/rules-content'
 import { GAMES } from '@/lib/games'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { isGameListed } from '@/lib/game-catalog'
+import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
 import { OG_LOCALES, SITE_NAME } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
@@ -25,6 +28,13 @@ import { SITE_URL } from '@/lib/site'
 
 /** Langue de TOUT le contenu de la page : celle des articles (docs/rules/fr/). */
 const CONTENT_LOCALE = 'fr'
+
+/**
+ * Rendue au build puis rafraîchie toutes les 5 minutes (ISR, comme /classement) :
+ * un jeu caché ou remis depuis la Supervision change le haut de l'article
+ * (bouton « Jouer », essai avec des bots) sans redéploiement.
+ */
+export const revalidate = 300
 
 /**
  * Carte de partage peinte pour CE jeu (même route que les pages de jeu,
@@ -89,10 +99,14 @@ export default async function RulesPage({
   const content = loadRulesDoc(gameId)
   if (!content) notFound()
   const game = GAMES.find((g) => g.id === gameId)
+  // Caché par l'équipe : l'article reste en ligne (référencement), sans accès au jeu.
+  const hiddenIds = await getStaffHiddenGameIds()
+  const playable = game ? isGameListed(game, hiddenIds) : false
   const meta = RULES_META[gameId]
   // Textes de l'enveloppe en FRANÇAIS quelle que soit l'URL, comme l'article
   // qu'ils encadrent (voir le `lang="fr"` plus bas).
   const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
+  const tCommon = await getTranslations({ locale, namespace: 'common' })
   const rulesIndexUrl = `${SITE_URL}/${CONTENT_LOCALE}/regles`
   const canonicalUrl = `${rulesIndexUrl}/${gameId}`
 
@@ -178,8 +192,19 @@ export default async function RulesPage({
             {t('showcaseFacts')}
             {game.onlineReady ? ` · ${t('voiceChat')}` : ''}
           </p>
+          {/* Le libellé du niveau suit la langue de l'URL (socle commun),
+              l'article reste français : `lang` posé sur la pastille. */}
+          <p lang={locale} className="mt-2 flex justify-center">
+            <DifficultyBadge level={game.difficulty} tone="felt" />
+          </p>
           <div className="mx-auto mt-3 max-w-sm">
-            <TryBotsGate gameId={game.id} />
+            {playable ? (
+              <TryBotsGate gameId={game.id} />
+            ) : (
+              <p lang={locale} className="text-sm font-semibold text-cream/80">
+                {tCommon('gameUnavailable.title')}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -188,7 +213,7 @@ export default async function RulesPage({
         {renderMarkdown(content)}
       </article>
 
-      {game && (
+      {game && playable && (
         <div className="mt-6 text-center">
           <Link
             href={game.path}

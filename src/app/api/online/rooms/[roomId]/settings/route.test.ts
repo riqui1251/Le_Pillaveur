@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * « pas prêt ».
  */
 
-const { userMock, roomMock, memberMock, transactionMock, dtoMock, bus, cache } = vi.hoisted(() => ({
+const { userMock, roomMock, memberMock, transactionMock, dtoMock, bus, cache, hiddenByStaffMock } = vi.hoisted(() => ({
+  hiddenByStaffMock: vi.fn(),
   userMock: vi.fn(),
   roomMock: { findUnique: vi.fn(), update: vi.fn() },
   memberMock: { count: vi.fn(), updateMany: vi.fn() },
@@ -25,6 +26,7 @@ vi.mock('@/lib/auth-server', () => ({ getCurrentUser: userMock }))
 vi.mock('@/lib/online-room', () => ({ buildRoomDto: dtoMock }))
 vi.mock('@/lib/online/room-bus', () => bus)
 vi.mock('@/lib/online/lobbies-cache', () => cache)
+vi.mock('@/lib/game-catalog-server', () => ({ isGameHiddenByStaff: hiddenByStaffMock }))
 
 import { PUT } from './route'
 import { GAMES } from '@/lib/games'
@@ -115,6 +117,48 @@ describe('PUT /settings — gameId validé', () => {
     expect(res.status).toBe(409)
     expect(await res.json()).toMatchObject({ error: 'max_players', count: max })
     expect(transactionMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('PUT /settings — jeu caché par l’équipe', () => {
+  it('refuse de basculer la table VERS un jeu caché : game_unavailable 409, rien écrit', async () => {
+    hiddenByStaffMock.mockImplementation(async (id: string) => id === 'menteur')
+
+    const res = await put({ gameId: 'menteur' })
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).error).toBe('game_unavailable')
+    expect(transactionMock).not.toHaveBeenCalled()
+    expect(roomMock.update).not.toHaveBeenCalled()
+    expect(bus.publishRoomChanged).not.toHaveBeenCalled()
+  })
+
+  it('un autre jeu, non caché, passe toujours', async () => {
+    hiddenByStaffMock.mockImplementation(async (id: string) => id === 'menteur')
+
+    const res = await put({ gameId: 'quiz' })
+
+    expect(res.status).toBe(200)
+    expect(writtenRoomData().gameId).toBe('quiz')
+  })
+
+  it('une table déjà sur le jeu, caché depuis, garde ses réglages : jamais bloquée', async () => {
+    hiddenByStaffMock.mockResolvedValue(true)
+
+    const res = await put({ gameId: 'toucher-coule', tcPowerups: false })
+
+    expect(res.status).toBe(200)
+    expect(hiddenByStaffMock).not.toHaveBeenCalled()
+    expect(JSON.parse(writtenRoomData().settingsJson)).toMatchObject({ tcPowerups: false })
+  })
+
+  it('un simple réglage, sans gameId, n’interroge pas le catalogue', async () => {
+    hiddenByStaffMock.mockResolvedValue(true)
+
+    const res = await put({ difficulty: 'facile' })
+
+    expect(res.status).toBe(200)
+    expect(hiddenByStaffMock).not.toHaveBeenCalled()
   })
 })
 

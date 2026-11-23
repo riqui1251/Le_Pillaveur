@@ -1,15 +1,23 @@
 "use client"
 
+import { useRef } from "react"
 import dynamic from "next/dynamic"
 import { usePathname } from "@/i18n/navigation"
 import { useRequireSelectedPlayers } from "@/hooks/useRequireSelectedPlayers"
 import { useRecordRecentLocalGame } from "@/lib/recent-local-games"
 import { useAuth } from "@/components/providers/AuthProvider"
+import { useOnlineRoom } from "@/hooks/useOnlineRoom"
+import { useGameCatalogSnapshot } from "@/hooks/useGameCatalog"
+import { decideGameAccess } from "@/lib/game-access"
+import { canAccessSupervision } from "@/lib/roles"
+import { playingRoundOf } from "@/lib/soiree/state"
+import { GameHiddenStaffBanner, GameUnavailableNotice } from "@/components/game/GameUnavailableNotice"
 import { useKeepScreenAwake } from "@/components/tv/use-keep-screen-awake"
 import { ConnectionBanner, ConnectionLiveRegion } from "@/components/online/ConnectionBanner"
 import { gameIdOf, SoireeRoundBar } from "@/components/soiree/SoireeRoundBar"
 import { SoireeEndActions } from "@/components/soiree/SoireeEndActions"
 import { useSiteBackdrop } from "@/components/soiree/site-backdrop"
+import { useSoiree } from "@/components/soiree/useSoiree"
 // Feuille servie SEULEMENT sous /games (App Router : un import CSS dans un
 // layout imbriqué ne part qu'avec ses routes). Elle était dans globals.css,
 // donc téléchargée par la vitrine et les 13 pages de règles qui n'en
@@ -60,6 +68,33 @@ export default function GamesLayout({
   // version renforcée : le feutre du panneau n'en laisse passer que 30 %.
   useSiteBackdrop(local ? gameIdOf(pathname) ?? undefined : undefined, local)
 
+  // Jeu caché par l'équipe depuis la Supervision : sa page cède la place à un
+  // écran « indisponible », sauf pour l'équipe (bandeau), une table en ligne
+  // déjà ouverte sur ce jeu et une manche de soirée déjà lancée — elles
+  // finissent. Rien ne change tant que le catalogue n'a pas été lu.
+  const gameId = gameIdOf(pathname)
+  const { state: catalog, source: catalogSource } = useGameCatalogSnapshot()
+  const { room, roomResolved } = useOnlineRoom()
+  // leaveRoom vide la salle AVANT que la navigation de sortie ne change de
+  // chemin : sans mémoire du siège, la page du jeu caché cédait la place à
+  // « indisponible » pour une image au moment de partir. Mémoire propre au
+  // chemin courant — un autre jeu rouvert plus tard repart de zéro.
+  const seatRef = useRef<{ pathname: string; gameId: string | null }>({ pathname, gameId: null })
+  if (seatRef.current.pathname !== pathname) seatRef.current = { pathname, gameId: null }
+  if (room?.gameId) seatRef.current.gameId = room.gameId
+  const { soiree, ready: soireeReady } = useSoiree()
+  const access = decideGameAccess({
+    gameId,
+    hiddenIds: catalog.hiddenIds,
+    catalogKnown: catalogSource !== "default",
+    isStaff: Boolean(user && canAccessSupervision(user.role)),
+    authLoading: loading,
+    roomGameId: room?.gameId ?? seatRef.current.gameId,
+    roomResolved,
+    soireeRoundPlaying: gameId !== null && playingRoundOf(soiree, gameId) !== null,
+    soireeReady,
+  })
+
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[1400px] flex-1 px-2 py-1 sm:px-4">
       {/* Coquille « Cartes sur Table » : le visiteur séduit par la vitrine
@@ -87,9 +122,14 @@ export default function GamesLayout({
         {/* Mode Soirée (jeux locaux) : la manche jouée ici, le retour à la soirée,
             et « Manche suivante » à la place de « Rejouer » en fin de partie. */}
         {local && <SoireeRoundBar pathname={pathname} />}
-        <SoireeEndActions pathname={pathname} enabled={local}>
-          {children}
-        </SoireeEndActions>
+        {access === "staff" && <GameHiddenStaffBanner />}
+        {access === "blocked" ? (
+          <GameUnavailableNotice />
+        ) : (
+          <SoireeEndActions pathname={pathname} enabled={local}>
+            {children}
+          </SoireeEndActions>
+        )}
         {/* Sa voix pour le lecteur d'écran, en DERNIER : une région live doit
             exister vide avant de parler, et `sr-only` en fin de liste ne
             décale aucun frère visible (cf. ConnectionLiveRegion). */}

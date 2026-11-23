@@ -1,4 +1,4 @@
-import { GAMES, getGameById } from '@/lib/games'
+import { GAMES, getGameById, type GameDifficulty } from '@/lib/games'
 
 /** Intensité d'un jeu dans une soirée : 1 on se chauffe, 3 ça tape. */
 export type SoireeHeat = 1 | 2 | 3
@@ -65,6 +65,11 @@ export function soireeMinutes(gameId: string): number {
   return SOIREE_GAME_META[gameId]?.minutes ?? 10
 }
 
+/** Difficulté des règles du jeu (1 facile à 3 difficile) : une échelle à part de l'intensité (`soireeHeat`, ce qu'on boit). */
+export function soireeDifficulty(gameId: string): GameDifficulty {
+  return getGameById(gameId)?.difficulty ?? 2
+}
+
 export function soireeCounting(gameId: string): SoireeCounting {
   return SOIREE_GAME_META[gameId]?.counting ?? 'manual'
 }
@@ -81,7 +86,7 @@ export function soireeMinPlayers(gameId: string): number {
   return getGameById(gameId)?.localMinPlayers ?? 2
 }
 
-/** Les jeux de la soirée jouables à `playerCount` joueurs. */
-export function playableSoireeGameIds(playerCount: number): string[] {
-  return SOIREE_GAME_IDS.filter((id) => playerCount >= soireeMinPlayers(id))
+/** Les jeux de la soirée jouables à `playerCount` joueurs, hors ceux que l'équipe a cachés (`hiddenIds`). */
+export function playableSoireeGameIds(playerCount: number, hiddenIds: readonly string[] = []): string[] {
+  return SOIREE_GAME_IDS.filter((id) => playerCount >= soireeMinPlayers(id) && !hiddenIds.includes(id))
 }

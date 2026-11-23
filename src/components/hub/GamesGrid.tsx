@@ -2,14 +2,17 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Bot, Globe, Search, Smartphone, Sparkles } from 'lucide-react'
+import { Bot, Flame, Globe, Search, Smartphone, Sparkles } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { hasContentIn, splitBySoloFit } from '@/lib/games'
+import { isGameListed } from '@/lib/game-catalog'
 import { GameCard } from '@/components/hub/GameCard'
+import { buildPopularRow } from '@/components/hub/popular-row'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { useBrowserOnline } from '@/hooks/useBrowserOnline'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 
@@ -99,6 +102,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const locale = useLocale()
   const games = useLocalizedGames()
   const { user } = useAuth()
+  const { hiddenIds, popular } = useGameCatalog()
   const isOnline = user?.playMode === 'online'
   // Navigateur hors ligne : une table en ligne ne peut pas s'ouvrir — les
   // jeux « en ligne uniquement » s'éteignent, et TOUT le catalogue en mode en
@@ -139,7 +143,8 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const visible = useMemo(
     () =>
       games.filter((g) => {
-        if (g.hidden) return false
+        // Retiré du code OU caché par l'équipe depuis la Supervision.
+        if (!isGameListed(g, hiddenIds)) return false
         // Solo : seulement les jeux dont une table peut s'ouvrir dans cette
         // langue (création refusée sinon, content_lang_unavailable).
         if (soloBots) {
@@ -148,7 +153,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
         if (isOnline) return Boolean(g.onlineReady) && (!isSoft || Boolean(g.softModeReady))
         return true
       }),
-    [games, isOnline, isSoft, soloBots, locale]
+    [games, hiddenIds, isOnline, isSoft, soloBots, locale]
   )
 
   const filtered = useMemo(() => {
@@ -174,15 +179,31 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     [filtered, localCatalog]
   )
 
-  // Rangée « les incontournables » : les jeux qui montrent le mieux le produit,
-  // en tête du hub EN LIGNE. Ils restent aussi dans leur famille plus bas —
-  // c'est une mise en avant, pas un déplacement. Hors français, un phare dont
-  // les cartes n'existent qu'en français (Sans Filtre) n'est pas mis en
-  // avant : sa table serait refusée dans cette langue — il reste dans sa
-  // famille, badge « FR » à l'appui.
-  const featured = useMemo(
-    () => (query.trim() ? [] : localGames.filter((g) => g.featured && hasContentIn(g, locale))),
-    [localGames, query, locale]
+  // Rangée « les plus joués en ce moment », en tête du catalogue (local comme
+  // en ligne) : les jeux les plus lancés ces 30 derniers jours, choisis par le
+  // serveur. Elle passe par les MÊMES filtres que le reste de la page (jeu
+  // caché, Sans alcool, langue). Tant qu'aucun jeu n'est classé, elle se replie
+  // sur les jeux phares du code, retitrée « Les incontournables » : un jeu sans
+  // partie ne passe jamais pour populaire — voir popular-row.ts. Ces jeux
+  // restent aussi dans leurs sections : c'est une mise en avant, pas un
+  // déplacement. Ni en recherche, ni en solo (qui garde ses sections
+  // « parfaits en solo »).
+  const mode = isOnline ? 'online' : 'local'
+  const popularRow = useMemo(
+    () =>
+      query.trim() || soloBots
+        ? { games: [] as typeof localGames, ranked: false }
+        : buildPopularRow({ candidates: localGames, popularIds: popular[mode], hiddenIds, mode, locale }),
+    [localGames, popular, hiddenIds, mode, locale, query, soloBots]
+  )
+  const popularTitle = popularRow.ranked ? (
+    <>
+      <Flame className="h-3.5 w-3.5" aria-hidden /> {t('popular')}
+    </>
+  ) : (
+    <>
+      <span aria-hidden>★</span> {t('featured')}
+    </>
   )
 
   // Mode solo hors recherche : « Parfaits en solo » d'abord, puis tous les
@@ -261,15 +282,25 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
         <div className="space-y-5">
           {localCatalog ? (
             localGames.length > 0 && (
-              <section>
-                <div data-tour="hub-local-head">
-                  <ModeTitle icon={<Smartphone className="h-4 w-4" />}>
-                    {t('localSection.title', { count: localGames.length })}
-                  </ModeTitle>
-                  <p className="mb-2 text-xs leading-snug text-cream/80">{t('localSection.hint')}</p>
-                </div>
-                <GamesCardGrid games={localGames} tourAnchor="hub-local-grid" {...offlineCard} />
-              </section>
+              <>
+                {popularRow.games.length > 0 && (
+                  <section>
+                    <FamilyTitle>
+                      {popularTitle}
+                    </FamilyTitle>
+                    <GamesCardGrid games={popularRow.games} {...offlineCard} />
+                  </section>
+                )}
+                <section>
+                  <div data-tour="hub-local-head">
+                    <ModeTitle icon={<Smartphone className="h-4 w-4" />}>
+                      {t('localSection.title', { count: localGames.length })}
+                    </ModeTitle>
+                    <p className="mb-2 text-xs leading-snug text-cream/80">{t('localSection.hint')}</p>
+                  </div>
+                  <GamesCardGrid games={localGames} tourAnchor="hub-local-grid" {...offlineCard} />
+                </section>
+              </>
             )
           ) : soloSections ? (
             <>
@@ -291,12 +322,12 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
             </>
           ) : sections ? (
             <>
-              {featured.length > 0 && (
+              {popularRow.games.length > 0 && (
                 <section>
                   <FamilyTitle>
-                    <span aria-hidden>★</span> {t('featured')}
+                    {popularTitle}
                   </FamilyTitle>
-                  <GamesCardGrid games={featured} {...offlineCard} />
+                  <GamesCardGrid games={popularRow.games} {...offlineCard} />
                 </section>
               )}
               {sections.map((section) => (

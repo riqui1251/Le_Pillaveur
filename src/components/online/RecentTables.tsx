@@ -7,6 +7,8 @@ import { useRouter } from '@/i18n/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
+import { isGameListed } from '@/lib/game-catalog'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +53,7 @@ export function RecentTables() {
   const router = useRouter()
   const games = useLocalizedGames()
   const { user, setPlayMode } = useAuth()
+  const { hiddenIds } = useGameCatalog()
   const { room, createRoom, loading: roomLoading, error: roomError } = useOnlineRoom()
   const userId = user?.id
 
@@ -95,9 +98,9 @@ export function RecentTables() {
 
   const soft = user.ambianceMode === 'soft'
   const gameById = new Map(games.map((g) => [g.id, g]))
-  /** Revanche possible : jeu encore ouvert en ligne (et proposé en Soft si besoin). */
+  /** Revanche possible : jeu encore ouvert en ligne (ni retiré ni caché par l'équipe) et proposé en Soft si besoin. */
   const replayable = (game: LocalizedGameMeta | undefined): game is LocalizedGameMeta =>
-    Boolean(game && game.onlineReady && !game.hidden && (!soft || game.softModeReady))
+    Boolean(game && game.onlineReady && isGameListed(game, hiddenIds) && (!soft || game.softModeReady))
 
   const busy = roomLoading || busyKey !== null
   // Créer une table fait quitter l'actuelle (leaveOtherRooms, côté serveur) —

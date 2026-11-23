@@ -73,13 +73,17 @@ export function nextNightNumber(bandeId: string | null, history: readonly Soiree
   return history.filter((entry) => entry.bandeId === bandeId).length + 1
 }
 
-/** La revanche : même bande, même ambiance, nouveau programme. */
-export function revancheOf(soiree: Soiree, now: number): Soiree {
+/**
+ * La revanche : même bande, même ambiance, nouveau programme. Les jeux cachés
+ * par l'équipe n'y entrent pas (la carte recopiée les écarte, le tirage les évite).
+ */
+export function revancheOf(soiree: Soiree, now: number, hiddenIds: readonly string[] = []): Soiree {
+  const kept = soiree.rounds.map((r) => r.gameId).filter((id) => !hiddenIds.includes(id))
   const rounds = soiree.length === 'carte' ? Math.max(1, soiree.rounds.length) : SOIREE_LENGTH_ROUNDS[soiree.length]
   const program =
     soiree.length === 'carte'
-      ? soiree.rounds.map((r) => r.gameId)
-      : buildProgram({ rounds, vibe: soiree.vibe, playerCount: soiree.playerIds.length })
+      ? kept
+      : buildProgram({ rounds, vibe: soiree.vibe, playerCount: soiree.playerIds.length, hiddenIds })
   return createSoiree({
     id: newSoireeId(now),
     now,

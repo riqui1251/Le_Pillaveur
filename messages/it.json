@@ -226,6 +226,21 @@
       "description": "La partita in corso andrà persa.",
       "confirm": "Ricomincia",
       "cancel": "Continua a giocare"
+    },
+    "difficulty": {
+      "label": "Difficoltà",
+      "aria": "Difficoltà: {level}",
+      "levels": {
+        "1": "Facile",
+        "2": "Media",
+        "3": "Difficile"
+      }
+    },
+    "gameUnavailable": {
+      "title": "Questo gioco è in pausa",
+      "text": "Per ora è stato tolto dal catalogo. Torna presto!",
+      "back": "Vedi gli altri giochi",
+      "staffBanner": "Nascosto ai giocatori: lo vedi perché fai parte del team."
     }
   },
   "hub": {
@@ -259,6 +274,7 @@
       "h1": "Giochi da festa gratis, con gli amici o con i bot",
       "intro": "Scegli un gioco e inizia in pochi secondi: tutti su un solo telefono che gira intorno al tavolo, o ognuno sul proprio con un codice tavolo.",
       "featured": "Immancabili",
+      "popular": "I più giocati del momento",
       "soloBanner": {
         "title": "Giocare da solo con i bot.",
         "text": "Sono mostrati solo i giochi in cui i bot possono completare il tavolo.",
@@ -743,7 +759,8 @@
       "word_already_said": "Già detta in questa manche: trova altro!",
       "word_wrong_letter": "Questa parola non inizia con la lettera giusta.",
       "word_missing_syllable": "Questa parola non contiene la sillaba richiesta.",
-      "contest_unavailable": "Questa parola non si può contestare."
+      "contest_unavailable": "Questa parola non si può contestare.",
+      "game_unavailable": "Questo gioco non è disponibile al momento."
     },
     "showcase": {
       "players": "Da {min} a {max} giocatori",
@@ -7765,6 +7782,32 @@
       "byGameEmpty": "Ancora nessun gioco votato a una pausa.",
       "commentsEmpty": "Ancora nessun commento scritto: i tavoli hanno solo votato."
     },
+    "gameCatalog": {
+      "title": "Catalogo dei giochi",
+      "desc": "Nascondi un gioco per toglierlo dal sito (hub, Modalità Serata, lobby, vetrina) o rimettilo. I giochi in evidenza si scelgono da soli: i più giocati negli ultimi 30 giorni.",
+      "refresh": "Aggiorna",
+      "loadError": "Impossibile caricare il catalogo dei giochi.",
+      "forbidden": "Sessione scaduta o accesso revocato: accedi di nuovo.",
+      "colGame": "Gioco",
+      "colPlays": "Partite in 30 giorni",
+      "colDifficulty": "Difficoltà",
+      "colStatus": "Sul sito",
+      "visible": "Visibile",
+      "hidden": "Nascosto",
+      "hide": "Nascondi {game}",
+      "show": "Rimetti {game}",
+      "popularLocal": "In evidenza in locale · n. {rank}",
+      "popularOnline": "In evidenza online · n. {rank}",
+      "plays": "{count, plural, =0 {Nessuna partita} one {# partita} other {# partite}}",
+      "playsDetail": "{online} online · {local} in locale",
+      "readOnly": "Sola lettura: solo i super admin possono nascondere o rimettere un gioco.",
+      "saveError": "La modifica non è stata salvata. Riprova.",
+      "hiddenCount": "{count, plural, =0 {Nessun gioco nascosto} one {# gioco nascosto} other {# giochi nascosti}}",
+      "retiredNote": "{count, plural, one {# vecchio gioco resta ritirato} other {# vecchi giochi restano ritirati}} nel codice.",
+      "sortedHint": "Dal più al meno giocato negli ultimi 30 giorni.",
+      "announceHidden": "{game} ora è nascosto ai giocatori.",
+      "announceShown": "{game} è di nuovo visibile ai giocatori."
+    },
     "history": {
       "activeConnection": "Connessione attiva",
       "sessionInDb": "Sessione nel database",
@@ -8663,7 +8706,8 @@
       "online": "Online",
       "local": "Locale",
       "players": "{min}-{max} giocatori",
-      "featured": "Immancabile"
+      "featured": "Immancabile",
+      "popular": "Popolare"
     },
     "rules": {
       "title": "Imparare le regole",

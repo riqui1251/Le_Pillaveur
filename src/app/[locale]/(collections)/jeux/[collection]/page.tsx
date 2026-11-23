@@ -12,6 +12,8 @@ import {
   type CollectionSlug,
 } from '@/lib/collections'
 import type { GameMeta } from '@/lib/games'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { buildAlternates, pageOpenGraph, pageTwitter } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
@@ -35,6 +37,12 @@ import { cn } from '@/lib/utils'
  * titres de niveau 1 et l'intro du hub avant la sienne. Le groupe sort ces
  * pages de ce layout sans le toucher — c'est l'usage prévu par Next.
  */
+
+/**
+ * Rendue au build puis rafraîchie toutes les 5 minutes (ISR, comme /classement) :
+ * un jeu caché ou remis depuis la Supervision sort de la grille sans redéploiement.
+ */
+export const revalidate = 300
 
 /** Au-delà de ce plafond, on affiche « dès N joueurs » — même seuil que la tuile du hub. */
 const OPEN_MAX_PLAYERS = 20
@@ -106,7 +114,8 @@ export default async function CollectionPage({
   const tCommon = await getTranslations({ locale, namespace: 'common' })
   const tNav = await getTranslations({ locale, namespace: 'nav.links' })
 
-  const games = gamesInCollection(collection, undefined, locale)
+  const hiddenIds = await getStaffHiddenGameIds()
+  const games = gamesInCollection(collection, undefined, locale, hiddenIds)
   const url = `${SITE_URL}/${locale}/jeux/${collection}`
   const others = COLLECTION_SLUGS.filter((slug) => slug !== collection)
 
@@ -208,6 +217,7 @@ export default async function CollectionPage({
                         {tCatalog(`${game.id}.title`)}
                       </h2>
                       {players && <p className="mt-0.5 text-[11px] font-bold text-[#4A443A]">{players}</p>}
+                      <DifficultyBadge level={game.difficulty} tone="card" className="mt-1" />
                       <p className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-[#4A443A]">
                         {tCatalog(`${game.id}.description`)}
                       </p>

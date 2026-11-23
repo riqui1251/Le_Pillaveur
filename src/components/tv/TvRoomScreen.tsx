@@ -280,7 +280,7 @@ export function TvRoomScreen({
     room.status !== 'waiting' && (!finished || room.gameId === 'petit-buveur') ? joinUrl : undefined
 
   return (
-    <TvStage title={title} code={room.code} joinUrl={headerJoinUrl}>
+    <TvStage title={title} gameId={room.gameId} code={room.code} joinUrl={headerJoinUrl}>
       {content}
     </TvStage>
   )

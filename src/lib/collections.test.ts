@@ -17,6 +17,7 @@ function game(overrides: Partial<GameMeta> & { id: string }): GameMeta {
     emoji: '🎲',
     gradient: '',
     fallbackColor: '#000',
+    difficulty: 1,
     ...overrides,
   }
 }
@@ -103,6 +104,28 @@ describe('collections sur le vrai registre', () => {
         (g) => !g.hidden && g.botsFillable && g.onlineReady && hasContentIn(g, locale)
       ).map((g) => g.id)
       expect(ids(gamesInCollection('seul-avec-des-bots', GAMES, locale)), locale).toEqual(expected)
+    }
+  })
+})
+
+describe('jeux cachés par l’équipe (hiddenIds)', () => {
+  it('sort le jeu caché de chaque collection, les autres gardent leur ordre', () => {
+    for (const slug of COLLECTION_SLUGS) {
+      const all = ids(gamesInCollection(slug, FAKE))
+      const [first] = all
+      if (!first) continue
+      expect(ids(gamesInCollection(slug, FAKE, undefined, [first])), slug).toEqual(all.slice(1))
+    }
+  })
+
+  it('sans hiddenIds, rien ne change', () => {
+    expect(ids(gamesInCollection('a-2-joueurs', FAKE, undefined, []))).toEqual(ids(gamesInCollection('a-2-joueurs', FAKE)))
+  })
+
+  it('sur le vrai registre : un jeu caché disparaît de toutes les collections qui le comptaient', () => {
+    for (const slug of COLLECTION_SLUGS) {
+      const [target] = gamesInCollection(slug)
+      expect(gamesInCollection(slug, GAMES, 'fr', [target.id]).map((g) => g.id), slug).not.toContain(target.id)
     }
   })
 })

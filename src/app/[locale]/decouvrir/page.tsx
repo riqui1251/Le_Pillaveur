@@ -6,6 +6,11 @@ import { LandingPage } from '@/components/landing/LandingPage'
 import { GAMES } from '@/lib/games'
 import { buildAlternates, buildOpenGraphLocale, siteOgImage } from '@/lib/seo/alternates'
 
+// Aucune lecture de cookies ni d'en-têtes sur la chaîne : la page est prérendue.
+// Sans revalidation, la liste cachée, le classement, les joueurs en ligne et la
+// Table du vendredi resteraient figés jusqu'au déploiement suivant.
+export const revalidate = 300
+
 /**
  * L'ancien accueil (la vitrine : héros, jeux, règles, FAQ), déplacé ici le
  * 22/11/2026 quand le Mode Soirée est devenu l'accueil — toujours dans le

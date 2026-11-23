@@ -1,4 +1,5 @@
 import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
+import { isGameListed } from '@/lib/game-catalog'
 
 /**
  * Collections de jeux — les pages /jeux/<collection> (« à 2 joueurs »,
@@ -64,13 +65,16 @@ export function isCollectionSlug(value: string): value is CollectionSlug {
  * Les jeux d'une collection, dans l'ordre du registre — le même que le hub,
  * pour que le joueur retrouve ses repères d'une page à l'autre. Jamais un jeu
  * masqué : il n'a de page ni au hub ni au sitemap. `locale` : la langue de la
- * page (absente = fr, comme hasContentIn).
+ * page (absente = fr, comme hasContentIn). `hiddenIds` : les jeux cachés par
+ * l'équipe depuis la Supervision (getStaffHiddenGameIds), écartés comme ceux
+ * que le code masque.
  */
 export function gamesInCollection(
   slug: CollectionSlug,
   games: readonly GameMeta[] = GAMES,
-  locale?: string
+  locale?: string,
+  hiddenIds: readonly string[] = []
 ): GameMeta[] {
   const matches = CRITERIA[slug]
-  return games.filter((game) => !game.hidden && matches(game, locale))
+  return games.filter((game) => isGameListed(game, hiddenIds) && matches(game, locale))
 }

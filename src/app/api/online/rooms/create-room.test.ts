@@ -12,7 +12,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * d'accord — un jeu qui perdrait `onlineReady` casserait ici.
  */
 
-const { userMock, roomCreateMock, roomDtoMock, leaveOtherRoomsMock, cookieLang } = vi.hoisted(() => ({
+const { userMock, roomCreateMock, roomDtoMock, leaveOtherRoomsMock, hiddenByStaffMock, cookieLang } = vi.hoisted(() => ({
+  hiddenByStaffMock: vi.fn(),
   userMock: vi.fn(),
   roomCreateMock: vi.fn(),
   roomDtoMock: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('@/lib/online-room', () => ({
   createUniqueRoomCode: vi.fn(async () => 'ABCD'),
   leaveOtherRooms: leaveOtherRoomsMock,
 }))
+vi.mock('@/lib/game-catalog-server', () => ({ isGameHiddenByStaff: hiddenByStaffMock }))
 vi.mock('@/lib/online/achievements', () => ({ awardAchievement: vi.fn() }))
 vi.mock('@/lib/online/lobbies-cache', () => ({ invalidateLobbiesCache: vi.fn() }))
 
@@ -109,6 +111,39 @@ describe('POST /api/online/rooms — jeu jouable en ligne', () => {
       gameId: 'loup-garou',
       hostUserId: (await userMock.mock.results[0].value).id,
     })
+  })
+})
+
+describe('POST /api/online/rooms — jeu caché par l’équipe', () => {
+  it('refuse un jeu caché depuis la Supervision : game_unavailable 409, aucune table, aucune place quittée', async () => {
+    hiddenByStaffMock.mockResolvedValue(true)
+
+    const res = await createRoom('loup-garou')
+
+    expect(res.status).toBe(409)
+    expect((await res.json()).error).toBe('game_unavailable')
+    expect(hiddenByStaffMock).toHaveBeenCalledWith('loup-garou')
+    expect(roomCreateMock).not.toHaveBeenCalled()
+    expect(leaveOtherRoomsMock).not.toHaveBeenCalled()
+  })
+
+  it('ouvre la table quand le jeu n’est pas caché', async () => {
+    hiddenByStaffMock.mockResolvedValue(false)
+
+    const res = await createRoom('loup-garou')
+
+    expect(res.status).toBe(200)
+    expect(roomCreateMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('un jeu inconnu reste invalid_game, sans consulter le catalogue', async () => {
+    hiddenByStaffMock.mockResolvedValue(true)
+
+    const res = await createRoom('jeu-inexistant')
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe('invalid_game')
+    expect(hiddenByStaffMock).not.toHaveBeenCalled()
   })
 })
 

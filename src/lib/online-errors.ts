@@ -41,6 +41,8 @@ export const ONLINE_ERROR_CODES = [
   // Jeu dont les cartes n'existent pas dans la langue de la table (création,
   // changement de jeu) — GameMeta.contentLangs
   'content_lang_unavailable',
+  // Jeu caché par l'équipe depuis la Supervision (création, changement de jeu)
+  'game_unavailable',
   // Expulsion au lobby par l'hôte (DELETE /rooms/[roomId]/members/[userId])
   'not_host',
   'cannot_kick_self',
@@ -219,6 +221,7 @@ export const ONLINE_ERROR_TEXT_FR: Record<OnlineErrorCode, string> = {
   invite_only: 'Ce lobby est sur invitation uniquement',
   content_lang_unavailable:
     "Les cartes de ce jeu n'existent qu'en français : ouvrez la table depuis le site en français",
+  game_unavailable: "Ce jeu n'est pas disponible pour le moment",
   not_host: "Seul l'hôte de la table peut faire ça",
   cannot_kick_self: "Impossible de s'expulser soi-même",
   member_not_found: "Ce joueur n'est plus à la table",

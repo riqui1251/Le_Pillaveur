@@ -110,6 +110,14 @@ export function useOnlineRoomState() {
   const [room, setRoom] = useState<RoomDto | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /**
+   * Compte pour lequel la PREMIÈRE lecture de la salle (/rooms/me) a fini,
+   * réussie ou non. Au rechargement, `room` vaut null le temps de cet
+   * aller-retour : sans ce repère, « pas encore lu » et « pas de table » se
+   * confondent. Un identifiant et non un booléen : un autre compte doit
+   * attendre sa propre lecture.
+   */
+  const [firstReadUserId, setFirstReadUserId] = useState<string | null>(null)
   const roomRef = useRef<RoomDto | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const userIdRef = useRef<string | undefined>(undefined)
@@ -298,6 +306,8 @@ export function useOnlineRoomState() {
       // Raté réseau ponctuel : on retentera au tick de polling suivant.
       notePollReach(false)
       return null
+    } finally {
+      setFirstReadUserId(user.id)
     }
   }, [user, notePollReach, explainMembershipLost])
 
@@ -1143,8 +1153,11 @@ export function useOnlineRoomState() {
     syncConnection()
   }, [room?.id, syncConnection])
 
+  const roomResolved = !user || user.playMode !== 'online' || firstReadUserId === user.id
+
   return {
     room,
+    roomResolved,
     loading,
     error,
     connection,

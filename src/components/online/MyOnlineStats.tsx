@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Globe } from 'lucide-react'
+import { GameIconById } from '@/components/hub/GameIconById'
 import { useLocalizedGames } from '@/lib/games-i18n'
 
 /** Mes stats de jeux EN LIGNE (V/D/%/parties par jeu) — page compte. */
@@ -56,8 +57,8 @@ export function MyOnlineStats() {
                 key={s.gameId}
                 className="flex items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5"
               >
-                <span className="shrink-0 text-lg" aria-hidden>
-                  {game?.emoji ?? '🎮'}
+                <span className="shrink-0" aria-hidden>
+                  <GameIconById id={s.gameId} surface="feltGold" className="block h-5 w-5" />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
                   {game?.title ?? s.gameId}

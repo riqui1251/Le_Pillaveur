@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { requestAgeVerification } from '@/components/legal/AgeGate'
 import { GAMES, hasContentIn, soloAlternativeFor, soloBotsCount } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
+import { isGameListed } from '@/lib/game-catalog'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { resolveOnlineErrorCode } from '@/lib/online-errors'
 import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
@@ -59,6 +61,7 @@ export function TryBotsGate({
   const tCommon = useTranslations('common')
   const locale = useLocale()
   const { user } = useAuth()
+  const { hiddenIds } = useGameCatalog()
 
   const game = GAMES.find((g) => g.id === gameId)
   // Titres du catalogue dans la langue (et l'ambiance) de la page : le jeu
@@ -85,10 +88,19 @@ export function TryBotsGate({
     setError(code && code !== 'min_players' && code !== 'max_players' ? tErr(code) : t('error'))
   }
 
-  if (!game) return null
-  const canBots = Boolean(game.botsFillable && game.onlineReady && !game.hidden && hasContentIn(game, locale))
+  // Jeu caché par l'équipe : ni essai avec des bots, ni lien « Jouer » — la
+  // table serait refusée (game_unavailable). La page appelante dit pourquoi.
+  if (!game || !isGameListed(game, hiddenIds)) return null
+  const canBots = Boolean(game.botsFillable && game.onlineReady && hasContentIn(game, locale))
   const groupFit = canBots && game.soloFit === 'group'
-  const alternative = groupFit ? soloAlternativeFor(gameId, { locale, soft: ambiance === 'soft' }) : null
+  // Jamais un jeu caché en proposition de remplacement.
+  const alternative = groupFit
+    ? soloAlternativeFor(gameId, {
+        locale,
+        soft: ambiance === 'soft',
+        games: GAMES.filter((g) => isGameListed(g, hiddenIds)),
+      })
+    : null
   const alternativeTitle = alternative
     ? (localizedGames.find((g) => g.id === alternative.id)?.title ?? alternative.title)
     : null

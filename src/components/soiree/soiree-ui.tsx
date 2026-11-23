@@ -4,11 +4,13 @@ import { useTranslations } from 'next-intl'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGame } from '@/lib/games-i18n'
 import { suitGlyph, suitIsRed } from '@/components/ui/PlayingCard'
+import { GAME_ICONS, GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
 import { usePlayers } from '@/hooks/usePlayers'
 import { soireeGameColors, type SoireeHeat } from '@/lib/soiree/catalog'
 import type { Soiree, SoireeMetric } from '@/lib/soiree/state'
 import { useSiteBackdrop } from './site-backdrop'
+import { badgeBackground, badgeInkFor } from './badge-contrast'
 
 /**
  * Colonne largeur téléphone posée sur le feutre du site ; la barre d'action vit en bas (SoireeCta).
@@ -105,17 +107,28 @@ export function gameGradient(gameId: string, angle = 135): string {
   return `linear-gradient(${angle}deg, ${from}, ${to})`
 }
 
-/** Pastille du jeu : son enseigne sur ses couleurs, comme une icône d'application. */
+/**
+ * Pastille du jeu : son icône unique sur ses couleurs, crème ou encre selon le contraste, comme une icône
+ * d'application. Un id sans icône retombe sur l'enseigne, puis sur ★.
+ */
 export function GameBadge({ gameId, size = 'md', className }: { gameId: string; size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const game = getGameById(gameId)
   const dims = size === 'lg' ? 'h-16 w-16 rounded-2xl text-3xl' : size === 'sm' ? 'h-8 w-8 rounded-lg text-base' : 'h-11 w-11 rounded-xl text-xl'
+  const ink = badgeInkFor(gameId)
+  const iconSize = size === 'lg' ? 'h-10 w-10' : size === 'sm' ? 'h-5 w-5' : 'h-7 w-7'
   return (
     <span
       aria-hidden
-      className={cn('grid shrink-0 place-items-center font-display font-bold text-white shadow-[0_6px_14px_-6px_rgba(0,0,0,0.6)] ring-1 ring-white/20', dims, className)}
-      style={{ background: gameGradient(gameId) }}
+      className={cn('grid shrink-0 place-items-center font-display font-bold shadow-[0_6px_14px_-6px_rgba(0,0,0,0.6)] ring-1 ring-white/20', dims, className)}
+      style={{ background: badgeBackground(gameGradient(gameId), ink.veil), color: ink.color }}
     >
-      <span className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]">{game?.suit ? suitGlyph(game.suit) : '★'}</span>
+      {GAME_ICONS[gameId] ? (
+        <span className="grid place-items-center" style={{ filter: `drop-shadow(${ink.shadow})` }}>
+          <GameIconById id={gameId} accent="none" className={iconSize} />
+        </span>
+      ) : (
+        <span style={{ textShadow: ink.shadow }}>{game?.suit ? suitGlyph(game.suit) : '★'}</span>
+      )}
     </span>
   )
 }

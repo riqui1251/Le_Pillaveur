@@ -81,6 +81,8 @@ export type LocalizedNightSummary = {
   headline: string
   /** Jeu fétiche de la table, null si son id n'est plus au catalogue. */
   topGame: string | null
+  /** Id du jeu fétiche (pour son icône), null en même temps que topGame. */
+  topGameId: string | null
   lines: NightAwardLine[]
 }
 
@@ -99,8 +101,9 @@ export function useNightSummary(players: Player[]): LocalizedNightSummary | null
       // Un jeu retiré du catalogue laisse des stats derrière lui : on préfère
       // taire la ligne plutôt qu'afficher un identifiant technique.
       topGame: meta
-        ? t('topGame', { game: `${meta.emoji} ${tCatalog(`${meta.id}.title`)}` })
+        ? t('topGame', { game: tCatalog(`${meta.id}.title`) })
         : null,
+      topGameId: meta?.id ?? null,
       lines: summary.awards.map((award) => ({
         id: award.id,
         icon: AWARD_ICONS[award.id],

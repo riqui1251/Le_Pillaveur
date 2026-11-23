@@ -247,14 +247,27 @@ export function upcomingProgram(soiree: Soiree): string[] {
   return soiree.rounds.slice(soiree.current).map((r) => r.gameId)
 }
 
+/** Retire les manches pas encore lancées dont le jeu ne passe pas `keep` ; la manche en cours, les jouées et leurs stats restent. */
+function withoutPendingGames(soiree: Soiree, keep: (gameId: string) => boolean): Soiree {
+  const rounds = soiree.rounds.filter((round, index) => index < soiree.current || round.status !== 'pending' || keep(round.gameId))
+  return rounds.length === soiree.rounds.length ? soiree : { ...soiree, rounds }
+}
+
 /**
  * Une soirée enregistrée avant qu'un jeu sorte du catalogue (Dégaine, le
  * 22/11/2026) : ses manches de ce jeu pas encore lancées tombent du
  * programme ; celles jouées restent sur l'ardoise.
  */
 export function withoutRetiredGames(soiree: Soiree): Soiree {
-  const rounds = soiree.rounds.filter(
-    (round, index) => index < soiree.current || round.status !== 'pending' || isSoireeGame(round.gameId)
-  )
-  return rounds.length === soiree.rounds.length ? soiree : { ...soiree, rounds }
+  return withoutPendingGames(soiree, isSoireeGame)
+}
+
+/**
+ * Même purge pour les jeux que l'équipe a cachés depuis la Supervision : on
+ * ne lance plus une manche d'un jeu retiré du catalogue. Une soirée finie
+ * garde son programme tel quel (l'addition le raconte).
+ */
+export function withoutHiddenGames(soiree: Soiree, hiddenIds: readonly string[]): Soiree {
+  if (hiddenIds.length === 0 || soiree.phase === 'finished') return soiree
+  return withoutPendingGames(soiree, (gameId) => !hiddenIds.includes(gameId))
 }
