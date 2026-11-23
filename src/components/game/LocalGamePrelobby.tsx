@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { resolveNextGamePath } from '@/lib/next-game-path'
 import { enterLocalPlay } from '@/lib/local-play-client'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
 import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
 import { Button } from '@/components/ui/button'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -113,6 +114,7 @@ export function LocalGamePrelobby({
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-cream">{game?.title}</h1>
           <p className="mt-0.5 text-[13px] leading-snug text-cream/70">{description ?? game?.description}</p>
+          {game && <DifficultyBadge level={game.difficulty} tone="felt" className="mt-1.5" />}
         </div>
       </header>
 

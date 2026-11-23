@@ -7,6 +7,8 @@ import { Check, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useLocalizedGames } from '@/lib/games-i18n'
+import { isGameListed } from '@/lib/game-catalog'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Button } from '@/components/ui/button'
 
@@ -44,6 +46,7 @@ export function RecentGamesRow() {
   const t = useTranslations('hub.jeuxOnline.recent')
   const router = useRouter()
   const games = useLocalizedGames()
+  const { hiddenIds } = useGameCatalog()
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [replayingId, setReplayingId] = useState<string | null>(null)
   const [proposal, setProposal] = useState<ReplayProposal | null>(null)
@@ -80,7 +83,10 @@ export function RecentGamesRow() {
   const entries = history
     .filter((h) => (soft ? h.softModeReady : true))
     .map((h) => ({ entry: h, game: games.find((g) => g.id === h.gameId) }))
-    .filter((x): x is { entry: HistoryEntry; game: NonNullable<typeof x.game> } => Boolean(x.game))
+    .filter(
+      (x): x is { entry: HistoryEntry; game: NonNullable<typeof x.game> } =>
+        Boolean(x.game) && isGameListed(x.game as NonNullable<typeof x.game>, hiddenIds)
+    )
 
   if (entries.length === 0) return null
 

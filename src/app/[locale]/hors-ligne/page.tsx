@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { ArrowLeft, Users, WifiOff } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { OfflineRetryButton } from '@/components/pwa/OfflineRetryButton'
-import { GameIconById } from '@/components/hub/GameIconById'
+import { OfflineGameList } from '@/components/offline/OfflineGameList'
 import { offlinePlayableGames } from '@/lib/offline/offline-routes'
 
 /**
@@ -71,20 +71,13 @@ export default async function OfflinePage({
             <span className="shrink-0">{t('gamesTitle')}</span>
             <span aria-hidden className="h-px flex-1 bg-gold/15" />
           </h2>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {games.map((game) => (
-              <li key={game.id}>
-                <Link
-                  href={game.path}
-                  prefetch={false}
-                  className="flex min-h-[3rem] items-center gap-2 rounded-xl border border-gold/20 bg-felt-deep/60 px-3 py-2 text-sm font-semibold text-cream transition-colors hover:border-gold/50"
-                >
-                  <GameIconById id={game.id} surface="felt" className="h-6 w-6 shrink-0" />
-                  <span className="min-w-0 truncate">{tCatalog(`${game.id}.title`)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <OfflineGameList
+            games={games.map((game) => ({
+              id: game.id,
+              path: game.path,
+              title: tCatalog(`${game.id}.title`),
+            }))}
+          />
         </section>
 
         <nav className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">

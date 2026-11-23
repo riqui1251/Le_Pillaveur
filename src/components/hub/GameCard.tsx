@@ -7,6 +7,7 @@ import { Bot, Loader2, Users, WifiOff } from "lucide-react"
 import { LocalizedGameMeta } from "@/lib/games-i18n"
 import { hasContentIn } from "@/lib/games"
 import { PlayingCard } from "@/components/ui/PlayingCard"
+import { DifficultyBadge } from "@/components/game/DifficultyBadge"
 import { cn } from "@/lib/utils"
 import { ReactNode, useEffect, useState, useTransition } from "react"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
@@ -205,24 +206,31 @@ export function GameCard({ game, icon, groupHint = false, disabled = false, disa
           <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.3] text-[#4A443A]">
             {game.description}
           </p>
-          {(groupHint || players) && (
-            // Pied de carte commun : un seul `mt-auto`, sinon deux marges
-            // automatiques se partageraient l'espace libre et décolleraient
-            // le badge du nombre de joueurs.
-            <span className="mt-auto flex flex-col items-center gap-0.5 pt-0.5">
-              {groupHint && (
-                // Largeur bornée à la colonne MOINS l'index du coin bas-droit
-                // (rang + enseigne retournés de PlayingCard, ~7 px à 6 px du
-                // bord) : centré, le badge garde 10 px libres de chaque côté.
-                // À 375 px (~97 px utiles), le libellé passe sur deux lignes
-                // au lieu de recouvrir l'index. Fond crème : rien ne se mêle
-                // à sa bordure. 11 px comme les badges « Bêta »/« FR » : le
-                // plancher lisible au téléphone (règle ESLint du dépôt).
-                <span className="inline-flex max-w-[calc(100%-1.25rem)] items-center gap-0.5 rounded-sm border border-[#24201A]/20 bg-cream px-1 py-px text-[11px] font-semibold leading-[13px] text-[#6B6455]">
-                  <Users className="h-3 w-3 shrink-0" aria-hidden />
-                  <span className="min-w-0 text-center">{t("soloFit.groupBadge")}</span>
-                </span>
-              )}
+          {/* Pied de carte commun : un seul `mt-auto`, sinon deux marges
+              automatiques se partageraient l'espace libre et décolleraient
+              le badge du nombre de joueurs. Toujours rendu : la difficulté
+              est sur toutes les cartes. */}
+          <span className="mt-auto flex flex-col items-center gap-0.5 pt-0.5">
+            {groupHint && (
+              // Largeur bornée à la colonne MOINS l'index du coin bas-droit
+              // (rang + enseigne retournés de PlayingCard, ~7 px à 6 px du
+              // bord) : centré, le badge garde 10 px libres de chaque côté.
+              // À 375 px (~97 px utiles), le libellé passe sur deux lignes
+              // au lieu de recouvrir l'index. Fond crème : rien ne se mêle
+              // à sa bordure. 11 px comme les badges « Bêta »/« FR » : le
+              // plancher lisible au téléphone (règle ESLint du dépôt).
+              <span className="inline-flex max-w-[calc(100%-1.25rem)] items-center gap-0.5 rounded-sm border border-[#24201A]/20 bg-cream px-1 py-px text-[11px] font-semibold leading-[13px] text-[#6B6455]">
+                <Users className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="min-w-0 text-center">{t("soloFit.groupBadge")}</span>
+              </span>
+            )}
+            {/* Joueurs et difficulté sur UNE ligne. Colonne utile à 375 px :
+                ~97 px moins l'index du coin bas-droit (10 px de chaque côté
+                une fois centré) = ~77 px. « 3-12 » + barres + mot ne tiennent
+                pas : avec le nombre de joueurs (en ligne), la difficulté se
+                réduit aux barres (le mot reste lu à voix haute et en
+                infobulle) ; sans lui (local), le mot reste écrit. */}
+            <span className="flex max-w-[calc(100%-1.25rem)] items-center justify-center gap-1.5">
               {players && (
                 <span className="inline-flex items-center gap-0.5 text-[11px] font-bold leading-[14px] text-[#4A443A]">
                   <Users className="h-3 w-3 shrink-0" aria-hidden />
@@ -230,8 +238,9 @@ export function GameCard({ game, icon, groupHint = false, disabled = false, disa
                   <span className="sr-only">{t("playersBadge", { range: players })}</span>
                 </span>
               )}
+              <DifficultyBadge level={game.difficulty} tone="card" variant={players ? "bars" : "label"} />
             </span>
-          )}
+          </span>
         </article>
         {/* Le voile lit le statut du <Link> parent : sans lien, pas de voile. */}
         {!disabled && <OpeningVeil forced={redirecting} label={t("opening")} />}

@@ -8,6 +8,7 @@ import '../fullscreen.css'
 import { Providers } from '../providers'
 import Navbar from '@/components/layout/Navbar'
 import { LocaleSync } from '@/components/layout/LocaleSync'
+import { SiteBackdrop } from '@/components/soiree/site-backdrop'
 import { FullscreenLayoutProvider } from '@/components/providers/FullscreenLayoutProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { routing } from '@/i18n/routing'
@@ -159,6 +160,13 @@ export default async function LocaleLayout({
             <Providers>
               <FullscreenLayoutProvider>
                 <div className="relative flex min-h-screen flex-col app-felt fullscreen-container">
+                  {/* Fond animé de tout le site : fixe, sans z-index, AVANT la
+                      barre et le contenu. Le contenu ci-dessous est positionné
+                      (relative) sans z-index : il se peint par-dessus dans
+                      l'ordre de l'arbre, sans contexte d'empilement — les
+                      calques fixes (barre z-40, arènes z-[45], fenêtres)
+                      gardent leur ordre. */}
+                  <SiteBackdrop />
                   <Navbar />
                   <LocaleSync />
                   {/* overflow-x-clip et non hidden : hidden ferait de ce div le
@@ -168,7 +176,7 @@ export default async function LocaleLayout({
                       viewport-fit=cover — sans ça, en paysage sur un écran à
                       encoche, une colonne de contenu passe sous la caméra, et
                       les boutons collés en bas passent sous la barre d'accueil. */}
-                  <div className="content-container flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip safe-x">
+                  <div className="content-container relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip safe-x">
                     {children}
                   </div>
                 </div>

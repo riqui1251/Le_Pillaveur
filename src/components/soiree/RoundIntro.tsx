@@ -3,10 +3,11 @@
 import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { useLocalizedGame } from '@/lib/games-i18n'
 import { playGameSound } from '@/lib/sound/game-sounds'
-import { soireeCounting, soireeHeat, soireeMinutes } from '@/lib/soiree/catalog'
+import { soireeCounting, soireeDifficulty, soireeHeat, soireeMinutes } from '@/lib/soiree/catalog'
 import type { Soiree } from '@/lib/soiree/state'
 import { GameBadge, HeatPips, SoireeCta, gameGradient, useSoireePlayer } from './soiree-ui'
 import { TutorialSteps } from './TutorialSteps'
@@ -54,6 +55,7 @@ export function RoundIntro({
           <h1 className="text-balance font-display text-3xl font-bold leading-tight">{game?.title ?? round.gameId}</h1>
           <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-[#5E5444]">
             <HeatPips heat={soireeHeat(round.gameId)} />
+            <DifficultyBadge level={soireeDifficulty(round.gameId)} tone="card" />
             <span>{tp('minutes', { minutes: soireeMinutes(round.gameId) })}</span>
             {counting !== 'auto' && <span className="font-semibold">{tp(`counting.${counting}`)}</span>}
           </p>

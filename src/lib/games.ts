@@ -1,6 +1,9 @@
 /** Enseigne de carte à jouer — identité « Cartes sur Table ». */
 export type GameSuit = 'spade' | 'heart' | 'diamond' | 'club';
 
+/** Difficulté d'un jeu pour une table qui le découvre : 1 facile, 2 moyen, 3 difficile. */
+export type GameDifficulty = 1 | 2 | 3;
+
 export type GameMeta = {
   id: string;
   title: string;
@@ -90,11 +93,17 @@ export type GameMeta = {
   /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
   softModeReady?: boolean;
   /**
-   * Jeu phare : remonté dans la rangée « les incontournables » en tête du hub.
-   * Réservé aux jeux les plus démonstratifs du produit — au-delà de 4 ou 5, la
-   * rangée ne met plus rien en avant. Un jeu `hidden` n'y a pas sa place.
+   * Jeu phare choisi à la main. La mise en avant du site suit la popularité
+   * des 30 derniers jours (src/lib/game-catalog.ts) ; ces jeux ne servent plus
+   * qu'à compléter la rangée tant que les parties manquent. Un jeu `hidden`
+   * n'y a pas sa place.
    */
   featured?: boolean;
+  /**
+   * Difficulté pour une table qui découvre le jeu (règles à expliquer, calcul,
+   * stratégie) — affichée là où l'on choisit un jeu (DifficultyBadge).
+   */
+  difficulty: GameDifficulty;
   /**
    * Jeu publié en BÊTA : jouable et au catalogue, mais encore en rodage —
    * un petit badge « Bêta » le dit sur sa carte du hub et sur sa vitrine,
@@ -125,6 +134,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0ea5e9',
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
+    difficulty: 2,
     localMinPlayers: 2,
   },
   {
@@ -139,6 +149,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#c026d3',
     colorTo: '#6d28d9',
     fallbackColor: '#6366f1',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -153,6 +164,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#059669',
     colorTo: '#2dd4bf',
     fallbackColor: '#10b981',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 99,
@@ -171,6 +183,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0284c7',
     colorTo: '#22d3ee',
     fallbackColor: '#0ea5e9',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 1,
     maxPlayers: 8,
@@ -189,6 +202,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#ea580c',
     colorTo: '#ef4444',
     fallbackColor: '#f97316',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 2,
     botsFillable: true,
@@ -214,6 +228,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#7c3aed',
     colorTo: '#d946ef',
     fallbackColor: '#a855f7',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 3,
     botsFillable: true,
@@ -235,6 +250,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#2563eb',
     colorTo: '#22d3ee',
     fallbackColor: '#3b82f6',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 2,
     botsFillable: true,
@@ -256,6 +272,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#334155',
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
+    difficulty: 3,
     onlineReady: true,
     minPlayers: 4,
     botsFillable: true,
@@ -277,6 +294,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#f43f5e',
     colorTo: '#d946ef',
     fallbackColor: '#f97316',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -291,6 +309,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#9333ea',
     colorTo: '#8b5cf6',
     fallbackColor: '#a855f7',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -309,6 +328,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#047857',
     colorTo: '#f59e0b',
     fallbackColor: '#047857',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 1,
     maxPlayers: 7,
@@ -334,6 +354,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#d97706',
     colorTo: '#facc15',
     fallbackColor: '#eab308',
+    difficulty: 2,
     localMinPlayers: 2,
   },
   {
@@ -348,6 +369,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#10b981',
     colorTo: '#a3e635',
     fallbackColor: '#22c55e',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -361,6 +383,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#db2777',
     colorTo: '#fb7185',
     fallbackColor: '#ec4899',
+    difficulty: 1,
   },
   {
     id: 'ballon-surprise',
@@ -373,6 +396,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0ea5e9',
     colorTo: '#22d3ee',
     fallbackColor: '#38bdf8',
+    difficulty: 1,
   },
   {
     id: 'petits-points',
@@ -385,6 +409,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#4f46e5',
     colorTo: '#2563eb',
     fallbackColor: '#3b82f6',
+    difficulty: 1,
   },
   {
     id: 'pendu',
@@ -397,6 +422,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#7c3aed',
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
+    difficulty: 1,
   },
   {
     id: 'trial-poursuite',
@@ -409,6 +435,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#dc2626',
     colorTo: '#f97316',
     fallbackColor: '#ef4444',
+    difficulty: 2,
   },
   {
     id: '1220',
@@ -423,6 +450,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#7c3aed',
     colorTo: '#f59e0b',
     fallbackColor: '#a855f7',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -442,6 +470,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#e11d48',
     colorTo: '#f59e0b',
     fallbackColor: '#f43f5e',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -463,6 +492,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#334155',
     colorTo: '#0891b2',
     fallbackColor: '#0e7490',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -492,6 +522,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#059669',
     colorTo: '#14b8a6',
     fallbackColor: '#10b981',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 16,
@@ -516,6 +547,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#c026d3',
     colorTo: '#f97316',
     fallbackColor: '#e11d48',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -538,6 +570,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#27272a',
     colorTo: '#d97706',
     fallbackColor: '#b45309',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 16,
@@ -562,6 +595,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#d97706',
     colorTo: '#b91c1c',
     fallbackColor: '#b45309',
+    difficulty: 3,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 16,
@@ -581,6 +615,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#be123c',
     colorTo: '#d97706',
     fallbackColor: '#be123c',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -604,6 +639,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0369a1',
     colorTo: '#d97706',
     fallbackColor: '#0369a1',
+    difficulty: 2,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -623,6 +659,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#065f46',
     colorTo: '#d97706',
     fallbackColor: '#065f46',
+    difficulty: 3,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 8,
@@ -644,6 +681,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0d9488',
     colorTo: '#6366f1',
     fallbackColor: '#14b8a6',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 8,
@@ -662,6 +700,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#dc2626',
     colorTo: '#f59e0b',
     fallbackColor: '#ef4444',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -681,6 +720,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#f43f5e',
     colorTo: '#f97316',
     fallbackColor: '#fb7185',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -695,6 +735,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#0ea5e9',
     colorTo: '#22d3ee',
     fallbackColor: '#06b6d4',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -715,6 +756,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#ec4899',
     colorTo: '#fb923c',
     fallbackColor: '#f472b6',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -730,6 +772,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#b91c1c',
     colorTo: '#eab308',
     fallbackColor: '#dc2626',
+    difficulty: 2,
     localMinPlayers: 2,
   },
   {
@@ -744,6 +787,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#ea580c',
     colorTo: '#dc2626',
     fallbackColor: '#f97316',
+    difficulty: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 12,
@@ -761,6 +805,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#d97706',
     colorTo: '#f97316',
     fallbackColor: '#f59e0b',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -775,6 +820,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#d97706',
     colorTo: '#facc15',
     fallbackColor: '#f59e0b',
+    difficulty: 1,
     localMinPlayers: 2,
   },
   {
@@ -789,6 +835,7 @@ export const GAMES: GameMeta[] = [
     colorFrom: '#f59e0b',
     colorTo: '#f43f5e',
     fallbackColor: '#f59e0b',
+    difficulty: 1,
     localMinPlayers: 2,
   },
 ];

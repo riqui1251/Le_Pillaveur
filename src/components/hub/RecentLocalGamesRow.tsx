@@ -7,6 +7,8 @@ import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { readRecentLocalGames } from '@/lib/recent-local-games'
+import { isGameListed } from '@/lib/game-catalog'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 
 /**
  * « Vos derniers jeux » en mode LOCAL : les 3 derniers jeux ouverts sur CET
@@ -23,6 +25,7 @@ import { readRecentLocalGames } from '@/lib/recent-local-games'
 export function RecentLocalGamesRow() {
   const t = useTranslations('hub.recentLocal')
   const games = useLocalizedGames()
+  const { hiddenIds } = useGameCatalog()
   const [recentIds, setRecentIds] = useState<string[]>([])
   const titleId = useId()
 
@@ -34,7 +37,7 @@ export function RecentLocalGamesRow() {
 
   const entries = recentIds
     .map((id) => games.find((g) => g.id === id))
-    .filter((g): g is LocalizedGameMeta => Boolean(g))
+    .filter((g): g is LocalizedGameMeta => Boolean(g) && isGameListed(g as LocalizedGameMeta, hiddenIds))
 
   if (entries.length === 0) return null
 

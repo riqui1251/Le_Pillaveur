@@ -139,6 +139,7 @@ import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDia
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
 import { ClientErrorsPanel } from '@/components/supervision/ClientErrorsPanel'
 import { FirstGameFeedbackMeta, FirstGameFeedbackPanel } from '@/components/supervision/FirstGameFeedbackPanel'
+import { GameCatalogPanel } from '@/components/supervision/GameCatalogPanel'
 import { OpsStatusPanel } from '@/components/supervision/OpsStatusPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
@@ -533,7 +534,7 @@ type StatsResponse = {
   }
   generatedAt: string
   games?: {
-    games: Array<{ gameId: string; title: string; emoji: string; partiesPlayed: number }>
+    games: Array<{ gameId: string; title: string; partiesPlayed: number }>
     totalParties: number
   }
 }
@@ -2771,6 +2772,10 @@ function StatsGamesView({
       ) : (
         <SkeletonRows rows={4} />
       )}
+
+      {/* Catalogue : panneau autonome (il charge son état), après les chiffres
+          de la période qui le motivent et avant le journal replié. */}
+      <GameCatalogPanel />
 
       {/* Journal des parties : panneau autonome, monté seulement une fois
           déplié (il charge ses propres pages). Un lien « voir dans le

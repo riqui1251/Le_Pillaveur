@@ -12,6 +12,7 @@ import { enterLocalPlay } from "@/lib/local-play-client"
 import { PlayerIcon } from "@/components/ui/PlayerIcon"
 import { PlayerName } from "@/components/ui/PlayerName"
 import { Button } from "@/components/ui/button"
+import { GameIconById } from "@/components/hub/GameIconById"
 
 /**
  * Le pont « soirée locale → compte / table en ligne » se referme pour de bon :
@@ -199,7 +200,14 @@ export function TableRecordsPanel() {
                 </li>
               ))}
               {nightSummary.topGame && (
-                <li className="pt-0.5 text-xs text-cream/60">{nightSummary.topGame}</li>
+                <li className="flex items-center gap-1.5 pt-0.5 text-xs text-cream/60">
+                  {nightSummary.topGameId && (
+                    <span aria-hidden>
+                      <GameIconById id={nightSummary.topGameId} surface="felt" className="block h-5 w-5 shrink-0" />
+                    </span>
+                  )}
+                  <span className="min-w-0">{nightSummary.topGame}</span>
+                </li>
               )}
             </ul>
           )}

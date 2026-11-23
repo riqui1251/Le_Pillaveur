@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { BookOpen, Play } from 'lucide-react'
 import { GameIconById } from '@/components/hub/GameIconById'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGame } from '@/lib/games-i18n'
@@ -136,6 +137,9 @@ export function GameShowcase({
                 {fact}
               </li>
             ))}
+            <li className="rounded-full border border-gold/25 px-2.5 py-1">
+              <DifficultyBadge level={game.difficulty} tone="felt" />
+            </li>
           </ul>
           {note && <p className="mx-auto mt-4 max-w-sm text-sm leading-snug text-cream/70">{note}</p>}
         </header>

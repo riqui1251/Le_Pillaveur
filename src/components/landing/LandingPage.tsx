@@ -6,6 +6,10 @@ import { AnalyticsConsentButton } from '@/components/legal/AgeGate'
 import { COLLECTION_SLUGS } from '@/lib/collections'
 import { FRIDAY_TABLE, formatClockTime, fridayTableStatus } from '@/lib/friday-table'
 import { GAMES, type GameSuit } from '@/lib/games'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { getGameCatalogState } from '@/lib/game-catalog-server'
+import { featuredGameIds, isGameListed } from '@/lib/game-catalog'
+import { orderLandingGames } from '@/components/hub/popular-row'
 import { readLandingLaunchesStat } from '@/lib/landing-stats-server'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
 import { SITE_URL } from '@/lib/site'
@@ -66,25 +70,37 @@ export async function LandingPage({ locale }: { locale: string }) {
   const tRules = await getTranslations({ locale, namespace: 'rules' })
   const tFriday = await getTranslations({ locale, namespace: 'fridayTable' })
 
-  const visibleGames = GAMES.filter((g) => !g.hidden)
-  // Les jeux phares ouvrent la grille : le héros promet « Loup-Garou, quiz,
-  // dessin, bluff » alors que l'ordre brut du tableau démarre sur des jeux de
-  // dés locaux. Tri stable — le reste du catalogue garde son ordre d'origine.
-  const games = [
-    ...visibleGames.filter((g) => g.featured),
-    ...visibleGames.filter((g) => !g.featured),
-  ]
+  // Jeux cachés par l'équipe écartés (en plus des `hidden` du code), puis les
+  // jeux mis en avant — les plus joués, local puis en ligne — ouvrent la grille
+  // : le héros promet « Loup-Garou, quiz, dessin, bluff » alors que l'ordre brut
+  // du tableau démarre sur des jeux de dés locaux. Le reste garde l'ordre du
+  // catalogue. Aucun jeu classé (base indisponible, ou pas encore de parties) :
+  // les jeux phares du code ouvrent la grille, marqués « Incontournable » et
+  // non « Populaire » (`ranked` false).
+  const catalog = await getGameCatalogState()
+  const { games, highlightedIds, ranked } = orderLandingGames({
+    games: GAMES,
+    hiddenIds: catalog.hiddenIds,
+    popular: catalog.popular,
+    fallback: {
+      local: featuredGameIds(catalog.hiddenIds, 'local'),
+      online: featuredGameIds(catalog.hiddenIds, 'online'),
+    },
+  })
+  // La Table du vendredi n'a plus de sens si son jeu est caché.
+  const fridayListed = GAMES.some((g) => g.id === FRIDAY_TABLE.gameId && isGameListed(g, catalog.hiddenIds))
 
   const playersOnline = await readPlayersOnline()
   // Parties lancées (journal anonyme, cache 15 min, seuils d'affichage —
   // voir landing-stats-server.ts) : null, et la vitrine n'en dit rien.
   const launches = await readLandingLaunchesStat()
   const previewGameTitle = tCatalog(`${PREVIEW_GAME_ID}.title`)
-  // Table ouverte du vendredi (src/lib/friday-table.ts) : calculée à chaque
-  // rendu, sans réseau — la vitrine lit les cookies, elle est donc rendue par
-  // requête et sait si la soirée est en cours. L'heure se dit À PARIS : le
-  // serveur ignore le fuseau du visiteur (le bandeau du hub, lui, la
-  // convertit dans le navigateur), et le texte le précise.
+  // Table ouverte du vendredi (src/lib/friday-table.ts) : calculée au rendu,
+  // sans réseau. La page est prérendue puis régénérée toutes les 5 minutes
+  // (`revalidate` de decouvrir/page.tsx) : « en cours ou non » a donc au plus
+  // cet âge. L'heure se dit À PARIS : le serveur ignore le fuseau du visiteur
+  // (le bandeau du hub, lui, la convertit dans le navigateur), et le texte le
+  // précise.
   const friday = fridayTableStatus()
   const fridayTime = formatClockTime(new Date(friday.startsAt), locale, FRIDAY_TABLE.tz)
 
@@ -173,24 +189,26 @@ export async function LandingPage({ locale }: { locale: string }) {
         {/* Rendez-vous du vendredi : une ligne, pas un bandeau — le héros
             reste à « Jouer ». Elle mène au hub, où le bandeau de la soirée
             propose de rejoindre ou d'ouvrir la table. */}
-        <p className="mt-4 flex justify-center">
-          <Link
-            href="/jeux"
-            className="inline-flex min-h-[44px] max-w-full items-center gap-2 rounded-full border border-gold/30 bg-felt-deep/70 px-4 py-2 text-left text-xs font-semibold text-cream/80 transition-colors hover:border-gold/60 hover:text-cream"
-          >
-            {friday.live ? (
-              <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
-                <span className="absolute inline-flex h-full w-full rounded-full bg-suit-red/60 motion-safe:animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-suit-red" />
+        {fridayListed && (
+          <p className="mt-4 flex justify-center">
+            <Link
+              href="/jeux"
+              className="inline-flex min-h-[44px] max-w-full items-center gap-2 rounded-full border border-gold/30 bg-felt-deep/70 px-4 py-2 text-left text-xs font-semibold text-cream/80 transition-colors hover:border-gold/60 hover:text-cream"
+            >
+              {friday.live ? (
+                <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-suit-red/60 motion-safe:animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-suit-red" />
+                </span>
+              ) : (
+                <CalendarClock aria-hidden className="h-3.5 w-3.5 shrink-0 text-gold" />
+              )}
+              <span>
+                {friday.live ? tFriday('landing.live') : tFriday('landing.next', { time: fridayTime })}
               </span>
-            ) : (
-              <CalendarClock aria-hidden className="h-3.5 w-3.5 shrink-0 text-gold" />
-            )}
-            <span>
-              {friday.live ? tFriday('landing.live') : tFriday('landing.next', { time: fridayTime })}
-            </span>
-          </Link>
-        </p>
+            </Link>
+          </p>
+        )}
         <p className="mt-4 text-xs text-white/40">{t('hero.trust')}</p>
       </section>
 
@@ -338,13 +356,14 @@ export async function LandingPage({ locale }: { locale: string }) {
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {games.map((game) => {
             const red = game.suit ? suitIsRed(game.suit) : false
+            const highlighted = highlightedIds.has(game.id)
             return (
               <Link
                 key={game.id}
                 href={game.path}
                 className={cn(
                   'group relative overflow-hidden rounded-2xl border bg-cream p-3 text-[#24201A] shadow-[0_8px_18px_-10px_rgba(0,0,0,0.6)] transition-transform hover:-translate-y-0.5',
-                  game.featured ? 'border-gold' : 'border-[#D8CCAE]'
+                  highlighted ? 'border-gold' : 'border-[#D8CCAE]'
                 )}
               >
                 {game.suit && (
@@ -360,12 +379,12 @@ export async function LandingPage({ locale }: { locale: string }) {
                     {SUIT_GLYPH[game.suit]}
                   </span>
                 )}
-                {/* Pastille « incontournable » à 11 px (métadonnée : la
-                    bordure or dit déjà la mise en avant) — à 12 px, elle
-                    rejoindrait l'index de la carte sur une colonne de 165 px. */}
-                {game.featured && (
+                {/* Pastille « populaire » à 11 px (métadonnée : la bordure or dit
+                    déjà la mise en avant) — à 12 px, elle rejoindrait l'index
+                    de la carte sur une colonne de 165 px. */}
+                {highlighted && (
                   <span className="absolute right-2 top-1.5 rounded-full bg-gold/25 px-1.5 py-0.5 text-[11px] font-black uppercase leading-tight tracking-tight text-[#6B4E0F]">
-                    ★ {t('catalog.featured')}
+                    ★ {ranked ? t('catalog.popular') : t('catalog.featured')}
                   </span>
                 )}
                 <div className="px-4 pt-4 text-center">
@@ -383,6 +402,7 @@ export async function LandingPage({ locale }: { locale: string }) {
                     {tCatalog(`${game.id}.description`)}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+                    <DifficultyBadge level={game.difficulty} tone="card" className="mr-1" />
                     {game.onlineReady && (
                       <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-emerald-800">
                         {t('catalog.online')}

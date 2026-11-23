@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-server'
 import { GAMES } from '@/lib/games'
 import { onlineErrorBody } from '@/lib/online-errors'
 import { buildReplayMatesForUser } from '@/lib/online/room-invites'
+import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,8 +53,10 @@ export async function GET() {
 
   // Seuls les jeux jouables aujourd'hui : online, non masqués. softModeReady
   // est exposé pour que le client filtre en ambiance soft.
+  // Les jeux cachés par l'équipe (Supervision) sont écartés comme les masqués du code.
+  const staffHidden = await getStaffHiddenGameIds()
   const playable = new Map(
-    GAMES.filter((g) => g.onlineReady && !g.hidden).map((g) => [g.id, g])
+    GAMES.filter((g) => g.onlineReady && !g.hidden && !staffHidden.includes(g.id)).map((g) => [g.id, g])
   )
 
   const recent = [...byGame.entries()]

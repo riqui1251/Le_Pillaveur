@@ -5,6 +5,9 @@ import { Link } from '@/i18n/navigation'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { getGameById, type GameMeta } from '@/lib/games'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { isGameListed } from '@/lib/game-catalog'
+import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { RULES_GAME_IDS, RULES_META, type RulesGameId } from '@/lib/rules/rules-content'
 import { OG_LOCALES, SITE_NAME, siteOgImage } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
@@ -27,13 +30,23 @@ import { cn } from '@/lib/utils'
 /** Langue de TOUT le contenu de la page : celle des articles (docs/rules/fr/). */
 const CONTENT_LOCALE = 'fr'
 
+/**
+ * Rendue au build puis rafraîchie toutes les 5 minutes (ISR, comme /classement) :
+ * un jeu caché depuis la Supervision quitte l'index sans redéploiement.
+ */
+export const revalidate = 300
+
 type RulesEntry = { id: RulesGameId; game: GameMeta }
 
-/** Les jeux qui ont un article, dans l'ordre de RULES_GAME_IDS — un id sans jeu au registre est ignoré. */
-function rulesEntries(): RulesEntry[] {
+/**
+ * Les jeux qui ont un article, dans l'ordre de RULES_GAME_IDS — un id sans jeu
+ * au registre est ignoré, un jeu caché par l'équipe aussi (son article reste
+ * en ligne pour le référencement, mais l'index ne le met plus en avant).
+ */
+function rulesEntries(hiddenIds: readonly string[]): RulesEntry[] {
   return RULES_GAME_IDS.flatMap((id) => {
     const game = getGameById(id)
-    return game ? [{ id, game }] : []
+    return game && isGameListed(game, hiddenIds) ? [{ id, game }] : []
   })
 }
 
@@ -78,7 +91,7 @@ export default async function RulesIndexPage({
 
   const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
   const tCatalog = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'games.catalog' })
-  const entries = rulesEntries()
+  const entries = rulesEntries(await getStaffHiddenGameIds())
   const url = `${SITE_URL}/${CONTENT_LOCALE}/regles`
 
   // Données structurées : la page de collection porte la liste ordonnée des
@@ -198,6 +211,12 @@ export default async function RulesIndexPage({
                               {t('botsBadge')}
                             </span>
                           )}
+                          {/* Le contenu de la page est français : le niveau se lit
+                              pourtant dans la langue de l'URL (le libellé vient du
+                              socle commun), d'où le `lang` posé sur la pastille. */}
+                          <span lang={locale}>
+                            <DifficultyBadge level={game.difficulty} tone="card" />
+                          </span>
                         </div>
                         <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#24201A] transition-colors group-hover:text-suit-red">
                           {t('readRules')}

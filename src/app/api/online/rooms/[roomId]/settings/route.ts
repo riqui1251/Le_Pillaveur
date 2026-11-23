@@ -6,6 +6,7 @@ import { parseRoomSettings, type RoomSettings } from '@/lib/online-game-state'
 import { publishRoomChanged } from '@/lib/online/room-bus'
 import { invalidateLobbiesCache } from '@/lib/online/lobbies-cache'
 import { onlineErrorBody } from '@/lib/online-errors'
+import { isGameHiddenByStaff } from '@/lib/game-catalog-server'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
 import { GAMES, hasContentIn } from '@/lib/games'
 import { getGameAdapter } from '@/lib/online/game-adapters'
@@ -120,6 +121,11 @@ export async function PUT(request: Request, { params }: Params) {
       return NextResponse.json(onlineErrorBody('invalid_game'), { status: 400 })
     }
     if (game.id !== room.gameId) {
+      // Caché par l'équipe : on ne bascule pas une table VERS ce jeu (rester
+      // sur le jeu actuel, même caché depuis, reste permis).
+      if (await isGameHiddenByStaff(game.id)) {
+        return NextResponse.json(onlineErrorBody('game_unavailable'), { status: 409 })
+      }
       nextGameId = game.id
       humans = await prisma.onlineRoomMember.count({ where: { roomId } })
       // Une tablée déjà trop nombreuse pour le nouveau jeu ne pourrait plus

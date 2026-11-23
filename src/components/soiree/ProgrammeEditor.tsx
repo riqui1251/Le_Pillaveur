@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { ArrowDown, ArrowUp, Plus, RefreshCw, Shuffle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
 import { useLocalizedGames } from '@/lib/games-i18n'
-import { soireeCounting, soireeGameColors, soireeHeat, soireeMinutes } from '@/lib/soiree/catalog'
+import { soireeCounting, soireeDifficulty, soireeGameColors, soireeHeat, soireeMinutes } from '@/lib/soiree/catalog'
 import { addRound, moveRound, programHeat, programMinutes, removeRound, replaceRound, SOIREE_MAX_ROUNDS } from '@/lib/soiree/program'
 import { GameBadge, HeatPips, gameGradient } from './soiree-ui'
 import { GamePickerDialog } from './GamePickerDialog'
@@ -94,6 +95,7 @@ export function ProgrammeEditor({
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#5E5444]">
                       <HeatPips heat={soireeHeat(gameId)} />
+                      <DifficultyBadge level={soireeDifficulty(gameId)} tone="card" />
                       <span>{t('minutes', { minutes: soireeMinutes(gameId) })}</span>
                       {counting !== 'auto' && <span className="font-semibold">{t(`counting.${counting}`)}</span>}
                     </p>

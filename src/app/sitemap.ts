@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { COLLECTION_SLUGS } from '@/lib/collections'
 import { GAMES } from '@/lib/games'
+import { isGameListed } from '@/lib/game-catalog'
+import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-content'
 import { buildAlternates } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
@@ -37,7 +39,14 @@ function entry(path: string, priority: number, changeFrequency: Freq): MetadataR
   }
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/**
+ * Rafraîchi toutes les 5 minutes : un jeu caché depuis la Supervision quitte le
+ * sitemap sans redéploiement (ses articles de règles, eux, restent listés).
+ */
+export const revalidate = 300
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const hiddenIds = await getStaffHiddenGameIds()
   return [
     // Accueil = Mode Soirée (seuls les comptes en ligne sont redirigés vers
     // /jeux) ; l'ancienne vitrine vit sur /decouvrir.
@@ -48,7 +57,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entry('/classement', 0.6, 'daily'),
     // Page de téléchargement de l'app mobile (liens stores à venir).
     entry('/application', 0.5, 'monthly'),
-    ...GAMES.filter((game) => !game.hidden).map((game) =>
+    ...GAMES.filter((game) => isGameListed(game, hiddenIds)).map((game) =>
       entry(`/games/${game.id}`, 0.7, 'monthly')
     ),
     // Index des règles puis un article par jeu : contenu français uniquement

@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import { BrandMark } from '@/components/brand/BrandLogo'
+import { GameIconById } from '@/components/hub/GameIconById'
 import { useFullscreen } from '@/hooks/useFullscreen'
 import { isCapacitorApp } from '@/lib/native-app'
 import { JoinQR } from './JoinQR'
@@ -23,11 +24,14 @@ import { useKeepScreenAwake } from './use-keep-screen-awake'
  */
 export function TvStage({
   title,
+  gameId,
   code,
   joinUrl,
   children,
 }: {
   title: string
+  /** Jeu en cours : son icône précède le titre. */
+  gameId?: string | null
   code: string
   joinUrl?: string
   children: ReactNode
@@ -55,7 +59,14 @@ export function TvStage({
           </div>
           <div className="min-w-0">
             <p className="font-display text-base font-semibold uppercase tracking-[0.3em] text-gold/90">{t('brand')}</p>
-            <h1 className="truncate font-display text-4xl font-bold leading-tight">{title}</h1>
+            <h1 className="flex items-center gap-3 font-display text-4xl font-bold leading-tight">
+              {gameId && (
+                <span aria-hidden className="shrink-0">
+                  <GameIconById id={gameId} surface="felt" className="block h-10 w-10" />
+                </span>
+              )}
+              <span className="min-w-0 truncate">{title}</span>
+            </h1>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-4">

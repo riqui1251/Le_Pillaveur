@@ -226,6 +226,21 @@
       "description": "The game in progress will be lost.",
       "confirm": "Start over",
       "cancel": "Keep playing"
+    },
+    "difficulty": {
+      "label": "Difficulty",
+      "aria": "Difficulty: {level}",
+      "levels": {
+        "1": "Easy",
+        "2": "Medium",
+        "3": "Hard"
+      }
+    },
+    "gameUnavailable": {
+      "title": "This game is taking a break",
+      "text": "It’s off the catalog for now. Check back soon!",
+      "back": "See the other games",
+      "staffBanner": "Hidden from players: you can see it because you’re on the team."
     }
   },
   "hub": {
@@ -259,6 +274,7 @@
       "h1": "Free party games, with friends or with bots",
       "intro": "Pick a game and start playing in seconds: all on one phone passed around the table, or everyone on their own with a table code.",
       "featured": "Must-plays",
+      "popular": "Most played right now",
       "soloBanner": {
         "title": "Playing solo with bots.",
         "text": "Only games where bots can fill the table are shown.",
@@ -743,7 +759,8 @@
       "word_already_said": "Already said this round: find something else!",
       "word_wrong_letter": "That word doesn’t start with the right letter.",
       "word_missing_syllable": "That word doesn’t contain the syllable.",
-      "contest_unavailable": "This word can’t be challenged."
+      "contest_unavailable": "This word can’t be challenged.",
+      "game_unavailable": "This game isn’t available right now."
     },
     "showcase": {
       "players": "{min} to {max} players",
@@ -7790,6 +7807,32 @@
       "reviewsLoadError": "Could not load the list of votes.",
       "authorAnonymous": "No account"
     },
+    "gameCatalog": {
+      "title": "Game catalog",
+      "desc": "Hide a game to remove it from the site (hub, Party Mode, lobby, showcase), or bring it back. Featured games pick themselves: the most played over 30 days.",
+      "refresh": "Refresh",
+      "loadError": "Couldn’t load the game catalog.",
+      "forbidden": "Session expired or access removed: sign in again.",
+      "colGame": "Game",
+      "colPlays": "Plays over 30 days",
+      "colDifficulty": "Difficulty",
+      "colStatus": "On the site",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "hide": "Hide {game}",
+      "show": "Bring back {game}",
+      "popularLocal": "Featured locally · #{rank}",
+      "popularOnline": "Featured online · #{rank}",
+      "plays": "{count, plural, =0 {No plays} one {# play} other {# plays}}",
+      "playsDetail": "{online} online · {local} local",
+      "readOnly": "Read only: only super admins can hide or bring back a game.",
+      "saveError": "The change wasn’t saved. Try again.",
+      "hiddenCount": "{count, plural, =0 {No hidden game} one {# hidden game} other {# hidden games}}",
+      "retiredNote": "{count, plural, one {# old game stays retired} other {# old games stay retired}} in the code.",
+      "sortedHint": "From most to least played over the last 30 days.",
+      "announceHidden": "{game} is now hidden from players.",
+      "announceShown": "{game} is visible to players again."
+    },
     "history": {
       "activeConnection": "Active sign-in",
       "sessionInDb": "Session in database",
@@ -8692,7 +8735,8 @@
       "online": "Online",
       "local": "Local",
       "players": "{min}-{max} players",
-      "featured": "Must-play"
+      "featured": "Must-play",
+      "popular": "Popular"
     },
     "rules": {
       "title": "Learn the rules",

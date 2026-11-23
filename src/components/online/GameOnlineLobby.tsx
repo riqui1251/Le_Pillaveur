@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from '@/i18n/navigation'
@@ -11,10 +11,13 @@ import { VoiceDockButton } from '@/components/voice/VoiceDockButton'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
+import { useGameCatalog } from '@/hooks/useGameCatalog'
 import { useFriends } from '@/hooks/useFriends'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
 import { OnlineCollection } from '@/components/online/OnlineCollection'
+import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { isGameListed } from '@/lib/game-catalog'
 import { isDefaultOnlineLook } from '@/lib/online/cosmetics'
 import { DEFAULT_ONLINE_PREFERENCES } from '@/lib/online-preferences'
 import { GAMES, hasContentIn, soloBotsCount, type GameMeta } from '@/lib/games'
@@ -77,9 +80,6 @@ function LobbyShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** Jeux qu'une table peut prendre : ceux qu'on peut ouvrir en ligne (même garde que POST /rooms). */
-const SWITCHABLE_GAMES = GAMES.filter((g) => g.onlineReady && !g.hidden)
-
 /**
  * Feuille « Changer de jeu » (hôte, table en attente) : la liste des jeux en
  * ligne, en zone pouce. Un jeu que la tablée dépasse déjà est grisé — le
@@ -117,10 +117,19 @@ function GameSwitchSheet({
   const panelRef = useRef<HTMLDivElement>(null)
   const busy = pendingId !== null
   const { mode: ambiance } = useAmbianceMode()
-  const games =
-    ambiance === 'soft'
-      ? SWITCHABLE_GAMES.filter((g) => g.softModeReady || g.id === currentGameId)
-      : SWITCHABLE_GAMES
+  const { hiddenIds } = useGameCatalog()
+  // Les jeux qu'on peut ouvrir en ligne (même garde que POST /rooms) ; celui de
+  // la table reste, même caché depuis par l'équipe.
+  const games = useMemo(
+    () =>
+      GAMES.filter(
+        (g) =>
+          g.onlineReady &&
+          isGameListed(g, g.id === currentGameId ? [] : hiddenIds) &&
+          (ambiance !== 'soft' || g.softModeReady || g.id === currentGameId)
+      ),
+    [hiddenIds, ambiance, currentGameId]
+  )
   const rows = games.map((g) => {
     const current = g.id === currentGameId
     const blockedReason =
@@ -258,11 +267,14 @@ function GameSwitchSheet({
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold text-cream">{titleOf(g.id)}</span>
-                            <span className={cn('block truncate text-xs', blockedReason ? 'text-amber-200' : 'text-cream/70')}>
-                              {blockedReason ??
-                                (g.maxPlayers && g.maxPlayers < 20
-                                  ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
-                                  : tOnline('playersRange.open', { min: g.minPlayers ?? 2 }))}
+                            <span className="flex items-center gap-x-2 text-xs">
+                              <span className={cn('min-w-0 truncate', blockedReason ? 'text-amber-200' : 'text-cream/70')}>
+                                {blockedReason ??
+                                  (g.maxPlayers && g.maxPlayers < 20
+                                    ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
+                                    : tOnline('playersRange.open', { min: g.minPlayers ?? 2 }))}
+                              </span>
+                              <DifficultyBadge level={g.difficulty} tone="felt" className="shrink-0" />
                             </span>
                           </span>
                           {current ? (
@@ -740,10 +752,13 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-bold leading-tight">{game?.title}</h1>
-            <p className="text-xs text-[#6B6455]">
-              {game?.maxPlayers && game.maxPlayers < 20
-                ? tOnline('playersRange.bounded', { min: game?.minPlayers ?? 2, max: game.maxPlayers })
-                : tOnline('playersRange.open', { min: game?.minPlayers ?? 2 })}
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#6B6455]">
+              <span>
+                {game?.maxPlayers && game.maxPlayers < 20
+                  ? tOnline('playersRange.bounded', { min: game?.minPlayers ?? 2, max: game.maxPlayers })
+                  : tOnline('playersRange.open', { min: game?.minPlayers ?? 2 })}
+              </span>
+              {game && <DifficultyBadge level={game.difficulty} tone="card" />}
             </p>
           </div>
         </div>
