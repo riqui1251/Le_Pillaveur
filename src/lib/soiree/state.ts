@@ -1,4 +1,4 @@
-import { isSoireeGame } from './catalog'
+import { isSoireeCandidate } from './catalog'
 import { SOIREE_MAX_ROUNDS, type SoireeLength, type SoireeVibe } from './program'
 
 export type SoireeTally = { drinks: number; wins: number; played: number }
@@ -262,14 +262,16 @@ function withoutPendingGames(soiree: Soiree, keep: (gameId: string) => boolean):
 /**
  * Une soirée enregistrée avant qu'un jeu sorte du catalogue (Dégaine, le
  * 22/11/2026) : ses manches de ce jeu pas encore lancées tombent du
- * programme ; celles jouées restent sur l'ardoise.
+ * programme ; celles jouées restent sur l'ardoise. Les jeux que l'équipe peut
+ * ajouter à la soirée (candidats) restent : cette lecture se fait sans le
+ * catalogue du serveur, elle ne doit pas effacer un jeu ajouté depuis.
  */
 export function withoutRetiredGames(soiree: Soiree): Soiree {
-  return withoutPendingGames(soiree, isSoireeGame)
+  return withoutPendingGames(soiree, isSoireeCandidate)
 }
 
 /**
- * Même purge pour les jeux que l'équipe a cachés depuis la Supervision : on
+ * Les manches pas encore lancées d'un jeu que l'équipe a caché depuis la Supervision : on
  * ne lance plus une manche d'un jeu retiré du catalogue. Une soirée finie
  * garde son programme tel quel (l'addition le raconte).
  */

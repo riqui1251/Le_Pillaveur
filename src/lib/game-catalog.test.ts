@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { GAMES } from '@/lib/games'
+import { SOIREE_CANDIDATE_IDS, SOIREE_GAME_IDS } from '@/lib/soiree/catalog'
+import { defaultVibesForLevel } from '@/lib/soiree/vibes'
 import {
   EMPTY_GAME_CATALOG,
+  FEATURED_LIMIT,
   GAME_CATEGORY_LIMITS,
   POPULAR_LIMIT,
+  POPULAR_RANKED_LIMIT,
   STAFF_TOGGLEABLE_GAME_IDS,
   categoryName,
   cleanCategoryName,
   gameDifficulty,
   gameDrinkLevel,
+  gameVibes,
   isGameCategoryId,
   isGameDrinkLevel,
   isGameListed,
@@ -16,9 +21,13 @@ import {
   normalizeCategoryNames,
   parseDifficultyOverrides,
   parseDrinkLevelOverrides,
+  parseFeaturedGameIds,
   parseGameCatalogState,
   parseGameCategories,
   parseHiddenGameIds,
+  parseSoireeOverrides,
+  parseVibeOverrides,
+  VIBE_GAME_IDS,
   featuredGameIds,
   rankPopularGames,
   totalPlays,
@@ -136,6 +145,10 @@ describe('rankPopularGames', () => {
   it('ne dépasse jamais la limite', () => {
     const counts = Object.fromEntries(onlineAndLocal.map((g) => [g.id, { online: 1, local: 0 }]))
     expect(rankPopularGames(counts, [], 'online').length).toBeLessThanOrEqual(POPULAR_LIMIT)
+    expect(rankPopularGames(counts, [], 'online', POPULAR_RANKED_LIMIT).length).toBe(
+      Math.min(POPULAR_RANKED_LIMIT, onlineAndLocal.length)
+    )
+    expect(POPULAR_RANKED_LIMIT).toBe(POPULAR_LIMIT + FEATURED_LIMIT)
   })
 })
 
@@ -164,7 +177,7 @@ describe('parseGameCatalogState', () => {
   it('relit une réponse valide en filtrant les ids inconnus', () => {
     expect(
       parseGameCatalogState({ hiddenIds: [b, 'nope'], popular: { local: [a, 'nope', 3], online: [b] } })
-    ).toEqual({ hiddenIds: [b], difficulty: {}, drinkLevel: {}, categories: [], popular: { local: [a], online: [b] } })
+    ).toEqual({ hiddenIds: [b], difficulty: {}, drinkLevel: {}, categories: [], vibes: {}, soiree: {}, featured: [], popular: { local: [a], online: [b] } })
   })
 
   it('le champ difficulty est facultatif : absent ou illisible, il vaut {} sans rendre null', () => {
@@ -477,5 +490,177 @@ describe('categoryName', () => {
     for (const locale of ['de', '', 'EN', 'en-GB', '__proto__', 'constructor']) {
       expect(categoryName(category, locale), locale).toBe('Chaud')
     }
+  })
+})
+
+describe('parseVibeOverrides', () => {
+  const [a, b] = SOIREE_GAME_IDS
+
+  it('VIBE_GAME_IDS : tous les candidats du Mode Soirée que l’équipe peut basculer, dans l’ordre du catalogue', () => {
+    expect(VIBE_GAME_IDS).toEqual(STAFF_TOGGLEABLE_GAME_IDS.filter((id) => SOIREE_CANDIDATE_IDS.includes(id)))
+    expect(VIBE_GAME_IDS.length).toBeGreaterThan(SOIREE_GAME_IDS.length)
+    for (const id of SOIREE_GAME_IDS) expect(VIBE_GAME_IDS).toContain(id)
+  })
+
+  it('relit un objet ou son texte JSON, dans l’ordre de SOIREE_VIBES et sans doublon', () => {
+    const stored = { [a]: ['grosse', 'apero', 'apero'], [b]: ['monte'] }
+    const expected = { [a]: ['apero', 'grosse'], [b]: ['monte'] }
+    expect(parseVibeOverrides(stored)).toEqual(expected)
+    expect(parseVibeOverrides(JSON.stringify(stored))).toEqual(expected)
+  })
+
+  it('garde la liste vide : « aucune ambiance » est un choix', () => {
+    expect(parseVibeOverrides({ [a]: [] })).toEqual({ [a]: [] })
+  })
+
+  it('écarte les ambiances inconnues sans écarter le jeu', () => {
+    expect(parseVibeOverrides({ [a]: ['soiree-folle', 3, null, 'monte'] })).toEqual({ [a]: ['monte'] })
+  })
+
+  it('écarte les ids inconnus, retirés du code ou qui ne sont pas candidats au Mode Soirée', () => {
+    const outside = STAFF_TOGGLEABLE_GAME_IDS.find((id) => !SOIREE_CANDIDATE_IDS.includes(id))
+    const ids = { nope: ['apero'], [retired.id]: ['apero'], ...(outside ? { [outside]: ['apero'] } : {}), [a]: ['apero'] }
+    expect(parseVibeOverrides(ids)).toEqual({ [a]: ['apero'] })
+  })
+
+  it('écarte une entrée qui n’est pas une liste', () => {
+    expect(parseVibeOverrides({ [a]: 'apero', [b]: { apero: true } })).toEqual({})
+  })
+
+  it('illisible ou absent : {}', () => {
+    for (const raw of ['{pas du json', '"texte"', '[]', '[["apero"]]', 12, true, null, undefined, '']) {
+      expect(parseVibeOverrides(raw), String(raw)).toEqual({})
+    }
+  })
+})
+
+describe('gameVibes', () => {
+  const [a, b] = SOIREE_GAME_IDS
+
+  it('sans réglage : les ambiances du niveau « fait boire » du code', () => {
+    expect(gameVibes(a, {}, {})).toEqual(defaultVibesForLevel(codeDrink(a)))
+  })
+
+  it('le défaut suit le niveau « fait boire » réglé par l’équipe', () => {
+    const level = otherDrink(a)
+    expect(gameVibes(a, {}, { [a]: level })).toEqual(defaultVibesForLevel(level))
+  })
+
+  it('un réglage de l’équipe remplace le défaut, même vide, et reste le même quand le niveau change', () => {
+    expect(gameVibes(a, { [a]: ['grosse'] }, {})).toEqual(['grosse'])
+    expect(gameVibes(a, { [a]: [] }, {})).toEqual([])
+    expect(gameVibes(a, { [a]: ['grosse'] }, { [a]: otherDrink(a) })).toEqual(['grosse'])
+    expect(gameVibes(b, { [a]: ['grosse'] }, {})).toEqual(defaultVibesForLevel(codeDrink(b)))
+  })
+
+  it('rend une copie : la modifier ne touche pas au réglage', () => {
+    const overrides = { [a]: ['apero' as const] }
+    gameVibes(a, overrides, {}).push('grosse')
+    expect(overrides[a]).toEqual(['apero'])
+  })
+})
+
+describe('parseGameCatalogState : ambiances', () => {
+  const [a] = SOIREE_GAME_IDS
+  const base = { hiddenIds: [], popular: { local: [], online: [] } }
+
+  it('vibes est facultatif : absent ou illisible, il vaut {} sans rendre null', () => {
+    expect(parseGameCatalogState(base)?.vibes).toEqual({})
+    expect(parseGameCatalogState({ ...base, vibes: 'toutes' })?.vibes).toEqual({})
+    expect(parseGameCatalogState({ ...base, vibes: [a] })?.vibes).toEqual({})
+  })
+
+  it('relit les ambiances réglées en écartant ce qui est invalide', () => {
+    const state = parseGameCatalogState({ ...base, vibes: { [a]: ['grosse', 'apero', 'nope'], nope: ['apero'] } })
+    expect(state?.vibes).toEqual({ [a]: ['apero', 'grosse'] })
+  })
+
+  it('EMPTY_GAME_CATALOG.vibes vaut {}', () => {
+    expect(EMPTY_GAME_CATALOG.vibes).toEqual({})
+  })
+})
+
+describe('parseSoireeOverrides', () => {
+  const [a, b] = SOIREE_GAME_IDS
+  const added = SOIREE_CANDIDATE_IDS.find((id) => !SOIREE_GAME_IDS.includes(id))!
+  const onlineOnly = GAMES.find((g) => !g.hidden && g.onlineOnly)
+
+  it('garde les écarts au défaut : un jeu du code sorti (false), un candidat ajouté (true)', () => {
+    expect(parseSoireeOverrides({ [a]: false, [added]: true })).toEqual({ [a]: false, [added]: true })
+  })
+
+  it('relit le texte JSON, dans l’ordre du catalogue', () => {
+    const stored = { [added]: true, [a]: false }
+    const result = parseSoireeOverrides(JSON.stringify(stored))
+    expect(Object.keys(result)).toEqual(SOIREE_CANDIDATE_IDS.filter((id) => id in stored))
+  })
+
+  it('écarte une entrée égale au défaut du code', () => {
+    expect(parseSoireeOverrides({ [a]: true, [added]: false })).toEqual({})
+  })
+
+  it('écarte les ids inconnus, retirés du code, en ligne uniquement, et les valeurs qui ne sont pas des booléens', () => {
+    const ids = {
+      nope: true,
+      [retired.id]: true,
+      ...(onlineOnly ? { [onlineOnly.id]: true } : {}),
+      [a]: 'false',
+      [b]: 0,
+      [added]: true,
+    }
+    expect(parseSoireeOverrides(ids)).toEqual({ [added]: true })
+  })
+
+  it('illisible, tableau ou absent : {}', () => {
+    for (const raw of ['{pas du json', '[1]', 'null', '"x"', [a], null, undefined, 3]) {
+      expect(parseSoireeOverrides(raw), String(raw)).toEqual({})
+    }
+  })
+})
+
+describe('parseFeaturedGameIds', () => {
+  const [a, b, c] = STAFF_TOGGLEABLE_GAME_IDS
+
+  it('garde l’ordre de mise à la une (pas celui du catalogue), objet ou texte JSON', () => {
+    expect(parseFeaturedGameIds([c, a, b])).toEqual([c, a, b])
+    expect(parseFeaturedGameIds(JSON.stringify([b, a]))).toEqual([b, a])
+  })
+
+  it('écarte doublons, inconnus, retirés du code et non-textes, en gardant la première place', () => {
+    expect(parseFeaturedGameIds([b, 'nope', b, retired.id, 3, null, a, b])).toEqual([b, a])
+  })
+
+  it(`tronque à FEATURED_LIMIT (${FEATURED_LIMIT})`, () => {
+    const many = STAFF_TOGGLEABLE_GAME_IDS.slice(0, FEATURED_LIMIT + 3)
+    expect(FEATURED_LIMIT).toBe(8)
+    expect(parseFeaturedGameIds(many)).toEqual(many.slice(0, FEATURED_LIMIT))
+  })
+
+  it('illisible, objet ou absent : []', () => {
+    for (const raw of ['{pas du json', '{"a":1}', 'null', { [a]: true }, null, undefined, 12]) {
+      expect(parseFeaturedGameIds(raw), String(raw)).toEqual([])
+    }
+  })
+})
+
+describe('parseGameCatalogState : Mode Soirée et à la une', () => {
+  const base = { hiddenIds: [], popular: { local: [], online: [] } }
+  const added = SOIREE_CANDIDATE_IDS.find((id) => !SOIREE_GAME_IDS.includes(id))!
+  const [a, b] = STAFF_TOGGLEABLE_GAME_IDS
+
+  it('soiree et featured sont facultatifs : absents ou abîmés, ils valent {} et []', () => {
+    expect(parseGameCatalogState(base)).toMatchObject({ soiree: {}, featured: [] })
+    expect(parseGameCatalogState({ ...base, soiree: 'x', featured: 'y' })).toMatchObject({ soiree: {}, featured: [] })
+  })
+
+  it('relit les deux champs en les nettoyant', () => {
+    const state = parseGameCatalogState({ ...base, soiree: { [added]: true, nope: true }, featured: [b, a, 'nope', b] })
+    expect(state?.soiree).toEqual({ [added]: true })
+    expect(state?.featured).toEqual([b, a])
+  })
+
+  it('EMPTY_GAME_CATALOG a soiree {} et featured []', () => {
+    expect(EMPTY_GAME_CATALOG.soiree).toEqual({})
+    expect(EMPTY_GAME_CATALOG.featured).toEqual([])
   })
 })

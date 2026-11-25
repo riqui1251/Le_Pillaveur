@@ -18,10 +18,11 @@ export type SoireeCounting = 'auto' | 'partial' | 'manual'
 type SoireeGameMeta = { minutes: number; counting: SoireeCounting }
 
 /**
- * Les jeux qu'une soirée peut enchaîner : les jeux LOCAUX visibles (un seul
- * téléphone), sauf la Pyramide et Dégaine, écartés par l'utilisateur le
+ * Fiches des jeux de la liste PAR DÉFAUT d'une soirée : les jeux LOCAUX visibles
+ * (un seul téléphone), sauf la Pyramide et Dégaine, écartés par l'utilisateur le
  * 22/11/2026 (Dégaine fermait chaque soirée en duel final : il n'y a plus
- * de final imposé).
+ * de final imposé). L'équipe peut ensuite ajouter un jeu : ceux de SOIREE_EXTRA_META ont
+ * leur fiche, les autres prennent les défauts de soireeMinutes et soireeCounting.
  * Minutes : une partie aux réglages par défaut, arrondie — sert au total
  * annoncé du programme, pas à minuter quoi que ce soit.
  */
@@ -44,6 +45,21 @@ const SOIREE_GAME_META: Readonly<Record<string, SoireeGameMeta>> = {
   'cap-ou-pas-cap': { minutes: 15, counting: 'auto' },
   'coupe-du-roi': { minutes: 20, counting: 'manual' },
   'petit-buveur': { minutes: 25, counting: 'auto' },
+}
+
+/**
+ * Fiches des jeux que l'équipe peut AJOUTER à la Soirée sans qu'ils soient dans
+ * la liste par défaut : ils n'entrent donc pas dans SOIREE_GAME_IDS. Sans elles
+ * l'ardoise les annoncerait « à saisir » alors que Dégaine remonte lui-même
+ * parties, victoires et gorgées ; la Pyramide, elle, ne remonte que la partie.
+ */
+const SOIREE_EXTRA_META: Readonly<Record<string, SoireeGameMeta>> = {
+  degaine: { minutes: 8, counting: 'auto' },
+  pyramide: { minutes: 10, counting: 'manual' },
+}
+
+function soireeMeta(gameId: string): SoireeGameMeta | undefined {
+  return SOIREE_GAME_META[gameId] ?? SOIREE_EXTRA_META[gameId]
 }
 
 /**
@@ -71,15 +87,38 @@ export function soireeCap(gameId: string): number | null {
   return SOIREE_GAME_CAPS[gameId] ?? null
 }
 
-/** Dans l'ordre du catalogue (src/lib/games.ts), jeux masqués et « en ligne uniquement » exclus. */
-export const SOIREE_GAME_IDS: readonly string[] = GAMES.filter(
-  (game) => !game.hidden && !game.onlineOnly && game.id in SOIREE_GAME_META
-).map((game) => game.id)
+/**
+ * Les jeux que l'équipe peut ajouter à la Soirée ou en sortir : tout jeu du
+ * catalogue que le code n'a pas retiré et qui se joue sur un seul téléphone,
+ * Pyramide et Dégaine compris (écartés par défaut, pas interdits). Ordre du catalogue.
+ */
+export const SOIREE_CANDIDATE_IDS: readonly string[] = GAMES.filter((game) => !game.hidden && !game.onlineOnly).map(
+  (game) => game.id
+)
+
+const SOIREE_CANDIDATE_SET: ReadonlySet<string> = new Set(SOIREE_CANDIDATE_IDS)
+
+export function isSoireeCandidate(gameId: string): boolean {
+  return SOIREE_CANDIDATE_SET.has(gameId)
+}
+
+/** La liste PAR DÉFAUT du code, dans l'ordre du catalogue (src/lib/games.ts) : les candidats qui ont une fiche. */
+export const SOIREE_GAME_IDS: readonly string[] = SOIREE_CANDIDATE_IDS.filter((id) => id in SOIREE_GAME_META)
 
 const SOIREE_GAME_SET: ReadonlySet<string> = new Set(SOIREE_GAME_IDS)
 
+/** Un jeu de la liste par défaut du code ; la liste effective passe par soireeGameIdsWith. */
 export function isSoireeGame(gameId: string): boolean {
   return SOIREE_GAME_SET.has(gameId)
+}
+
+/**
+ * La liste effective de la Soirée : les candidats retenus, dans l'ordre du
+ * catalogue. `overrides` = les écarts de l'équipe au défaut du code (id → ajouté
+ * ou sorti) ; un id qui n'est pas candidat est ignoré.
+ */
+export function soireeGameIdsWith(overrides: Readonly<Record<string, boolean>>): string[] {
+  return SOIREE_CANDIDATE_IDS.filter((id) => overrides[id] ?? SOIREE_GAME_SET.has(id))
 }
 
 /**
@@ -91,11 +130,11 @@ export function soireeHeat(gameId: string): SoireeHeat {
 }
 
 export function soireeMinutes(gameId: string): number {
-  return SOIREE_GAME_META[gameId]?.minutes ?? 10
+  return soireeMeta(gameId)?.minutes ?? 10
 }
 
 export function soireeCounting(gameId: string): SoireeCounting {
-  return SOIREE_GAME_META[gameId]?.counting ?? 'manual'
+  return soireeMeta(gameId)?.counting ?? 'manual'
 }
 
 /** Les deux couleurs du jeu (src/lib/games.ts) : chaque manche a sa teinte dans la soirée. */
@@ -110,7 +149,14 @@ export function soireeMinPlayers(gameId: string): number {
   return getGameById(gameId)?.localMinPlayers ?? 2
 }
 
-/** Les jeux de la soirée jouables à `playerCount` joueurs, hors ceux que l'équipe a cachés (`hiddenIds`). */
-export function playableSoireeGameIds(playerCount: number, hiddenIds: readonly string[] = []): string[] {
-  return SOIREE_GAME_IDS.filter((id) => playerCount >= soireeMinPlayers(id) && !hiddenIds.includes(id))
+/**
+ * Les jeux de la soirée jouables à `playerCount` joueurs, hors ceux que l'équipe a cachés (`hiddenIds`).
+ * `soireeIds` : la liste effective (soireeGameIdsWith), par défaut celle du code.
+ */
+export function playableSoireeGameIds(
+  playerCount: number,
+  hiddenIds: readonly string[] = [],
+  soireeIds: readonly string[] = SOIREE_GAME_IDS
+): string[] {
+  return soireeIds.filter((id) => playerCount >= soireeMinPlayers(id) && !hiddenIds.includes(id))
 }

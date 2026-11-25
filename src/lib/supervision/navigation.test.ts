@@ -34,16 +34,16 @@ describe('onglets et vues par rôle', () => {
     expect(defaultSupervisionTab('moderator')).toBe('accounts')
   })
 
-  it('admin et super admin : tout sauf Serveur', () => {
+  it('admin et super admin : tout sauf Serveur (Jeux compris)', () => {
     for (const role of ['admin', 'superadmin']) {
-      expect(supervisionTabsFor(role)).toEqual(['overview', 'stats', 'accounts', 'moderation'])
+      expect(supervisionTabsFor(role)).toEqual(['overview', 'stats', 'catalog', 'accounts', 'moderation'])
       expect(moderationViewsFor(role)).toEqual(['reports', 'sanctions', 'words', 'journal'])
       expect(defaultSupervisionTab(role)).toBe('overview')
     }
   })
 
-  it('fondateur : les cinq onglets', () => {
-    expect(supervisionTabsFor('fondateur')).toEqual(['overview', 'stats', 'accounts', 'moderation', 'ops'])
+  it('fondateur : tous les onglets', () => {
+    expect(supervisionTabsFor('fondateur')).toEqual(['overview', 'stats', 'catalog', 'accounts', 'moderation', 'ops'])
     expect(tabViewsFor('stats', 'fondateur')).toEqual(['audience', 'players', 'games', 'quality'])
   })
 
@@ -60,14 +60,16 @@ describe('onglets et vues par rôle', () => {
     expect(defaultTabView('ops', 'fondateur')).toBeNull()
   })
 
-  it('navigation en trois familles, une famille vide disparaît', () => {
+  it('navigation en familles, une famille vide disparaît', () => {
     expect(supervisionNavGroupsFor('moderator')).toEqual([{ key: 'community', tabs: ['accounts', 'moderation'] }])
     expect(supervisionNavGroupsFor('admin')).toEqual([
       { key: 'analysis', tabs: ['overview', 'stats'] },
+      { key: 'content', tabs: ['catalog'] },
       { key: 'community', tabs: ['accounts', 'moderation'] },
     ])
     expect(supervisionNavGroupsFor('fondateur')).toEqual([
       { key: 'analysis', tabs: ['overview', 'stats'] },
+      { key: 'content', tabs: ['catalog'] },
       { key: 'community', tabs: ['accounts', 'moderation'] },
       { key: 'server', tabs: ['ops'] },
     ])
@@ -79,6 +81,8 @@ describe('resolveSupervisionLocation', () => {
     expect(resolve('overview')).toEqual({ tab: 'overview', view: null })
     expect(resolve('accounts', { view: 'games' })).toEqual({ tab: 'accounts', view: null })
     expect(resolve('ops', { role: 'fondateur' })).toEqual({ tab: 'ops', view: null })
+    expect(resolve('catalog')).toEqual({ tab: 'catalog', view: null })
+    expect(resolve('catalog', { view: 'games' })).toEqual({ tab: 'catalog', view: null })
   })
 
   it('Statistiques : la vue demandée, sinon Joueurs', () => {
@@ -138,6 +142,7 @@ describe('resolveSupervisionLocation', () => {
     // Un modérateur n'a ni La Salle ni Statistiques ; un admin n'a pas Serveur.
     expect(resolve('stats', { role: 'moderator' })).toEqual({ tab: 'accounts', view: null })
     expect(resolve('overview', { role: 'moderator' })).toEqual({ tab: 'accounts', view: null })
+    expect(resolve('catalog', { role: 'moderator' })).toEqual({ tab: 'accounts', view: null })
     expect(resolve(null, { role: 'moderator' })).toEqual({ tab: 'accounts', view: null })
     expect(resolve('ops')).toEqual({ tab: 'overview', view: null })
     expect(resolve('ops', { role: 'superadmin' })).toEqual({ tab: 'overview', view: null })
@@ -252,7 +257,7 @@ describe('supervisionUrlPatch', () => {
 
 describe('gardes de type', () => {
   it('reconnaissent les onglets et les vues, rien d’autre', () => {
-    expect(['overview', 'stats', 'accounts', 'moderation', 'ops'].every(isSupervisionTab)).toBe(true)
+    expect(['overview', 'stats', 'catalog', 'accounts', 'moderation', 'ops'].every(isSupervisionTab)).toBe(true)
     expect(['geo', 'bans', 'feedback', 'feedback-resolved', null].some(isSupervisionTab)).toBe(false)
     expect(['audience', 'players', 'games', 'quality'].every(isStatsView)).toBe(true)
     expect(isStatsView('geo')).toBe(false)

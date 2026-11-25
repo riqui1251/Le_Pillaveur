@@ -1,7 +1,17 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { EMPTY_GAME_CATALOG, gameDifficulty, gameDrinkLevel } from '@/lib/game-catalog'
+import { EMPTY_GAME_CATALOG, gameDifficulty, gameDrinkLevel, gameVibes } from '@/lib/game-catalog'
 import { GAMES } from '@/lib/games'
-import { GAME_CATALOG_CACHE_KEY, GAME_CATALOG_MAX_AGE_MS, GAME_CATALOG_RETRY_MS, createGameCatalogStore } from './useGameCatalog'
+import { SOIREE_CANDIDATE_IDS, SOIREE_GAME_IDS, soireeGameIdsWith } from '@/lib/soiree/catalog'
+import {
+  GAME_CATALOG_CACHE_KEY,
+  GAME_CATALOG_MAX_AGE_MS,
+  GAME_CATALOG_RETRY_MS,
+  createGameCatalogStore,
+  useFeaturedGameIds,
+  useSoireeGameIds,
+} from './useGameCatalog'
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial))
@@ -16,12 +26,16 @@ function memoryStorage(initial: Record<string, string> = {}) {
 
 const CODE_DRINK = (id: string) => GAMES.find((g) => g.id === id)!.drinkLevel
 const OTHER_DRINK = CODE_DRINK('pmu') === 3 ? 1 : 3
+const ADDED = SOIREE_CANDIDATE_IDS.find((id) => !SOIREE_GAME_IDS.includes(id))!
 const CATEGORIES = [{ id: 'chaud', names: { fr: 'Chaud', en: 'Hot' }, gameIds: ['pmu', 'hi-lo'] }]
 const SERVER_STATE = {
   hiddenIds: ['plinko'],
   difficulty: { pmu: 3 },
   drinkLevel: { pmu: OTHER_DRINK },
   categories: CATEGORIES,
+  vibes: { pmu: ['grosse'] },
+  soiree: { [ADDED]: true, 'hi-lo': false },
+  featured: ['hi-lo', 'pmu'],
   popular: { local: ['pmu', 'hi-lo'], online: ['imposteur'] },
 }
 
@@ -55,6 +69,24 @@ describe('catalogue des jeux côté navigateur', () => {
     expect(store.getSnapshot().state.difficulty).toEqual({})
   })
 
+  it('une copie d’avant la liste de la soirée et la une reste lisible : soiree vaut {}, featured vaut []', () => {
+    const { store } = setup({ stored: { hiddenIds: [], difficulty: {}, popular: { local: [], online: [] } } })
+    expect(store.getSnapshot().source).toBe('cache')
+    expect(store.getSnapshot().state.soiree).toEqual({})
+    expect(store.getSnapshot().state.featured).toEqual([])
+  })
+
+  it('relit soiree et featured de la réponse du serveur, dans l’ordre de mise à la une', async () => {
+    const { store } = setup()
+    await store.refresh()
+    const { soiree, featured } = store.getSnapshot().state
+    expect(soiree).toEqual({ [ADDED]: true, 'hi-lo': false })
+    expect(featured).toEqual(['hi-lo', 'pmu'])
+    const ids = soireeGameIdsWith(soiree)
+    expect(ids).toContain(ADDED)
+    expect(ids).not.toContain('hi-lo')
+  })
+
   it('une copie d’avant le barème et les catégories reste lisible : drinkLevel vaut {}, categories vaut []', () => {
     const { store } = setup({ stored: { hiddenIds: ['plinko'], difficulty: { pmu: 3 }, popular: { local: [], online: [] } } })
     expect(store.getSnapshot().source).toBe('cache')
@@ -78,6 +110,21 @@ describe('catalogue des jeux côté navigateur', () => {
 
     const reopened = setup({ stored: JSON.parse(storage.data.get(GAME_CATALOG_CACHE_KEY)!) })
     expect(reopened.store.getSnapshot().state.categories).toEqual(CATEGORIES)
+  })
+
+  it('les ambiances du serveur passent par gameVibes, comme useGameVibes, et le défaut suit le niveau réglé', async () => {
+    const { store, storage } = setup()
+    await store.refresh()
+    const { vibes, drinkLevel } = store.getSnapshot().state
+    expect(gameVibes('pmu', vibes, drinkLevel)).toEqual(['grosse'])
+    expect(gameVibes('hi-lo', vibes, drinkLevel)).toEqual(gameVibes('hi-lo', {}, {}))
+    expect(JSON.parse(storage.data.get(GAME_CATALOG_CACHE_KEY) ?? 'null').vibes).toEqual({ pmu: ['grosse'] })
+  })
+
+  it('une copie d’avant les ambiances reste lisible : vibes vaut {}', () => {
+    const { store } = setup({ stored: { hiddenIds: [], drinkLevel: { pmu: OTHER_DRINK }, popular: { local: [], online: [] } } })
+    expect(store.getSnapshot().source).toBe('cache')
+    expect(store.getSnapshot().state.vibes).toEqual({})
   })
 
   it('la difficulté du serveur passe par gameDifficulty, comme useGameDifficulty', async () => {
@@ -146,5 +193,15 @@ describe('catalogue des jeux côté navigateur', () => {
     await store.refresh(true)
     expect(fetchState).toHaveBeenNthCalledWith(1, false)
     expect(fetchState).toHaveBeenNthCalledWith(2, true)
+  })
+})
+
+describe('useSoireeGameIds et useFeaturedGameIds', () => {
+  const render = (hook: () => unknown) =>
+    renderToStaticMarkup(createElement(() => createElement('i', { 'data-v': JSON.stringify(hook()) })))
+
+  it('sans réponse lue : la liste du code, et aucun jeu à la une', () => {
+    expect(render(useSoireeGameIds)).toContain(JSON.stringify(SOIREE_GAME_IDS).replace(/"/g, '&quot;'))
+    expect(render(useFeaturedGameIds)).toContain('[]')
   })
 })

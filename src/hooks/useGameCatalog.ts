@@ -1,18 +1,21 @@
 'use client'
 
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import {
   EMPTY_GAME_CATALOG,
   gameDifficulty,
   gameDrinkLevel,
+  gameVibes,
   parseGameCatalogState,
   type GameCatalogState,
   type GameCategory,
 } from '@/lib/game-catalog'
 import type { GameDifficulty, GameDrinkLevel } from '@/lib/games'
+import { soireeGameIdsWith } from '@/lib/soiree/catalog'
+import type { SoireeVibe } from '@/lib/soiree/vibes'
 
 /**
- * Le catalogue tel que l'équipe le règle (jeux cachés, difficulté, niveau « fait boire », catégories, jeux les plus joués),
+ * Le catalogue tel que l'équipe le règle (jeux cachés, difficulté, niveau « fait boire », catégories, liste du Mode Soirée, jeux à la une, jeux les plus joués),
  * côté navigateur : servi par GET /api/games/catalog, gardé sur l'appareil.
  *
  * La copie de l'appareil s'affiche tout de suite (et hors ligne : les jeux
@@ -159,7 +162,24 @@ export function useGameDrinkLevel(): (gameId: string) => GameDrinkLevel {
   return (gameId) => gameDrinkLevel(gameId, drinkLevel)
 }
 
+/** Les ambiances du Mode Soirée où un jeu peut être tiré (réglage de la Supervision, sinon celles de son niveau « fait boire »). */
+export function useGameVibes(): (gameId: string) => SoireeVibe[] {
+  const { vibes, drinkLevel } = useGameCatalog()
+  return (gameId) => gameVibes(gameId, vibes, drinkLevel)
+}
+
 /** Les catégories de jeux créées par l'équipe, dans l'ordre où le hub les propose. */
 export function useGameCategories(): GameCategory[] {
   return useGameCatalog().categories
+}
+
+/** La liste effective du Mode Soirée : celle du code, avec les ajouts et les sorties de l'équipe. */
+export function useSoireeGameIds(): string[] {
+  const { soiree } = useGameCatalog()
+  return useMemo(() => soireeGameIdsWith(soiree), [soiree])
+}
+
+/** Les jeux mis à la une par l'équipe, dans l'ordre de mise à la une. */
+export function useFeaturedGameIds(): string[] {
+  return useGameCatalog().featured
 }

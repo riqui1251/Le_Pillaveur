@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { apiError, withApiRoute } from '@/lib/api-route'
 import { GAMES, type GameDifficulty, type GameDrinkLevel } from '@/lib/games'
 import {
+  POPULAR_LIMIT,
   STAFF_TOGGLEABLE_GAME_IDS,
   gameDifficulty,
   gameDrinkLevel,
@@ -10,11 +11,13 @@ import {
   totalPlays,
 } from '@/lib/game-catalog'
 import {
+  GameFeaturedLimitError,
   GameNotToggleableError,
   getGameCatalogState,
   getGamePlayCounts30d,
   setGameDifficulty,
   setGameDrinkLevel,
+  setGameFeatured,
   setGameHidden,
 } from '@/lib/game-catalog-server'
 import { readJsonBodyLimited } from '@/lib/rate-limit'
@@ -24,7 +27,7 @@ import { FORBIDDEN, requireRole } from '../_guard'
 
 export const dynamic = 'force-dynamic'
 
-/** { gameId, hidden } ou { gameId, difficulty } ou { gameId, drinkLevel } : quelques dizaines d'octets, 4 Ko est déjà très large. */
+/** { gameId, hidden | difficulty | drinkLevel | featured } : quelques dizaines d'octets, 4 Ko est déjà très large. */
 const MAX_BODY_BYTES = 4 * 1024
 
 /** Le journal de l'équipe est en français, comme « Jeu caché » : pas de clé de traduction ici. */
@@ -42,6 +45,10 @@ export type AdminGameCatalogRow = {
   drinkLevel: GameDrinkLevel
   /** Niveau « fait boire » fixé par le code, celui où revient le réglage. */
   defaultDrinkLevel: GameDrinkLevel
+  /** Mis à la une par l'équipe (en tête du hub et de la vitrine). */
+  featured: boolean
+  /** Rang (à partir de 1) dans l'ordre de mise à la une, null si le jeu n'est pas à la une. */
+  featuredRank: number | null
   plays: { online: number; local: number; total: number }
   popularLocalRank: number | null
   popularOnlineRank: number | null
@@ -60,6 +67,11 @@ async function buildResponse(role: string): Promise<AdminGameCatalogResponse> {
     const index = ids.indexOf(gameId)
     return index === -1 ? null : index + 1
   }
+  // Le rang « Parmi les plus joués » est celui de la rangée telle qu'on la voit :
+  // le serveur en classe plus que POPULAR_LIMIT, et un jeu à la une n'y figure pas.
+  const shownPopular = (ids: string[]) => ids.filter((id) => !state.featured.includes(id)).slice(0, POPULAR_LIMIT)
+  const popularLocal = shownPopular(state.popular.local)
+  const popularOnline = shownPopular(state.popular.online)
   const games = STAFF_TOGGLEABLE_GAME_IDS.map((id) => ({
     id,
     hidden: state.hiddenIds.includes(id),
@@ -67,13 +79,15 @@ async function buildResponse(role: string): Promise<AdminGameCatalogResponse> {
     defaultDifficulty: gameDifficulty(id, {}),
     drinkLevel: gameDrinkLevel(id, state.drinkLevel),
     defaultDrinkLevel: gameDrinkLevel(id, {}),
+    featured: state.featured.includes(id),
+    featuredRank: rank(state.featured, id),
     plays: {
       online: Math.max(0, counts[id]?.online ?? 0),
       local: Math.max(0, counts[id]?.local ?? 0),
       total: totalPlays(counts, id),
     },
-    popularLocalRank: rank(state.popular.local, id),
-    popularOnlineRank: rank(state.popular.online, id),
+    popularLocalRank: rank(popularLocal, id),
+    popularOnlineRank: rank(popularOnline, id),
   })).sort((a, b) => b.plays.total - a.plays.total)
   return {
     canEdit: canManageSiteSettings(role),
@@ -101,8 +115,10 @@ export const GET = withApiRoute('admin/game-catalog GET', async () => {
 
 /**
  * Cache (`hidden: true`) ou remet (`false`) un jeu, OU règle sa difficulté
- * (`difficulty: 1 | 2 | 3`), OU son niveau « fait boire » (`drinkLevel: 1 | 2 | 3`) :
- * exactement l'un des trois. Super admin, et journalisé si ça change.
+ * (`difficulty: 1 | 2 | 3`), OU son niveau « fait boire » (`drinkLevel: 1 | 2 | 3`),
+ * OU le met à la une (`featured: boolean`) : exactement l'un des quatre. Déjà
+ * FEATURED_LIMIT jeux à la une → 409 `conflict`. Super admin, et journalisé si
+ * ça change.
  */
 export const PATCH = withApiRoute('admin/game-catalog PATCH', async (request: Request) => {
   let actor
@@ -125,7 +141,11 @@ export const PATCH = withApiRoute('admin/game-catalog PATCH', async (request: Re
   const hasHidden = 'hidden' in body
   const hasDifficulty = 'difficulty' in body
   const hasDrinkLevel = 'drinkLevel' in body
-  if (Number(hasHidden) + Number(hasDifficulty) + Number(hasDrinkLevel) !== 1) return apiError('invalid_action', 400)
+  const hasFeatured = 'featured' in body
+  if (Number(hasHidden) + Number(hasDifficulty) + Number(hasDrinkLevel) + Number(hasFeatured) !== 1) {
+    return apiError('invalid_action', 400)
+  }
+  if (hasFeatured && typeof body.featured !== 'boolean') return apiError('invalid_action', 400)
   if (hasHidden && typeof body.hidden !== 'boolean') return apiError('invalid_action', 400)
   if (hasDifficulty && !isGameDifficulty(body.difficulty)) return apiError('invalid_action', 400)
   if (hasDrinkLevel && !isGameDrinkLevel(body.drinkLevel)) return apiError('invalid_action', 400)
@@ -142,12 +162,17 @@ export const PATCH = withApiRoute('admin/game-catalog PATCH', async (request: Re
       const level = body.difficulty as GameDifficulty
       changed = (await setGameDifficulty(gameId, level)).changed
       detail = `Difficulté : ${title} → ${DIFFICULTY_LABELS[level]}`
-    } else {
+    } else if (hasDrinkLevel) {
       const level = body.drinkLevel as GameDrinkLevel
       changed = (await setGameDrinkLevel(gameId, level)).changed
       detail = `Fait boire : ${title} → ${DRINK_LEVEL_LABELS[level]}`
+    } else {
+      const featured = body.featured as boolean
+      changed = (await setGameFeatured(gameId, featured)).changed
+      detail = `À la une : ${title} ${featured ? 'ajouté' : 'retiré'}`
     }
   } catch (error) {
+    if (error instanceof GameFeaturedLimitError) return apiError('conflict', 409)
     if (error instanceof GameNotToggleableError) return apiError('invalid_action', 400)
     throw error
   }

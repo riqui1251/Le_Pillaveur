@@ -306,7 +306,8 @@
       "categories": {
         "label": "Categorie di giochi",
         "all": "Tutte"
-      }
+      },
+      "featuredRow": "In primo piano"
     },
     "recentLocal": {
       "title": "I tuoi ultimi giochi",
@@ -7273,6 +7274,7 @@
       "section": "Sezione",
       "overview": "La Sala",
       "stats": "Statistiche",
+      "catalog": "Giochi",
       "moderation": "Moderazione",
       "accountsShort": "Account",
       "ops": "Server"
@@ -7842,9 +7844,61 @@
       "reviewsLoadError": "Impossibile caricare l’elenco dei voti.",
       "authorAnonymous": "Senza account"
     },
+    "gameVibes": {
+      "title": "Modalità Serata",
+      "desc": "Aggiungi un gioco alla Modalità Serata o toglilo, poi scegli le atmosfere in cui può essere estratto: Aperitivo tranquillo, Si sale, Grande serata. Un gioco senza atmosfera non esce più all’estrazione, ma si può scegliere a mano.",
+      "rule": "Per impostazione predefinita un gioco segue il suo livello «Fa bere»: Poco → Aperitivo tranquillo e Si sale; Medio → tutte e tre; Molto → Si sale e Grande serata. Spunta o togli un’atmosfera per cambiare questa impostazione.",
+      "refresh": "Aggiorna",
+      "loadError": "Impossibile caricare la Modalità Serata.",
+      "forbidden": "Sessione scaduta o accesso revocato: accedi di nuovo.",
+      "readOnly": "Sola lettura: solo i super admin possono aggiungere un gioco alla Modalità Serata, toglierlo o cambiarne le atmosfere.",
+      "saveError": "La modifica non è stata salvata. Riprova.",
+      "colGame": "Gioco",
+      "colDrink": "Fa bere",
+      "colVibes": "Atmosfere",
+      "colSetting": "Impostazione",
+      "hidden": "Nascosto",
+      "group": "Atmosfere di {game}",
+      "vibes": {
+        "apero": "Aperitivo tranquillo",
+        "monte": "Si sale",
+        "grosse": "Grande serata"
+      },
+      "vibesShort": {
+        "apero": "Aperitivo",
+        "monte": "Si sale",
+        "grosse": "Grande"
+      },
+      "count": "{vibe}: {count, plural, =0 {nessun gioco} one {# gioco} other {# giochi}}",
+      "modified": "Modificato",
+      "defaultWas": "Predefinito: {vibes}",
+      "noVibe": "nessuna",
+      "isDefault": "Impostazione predefinita",
+      "noneNote": "Nessuna atmosfera: questo gioco non esce più all’estrazione.",
+      "announceOn": "{game} ora può uscire nell’atmosfera «{vibe}».",
+      "announceOff": "{game} non esce più nell’atmosfera «{vibe}».",
+      "colSoiree": "Modalità Serata",
+      "inSoiree": "Nella Modalità Serata",
+      "inSoireeAria": "{game} nella Modalità Serata",
+      "outOfSoiree": "Fuori dalla Modalità Serata",
+      "added": "Aggiunto",
+      "removed": "Tolto",
+      "defaultOut": "Fuori dalla Modalità Serata per impostazione predefinita",
+      "defaultIn": "Nella Modalità Serata per impostazione predefinita",
+      "inSoireeCount": "{count, plural, =0 {Nessun gioco nella Modalità Serata} one {# gioco nella Modalità Serata} other {# giochi nella Modalità Serata}}",
+      "hiddenInSoiree": "{count, plural, one {# gioco nascosto non esce all’estrazione} other {# giochi nascosti non escono all’estrazione}}",
+      "vibesNeedSoiree": "Aggiungi prima questo gioco alla Modalità Serata.",
+      "outNote": "Fuori dalla Modalità Serata: non viene mai estratto né proposto.",
+      "announceIn": "{game} è ora nella Modalità Serata.",
+      "announceOut": "{game} non è più nella Modalità Serata.",
+      "notCandidate": "Questo gioco si gioca online: non può entrare nella Modalità Serata."
+    },
+    "gameEditing": {
+      "pickerLabel": "Gioco da modificare"
+    },
     "gameCatalog": {
       "title": "Catalogo dei giochi",
-      "desc": "Nascondi un gioco per toglierlo dal sito (hub, Modalità Serata, lobby, vetrina) o rimettilo, e regola la sua difficoltà (Facile, Media, Difficile) e il suo livello «fa bere» (Poco, Medio, Molto) come li vedono i giocatori. I giochi in evidenza si scelgono da soli: i più giocati negli ultimi 30 giorni.",
+      "desc": "Nascondi un gioco per toglierlo dal sito (hub, Modalità Serata, lobby, vetrina) o rimettilo, mettilo in primo piano, mettilo in categorie e regola la sua difficoltà (Facile, Media, Difficile) e il suo livello «fa bere» (Poco, Medio, Molto) come li vedono i giocatori. La posizione tra i più giocati si calcola da sola, sugli ultimi 30 giorni.",
       "refresh": "Aggiorna",
       "loadError": "Impossibile caricare il catalogo dei giochi.",
       "forbidden": "Sessione scaduta o accesso revocato: accedi di nuovo.",
@@ -7856,11 +7910,11 @@
       "hidden": "Nascosto",
       "hide": "Nascondi {game}",
       "show": "Rimetti {game}",
-      "popularLocal": "In evidenza in locale · n. {rank}",
-      "popularOnline": "In evidenza online · n. {rank}",
+      "popularLocal": "Tra i più giocati in locale · n. {rank}",
+      "popularOnline": "Tra i più giocati online · n. {rank}",
       "plays": "{count, plural, =0 {Nessuna partita} one {# partita} other {# partite}}",
       "playsDetail": "{online} online · {local} in locale",
-      "readOnly": "Sola lettura: solo i super admin possono nascondere un gioco o cambiarne la difficoltà o il livello «fa bere».",
+      "readOnly": "Sola lettura: solo i super admin possono nascondere un gioco, metterlo in primo piano, metterlo in una categoria o cambiarne la difficoltà o il livello «fa bere».",
       "saveError": "La modifica non è stata salvata. Riprova.",
       "hiddenCount": "{count, plural, =0 {Nessun gioco nascosto} one {# gioco nascosto} other {# giochi nascosti}}",
       "retiredNote": "{count, plural, one {# vecchio gioco resta ritirato} other {# vecchi giochi restano ritirati}} nel codice.",
@@ -7874,6 +7928,25 @@
       "scaleDrink": "Fa bere",
       "drinkGroup": "Livello «fa bere» di {game}",
       "drinkModified": "Modificato · {level} nel codice",
+      "featuredCount": "In primo piano: {count}/{max}",
+      "featuredHint": "I giochi in primo piano vengono per primi nell’hub e nella vetrina, nell’ordine in cui li hai aggiunti: il numero è indicato su ogni gioco.",
+      "featured": "In primo piano",
+      "featuredAria": "In primo piano: {game}",
+      "featuredPill": "In primo piano",
+      "featuredPillRank": "In primo piano · n. {rank}",
+      "featuredLimit": "Al massimo {max} giochi in primo piano: toglierne prima uno.",
+      "announceFeaturedOn": "{game} è ora in primo piano.",
+      "announceFeaturedOff": "{game} non è più in primo piano.",
+      "categories": "Categorie",
+      "categoriesGroup": "Categorie di {game}",
+      "categoriesLoading": "Caricamento delle categorie…",
+      "categoriesLoadError": "Impossibile caricare le categorie: aggiorna.",
+      "noCategories": "Non esiste ancora nessuna categoria.",
+      "createCategory": "Crea una categoria",
+      "notInCategory": "In nessuna categoria.",
+      "announceCategoryOn": "{game} è stato messo in «{category}».",
+      "announceCategoryOff": "{game} esce da «{category}».",
+      "categoryGone": "Questa categoria non esiste più: l’elenco è stato aggiornato.",
       "announceDrinkLevel": "Livello «fa bere» di {game}: {level}."
     },
     "gameCategories": {
@@ -8184,6 +8257,7 @@
     },
     "navGroups": {
       "analysis": "Analisi",
+      "content": "Contenuti",
       "community": "Comunità",
       "server": "Server"
     },
@@ -8824,7 +8898,8 @@
       "local": "Locale",
       "players": "{min}-{max} giocatori",
       "featured": "Immancabile",
-      "popular": "Popolare"
+      "popular": "Popolare",
+      "teamFeatured": "In primo piano"
     },
     "rules": {
       "title": "Imparare le regole",

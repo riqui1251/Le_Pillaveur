@@ -10,7 +10,7 @@ import { useLocalizedGame } from '@/lib/games-i18n'
 import { soireeCounting } from '@/lib/soiree/catalog'
 import { isRoundComplete, roundHasData, soireeMetric, type Soiree } from '@/lib/soiree/state'
 import { GameBadge, SoireeCta, StepHeader, useSoireePlayer, useSoireeUnits } from './soiree-ui'
-import { TutorialSteps } from './TutorialSteps'
+import { TutorialSteps, useHasTutorial } from './TutorialSteps'
 
 /**
  * La manche lancée, vue depuis la soirée : où en est le jeu, ce qu'il a déjà
@@ -35,6 +35,7 @@ export function RoundView({
   const round = soiree.rounds[soiree.current]
   const game = useLocalizedGame(round?.gameId ?? '')
   const [showTuto, setShowTuto] = useState(false)
+  const hasTutorial = useHasTutorial(round?.gameId ?? '')
   if (!round) return null
   const metric = soireeMetric(soiree)
   const complete = isRoundComplete(round)
@@ -53,22 +54,26 @@ export function RoundView({
         />
       </div>
 
-      <Button variant="quiet" size="game" className="self-start" onClick={() => setShowTuto(true)}>
-        <BookOpen aria-hidden className="mr-1.5 h-4 w-4" />
-        {t('howTo')}
-      </Button>
-      <Dialog open={showTuto} onOpenChange={setShowTuto}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto border-gold/20 bg-felt-deep text-cream sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 font-display text-2xl text-cream">
-              <GameBadge gameId={round.gameId} size="sm" />
-              {game?.title ?? round.gameId}
-            </DialogTitle>
-            <DialogDescription className="text-cream/70">{t('howTo')}</DialogDescription>
-          </DialogHeader>
-          <TutorialSteps gameId={round.gameId} soft={soiree.soft} />
-        </DialogContent>
-      </Dialog>
+      {hasTutorial && (
+        <>
+          <Button variant="quiet" size="game" className="self-start" onClick={() => setShowTuto(true)}>
+            <BookOpen aria-hidden className="mr-1.5 h-4 w-4" />
+            {t('howTo')}
+          </Button>
+          <Dialog open={showTuto} onOpenChange={setShowTuto}>
+            <DialogContent className="max-h-[85vh] overflow-y-auto border-gold/20 bg-felt-deep text-cream sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3 font-display text-2xl text-cream">
+                  <GameBadge gameId={round.gameId} size="sm" />
+                  {game?.title ?? round.gameId}
+                </DialogTitle>
+                <DialogDescription className="text-cream/70">{t('howTo')}</DialogDescription>
+              </DialogHeader>
+              <TutorialSteps gameId={round.gameId} soft={soiree.soft} />
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
 
       <section aria-label={t('tallyLabel')} className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/50 p-4">
         <p className="text-sm font-semibold text-cream/70">{complete ? t('complete') : hasData ? t('partial') : t('waiting')}</p>

@@ -3,18 +3,27 @@ import { prisma } from '@/lib/prisma'
 import { errorTrace } from '@/lib/error-trace'
 import { parisDayOffset } from '@/lib/paris-time'
 import type { GameDifficulty, GameDrinkLevel } from '@/lib/games'
+import { SOIREE_VIBES, defaultVibesForLevel, isSoireeVibe, type SoireeVibe } from '@/lib/soiree/vibes'
 import {
   EMPTY_GAME_CATALOG,
+  FEATURED_LIMIT,
+  POPULAR_RANKED_LIMIT,
   GAME_CATEGORY_LIMITS,
   STAFF_TOGGLEABLE_GAME_IDS,
+  VIBE_GAME_IDS,
+  gameDrinkLevel,
+  gameVibes,
   isGameDifficulty,
   isGameDrinkLevel,
   normalizeCategoryGameIds,
   normalizeCategoryNames,
   parseDifficultyOverrides,
   parseDrinkLevelOverrides,
+  parseFeaturedGameIds,
   parseGameCategories,
   parseHiddenGameIds,
+  parseSoireeOverrides,
+  parseVibeOverrides,
   rankPopularGames,
   type GameCatalogState,
   type GameCategory,
@@ -32,22 +41,31 @@ import {
  * - Le niveau « fait boire » (clé `games.drinkLevel`, même forme que la
  *   difficulté) et les catégories de jeux (clé `games.categories`, tableau JSON
  *   ordonné) vivent aussi dans SiteSetting.
+ * - Les ambiances du Mode Soirée où chaque jeu peut être tiré (clé `games.vibes`,
+ *   objet JSON id → ambiances, seulement les jeux dont la liste diffère de celle
+ *   de leur niveau « fait boire »).
+ * - Les écarts à la liste par défaut du Mode Soirée (clé `games.soiree`, objet
+ *   JSON id → ajouté ou sorti, seulement les jeux qui diffèrent du code) et les
+ *   jeux mis à la une (clé `games.featured`, tableau JSON ordonné).
  * - La popularité compte les parties des 30 derniers jours : lancements en
  *   ligne (OnlineGameSession) et débuts de partie en local (LocalGameDaily).
  *
- * Six caches mémoire sur globalThis (un module peut être recopié dans
+ * Neuf caches mémoire sur globalThis (un module peut être recopié dans
  * plusieurs bundles, comme pour src/lib/landing-stats-server.ts), chacun avec
  * sa requête en vol partagée. Tous sont RÉSILIENTS : une erreur de lecture
  * (table absente d'une base locale pas migrée, base indisponible) ne remonte
  * jamais — dernière valeur connue, ou valeur vide, gardée jusqu'à la fin du
  * délai pour ne pas retenter à chaque requête. Seule l'ÉCRITURE
- * (`setGameHidden`, `setGameDifficulty`, `setGameDrinkLevel`, les catégories) laisse remonter ses erreurs.
+ * (`setGameHidden`, `setGameDifficulty`, `setGameDrinkLevel`, `setGameVibe`, `setGameInSoiree`, `setGameFeatured`, les catégories) laisse remonter ses erreurs.
  */
 
 export const HIDDEN_GAMES_SETTING_KEY = 'games.hiddenIds'
 export const DIFFICULTY_SETTING_KEY = 'games.difficulty'
 export const DRINK_LEVEL_SETTING_KEY = 'games.drinkLevel'
 export const GAME_CATEGORIES_SETTING_KEY = 'games.categories'
+export const VIBES_SETTING_KEY = 'games.vibes'
+export const SOIREE_SETTING_KEY = 'games.soiree'
+export const FEATURED_SETTING_KEY = 'games.featured'
 export const HIDDEN_IDS_TTL_MS = 30_000
 export const PLAY_COUNTS_TTL_MS = 10 * 60_000
 export const CATALOG_STATE_TTL_MS = 60_000
@@ -69,6 +87,9 @@ type CatalogCaches = {
   difficulty: CacheEntry<Record<string, GameDifficulty>>
   drinkLevel: CacheEntry<Record<string, GameDrinkLevel>>
   categories: CacheEntry<GameCategory[]>
+  vibes: CacheEntry<Record<string, SoireeVibe[]>>
+  soiree: CacheEntry<Record<string, boolean>>
+  featured: CacheEntry<string[]>
   counts: CacheEntry<GamePlayCounts>
   state: CacheEntry<GameCatalogState>
 }
@@ -101,6 +122,9 @@ const emptyState = (): GameCatalogState => ({
   difficulty: {},
   drinkLevel: {},
   categories: [],
+  vibes: {},
+  soiree: {},
+  featured: [],
   popular: { local: [], online: [] },
 })
 
@@ -109,6 +133,9 @@ const caches: CatalogCaches = globalForCache.__lpGameCatalogCaches ?? {
   difficulty: newEntry<Record<string, GameDifficulty>>({}),
   drinkLevel: newEntry<Record<string, GameDrinkLevel>>({}),
   categories: newEntry<GameCategory[]>([]),
+  vibes: newEntry<Record<string, SoireeVibe[]>>({}),
+  soiree: newEntry<Record<string, boolean>>({}),
+  featured: newEntry<string[]>([]),
   counts: newEntry<GamePlayCounts>({}),
   state: newEntry<GameCatalogState>(emptyState()),
 }
@@ -117,8 +144,19 @@ if (!globalForCache.__lpGameCatalogCaches) globalForCache.__lpGameCatalogCaches 
 caches.difficulty ??= newEntry<Record<string, GameDifficulty>>({})
 caches.drinkLevel ??= newEntry<Record<string, GameDrinkLevel>>({})
 caches.categories ??= newEntry<GameCategory[]>([])
+caches.vibes ??= newEntry<Record<string, SoireeVibe[]>>({})
+caches.soiree ??= newEntry<Record<string, boolean>>({})
+caches.featured ??= newEntry<string[]>([])
 // Même objet : un état gardé d'avant ces champs ferait planter gameDifficulty ou le hub, on le relit.
-if (!caches.state.value.difficulty || !caches.state.value.drinkLevel || !caches.state.value.categories) {
+const keptState = caches.state.value
+if (
+  !keptState.difficulty ||
+  !keptState.drinkLevel ||
+  !keptState.categories ||
+  !keptState.vibes ||
+  !keptState.soiree ||
+  !keptState.featured
+) {
   caches.state.value = emptyState()
   caches.state.freshUntil = 0
 }
@@ -179,6 +217,9 @@ export function invalidateGameCatalogCaches(options: { forget?: boolean } = {}):
   resetEntry(caches.difficulty, forget ? {} : undefined)
   resetEntry(caches.drinkLevel, forget ? {} : undefined)
   resetEntry(caches.categories, forget ? [] : undefined)
+  resetEntry(caches.vibes, forget ? {} : undefined)
+  resetEntry(caches.soiree, forget ? {} : undefined)
+  resetEntry(caches.featured, forget ? [] : undefined)
   resetEntry(caches.counts, forget ? {} : undefined)
   resetEntry(caches.state, forget ? emptyState() : undefined)
 }
@@ -329,6 +370,7 @@ async function applyGameDrinkLevel(
   const drinkLevel = parseDrinkLevelOverrides({ ...previous, [gameId]: level })
   const changed = JSON.stringify(drinkLevel) !== JSON.stringify(previous)
 
+  let prunedVibes: Record<string, SoireeVibe[]> | null = null
   if (changed) {
     const value = JSON.stringify(drinkLevel)
     await prisma.siteSetting.upsert({
@@ -336,11 +378,200 @@ async function applyGameDrinkLevel(
       create: { key: DRINK_LEVEL_SETTING_KEY, value },
       update: { value },
     })
+    // Des ambiances réglées qui redeviennent le défaut du nouveau niveau ne sont
+    // plus un réglage : gardées, elles figeraient le jeu, qui ne suivrait plus
+    // son niveau au changement suivant (même file d'écriture, pas de course).
+    if (VIBE_GAME_IDS.includes(gameId)) {
+      const vibes = await readVibesSetting()
+      const stored = vibes[gameId]
+      if (stored && stored.join() === defaultVibesForLevel(gameDrinkLevel(gameId, drinkLevel)).join()) {
+        const next = { ...vibes }
+        delete next[gameId]
+        prunedVibes = parseVibeOverrides(next)
+        const vibesValue = JSON.stringify(prunedVibes)
+        await prisma.siteSetting.upsert({
+          where: { key: VIBES_SETTING_KEY },
+          create: { key: VIBES_SETTING_KEY, value: vibesValue },
+          update: { value: vibesValue },
+        })
+      }
+    }
   }
   invalidateGameCatalogCaches()
   // La valeur qu'on vient d'écrire vaut mieux que l'ancienne si la relecture échoue.
   caches.drinkLevel.value = drinkLevel
+  if (prunedVibes) caches.vibes.value = prunedVibes
   return { drinkLevel, changed }
+}
+
+async function readVibesSetting(): Promise<Record<string, SoireeVibe[]>> {
+  const row = await prisma.siteSetting.findUnique({ where: { key: VIBES_SETTING_KEY } })
+  return parseVibeOverrides(row?.value)
+}
+
+/** Les ambiances réglées par l'équipe (id → ambiances, seulement les jeux dont la liste diffère du défaut). Ne lève jamais. */
+export function getStaffGameVibes(): Promise<Record<string, SoireeVibe[]>> {
+  return readCached(caches.vibes, HIDDEN_IDS_TTL_MS, 'ambiances', readVibesSetting)
+}
+
+/**
+ * Coche ou décoche UNE ambiance d'un jeu du Mode Soirée. Part des valeurs
+ * STOCKÉES — les ambiances et le niveau « fait boire » relus en base, jamais
+ * le cache — : la liste effective, qui découle du niveau tant que rien n'est
+ * réglé, est modifiée puis comparée au défaut de ce niveau ; égale, l'entrée
+ * est SUPPRIMÉE, sinon elle est stockée (une liste vide est permise). `changed`
+ * sert au journal. Les erreurs de base remontent.
+ */
+export function setGameVibe(
+  gameId: string,
+  vibe: SoireeVibe,
+  on: boolean
+): Promise<{ vibes: Record<string, SoireeVibe[]>; changed: boolean }> {
+  return serializeWrite(() => applyGameVibe(gameId, vibe, on))
+}
+
+async function applyGameVibe(
+  gameId: string,
+  vibe: SoireeVibe,
+  on: boolean
+): Promise<{ vibes: Record<string, SoireeVibe[]>; changed: boolean }> {
+  if (!VIBE_GAME_IDS.includes(gameId) || !isSoireeVibe(vibe) || typeof on !== 'boolean') {
+    throw new GameNotToggleableError(gameId)
+  }
+
+  const [previous, drinkLevel] = await Promise.all([readVibesSetting(), readDrinkLevelSetting()])
+  const wanted = new Set<SoireeVibe>(gameVibes(gameId, previous, drinkLevel))
+  if (on) wanted.add(vibe)
+  else wanted.delete(vibe)
+  const list = SOIREE_VIBES.filter((id) => wanted.has(id))
+  const defaults = defaultVibesForLevel(gameDrinkLevel(gameId, drinkLevel))
+
+  const next = { ...previous }
+  if (list.join() === defaults.join()) delete next[gameId]
+  else next[gameId] = list
+  const vibes = parseVibeOverrides(next)
+  const changed = JSON.stringify(vibes) !== JSON.stringify(previous)
+
+  if (changed) {
+    const value = JSON.stringify(vibes)
+    await prisma.siteSetting.upsert({
+      where: { key: VIBES_SETTING_KEY },
+      create: { key: VIBES_SETTING_KEY, value },
+      update: { value },
+    })
+  }
+  invalidateGameCatalogCaches()
+  // La valeur qu'on vient d'écrire vaut mieux que l'ancienne si la relecture échoue.
+  caches.vibes.value = vibes
+  return { vibes, changed }
+}
+
+async function readSoireeSetting(): Promise<Record<string, boolean>> {
+  const row = await prisma.siteSetting.findUnique({ where: { key: SOIREE_SETTING_KEY } })
+  return parseSoireeOverrides(row?.value)
+}
+
+/** Les écarts de l'équipe à la liste du Mode Soirée (id → ajouté ou sorti, seulement ceux qui diffèrent du code). Ne lève jamais. */
+export function getStaffSoireeGames(): Promise<Record<string, boolean>> {
+  return readCached(caches.soiree, HIDDEN_IDS_TTL_MS, 'jeux de la soirée', readSoireeSetting)
+}
+
+/**
+ * Ajoute (`on: true`) un jeu au Mode Soirée ou l'en sort (`false`). Part de la
+ * valeur STOCKÉE ; revenir au défaut du code SUPPRIME l'entrée. Seuls les
+ * candidats basculables passent (GameNotToggleableError sinon). `changed` sert
+ * au journal. Les erreurs de base remontent.
+ */
+export function setGameInSoiree(
+  gameId: string,
+  on: boolean
+): Promise<{ soiree: Record<string, boolean>; changed: boolean }> {
+  return serializeWrite(() => applyGameInSoiree(gameId, on))
+}
+
+async function applyGameInSoiree(
+  gameId: string,
+  on: boolean
+): Promise<{ soiree: Record<string, boolean>; changed: boolean }> {
+  if (!VIBE_GAME_IDS.includes(gameId) || typeof on !== 'boolean') throw new GameNotToggleableError(gameId)
+
+  const previous = await readSoireeSetting()
+  // parseSoireeOverrides écarte l'entrée égale au défaut du code et garde l'ordre du catalogue.
+  const soiree = parseSoireeOverrides({ ...previous, [gameId]: on })
+  const changed = JSON.stringify(soiree) !== JSON.stringify(previous)
+
+  if (changed) {
+    const value = JSON.stringify(soiree)
+    await prisma.siteSetting.upsert({
+      where: { key: SOIREE_SETTING_KEY },
+      create: { key: SOIREE_SETTING_KEY, value },
+      update: { value },
+    })
+  }
+  invalidateGameCatalogCaches()
+  // La valeur qu'on vient d'écrire vaut mieux que l'ancienne si la relecture échoue.
+  caches.soiree.value = soiree
+  return { soiree, changed }
+}
+
+async function readFeaturedSetting(): Promise<string[]> {
+  const row = await prisma.siteSetting.findUnique({ where: { key: FEATURED_SETTING_KEY } })
+  return parseFeaturedGameIds(row?.value)
+}
+
+/** Les jeux mis à la une par l'équipe, dans l'ordre de mise à la une. Ne lève jamais. */
+export function getStaffFeaturedGameIds(): Promise<string[]> {
+  return readCached(caches.featured, HIDDEN_IDS_TTL_MS, 'jeux à la une', readFeaturedSetting)
+}
+
+/** Déjà FEATURED_LIMIT jeux à la une : il faut en retirer un avant d'en ajouter. */
+export class GameFeaturedLimitError extends Error {
+  constructor() {
+    super('game_featured_limit')
+    this.name = 'GameFeaturedLimitError'
+  }
+}
+
+/**
+ * Met un jeu à la une (`on: true`, en fin de liste) ou l'en retire. Part de la
+ * valeur STOCKÉE ; un jeu déjà à la une garde sa place. `changed` sert au
+ * journal. Les erreurs de base remontent.
+ */
+export function setGameFeatured(
+  gameId: string,
+  on: boolean
+): Promise<{ featured: string[]; changed: boolean }> {
+  return serializeWrite(() => applyGameFeatured(gameId, on))
+}
+
+async function applyGameFeatured(
+  gameId: string,
+  on: boolean
+): Promise<{ featured: string[]; changed: boolean }> {
+  if (!STAFF_TOGGLEABLE_GAME_IDS.includes(gameId) || typeof on !== 'boolean') throw new GameNotToggleableError(gameId)
+
+  const previous = await readFeaturedSetting()
+  let featured = previous
+  if (on && !previous.includes(gameId)) {
+    if (previous.length >= FEATURED_LIMIT) throw new GameFeaturedLimitError()
+    featured = [...previous, gameId]
+  } else if (!on && previous.includes(gameId)) {
+    featured = previous.filter((id) => id !== gameId)
+  }
+  const changed = featured !== previous
+
+  if (changed) {
+    const value = JSON.stringify(featured)
+    await prisma.siteSetting.upsert({
+      where: { key: FEATURED_SETTING_KEY },
+      create: { key: FEATURED_SETTING_KEY, value },
+      update: { value },
+    })
+  }
+  invalidateGameCatalogCaches()
+  // La valeur qu'on vient d'écrire vaut mieux que l'ancienne si la relecture échoue.
+  caches.featured.value = featured
+  return { featured, changed }
 }
 
 async function readCategoriesSetting(): Promise<GameCategory[]> {
@@ -547,11 +778,14 @@ export function getGamePlayCounts30d(now: Date = new Date()): Promise<GamePlayCo
 /** L'état complet servi par GET /api/games/catalog. Cache de 60 s ; ne lève jamais. */
 export function getGameCatalogState(): Promise<GameCatalogState> {
   return readCached(caches.state, CATALOG_STATE_TTL_MS, 'catalogue', async () => {
-    const [hiddenIds, difficulty, drinkLevel, categories, counts] = await Promise.all([
+    const [hiddenIds, difficulty, drinkLevel, categories, vibes, soiree, featured, counts] = await Promise.all([
       getStaffHiddenGameIds(),
       getStaffGameDifficulty(),
       getStaffGameDrinkLevel(),
       getGameCategories(),
+      getStaffGameVibes(),
+      getStaffSoireeGames(),
+      getStaffFeaturedGameIds(),
       getGamePlayCounts30d(),
     ])
     return {
@@ -559,9 +793,12 @@ export function getGameCatalogState(): Promise<GameCatalogState> {
       difficulty,
       drinkLevel,
       categories,
+      vibes,
+      soiree,
+      featured,
       popular: {
-        local: rankPopularGames(counts, hiddenIds, 'local'),
-        online: rankPopularGames(counts, hiddenIds, 'online'),
+        local: rankPopularGames(counts, hiddenIds, 'local', POPULAR_RANKED_LIMIT),
+        online: rankPopularGames(counts, hiddenIds, 'online', POPULAR_RANKED_LIMIT),
       },
     }
   })

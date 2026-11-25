@@ -306,7 +306,8 @@
       "categories": {
         "label": "Categorías de juegos",
         "all": "Todas"
-      }
+      },
+      "featuredRow": "Destacados"
     },
     "recentLocal": {
       "title": "Tus últimos juegos",
@@ -7273,6 +7274,7 @@
       "section": "Sección",
       "overview": "La Sala",
       "stats": "Estadísticas",
+      "catalog": "Juegos",
       "moderation": "Moderación",
       "accountsShort": "Cuentas",
       "ops": "Servidor"
@@ -7842,9 +7844,61 @@
       "reviewsLoadError": "No se pudo cargar la lista de votos.",
       "authorAnonymous": "Sin cuenta"
     },
+    "gameVibes": {
+      "title": "Modo Fiesta",
+      "desc": "Añade un juego al Modo Fiesta o sácalo, y elige los ambientes en los que puede salir: Aperitivo tranquilo, Va subiendo, Gran fiesta. Un juego sin ambiente deja de salir en el sorteo, pero se puede elegir a mano.",
+      "rule": "Por defecto, un juego sigue su nivel «Hace beber»: Poco → Aperitivo tranquilo y Va subiendo; Medio → los tres; Mucho → Va subiendo y Gran fiesta. Marca o desmarca un ambiente para cambiar ese ajuste.",
+      "refresh": "Actualizar",
+      "loadError": "No se ha podido cargar el Modo Fiesta.",
+      "forbidden": "Sesión caducada o acceso retirado: vuelve a iniciar sesión.",
+      "readOnly": "Solo lectura: solo los superadministradores pueden añadir un juego al Modo Fiesta, sacarlo o cambiar sus ambientes.",
+      "saveError": "El cambio no se guardó. Inténtalo de nuevo.",
+      "colGame": "Juego",
+      "colDrink": "Hace beber",
+      "colVibes": "Ambientes",
+      "colSetting": "Ajuste",
+      "hidden": "Oculto",
+      "group": "Ambientes de {game}",
+      "vibes": {
+        "apero": "Aperitivo tranquilo",
+        "monte": "Va subiendo",
+        "grosse": "Gran fiesta"
+      },
+      "vibesShort": {
+        "apero": "Aperitivo",
+        "monte": "Va subiendo",
+        "grosse": "Gran"
+      },
+      "count": "{vibe}: {count, plural, =0 {ningún juego} one {# juego} other {# juegos}}",
+      "modified": "Modificado",
+      "defaultWas": "Por defecto: {vibes}",
+      "noVibe": "ninguno",
+      "isDefault": "Ajuste por defecto",
+      "noneNote": "Sin ambiente: este juego ya no sale en el sorteo.",
+      "announceOn": "{game} ya puede salir en el ambiente «{vibe}».",
+      "announceOff": "{game} ya no sale en el ambiente «{vibe}».",
+      "colSoiree": "Modo Fiesta",
+      "inSoiree": "En el Modo Fiesta",
+      "inSoireeAria": "{game} en el Modo Fiesta",
+      "outOfSoiree": "Fuera del Modo Fiesta",
+      "added": "Añadido",
+      "removed": "Retirado",
+      "defaultOut": "Fuera del Modo Fiesta por defecto",
+      "defaultIn": "En el Modo Fiesta por defecto",
+      "inSoireeCount": "{count, plural, =0 {Ningún juego en el Modo Fiesta} one {# juego en el Modo Fiesta} other {# juegos en el Modo Fiesta}}",
+      "hiddenInSoiree": "{count, plural, one {# juego oculto no sale en el sorteo} other {# juegos ocultos no salen en el sorteo}}",
+      "vibesNeedSoiree": "Añade antes este juego al Modo Fiesta.",
+      "outNote": "Fuera del Modo Fiesta: nunca sale en el sorteo ni se propone.",
+      "announceIn": "{game} ahora está en el Modo Fiesta.",
+      "announceOut": "{game} ya no está en el Modo Fiesta.",
+      "notCandidate": "Este juego se juega en línea: no puede entrar en el Modo Fiesta."
+    },
+    "gameEditing": {
+      "pickerLabel": "Juego a modificar"
+    },
     "gameCatalog": {
       "title": "Catálogo de juegos",
-      "desc": "Oculta un juego para retirarlo del sitio (hub, Modo Fiesta, lobby, escaparate) o vuelve a mostrarlo, y ajusta su dificultad (Fácil, Media, Difícil) y su nivel de «hace beber» (Poco, Medio, Mucho) tal como los ven los jugadores. Los juegos destacados se eligen solos: los más jugados en 30 días.",
+      "desc": "Oculta un juego para retirarlo del sitio (hub, Modo Fiesta, lobby, escaparate) o vuelve a mostrarlo, destácalo, clasifícalo en categorías y ajusta su dificultad (Fácil, Media, Difícil) y su nivel de «hace beber» (Poco, Medio, Mucho) tal como los ven los jugadores. El puesto entre los más jugados se calcula solo, sobre 30 días.",
       "refresh": "Actualizar",
       "loadError": "No se pudo cargar el catálogo de juegos.",
       "forbidden": "Sesión caducada o acceso retirado: vuelve a iniciar sesión.",
@@ -7856,11 +7910,11 @@
       "hidden": "Oculto",
       "hide": "Ocultar {game}",
       "show": "Volver a mostrar {game}",
-      "popularLocal": "Destacado en local · n.º {rank}",
-      "popularOnline": "Destacado en línea · n.º {rank}",
+      "popularLocal": "Entre los más jugados en local · n.º {rank}",
+      "popularOnline": "Entre los más jugados en línea · n.º {rank}",
       "plays": "{count, plural, =0 {Ninguna partida} one {# partida} other {# partidas}}",
       "playsDetail": "{online} en línea · {local} en local",
-      "readOnly": "Solo lectura: solo los superadministradores pueden ocultar un juego o cambiar su dificultad o su nivel de «hace beber».",
+      "readOnly": "Solo lectura: solo los superadministradores pueden ocultar un juego, destacarlo, clasificarlo en una categoría o cambiar su dificultad o su nivel de «hace beber».",
       "saveError": "El cambio no se ha guardado. Inténtalo de nuevo.",
       "hiddenCount": "{count, plural, =0 {Ningún juego oculto} one {# juego oculto} other {# juegos ocultos}}",
       "retiredNote": "{count, plural, one {# juego antiguo sigue retirado} other {# juegos antiguos siguen retirados}} en el código.",
@@ -7874,6 +7928,25 @@
       "scaleDrink": "Hace beber",
       "drinkGroup": "Nivel «hace beber» de {game}",
       "drinkModified": "Modificado · {level} en el código",
+      "featuredCount": "Destacados: {count}/{max}",
+      "featuredHint": "Los juegos destacados van primero en el hub y en el escaparate, en el orden en que los añadiste: el número aparece en cada juego.",
+      "featured": "Destacado",
+      "featuredAria": "Destacado: {game}",
+      "featuredPill": "Destacado",
+      "featuredPillRank": "Destacado · n.º {rank}",
+      "featuredLimit": "Máximo {max} juegos destacados: quita uno antes.",
+      "announceFeaturedOn": "{game} ahora es un juego destacado.",
+      "announceFeaturedOff": "{game} ya no es un juego destacado.",
+      "categories": "Categorías",
+      "categoriesGroup": "Categorías de {game}",
+      "categoriesLoading": "Cargando las categorías…",
+      "categoriesLoadError": "No se han podido cargar las categorías: actualiza.",
+      "noCategories": "Todavía no existe ninguna categoría.",
+      "createCategory": "Crear una categoría",
+      "notInCategory": "En ninguna categoría.",
+      "announceCategoryOn": "{game} se ha clasificado en «{category}».",
+      "announceCategoryOff": "{game} sale de «{category}».",
+      "categoryGone": "Esa categoría ya no existe: la lista se ha actualizado.",
       "announceDrinkLevel": "Nivel «hace beber» de {game}: {level}."
     },
     "gameCategories": {
@@ -8184,6 +8257,7 @@
     },
     "navGroups": {
       "analysis": "Análisis",
+      "content": "Contenido",
       "community": "Comunidad",
       "server": "Servidor"
     },
@@ -8824,7 +8898,8 @@
       "local": "Local",
       "players": "{min}-{max} jugadores",
       "featured": "Imprescindible",
-      "popular": "Popular"
+      "popular": "Popular",
+      "teamFeatured": "Destacado"
     },
     "rules": {
       "title": "Aprender las reglas",

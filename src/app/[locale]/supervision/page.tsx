@@ -139,8 +139,7 @@ import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDia
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
 import { ClientErrorsPanel } from '@/components/supervision/ClientErrorsPanel'
 import { FirstGameFeedbackMeta, FirstGameFeedbackPanel } from '@/components/supervision/FirstGameFeedbackPanel'
-import { GameCatalogPanel } from '@/components/supervision/GameCatalogPanel'
-import { GameCategoriesPanel } from '@/components/supervision/GameCategoriesPanel'
+import { GamesEditingTab } from '@/components/supervision/GamesEditingTab'
 import { OpsStatusPanel } from '@/components/supervision/OpsStatusPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
 import {
@@ -213,6 +212,7 @@ const HEALTH_TARGET: Readonly<Record<string, { tab: SupervisionTab; view?: Super
 const TAB_META: Readonly<Record<SupervisionTab, { labelKey: `tabs.${string}`; icon: typeof LayoutDashboard }>> = {
   overview: { labelKey: 'tabs.overview', icon: LayoutDashboard },
   stats: { labelKey: 'tabs.stats', icon: BarChart3 },
+  catalog: { labelKey: 'tabs.catalog', icon: Gamepad2 },
   accounts: { labelKey: 'tabs.accountsShort', icon: Users },
   moderation: { labelKey: 'tabs.moderation', icon: Gavel },
   ops: { labelKey: 'tabs.ops', icon: ServerCog },
@@ -2774,11 +2774,6 @@ function StatsGamesView({
         <SkeletonRows rows={4} />
       )}
 
-      {/* Catalogue : panneau autonome (il charge son état), après les chiffres
-          de la période qui le motivent et avant le journal replié. */}
-      <GameCatalogPanel />
-      <GameCategoriesPanel />
-
       {/* Journal des parties : panneau autonome, monté seulement une fois
           déplié (il charge ses propres pages). Un lien « voir dans le
           journal » d'une fiche compte l'ouvre et y défile (journalRef). */}
@@ -5145,6 +5140,16 @@ function SupervisionDashboard() {
               onMethod={setMethodGroup}
             />
           )}
+        </section>
+        )}
+
+        {/* Jeux : tout ce qui touche à l'édition des jeux (catalogue, catégories,
+            ambiances du Mode Soirée). Panneaux autonomes : chacun charge son
+            état, montés seulement onglet ouvert. */}
+        {allowedTabs.includes('catalog') && activeTab === 'catalog' && (
+        <section aria-labelledby={supervisionNavItemId('catalog')} className="min-w-0 space-y-4">
+          <h2 className="sr-only">{t('tabs.catalog')}</h2>
+          <GamesEditingTab />
         </section>
         )}
 

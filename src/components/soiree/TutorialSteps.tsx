@@ -10,13 +10,20 @@ const STEPS = [
   { key: 'c', label: 'end', icon: Flag, tone: 'bg-chip-blue text-cream' },
 ] as const
 
+/** Le jeu a-t-il un tuto de soirée ? Un jeu ajouté par l'équipe depuis la Supervision n'en a pas : les écrans cachent alors le titre « comment on joue ». */
+export function useHasTutorial(gameId: string): boolean {
+  const t = useTranslations('soiree')
+  return t.has(`tutorials.${gameId}.a`)
+}
+
 /**
  * Le tuto d'un jeu en trois temps (le principe, les gorgées, la fin), écrit
  * pour une table qui joue sur un seul téléphone — soiree.tutorials.<jeu>.
  */
 export function TutorialSteps({ gameId, soft, className }: { gameId: string; soft: boolean; className?: string }) {
   const t = useTranslations('soiree')
-  if (!t.has(`tutorials.${gameId}.a`)) return null
+  const hasTutorial = useHasTutorial(gameId)
+  if (!hasTutorial) return null
   return (
     <div className={cn('space-y-3', className)}>
       <ol className="space-y-2.5">

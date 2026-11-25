@@ -14,14 +14,18 @@ import {
   CATALOG_STATE_TTL_MS,
   DIFFICULTY_SETTING_KEY,
   DRINK_LEVEL_SETTING_KEY,
+  FEATURED_SETTING_KEY,
   GAME_CATEGORIES_SETTING_KEY,
   GameCategoryInvalidError,
+  GameFeaturedLimitError,
   GameCategoryLimitError,
   GameCategoryNotFoundError,
   GameNotToggleableError,
   HIDDEN_GAMES_SETTING_KEY,
   HIDDEN_IDS_TTL_MS,
   PLAY_COUNTS_TTL_MS,
+  SOIREE_SETTING_KEY,
+  VIBES_SETTING_KEY,
   createGameCategory,
   deleteGameCategory,
   getGameCatalogState,
@@ -29,21 +33,40 @@ import {
   getGamePlayCounts30d,
   getStaffGameDifficulty,
   getStaffGameDrinkLevel,
+  getStaffFeaturedGameIds,
+  getStaffGameVibes,
   getStaffHiddenGameIds,
+  getStaffSoireeGames,
   invalidateGameCatalogCaches,
   isGameHiddenByStaff,
   moveGameCategory,
   setGameDifficulty,
   setGameDrinkLevel,
+  setGameFeatured,
   setGameHidden,
   setGameInCategory,
+  setGameInSoiree,
+  setGameVibe,
   updateGameCategory,
 } from './game-catalog-server'
-import { EMPTY_GAME_CATALOG, GAME_CATEGORY_LIMITS, STAFF_TOGGLEABLE_GAME_IDS } from './game-catalog'
+import {
+  EMPTY_GAME_CATALOG,
+  FEATURED_LIMIT,
+  GAME_CATEGORY_LIMITS,
+  POPULAR_LIMIT,
+  POPULAR_RANKED_LIMIT,
+  STAFF_TOGGLEABLE_GAME_IDS,
+} from './game-catalog'
 import { GAMES } from './games'
+import { SOIREE_CANDIDATE_IDS, SOIREE_GAME_IDS } from './soiree/catalog'
+import { defaultVibesForLevel } from './soiree/vibes'
 
 const [A, B, C] = STAFF_TOGGLEABLE_GAME_IDS
 const retired = GAMES.find((g) => g.hidden)!.id
+// Trois jeux du Mode Soirée dont le niveau « fait boire » du code est Peu, Moyen puis Beaucoup.
+const V1 = 'purple'
+const V2 = 'pmu'
+const V3 = 'coupe-du-roi'
 const codeLevel = (id: string) => GAMES.find((g) => g.id === id)!.difficulty
 const otherLevel = (id: string): 1 | 2 | 3 => (codeLevel(id) === 3 ? 1 : ((codeLevel(id) + 1) as 2 | 3))
 const codeDrink = (id: string) => GAMES.find((g) => g.id === id)!.drinkLevel
@@ -365,6 +388,20 @@ describe('getGameCatalogState', () => {
     expect(state.popular.local).not.toContain(first)
   })
 
+  it('classe POPULAR_RANKED_LIMIT jeux par mode : de la réserve pour les jeux mis à la une', async () => {
+    const online = GAMES.filter((g) => !g.hidden && g.onlineReady).map((g) => g.id)
+    expect(online.length).toBeGreaterThan(POPULAR_LIMIT)
+    prismaMock.siteSetting.findUnique.mockResolvedValue(null)
+    prismaMock.onlineGameSession.groupBy.mockResolvedValue(
+      online.map((gameId, i) => ({ gameId, _count: { _all: 100 - i } }))
+    )
+
+    const state = await getGameCatalogState()
+
+    expect(state.popular.online).toEqual(online.slice(0, POPULAR_RANKED_LIMIT))
+    expect(state.popular.online.length).toBeGreaterThan(POPULAR_LIMIT)
+  })
+
   it('base illisible : aucun jeu caché, aucun jeu présenté comme populaire', async () => {
     prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
     prismaMock.onlineGameSession.groupBy.mockRejectedValue(new Error('down'))
@@ -377,8 +414,8 @@ describe('getGameCatalogState', () => {
     await getGameCatalogState()
     vi.advanceTimersByTime(CATALOG_STATE_TTL_MS - 1)
     await getGameCatalogState()
-    // Une lecture par réglage (jeux cachés, difficulté, « fait boire », catégories), pas une de plus.
-    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(4)
+    // Une lecture par réglage (jeux cachés, difficulté, « fait boire », catégories, ambiances, soirée, à la une), pas une de plus.
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(7)
   })
 
   it('inclut les difficultés réglées, et setGameDifficulty fait relire l’état tout de suite', async () => {
@@ -865,5 +902,414 @@ describe('getGameCatalogState : barème et catégories', () => {
     const state = await getGameCatalogState()
     expect(state.drinkLevel).not.toBe(EMPTY_GAME_CATALOG.drinkLevel)
     expect(state.categories).not.toBe(EMPTY_GAME_CATALOG.categories)
+  })
+})
+
+describe('getStaffGameVibes', () => {
+  it('lit la clé games.vibes de SiteSetting, ambiances dans l’ordre de SOIREE_VIBES', async () => {
+    storeSettings({ [VIBES_SETTING_KEY]: JSON.stringify({ [V1]: ['grosse', 'apero'] }) })
+    expect(await getStaffGameVibes()).toEqual({ [V1]: ['apero', 'grosse'] })
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledWith({ where: { key: 'games.vibes' } })
+  })
+
+  it('valeur abîmée ou absente : aucun réglage', async () => {
+    storeSettings({ [VIBES_SETTING_KEY]: '{pas du json' })
+    expect(await getStaffGameVibes()).toEqual({})
+    invalidateGameCatalogCaches({ forget: true })
+    prismaMock.siteSetting.findUnique.mockResolvedValue(null)
+    expect(await getStaffGameVibes()).toEqual({})
+  })
+
+  it('erreur de base : dernière valeur connue, sans lever', async () => {
+    storeSettings({ [VIBES_SETTING_KEY]: JSON.stringify({ [V1]: [] }) })
+    expect(await getStaffGameVibes()).toEqual({ [V1]: [] })
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    await vi.advanceTimersByTimeAsync(HIDDEN_IDS_TTL_MS + 1)
+    expect(await getStaffGameVibes()).toEqual({ [V1]: [] })
+  })
+
+  it('garde le résultat 30 s', async () => {
+    storeSettings()
+    await getStaffGameVibes()
+    await getStaffGameVibes()
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(HIDDEN_IDS_TTL_MS + 1)
+    await getStaffGameVibes()
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('setGameVibe', () => {
+  it('ajoute une ambiance : upsert du JSON, changed vrai, caches invalidés', async () => {
+    const rows = storeSettings()
+    // « Peu » : apéro et ça monte par défaut ; la grosse soirée en plus sort du défaut.
+    const result = await setGameVibe(V1, 'grosse', true)
+
+    const expected = { [V1]: ['apero', 'monte', 'grosse'] }
+    expect(result).toEqual({ vibes: expected, changed: true })
+    const value = JSON.stringify(expected)
+    expect(prismaMock.siteSetting.upsert).toHaveBeenCalledWith({
+      where: { key: 'games.vibes' },
+      create: { key: 'games.vibes', value },
+      update: { value },
+    })
+    expect(rows.get(VIBES_SETTING_KEY)).toBe(value)
+    expect(await getStaffGameVibes()).toEqual(expected)
+  })
+
+  it('retire une ambiance du défaut du niveau', async () => {
+    storeSettings()
+    // « Moyen » : les trois par défaut.
+    expect(await setGameVibe(V2, 'apero', false)).toEqual({ vibes: { [V2]: ['monte', 'grosse'] }, changed: true })
+  })
+
+  it('garde les autres jeux et l’ordre de SOIREE_VIBES', async () => {
+    storeSettings({ [VIBES_SETTING_KEY]: JSON.stringify({ [V3]: ['grosse'] }) })
+    const result = await setGameVibe(V3, 'apero', true)
+    expect(result.vibes).toEqual({ [V3]: ['apero', 'grosse'] })
+    const other = await setGameVibe(V1, 'grosse', true)
+    expect(other.vibes).toEqual({ [V3]: ['apero', 'grosse'], [V1]: ['apero', 'monte', 'grosse'] })
+  })
+
+  it('un changement de niveau efface les ambiances redevenues son défaut, garde les autres', async () => {
+    const level = codeDrink(V1)
+    const to: 1 | 2 | 3 = level === 2 ? 3 : 2
+    const same = defaultVibesForLevel(to)
+    const rows = storeSettings({
+      [VIBES_SETTING_KEY]: JSON.stringify({ [V1]: same, [V2]: ['grosse'] }),
+    })
+    await setGameDrinkLevel(V1, to)
+    // Égale au défaut du nouveau niveau : l'entrée disparaît, le jeu suit de nouveau son niveau.
+    expect(JSON.parse(rows.get(VIBES_SETTING_KEY)!)).toEqual({ [V2]: ['grosse'] })
+    expect(await getStaffGameVibes()).toEqual({ [V2]: ['grosse'] })
+
+    // Un réglage qui reste différent du défaut n'est pas touché.
+    await setGameDrinkLevel(V2, codeDrink(V2) === 1 ? 3 : 1)
+    expect(JSON.parse(rows.get(VIBES_SETTING_KEY)!)).toEqual({ [V2]: ['grosse'] })
+  })
+
+  it('revenir au défaut du niveau SUPPRIME l’entrée', async () => {
+    const rows = storeSettings({
+      [VIBES_SETTING_KEY]: JSON.stringify({ [V1]: ['apero', 'monte', 'grosse'], [V2]: ['grosse'] }),
+    })
+    const result = await setGameVibe(V1, 'grosse', false)
+    expect(result).toEqual({ vibes: { [V2]: ['grosse'] }, changed: true })
+    expect(rows.get(VIBES_SETTING_KEY)).toBe(JSON.stringify({ [V2]: ['grosse'] }))
+
+    const last = await setGameVibe(V2, 'apero', true)
+    expect(last.vibes).toEqual({ [V2]: ['apero', 'grosse'] })
+    await setGameVibe(V2, 'monte', true)
+    expect(rows.get(VIBES_SETTING_KEY)).toBe('{}')
+  })
+
+  it('une liste vide est permise et gardée', async () => {
+    const rows = storeSettings()
+    await setGameVibe(V1, 'apero', false)
+    const result = await setGameVibe(V1, 'monte', false)
+    expect(result).toEqual({ vibes: { [V1]: [] }, changed: true })
+    expect(rows.get(VIBES_SETTING_KEY)).toBe(JSON.stringify({ [V1]: [] }))
+    expect(await getStaffGameVibes()).toEqual({ [V1]: [] })
+  })
+
+  it('déjà dans cet état : changed faux, rien d’écrit', async () => {
+    storeSettings({ [VIBES_SETTING_KEY]: JSON.stringify({ [V3]: ['grosse'] }) })
+    expect(await setGameVibe(V1, 'apero', true)).toEqual({ vibes: { [V3]: ['grosse'] }, changed: false })
+    expect(await setGameVibe(V3, 'grosse', true)).toEqual({ vibes: { [V3]: ['grosse'] }, changed: false })
+    expect(await setGameVibe(V3, 'apero', false)).toEqual({ vibes: { [V3]: ['grosse'] }, changed: false })
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('le défaut se recalcule avec le niveau « fait boire » STOCKÉ, pas celui du code', async () => {
+    // V1 est « Peu » dans le code ; réglé sur « Beaucoup », ses ambiances par défaut deviennent ça monte + grosse.
+    storeSettings({ [DRINK_LEVEL_SETTING_KEY]: JSON.stringify({ [V1]: 3 }) })
+    expect(await setGameVibe(V1, 'grosse', true)).toEqual({ vibes: {}, changed: false })
+    expect(await setGameVibe(V1, 'apero', true)).toEqual({ vibes: { [V1]: ['apero', 'monte', 'grosse'] }, changed: true })
+    // Retirer l'apéro ramène au défaut du niveau réglé : l'entrée disparaît.
+    expect(await setGameVibe(V1, 'apero', false)).toEqual({ vibes: {}, changed: true })
+  })
+
+  it('relit le niveau en base, pas le cache périmé', async () => {
+    const rows = storeSettings()
+    expect(await getStaffGameDrinkLevel()).toEqual({})
+    rows.set(DRINK_LEVEL_SETTING_KEY, JSON.stringify({ [V1]: 3 }))
+
+    expect(await setGameVibe(V1, 'grosse', true)).toEqual({ vibes: {}, changed: false })
+  })
+
+  it('part des ambiances stockées, pas du cache périmé', async () => {
+    const rows = storeSettings()
+    expect(await getStaffGameVibes()).toEqual({})
+    rows.set(VIBES_SETTING_KEY, JSON.stringify({ [V3]: ['grosse'] }))
+
+    const result = await setGameVibe(V1, 'grosse', true)
+
+    expect(result.vibes).toEqual({ [V3]: ['grosse'], [V1]: ['apero', 'monte', 'grosse'] })
+  })
+
+  it('n’écrit jamais dans une autre clé', async () => {
+    const rows = storeSettings()
+    await setGameVibe(V1, 'grosse', true)
+    expect([...rows.keys()]).toEqual([VIBES_SETTING_KEY])
+  })
+
+  it('refuse un jeu inconnu, retiré du code ou hors Mode Soirée, une ambiance inconnue, un on non booléen — sans toucher à la base', async () => {
+    const outside = STAFF_TOGGLEABLE_GAME_IDS.find((id) => !SOIREE_GAME_IDS.includes(id))
+    for (const id of ['nope', retired, '', ...(outside ? [outside] : [])]) {
+      await expect(setGameVibe(id, 'apero', true), id).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    for (const vibe of ['soiree', '', null, 1]) {
+      await expect(setGameVibe(V1, vibe as never, true), String(vibe)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    for (const on of ['true', 1, null, undefined]) {
+      await expect(setGameVibe(V1, 'apero', on as never), String(on)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('laisse remonter une panne d’écriture, et la valeur écrite sert de repli si la relecture échoue', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValueOnce(new Error('locked'))
+    await expect(setGameVibe(V1, 'grosse', true)).rejects.toThrow('locked')
+
+    await setGameVibe(V1, 'grosse', true)
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffGameVibes()).toEqual({ [V1]: ['apero', 'monte', 'grosse'] })
+  })
+
+  it('deux écritures simultanées sur le même jeu gardent les deux changements', async () => {
+    const rows = storeSettings()
+    const read = prismaMock.siteSetting.findUnique.getMockImplementation()!
+    prismaMock.siteSetting.findUnique.mockImplementation(async (args: { where: { key: string } }) => {
+      const value = await read(args)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      return value
+    })
+
+    const pending = Promise.all([setGameVibe(V2, 'apero', false), setGameVibe(V2, 'grosse', false)])
+    await vi.advanceTimersByTimeAsync(100)
+    await pending
+
+    expect(JSON.parse(rows.get(VIBES_SETTING_KEY)!)).toEqual({ [V2]: ['monte'] })
+  })
+
+  it('partage la file des autres réglages sans les mélanger', async () => {
+    const rows = storeSettings()
+    await Promise.all([setGameHidden(A, true), setGameVibe(V1, 'grosse', true), setGameDrinkLevel(C, otherDrink(C))])
+    expect(JSON.parse(rows.get(HIDDEN_GAMES_SETTING_KEY)!)).toEqual([A])
+    expect(JSON.parse(rows.get(VIBES_SETTING_KEY)!)).toEqual({ [V1]: ['apero', 'monte', 'grosse'] })
+    expect(JSON.parse(rows.get(DRINK_LEVEL_SETTING_KEY)!)).toEqual({ [C]: otherDrink(C) })
+  })
+})
+
+describe('getGameCatalogState : ambiances', () => {
+  it('inclut les ambiances réglées, et setGameVibe fait relire l’état tout de suite', async () => {
+    storeSettings({ [VIBES_SETTING_KEY]: JSON.stringify({ [V3]: ['grosse'] }) })
+    expect((await getGameCatalogState()).vibes).toEqual({ [V3]: ['grosse'] })
+
+    await setGameVibe(V1, 'grosse', true)
+
+    expect((await getGameCatalogState()).vibes).toEqual({ [V3]: ['grosse'], [V1]: ['apero', 'monte', 'grosse'] })
+  })
+
+  it('base illisible : vibes vaut {}', async () => {
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    const state = await getGameCatalogState()
+    expect(state.vibes).toEqual({})
+    expect(state.vibes).not.toBe(EMPTY_GAME_CATALOG.vibes)
+  })
+})
+
+// Un candidat que le code laisse hors de la liste par défaut (Pyramide, Dégaine) et un jeu de la liste.
+const ADDED = SOIREE_CANDIDATE_IDS.find((id) => !SOIREE_GAME_IDS.includes(id))!
+const IN_LIST = SOIREE_GAME_IDS[0]
+const onlineOnlyId = GAMES.find((g) => !g.hidden && g.onlineOnly)!.id
+
+describe('getStaffSoireeGames', () => {
+  it('lit la clé games.soiree de SiteSetting, en écartant ce qui égale le défaut', async () => {
+    prismaMock.siteSetting.findUnique.mockResolvedValue({
+      value: JSON.stringify({ [ADDED]: true, [IN_LIST]: true, nope: true, [onlineOnlyId]: true }),
+    })
+    expect(await getStaffSoireeGames()).toEqual({ [ADDED]: true })
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledWith({ where: { key: 'games.soiree' } })
+  })
+
+  it('base illisible : {}, sans lever', async () => {
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffSoireeGames()).toEqual({})
+  })
+})
+
+describe('setGameInSoiree', () => {
+  it('ajoute un candidat hors liste : la valeur true est stockée', async () => {
+    const rows = storeSettings()
+    expect(await setGameInSoiree(ADDED, true)).toEqual({ soiree: { [ADDED]: true }, changed: true })
+    expect(JSON.parse(rows.get(SOIREE_SETTING_KEY)!)).toEqual({ [ADDED]: true })
+    expect(SOIREE_SETTING_KEY).toBe('games.soiree')
+  })
+
+  it('sort un jeu de la liste : la valeur false est stockée', async () => {
+    const rows = storeSettings()
+    expect(await setGameInSoiree(IN_LIST, false)).toEqual({ soiree: { [IN_LIST]: false }, changed: true })
+    expect(JSON.parse(rows.get(SOIREE_SETTING_KEY)!)).toEqual({ [IN_LIST]: false })
+  })
+
+  it('revenir au défaut supprime l’entrée, sans toucher aux autres', async () => {
+    const rows = storeSettings({ [SOIREE_SETTING_KEY]: JSON.stringify({ [ADDED]: true, [IN_LIST]: false }) })
+    expect(await setGameInSoiree(ADDED, false)).toEqual({ soiree: { [IN_LIST]: false }, changed: true })
+    expect(JSON.parse(rows.get(SOIREE_SETTING_KEY)!)).toEqual({ [IN_LIST]: false })
+    expect((await setGameInSoiree(IN_LIST, true)).soiree).toEqual({})
+    expect(JSON.parse(rows.get(SOIREE_SETTING_KEY)!)).toEqual({})
+  })
+
+  it('un réglage déjà au bon état ne change rien et n’écrit rien', async () => {
+    storeSettings()
+    expect(await setGameInSoiree(IN_LIST, true)).toEqual({ soiree: {}, changed: false })
+    expect(await setGameInSoiree(ADDED, false)).toEqual({ soiree: {}, changed: false })
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuse un jeu inconnu, retiré du code, en ligne uniquement, ou une valeur qui n’est pas un booléen', async () => {
+    for (const id of ['jeu-inexistant', retired, onlineOnlyId]) {
+      await expect(setGameInSoiree(id, true), id).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    for (const on of ['true', 1, null, undefined]) {
+      await expect(setGameInSoiree(ADDED, on as never), String(on)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('part de la valeur stockée, pas du cache : deux écritures simultanées gardent les deux', async () => {
+    const rows = storeSettings()
+    const read = prismaMock.siteSetting.findUnique.getMockImplementation()!
+    prismaMock.siteSetting.findUnique.mockImplementation(async (args: { where: { key: string } }) => {
+      const value = await read(args)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      return value
+    })
+    const pending = Promise.all([setGameInSoiree(ADDED, true), setGameInSoiree(IN_LIST, false)])
+    await vi.advanceTimersByTimeAsync(100)
+    await pending
+    expect(JSON.parse(rows.get(SOIREE_SETTING_KEY)!)).toEqual({ [ADDED]: true, [IN_LIST]: false })
+  })
+
+  it('laisse remonter une panne d’écriture ; la valeur écrite sert de repli si la relecture échoue', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValueOnce(new Error('locked'))
+    await expect(setGameInSoiree(ADDED, true)).rejects.toThrow('locked')
+
+    await setGameInSoiree(ADDED, true)
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffSoireeGames()).toEqual({ [ADDED]: true })
+  })
+
+  it('l’état du catalogue est relu tout de suite', async () => {
+    storeSettings()
+    expect((await getGameCatalogState()).soiree).toEqual({})
+    await setGameInSoiree(ADDED, true)
+    expect((await getGameCatalogState()).soiree).toEqual({ [ADDED]: true })
+  })
+})
+
+describe('getStaffFeaturedGameIds', () => {
+  it('lit la clé games.featured de SiteSetting, dans l’ordre stocké', async () => {
+    prismaMock.siteSetting.findUnique.mockResolvedValue({ value: JSON.stringify([C, 'nope', A, C]) })
+    expect(await getStaffFeaturedGameIds()).toEqual([C, A])
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledWith({ where: { key: 'games.featured' } })
+  })
+
+  it('base illisible : [], sans lever', async () => {
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffFeaturedGameIds()).toEqual([])
+  })
+})
+
+describe('setGameFeatured', () => {
+  it('ajoute en fin de liste, dans l’ordre de mise à la une', async () => {
+    const rows = storeSettings()
+    expect(await setGameFeatured(C, true)).toEqual({ featured: [C], changed: true })
+    expect(await setGameFeatured(A, true)).toEqual({ featured: [C, A], changed: true })
+    expect(JSON.parse(rows.get(FEATURED_SETTING_KEY)!)).toEqual([C, A])
+    expect(FEATURED_SETTING_KEY).toBe('games.featured')
+  })
+
+  it('retire un jeu sans bousculer l’ordre des autres', async () => {
+    const rows = storeSettings({ [FEATURED_SETTING_KEY]: JSON.stringify([C, A, B]) })
+    expect(await setGameFeatured(A, false)).toEqual({ featured: [C, B], changed: true })
+    expect(JSON.parse(rows.get(FEATURED_SETTING_KEY)!)).toEqual([C, B])
+  })
+
+  it('un jeu déjà à la une garde sa place ; retirer un absent ne change rien ; rien n’est écrit', async () => {
+    storeSettings({ [FEATURED_SETTING_KEY]: JSON.stringify([C, A]) })
+    expect(await setGameFeatured(C, true)).toEqual({ featured: [C, A], changed: false })
+    expect(await setGameFeatured(B, false)).toEqual({ featured: [C, A], changed: false })
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it(`limite de ${FEATURED_LIMIT} : GameFeaturedLimitError au-delà, mais retirer puis ajouter passe`, async () => {
+    const full = STAFF_TOGGLEABLE_GAME_IDS.slice(0, FEATURED_LIMIT)
+    const extra = STAFF_TOGGLEABLE_GAME_IDS[FEATURED_LIMIT]
+    const rows = storeSettings({ [FEATURED_SETTING_KEY]: JSON.stringify(full) })
+
+    await expect(setGameFeatured(extra, true)).rejects.toBeInstanceOf(GameFeaturedLimitError)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+    // Un jeu déjà à la une ne compte pas comme un ajout.
+    expect((await setGameFeatured(full[0], true)).changed).toBe(false)
+
+    await setGameFeatured(full[0], false)
+    expect((await setGameFeatured(extra, true)).featured).toEqual([...full.slice(1), extra])
+    expect(JSON.parse(rows.get(FEATURED_SETTING_KEY)!)).toEqual([...full.slice(1), extra])
+  })
+
+  it('refuse un jeu inconnu ou retiré du code, ou une valeur qui n’est pas un booléen', async () => {
+    for (const id of ['jeu-inexistant', retired]) {
+      await expect(setGameFeatured(id, true), id).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    for (const on of ['true', 1, null, undefined]) {
+      await expect(setGameFeatured(A, on as never), String(on)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('deux ajouts simultanés gardent les deux, dans l’ordre d’arrivée', async () => {
+    const rows = storeSettings()
+    const read = prismaMock.siteSetting.findUnique.getMockImplementation()!
+    prismaMock.siteSetting.findUnique.mockImplementation(async (args: { where: { key: string } }) => {
+      const value = await read(args)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      return value
+    })
+    const pending = Promise.all([setGameFeatured(B, true), setGameFeatured(A, true)])
+    await vi.advanceTimersByTimeAsync(100)
+    await pending
+    expect(JSON.parse(rows.get(FEATURED_SETTING_KEY)!)).toEqual([B, A])
+  })
+
+  it('laisse remonter une panne d’écriture ; la valeur écrite sert de repli si la relecture échoue', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValueOnce(new Error('locked'))
+    await expect(setGameFeatured(A, true)).rejects.toThrow('locked')
+
+    await setGameFeatured(A, true)
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffFeaturedGameIds()).toEqual([A])
+  })
+
+  it('l’état du catalogue est relu tout de suite', async () => {
+    storeSettings()
+    expect((await getGameCatalogState()).featured).toEqual([])
+    await setGameFeatured(B, true)
+    expect((await getGameCatalogState()).featured).toEqual([B])
+  })
+
+  it('base illisible : l’état vaut soiree {} et featured []', async () => {
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    const state = await getGameCatalogState()
+    expect(state.soiree).toEqual({})
+    expect(state.featured).toEqual([])
+    expect(state.soiree).not.toBe(EMPTY_GAME_CATALOG.soiree)
+    expect(state.featured).not.toBe(EMPTY_GAME_CATALOG.featured)
   })
 })

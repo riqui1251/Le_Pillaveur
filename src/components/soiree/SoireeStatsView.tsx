@@ -6,8 +6,8 @@ import { Link } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { usePlayers } from '@/hooks/usePlayers'
+import { SOIREE_CANDIDATE_IDS } from '@/lib/soiree/catalog'
 import { useLocalizedGames } from '@/lib/games-i18n'
-import { SOIREE_GAME_IDS } from '@/lib/soiree/catalog'
 import { gameDrinkStats, historyDrinks, historyStats, topDrinkers } from '@/lib/soiree/device-stats'
 import { readHistory } from '@/lib/soiree/storage'
 import type { SoireeHistoryEntry } from '@/lib/soiree/summary'
@@ -30,7 +30,7 @@ export function SoireeStatsView() {
   const title = (id: string) => games.find((g) => g.id === id)?.title ?? id
   const playerName = (id: string | null) => players.find((p) => p.id === id)?.name ?? '?'
   const decimal = useMemo(() => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }), [locale])
-  const rows = useMemo(() => gameDrinkStats(players, SOIREE_GAME_IDS), [players])
+  const rows = useMemo(() => gameDrinkStats(players, SOIREE_CANDIDATE_IDS), [players])
   const drinkers = useMemo(() => topDrinkers(players), [players])
   const soirees = useMemo(() => historyStats(history), [history])
 

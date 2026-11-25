@@ -18,7 +18,7 @@ import {
 } from '@/lib/roles'
 
 /** Onglets, dans l'ordre de la navigation. */
-export const SUPERVISION_TABS = ['overview', 'stats', 'accounts', 'moderation', 'ops'] as const
+export const SUPERVISION_TABS = ['overview', 'stats', 'catalog', 'accounts', 'moderation', 'ops'] as const
 export type SupervisionTab = (typeof SUPERVISION_TABS)[number]
 
 /** Vues de l'onglet Statistiques (?view=), dans l'ordre du sélecteur. */
@@ -85,6 +85,7 @@ export function supervisionTabsFor(role: string): SupervisionTab[] {
     switch (tab) {
       case 'overview':
       case 'stats':
+      case 'catalog':
         return analytics
       case 'accounts':
         return true
@@ -111,15 +112,17 @@ export function defaultTabView(tab: SupervisionTab, role: string): SupervisionVi
   return views[0] ?? null
 }
 
-export type SupervisionNavGroupKey = 'analysis' | 'community' | 'server'
+export type SupervisionNavGroupKey = 'analysis' | 'content' | 'community' | 'server'
 
 /**
  * Familles de la navigation, séparées à l'écran par de l'espace : ce qu'on
- * regarde (Salle, Statistiques), les gens (Comptes, Modération), la machine
- * (Serveur, fondateurs seulement).
+ * regarde (Salle, Statistiques), ce qu'on édite (Jeux : catalogue, catégories,
+ * ambiances), les gens (Comptes, Modération), la machine (Serveur, fondateurs
+ * seulement).
  */
 export const SUPERVISION_NAV_GROUPS: ReadonlyArray<{ key: SupervisionNavGroupKey; tabs: readonly SupervisionTab[] }> = [
   { key: 'analysis', tabs: ['overview', 'stats'] },
+  { key: 'content', tabs: ['catalog'] },
   { key: 'community', tabs: ['accounts', 'moderation'] },
   { key: 'server', tabs: ['ops'] },
 ]
@@ -134,7 +137,7 @@ export function supervisionNavGroupsFor(role: string): Array<{ key: SupervisionN
 }
 
 /**
- * Anciens onglets fondus dans une vue d'un des cinq onglets. Un favori, un
+ * Anciens onglets fondus dans une vue d'un des autres onglets. Un favori, un
  * lien partagé ou l'historique du navigateur y mènent encore :
  * - « Pays / IP » est devenu la vue Audience des Statistiques ;
  * - « Sanctions » est passé sous Modération ;

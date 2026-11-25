@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { countHidden, parseAdminGameCatalog } from './game-catalog-panel'
+import { countFeatured, countHidden, parseAdminGameCatalog } from './game-catalog-panel'
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'pmu',
   hidden: false,
+  featured: false,
   difficulty: 2,
   defaultDifficulty: 2,
   drinkLevel: 2,
@@ -11,6 +12,7 @@ const row = (over: Record<string, unknown> = {}) => ({
   plays: { online: 3, local: 4, total: 7 },
   popularLocalRank: 1,
   popularOnlineRank: null,
+  featuredRank: null,
   ...over,
 })
 const body = (over: Record<string, unknown> = {}) => ({ canEdit: true, retiredCount: 2, games: [row()], ...over })
@@ -70,6 +72,26 @@ describe('parseAdminGameCatalog', () => {
     expect(parseAdminGameCatalog(body({ games: [row({ defaultDrinkLevel: null })] }))).toBeNull()
   })
 
+  it('lit une mise à la une et refuse une ligne sans mise à la une valide (serveur plus ancien ou réponse abîmée)', () => {
+    expect(parseAdminGameCatalog(body({ games: [row({ featured: true })] }))?.games[0].featured).toBe(true)
+    const { featured: _f, ...old } = row()
+    expect(parseAdminGameCatalog(body({ games: [old] }))).toBeNull()
+    expect(parseAdminGameCatalog(body({ games: [row({ featured: 'oui' })] }))).toBeNull()
+    expect(parseAdminGameCatalog(body({ games: [row({ featured: null })] }))).toBeNull()
+  })
+
+  it('lit le rang à la une, entier ≥ 1 ou null', () => {
+    expect(parseAdminGameCatalog(body({ games: [row({ featured: true, featuredRank: 3 })] }))?.games[0].featuredRank).toBe(3)
+    expect(parseAdminGameCatalog(body({ games: [row({ featuredRank: 0 })] }))).toBeNull()
+    expect(parseAdminGameCatalog(body({ games: [row({ featuredRank: 1.5 })] }))).toBeNull()
+    expect(parseAdminGameCatalog(body({ games: [row({ featuredRank: '1' })] }))).toBeNull()
+  })
+
+  it('lit une réponse d’un serveur plus ancien sans rang à la une : null', () => {
+    const { featuredRank: _r, ...old } = row()
+    expect(parseAdminGameCatalog(body({ games: [old] }))?.games[0].featuredRank).toBeNull()
+  })
+
   it('ne garde que les champs du contrat', () => {
     const parsed = parseAdminGameCatalog(body({ games: [row({ extra: 1 })], other: true }))
     expect(parsed).toEqual(body())
@@ -81,5 +103,13 @@ describe('countHidden', () => {
     const rows = [row(), row({ id: 'a', hidden: true }), row({ id: 'b', hidden: true })] as never
     expect(countHidden(rows)).toBe(2)
     expect(countHidden([])).toBe(0)
+  })
+})
+
+describe('countFeatured', () => {
+  it('compte les jeux mis à la une', () => {
+    const rows = [row(), row({ id: 'a', featured: true }), row({ id: 'b', featured: true })] as never
+    expect(countFeatured(rows)).toBe(2)
+    expect(countFeatured([])).toBe(0)
   })
 })

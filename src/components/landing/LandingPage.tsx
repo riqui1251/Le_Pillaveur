@@ -75,14 +75,16 @@ export async function LandingPage({ locale }: { locale: string }) {
   // jeux mis en avant — les plus joués, local puis en ligne — ouvrent la grille
   // : le héros promet « Loup-Garou, quiz, dessin, bluff » alors que l'ordre brut
   // du tableau démarre sur des jeux de dés locaux. Le reste garde l'ordre du
-  // catalogue. Aucun jeu classé (base indisponible, ou pas encore de parties) :
+  // catalogue. Les jeux que l'équipe met à la une passent avant tous les autres
+  // (pastille « À la une »). Aucun jeu classé (base indisponible, ou pas encore de parties) :
   // les jeux phares du code ouvrent la grille, marqués « Incontournable » et
   // non « Populaire » (`ranked` false).
   const catalog = await getGameCatalogState()
-  const { games, highlightedIds, ranked } = orderLandingGames({
+  const { games, highlightedIds, teamFeaturedIds, ranked } = orderLandingGames({
     games: GAMES,
     hiddenIds: catalog.hiddenIds,
     popular: catalog.popular,
+    featuredIds: catalog.featured,
     fallback: {
       local: featuredGameIds(catalog.hiddenIds, 'local'),
       online: featuredGameIds(catalog.hiddenIds, 'online'),
@@ -357,7 +359,8 @@ export async function LandingPage({ locale }: { locale: string }) {
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {games.map((game) => {
             const red = game.suit ? suitIsRed(game.suit) : false
-            const highlighted = highlightedIds.has(game.id)
+            const teamFeatured = teamFeaturedIds.has(game.id)
+            const highlighted = teamFeatured || highlightedIds.has(game.id)
             return (
               <Link
                 key={game.id}
@@ -385,7 +388,7 @@ export async function LandingPage({ locale }: { locale: string }) {
                     de la carte sur une colonne de 165 px. */}
                 {highlighted && (
                   <span className="absolute right-2 top-1.5 rounded-full bg-gold/25 px-1.5 py-0.5 text-[11px] font-black uppercase leading-tight tracking-tight text-[#6B4E0F]">
-                    ★ {ranked ? t('catalog.popular') : t('catalog.featured')}
+                    ★ {teamFeatured ? t('catalog.teamFeatured') : ranked ? t('catalog.popular') : t('catalog.featured')}
                   </span>
                 )}
                 <div className="px-4 pt-4 text-center">

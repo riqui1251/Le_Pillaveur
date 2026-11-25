@@ -306,7 +306,8 @@
       "categories": {
         "label": "Catégories de jeux",
         "all": "Toutes"
-      }
+      },
+      "featuredRow": "À la une"
     },
     "recentLocal": {
       "title": "Vos derniers jeux",
@@ -7273,6 +7274,7 @@
       "section": "Section",
       "overview": "La Salle",
       "stats": "Statistiques",
+      "catalog": "Jeux",
       "moderation": "Modération",
       "accountsShort": "Comptes",
       "ops": "Serveur"
@@ -7842,9 +7844,61 @@
       "reviewsLoadError": "Impossible de charger la liste des votes.",
       "authorAnonymous": "Sans compte"
     },
+    "gameVibes": {
+      "title": "Mode Soirée",
+      "desc": "Ajoutez un jeu au Mode Soirée ou sortez-le, puis choisissez les ambiances où le tirage peut le choisir : Apéro tranquille, Ça monte, Grosse soirée. Un jeu sans ambiance ne sort plus au tirage, mais reste choisissable à la main.",
+      "rule": "Par défaut, un jeu suit son niveau « Fait boire » : Peu → Apéro tranquille et Ça monte ; Moyen → les trois ; Beaucoup → Ça monte et Grosse soirée. Cochez ou décochez une ambiance pour sortir de ce réglage.",
+      "refresh": "Actualiser",
+      "loadError": "Impossible de charger le Mode Soirée.",
+      "forbidden": "Session expirée ou accès retiré : reconnectez-vous.",
+      "readOnly": "Lecture seule : seuls les super-admins peuvent ajouter un jeu au Mode Soirée, le sortir ou changer ses ambiances.",
+      "saveError": "Le changement n’a pas été enregistré. Réessayez.",
+      "colGame": "Jeu",
+      "colDrink": "Fait boire",
+      "colVibes": "Ambiances",
+      "colSetting": "Réglage",
+      "hidden": "Caché",
+      "group": "Ambiances de {game}",
+      "vibes": {
+        "apero": "Apéro tranquille",
+        "monte": "Ça monte",
+        "grosse": "Grosse soirée"
+      },
+      "vibesShort": {
+        "apero": "Apéro",
+        "monte": "Ça monte",
+        "grosse": "Grosse"
+      },
+      "count": "{vibe} : {count, plural, =0 {aucun jeu} one {# jeu} other {# jeux}}",
+      "modified": "Modifié",
+      "defaultWas": "Par défaut : {vibes}",
+      "noVibe": "aucune",
+      "isDefault": "Réglage par défaut",
+      "noneNote": "Aucune ambiance : ce jeu ne sort plus au tirage.",
+      "announceOn": "{game} peut maintenant sortir en ambiance « {vibe} ».",
+      "announceOff": "{game} ne sort plus en ambiance « {vibe} ».",
+      "colSoiree": "Mode Soirée",
+      "inSoiree": "Dans le Mode Soirée",
+      "inSoireeAria": "{game} dans le Mode Soirée",
+      "outOfSoiree": "Hors du Mode Soirée",
+      "added": "Ajouté",
+      "removed": "Retiré",
+      "defaultOut": "Hors du Mode Soirée par défaut",
+      "defaultIn": "Dans le Mode Soirée par défaut",
+      "inSoireeCount": "{count, plural, =0 {Aucun jeu dans le Mode Soirée} one {# jeu dans le Mode Soirée} other {# jeux dans le Mode Soirée}}",
+      "hiddenInSoiree": "{count, plural, one {# jeu caché ne sort pas au tirage} other {# jeux cachés ne sortent pas au tirage}}",
+      "vibesNeedSoiree": "Ajoutez d’abord ce jeu au Mode Soirée.",
+      "outNote": "Hors du Mode Soirée : jamais tiré ni proposé.",
+      "announceIn": "{game} est maintenant dans le Mode Soirée.",
+      "announceOut": "{game} n’est plus dans le Mode Soirée.",
+      "notCandidate": "Ce jeu se joue en ligne : il ne peut pas entrer dans le Mode Soirée."
+    },
+    "gameEditing": {
+      "pickerLabel": "Jeu à modifier"
+    },
     "gameCatalog": {
       "title": "Catalogue des jeux",
-      "desc": "Cachez un jeu pour le retirer du site (hub, Mode Soirée, lobby, vitrine) ou remettez-le, et réglez sa difficulté (Facile, Moyen, Difficile) et son barème « fait boire » (Peu, Moyen, Beaucoup) tels que les joueurs les voient. Les jeux mis en avant se choisissent seuls : les plus joués sur 30 jours.",
+      "desc": "Cachez un jeu pour le retirer du site (hub, Mode Soirée, lobby, vitrine) ou remettez-le, mettez-le à la une, rangez-le dans des catégories et réglez sa difficulté (Facile, Moyen, Difficile) et son barème « fait boire » (Peu, Moyen, Beaucoup) tels que les joueurs les voient. Le rang parmi les plus joués se calcule seul, sur 30 jours.",
       "refresh": "Actualiser",
       "loadError": "Impossible de charger le catalogue des jeux.",
       "forbidden": "Session expirée ou accès retiré : reconnectez-vous.",
@@ -7856,11 +7910,11 @@
       "hidden": "Caché",
       "hide": "Cacher {game}",
       "show": "Remettre {game}",
-      "popularLocal": "Mis en avant en local · n°{rank}",
-      "popularOnline": "Mis en avant en ligne · n°{rank}",
+      "popularLocal": "Parmi les plus joués en local · n°{rank}",
+      "popularOnline": "Parmi les plus joués en ligne · n°{rank}",
       "plays": "{count, plural, =0 {Aucune partie} one {# partie} other {# parties}}",
       "playsDetail": "{online} en ligne · {local} en local",
-      "readOnly": "Lecture seule : seuls les super-admins peuvent cacher un jeu ou changer sa difficulté ou son barème « fait boire ».",
+      "readOnly": "Lecture seule : seuls les super-admins peuvent cacher un jeu, le mettre à la une, le ranger dans une catégorie ou changer sa difficulté ou son barème « fait boire ».",
       "saveError": "Le changement n’a pas été enregistré. Réessayez.",
       "hiddenCount": "{count, plural, =0 {Aucun jeu caché} one {# jeu caché} other {# jeux cachés}}",
       "retiredNote": "{count, plural, one {# ancien jeu reste retiré} other {# anciens jeux restent retirés}} dans le code.",
@@ -7874,6 +7928,25 @@
       "scaleDrink": "Fait boire",
       "drinkGroup": "Niveau « fait boire » de {game}",
       "drinkModified": "Modifié · {level} dans le code",
+      "featuredCount": "À la une : {count}/{max}",
+      "featuredHint": "Les jeux à la une passent en tête du hub et de la vitrine, dans l’ordre où vous les avez ajoutés : le numéro est indiqué sur chaque jeu.",
+      "featured": "À la une",
+      "featuredAria": "À la une : {game}",
+      "featuredPill": "À la une",
+      "featuredPillRank": "À la une · n°{rank}",
+      "featuredLimit": "{max} jeux à la une au plus : retirez-en un d’abord.",
+      "announceFeaturedOn": "{game} est maintenant à la une.",
+      "announceFeaturedOff": "{game} n’est plus à la une.",
+      "categories": "Catégories",
+      "categoriesGroup": "Catégories de {game}",
+      "categoriesLoading": "Chargement des catégories…",
+      "categoriesLoadError": "Impossible de charger les catégories : actualisez.",
+      "noCategories": "Aucune catégorie n’existe encore.",
+      "createCategory": "Créer une catégorie",
+      "notInCategory": "Dans aucune catégorie.",
+      "announceCategoryOn": "{game} est rangé dans « {category} ».",
+      "announceCategoryOff": "{game} sort de « {category} ».",
+      "categoryGone": "Cette catégorie n’existe plus : la liste a été actualisée.",
       "announceDrinkLevel": "Niveau « fait boire » de {game} : {level}."
     },
     "gameCategories": {
@@ -8184,6 +8257,7 @@
     },
     "navGroups": {
       "analysis": "Analyse",
+      "content": "Contenu",
       "community": "Communauté",
       "server": "Serveur"
     },
@@ -8824,7 +8898,8 @@
       "local": "Local",
       "players": "{min}-{max} joueurs",
       "featured": "Incontournable",
-      "popular": "Populaire"
+      "popular": "Populaire",
+      "teamFeatured": "À la une"
     },
     "rules": {
       "title": "Apprendre les règles",

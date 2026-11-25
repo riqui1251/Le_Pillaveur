@@ -9,12 +9,12 @@ import { hasContentIn, splitBySoloFit } from '@/lib/games'
 import { categoryName, isGameListed } from '@/lib/game-catalog'
 import { GameCard } from '@/components/hub/GameCard'
 import { categoriesToOffer, filterByCategory, resolveActiveCategory } from '@/components/hub/category-filter'
-import { buildPopularRow } from '@/components/hub/popular-row'
+import { buildFeaturedRow, buildPopularRow } from '@/components/hub/popular-row'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
-import { useGameCatalog, useGameCategories } from '@/hooks/useGameCatalog'
+import { useFeaturedGameIds, useGameCatalog, useGameCategories } from '@/hooks/useGameCatalog'
 import { useBrowserOnline } from '@/hooks/useBrowserOnline'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 
@@ -106,6 +106,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const { user } = useAuth()
   const { hiddenIds, popular } = useGameCatalog()
   const categories = useGameCategories()
+  const featuredIds = useFeaturedGameIds()
   const isOnline = user?.playMode === 'online'
   // Navigateur hors ligne : une table en ligne ne peut pas s'ouvrir — les
   // jeux « en ligne uniquement » s'éteignent, et TOUT le catalogue en mode en
@@ -203,12 +204,34 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   // déplacement. Ni en recherche, ni en solo (qui garde ses sections
   // « parfaits en solo »).
   const mode = isOnline ? 'online' : 'local'
+  // « À la une » : les jeux que l'équipe a choisis, AVANT « Les plus joués »,
+  // mêmes filtres et mêmes exclusions (ni recherche, ni catégorie, ni solo) ;
+  // « Les plus joués » ne répète pas ces jeux.
+  const featuredRow = useMemo(
+    () =>
+      query.trim() || soloBots || activeCategory
+        ? []
+        : buildFeaturedRow({ candidates: localGames, featuredIds, hiddenIds, mode, locale }),
+    [localGames, featuredIds, hiddenIds, mode, locale, query, soloBots, activeCategory]
+  )
   const popularRow = useMemo(
     () =>
       query.trim() || soloBots || activeCategory
         ? { games: [] as typeof localGames, ranked: false }
-        : buildPopularRow({ candidates: localGames, popularIds: popular[mode], hiddenIds, mode, locale }),
-    [localGames, popular, hiddenIds, mode, locale, query, soloBots, activeCategory]
+        : buildPopularRow({
+            candidates: localGames,
+            popularIds: popular[mode],
+            hiddenIds,
+            mode,
+            locale,
+            excludeIds: featuredRow.map((g) => g.id),
+          }),
+    [localGames, popular, hiddenIds, mode, locale, query, soloBots, activeCategory, featuredRow]
+  )
+  const featuredTitle = (
+    <>
+      <span aria-hidden>★</span> {t('featuredRow')}
+    </>
   )
   const popularTitle = popularRow.ranked ? (
     <>
@@ -331,6 +354,12 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
           {localCatalog ? (
             localGames.length > 0 && (
               <>
+                {featuredRow.length > 0 && (
+                  <section>
+                    <FamilyTitle>{featuredTitle}</FamilyTitle>
+                    <GamesCardGrid games={featuredRow} {...offlineCard} />
+                  </section>
+                )}
                 {popularRow.games.length > 0 && (
                   <section>
                     <FamilyTitle>
@@ -370,6 +399,12 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
             </>
           ) : sections ? (
             <>
+              {featuredRow.length > 0 && (
+                <section>
+                  <FamilyTitle>{featuredTitle}</FamilyTitle>
+                  <GamesCardGrid games={featuredRow} {...offlineCard} />
+                </section>
+              )}
               {popularRow.games.length > 0 && (
                 <section>
                   <FamilyTitle>

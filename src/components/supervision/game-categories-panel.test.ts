@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { STAFF_TOGGLEABLE_GAME_IDS } from '@/lib/game-catalog'
 import {
   canAddCategory,
+  categoriesSignature,
+  categoryIdsOfGame,
   filterGameIds,
   nameInputsOf,
   namesFromInputs,
@@ -96,5 +98,40 @@ describe('filterGameIds', () => {
     expect(filterGameIds([first, second, third], 'ecarte', titleOf)).toEqual([first])
     expect(filterGameIds([first, second, third], 'PILE', titleOf)).toEqual([second])
     expect(filterGameIds([first, second, third], 'zzz', titleOf)).toEqual([])
+  })
+})
+
+describe('categoryIdsOfGame', () => {
+  it('liste les catégories qui rangent le jeu, dans l’ordre des catégories', () => {
+    const categories = parseAdminGameCategories(
+      body({
+        categories: [
+          category({ id: 'a', gameIds: [first] }),
+          category({ id: 'b', gameIds: [second] }),
+          category({ id: 'c', gameIds: [first, second] }),
+        ],
+      })
+    )!.categories
+    expect(categoryIdsOfGame(categories, first)).toEqual(['a', 'c'])
+    expect(categoryIdsOfGame(categories, second)).toEqual(['b', 'c'])
+    expect(categoryIdsOfGame(categories, third)).toEqual([])
+    expect(categoryIdsOfGame([], first)).toEqual([])
+  })
+})
+
+describe('categoriesSignature', () => {
+  const list = (over: Record<string, unknown> = {}) => parseAdminGameCategories(body({ categories: [category(over)] }))!.categories
+
+  it('ne dépend pas de l’ordre des jeux dans une catégorie', () => {
+    expect(categoriesSignature(list({ gameIds: [first, second] }))).toBe(categoriesSignature(list({ gameIds: [second, first] })))
+  })
+
+  it('change quand un jeu, un nom ou l’ordre des catégories change', () => {
+    const base = categoriesSignature(list())
+    expect(categoriesSignature(list({ gameIds: [first] }))).not.toBe(base)
+    expect(categoriesSignature(list({ names: { fr: 'Autre' } }))).not.toBe(base)
+    const two = parseAdminGameCategories(body({ categories: [category({ id: 'a' }), category({ id: 'b' })] }))!.categories
+    expect(categoriesSignature([...two].reverse())).not.toBe(categoriesSignature(two))
+    expect(categoriesSignature([])).toBe('[]')
   })
 })

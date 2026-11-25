@@ -5,11 +5,14 @@ import { useGameCatalogSnapshot } from '@/hooks/useGameCatalog'
 import { withoutHiddenGames, type Soiree } from '@/lib/soiree/state'
 
 /**
- * Les manches pas encore lancées d'un jeu que l'équipe vient de cacher
- * quittent la soirée enregistrée. La purge est irréversible : elle n'a lieu
+ * Les manches pas encore lancées d'un jeu que l'équipe vient de cacher quittent
+ * la soirée enregistrée. La purge est irréversible : elle n'a lieu
  * que sur un état lu du serveur, jamais sur la copie de l'appareil (source
  * « cache »), qui peut être périmée — un jeu remis entre-temps y perdrait ses
  * manches. Relancé à chaque soirée relue (une revanche tire un programme).
+ * Un jeu seulement SORTI du Mode Soirée n'est pas purgé : l'état de repli
+ * (lecture du réglage ratée) ne distingue pas un jeu sorti d'un jeu ajouté par
+ * l'équipe, et une purge efface pour de bon. Il n'est simplement plus tiré.
  */
 export function useHiddenGamesPurge(soiree: Soiree | null, save: (next: Soiree | null) => void) {
   const { state, source } = useGameCatalogSnapshot()

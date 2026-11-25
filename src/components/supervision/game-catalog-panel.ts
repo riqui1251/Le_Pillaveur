@@ -26,6 +26,7 @@ function parseRow(raw: unknown): AdminGameCatalogRow | null {
   if (
     typeof row.id !== 'string' ||
     typeof row.hidden !== 'boolean' ||
+    typeof row.featured !== 'boolean' ||
     !isLevel(row.difficulty) ||
     !isLevel(row.defaultDifficulty) ||
     !isLevel(row.drinkLevel) ||
@@ -36,13 +37,16 @@ function parseRow(raw: unknown): AdminGameCatalogRow | null {
     !isCount(plays.local) ||
     !isCount(plays.total) ||
     !isRank(row.popularLocalRank) ||
-    !isRank(row.popularOnlineRank)
+    !isRank(row.popularOnlineRank) ||
+    // Absent chez un serveur plus ancien : la rangée se lit alors sans numéro.
+    !(row.featuredRank === undefined || isRank(row.featuredRank))
   ) {
     return null
   }
   return {
     id: row.id,
     hidden: row.hidden,
+    featured: row.featured,
     difficulty: row.difficulty,
     defaultDifficulty: row.defaultDifficulty,
     drinkLevel: row.drinkLevel,
@@ -50,6 +54,7 @@ function parseRow(raw: unknown): AdminGameCatalogRow | null {
     plays: { online: plays.online, local: plays.local, total: plays.total },
     popularLocalRank: row.popularLocalRank,
     popularOnlineRank: row.popularOnlineRank,
+    featuredRank: row.featuredRank ?? null,
   }
 }
 
@@ -68,4 +73,8 @@ export function parseAdminGameCatalog(body: unknown): AdminGameCatalogResponse |
 
 export function countHidden(rows: readonly AdminGameCatalogRow[]): number {
   return rows.filter((row) => row.hidden).length
+}
+
+export function countFeatured(rows: readonly AdminGameCatalogRow[]): number {
+  return rows.filter((row) => row.featured).length
 }

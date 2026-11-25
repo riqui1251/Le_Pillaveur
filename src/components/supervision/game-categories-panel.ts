@@ -78,3 +78,16 @@ export function filterGameIds(ids: readonly string[], query: string, titleOf: (i
   if (!needle) return [...ids]
   return ids.filter((id) => fold(titleOf(id)).includes(needle))
 }
+
+/** Catégories où un jeu est rangé. */
+export function categoryIdsOfGame(categories: readonly GameCategory[], gameId: string): string[] {
+  return categories.filter((category) => category.gameIds.includes(gameId)).map((category) => category.id)
+}
+
+/**
+ * Empreinte du rangement (ordre, noms, jeux) : deux listes qui disent la même chose ont la même
+ * empreinte, donc le catalogue de l'appareil ne déclenche une relecture que pour un vrai changement.
+ */
+export function categoriesSignature(categories: readonly GameCategory[]): string {
+  return JSON.stringify(categories.map((category) => [category.id, category.names, [...category.gameIds].sort()]))
+}

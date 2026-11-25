@@ -9,6 +9,7 @@ import { ErrorState, SectionCard, SkeletonRows } from '@/components/supervision/
 import {
   EMPTY_NAME_INPUTS,
   canAddCategory,
+  categoriesSignature,
   filterGameIds,
   nameInputsOf,
   namesFromInputs,
@@ -16,7 +17,7 @@ import {
   type CategoryNameInputs,
 } from '@/components/supervision/game-categories-panel'
 import type { AdminGameCategoriesResponse } from '@/app/api/admin/game-categories/route'
-import { refreshGameCatalog } from '@/hooks/useGameCatalog'
+import { refreshGameCatalog, useGameCategories } from '@/hooks/useGameCatalog'
 import { GAME_CATEGORY_LIMITS, STAFF_TOGGLEABLE_GAME_IDS, categoryName, type GameCategory } from '@/lib/game-catalog'
 import { cn } from '@/lib/utils'
 
@@ -484,6 +485,7 @@ export function GameCategoriesPanel() {
   const [createInputs, setCreateInputs] = useState<CategoryNameInputs>(EMPTY_NAME_INPUTS)
   const [createInvalid, setCreateInvalid] = useState(false)
   const [focusRequest, setFocusRequest] = useState<{ kind: 'move'; id: string; direction: 'up' | 'down' } | { kind: 'deleted'; index: number } | null>(null)
+  const deviceCategories = useGameCategories()
 
   const tRef = useRef(t)
   tRef.current = t
@@ -493,6 +495,8 @@ export function GameCategoriesPanel() {
   const queueRef = useRef<Job[]>([])
   const runningRef = useRef(false)
   const reloadRef = useRef(false)
+  const dataRef = useRef(data)
+  dataRef.current = data
   const listRef = useRef<HTMLUListElement>(null)
   const countRef = useRef<HTMLParagraphElement>(null)
 
@@ -537,6 +541,16 @@ export function GameCategoriesPanel() {
       inflight?.abort()
     }
   }, [load])
+
+  // Le rangement se règle aussi depuis la fiche d'un jeu (catalogue, juste au-dessus) : sa réponse met à jour le catalogue de cet appareil,
+  // et c'est ce changement qui déclenche la relecture ici. Comparaison par empreinte : nos propres envois y répondent déjà.
+  const deviceSignature = useMemo(() => categoriesSignature(deviceCategories), [deviceCategories])
+  useEffect(() => {
+    const current = dataRef.current
+    if (!current || categoriesSignature(current.categories) === deviceSignature) return
+    if (keysRef.current.size > 0 || runningRef.current) reloadRef.current = true
+    else void load()
+  }, [deviceSignature, load])
 
   /** Un envoi ; renvoie null s'il a réussi, sinon la raison de l'échec. */
   const run = useCallback(async (job: Job): Promise<FailureKey | null> => {

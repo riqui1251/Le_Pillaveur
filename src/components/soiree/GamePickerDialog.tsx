@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
 import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
-import { useGameCatalog, useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
+import { useGameCatalog, useGameDifficulty, useGameDrinkLevel, useSoireeGameIds } from '@/hooks/useGameCatalog'
 import { cn } from '@/lib/utils'
-import { SOIREE_GAME_IDS, soireeCounting, soireeMinPlayers, soireeMinutes } from '@/lib/soiree/catalog'
+import { soireeCounting, soireeMinPlayers, soireeMinutes } from '@/lib/soiree/catalog'
 import { GameBadge, gameGradient } from './soiree-ui'
 
 /** Choisir un jeu à ajouter (ou à mettre à la place d'une manche) parmi les jeux de la soirée. */
@@ -29,10 +29,11 @@ export function GamePickerDialog({
   const t = useTranslations('soiree.picker')
   const games = useLocalizedGames()
   const { hiddenIds } = useGameCatalog()
+  const soireeIds = useSoireeGameIds()
   const difficultyOf = useGameDifficulty()
   const drinkLevelOf = useGameDrinkLevel()
   const byId = new Map(games.map((g) => [g.id, g]))
-  const rows = SOIREE_GAME_IDS.filter((id) => !hiddenIds.includes(id)).map((id) => ({ id, game: byId.get(id) }))
+  const rows = soireeIds.filter((id) => !hiddenIds.includes(id)).map((id) => ({ id, game: byId.get(id) }))
     .filter((row) => row.game)
     .sort((a, b) => drinkLevelOf(a.id) - drinkLevelOf(b.id) || a.game!.title.localeCompare(b.game!.title))
 

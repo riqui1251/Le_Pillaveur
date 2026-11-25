@@ -12,7 +12,7 @@ import { playGameSound } from '@/lib/sound/game-sounds'
 import { soireeCounting, soireeMinutes } from '@/lib/soiree/catalog'
 import type { Soiree } from '@/lib/soiree/state'
 import { GameBadge, SoireeCta, gameGradient, useSoireePlayer } from './soiree-ui'
-import { TutorialSteps } from './TutorialSteps'
+import { TutorialSteps, useHasTutorial } from './TutorialSteps'
 
 /**
  * Avant chaque manche : la carte du jeu, son tuto en trois temps et les
@@ -36,6 +36,7 @@ export function RoundIntro({
   const playerOf = useSoireePlayer(soiree)
   const round = soiree.rounds[soiree.current]
   const game = useLocalizedGame(round?.gameId ?? '')
+  const hasTutorial = useHasTutorial(round?.gameId ?? '')
 
   useEffect(() => {
     playGameSound('reveal')
@@ -66,10 +67,12 @@ export function RoundIntro({
         </div>
       </div>
 
-      <section className="space-y-2" aria-label={t('howTo')}>
-        <h2 className="font-display text-2xl font-bold text-cream">{t('howTo')}</h2>
-        <TutorialSteps gameId={round.gameId} soft={soiree.soft} />
-      </section>
+      {hasTutorial && (
+        <section className="space-y-2" aria-label={t('howTo')}>
+          <h2 className="font-display text-2xl font-bold text-cream">{t('howTo')}</h2>
+          <TutorialSteps gameId={round.gameId} soft={soiree.soft} />
+        </section>
+      )}
 
       <section className="space-y-2" aria-label={t('players')}>
         <h2 className="text-sm font-semibold text-cream/70">{t('players')}</h2>

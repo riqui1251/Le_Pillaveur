@@ -306,7 +306,8 @@
       "categories": {
         "label": "Game categories",
         "all": "All"
-      }
+      },
+      "featuredRow": "Featured"
     },
     "recentLocal": {
       "title": "Your latest games",
@@ -7273,6 +7274,7 @@
       "section": "Section",
       "overview": "The Room",
       "stats": "Statistics",
+      "catalog": "Games",
       "moderation": "Moderation",
       "accountsShort": "Accounts",
       "ops": "Server"
@@ -7842,9 +7844,61 @@
       "reviewsLoadError": "Could not load the list of votes.",
       "authorAnonymous": "No account"
     },
+    "gameVibes": {
+      "title": "Party Mode",
+      "desc": "Add a game to Party Mode or take it out, then choose the vibes it can be drawn in: Easy drinks, Building up, Big night. A game with no vibe is no longer drawn, but can still be picked by hand.",
+      "rule": "By default a game follows its drinking level: Light → Easy drinks and Building up; Medium → all three; Heavy → Building up and Big night. Tick or untick a vibe to override that.",
+      "refresh": "Refresh",
+      "loadError": "Couldn’t load Party Mode.",
+      "forbidden": "Session expired or access removed: sign in again.",
+      "readOnly": "Read-only: only super admins can add a game to Party Mode, take it out, or change its vibes.",
+      "saveError": "The change wasn’t saved. Try again.",
+      "colGame": "Game",
+      "colDrink": "Drinking",
+      "colVibes": "Vibes",
+      "colSetting": "Setting",
+      "hidden": "Hidden",
+      "group": "Vibes for {game}",
+      "vibes": {
+        "apero": "Easy drinks",
+        "monte": "Building up",
+        "grosse": "Big night"
+      },
+      "vibesShort": {
+        "apero": "Easy",
+        "monte": "Building",
+        "grosse": "Big"
+      },
+      "count": "{vibe}: {count, plural, =0 {no games} one {# game} other {# games}}",
+      "modified": "Changed",
+      "defaultWas": "Default: {vibes}",
+      "noVibe": "none",
+      "isDefault": "Default setting",
+      "noneNote": "No vibe: this game is no longer drawn.",
+      "announceOn": "{game} can now be drawn in the “{vibe}” vibe.",
+      "announceOff": "{game} is no longer drawn in the “{vibe}” vibe.",
+      "colSoiree": "Party Mode",
+      "inSoiree": "In Party Mode",
+      "inSoireeAria": "{game} in Party Mode",
+      "outOfSoiree": "Not in Party Mode",
+      "added": "Added",
+      "removed": "Removed",
+      "defaultOut": "Not in Party Mode by default",
+      "defaultIn": "In Party Mode by default",
+      "inSoireeCount": "{count, plural, =0 {No games in Party Mode} one {# game in Party Mode} other {# games in Party Mode}}",
+      "hiddenInSoiree": "{count, plural, one {# hidden game isn’t drawn} other {# hidden games aren’t drawn}}",
+      "vibesNeedSoiree": "Add this game to Party Mode first.",
+      "outNote": "Not in Party Mode: never drawn or offered.",
+      "announceIn": "{game} is now in Party Mode.",
+      "announceOut": "{game} is no longer in Party Mode.",
+      "notCandidate": "This game is played online: it can’t join Party Mode."
+    },
+    "gameEditing": {
+      "pickerLabel": "Game to edit"
+    },
     "gameCatalog": {
       "title": "Game catalog",
-      "desc": "Hide a game to remove it from the site (hub, Party Mode, lobby, showcase), or bring it back, and set its difficulty (Easy, Medium, Hard) and its drinking level (Light, Medium, Heavy) as players see them. Featured games pick themselves: the most played over 30 days.",
+      "desc": "Hide a game to remove it from the site (hub, Party Mode, lobby, showcase) or bring it back, feature it, file it in categories, and set its difficulty (Easy, Medium, Hard) and its drinking level (Light, Medium, Heavy) as players see them. The ranking among the most played is worked out on its own, over 30 days.",
       "refresh": "Refresh",
       "loadError": "Couldn’t load the game catalog.",
       "forbidden": "Session expired or access removed: sign in again.",
@@ -7856,11 +7910,11 @@
       "hidden": "Hidden",
       "hide": "Hide {game}",
       "show": "Bring back {game}",
-      "popularLocal": "Featured locally · #{rank}",
-      "popularOnline": "Featured online · #{rank}",
+      "popularLocal": "Among the most played locally · #{rank}",
+      "popularOnline": "Among the most played online · #{rank}",
       "plays": "{count, plural, =0 {No plays} one {# play} other {# plays}}",
       "playsDetail": "{online} online · {local} local",
-      "readOnly": "Read only: only super admins can hide a game or change its difficulty or its drinking level.",
+      "readOnly": "Read only: only super admins can hide a game, feature it, file it in a category, or change its difficulty or its drinking level.",
       "saveError": "The change wasn’t saved. Try again.",
       "hiddenCount": "{count, plural, =0 {No hidden game} one {# hidden game} other {# hidden games}}",
       "retiredNote": "{count, plural, one {# old game stays retired} other {# old games stay retired}} in the code.",
@@ -7874,6 +7928,25 @@
       "scaleDrink": "Drinking level",
       "drinkGroup": "Drinking level of {game}",
       "drinkModified": "Changed · {level} in the code",
+      "featuredCount": "Featured: {count}/{max}",
+      "featuredHint": "Featured games come first on the hub and the showcase, in the order you added them: the number is shown on each game.",
+      "featured": "Featured",
+      "featuredAria": "Featured: {game}",
+      "featuredPill": "Featured",
+      "featuredPillRank": "Featured · No. {rank}",
+      "featuredLimit": "At most {max} featured games: remove one first.",
+      "announceFeaturedOn": "{game} is now featured.",
+      "announceFeaturedOff": "{game} is no longer featured.",
+      "categories": "Categories",
+      "categoriesGroup": "Categories of {game}",
+      "categoriesLoading": "Loading categories…",
+      "categoriesLoadError": "Couldn’t load the categories: refresh.",
+      "noCategories": "No category exists yet.",
+      "createCategory": "Create a category",
+      "notInCategory": "In no category.",
+      "announceCategoryOn": "{game} is now filed in “{category}”.",
+      "announceCategoryOff": "{game} was taken out of “{category}”.",
+      "categoryGone": "That category no longer exists: the list has been refreshed.",
       "announceDrinkLevel": "Drinking level of {game}: {level}."
     },
     "gameCategories": {
@@ -8184,6 +8257,7 @@
     },
     "navGroups": {
       "analysis": "Analytics",
+      "content": "Content",
       "community": "Community",
       "server": "Server"
     },
@@ -8824,7 +8898,8 @@
       "local": "Local",
       "players": "{min}-{max} players",
       "featured": "Must-play",
-      "popular": "Popular"
+      "popular": "Popular",
+      "teamFeatured": "Featured"
     },
     "rules": {
       "title": "Learn the rules",

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
-import { POPULAR_LIMIT, isGameListed, isPlayableIn } from '@/lib/game-catalog'
-import { buildPopularRow, orderLandingGames } from './popular-row'
+import { FEATURED_LIMIT, POPULAR_LIMIT, POPULAR_RANKED_LIMIT, isGameListed, isPlayableIn } from '@/lib/game-catalog'
+import { buildFeaturedRow, buildPopularRow, orderLandingGames } from './popular-row'
 
 function game(overrides: Partial<GameMeta> & { id: string }): GameMeta {
   return {
@@ -205,5 +205,147 @@ describe('orderLandingGames', () => {
     expect(highlightedIds.size).toBe(0)
     expect(ranked).toBe(false)
     expect(ids(games)).not.toContain('f')
+  })
+})
+
+describe('buildPopularRow : jeux déjà à la une', () => {
+  it('ne répète pas un jeu exclu et laisse la place au suivant', () => {
+    const row = buildPopularRow({
+      candidates: FAKE,
+      popularIds: ['a', 'b', 'g'],
+      hiddenIds: [],
+      mode: 'online',
+      locale: 'fr',
+      limit: 2,
+      excludeIds: ['a'],
+    })
+    expect(ids(row.games)).toEqual(['b', 'g'])
+    expect(row.ranked).toBe(true)
+  })
+
+  it('avec le classement du serveur (POPULAR_RANKED_LIMIT ids), la rangée garde POPULAR_LIMIT jeux même si tous les jeux à la une sont populaires', () => {
+    const many = Array.from({ length: POPULAR_RANKED_LIMIT }, (_, i) => game({ id: `p${i}`, onlineReady: true }))
+    const featured = many.slice(0, FEATURED_LIMIT).map((g) => g.id)
+    const row = buildPopularRow({
+      candidates: many,
+      popularIds: ids(many),
+      hiddenIds: [],
+      mode: 'online',
+      locale: 'fr',
+      excludeIds: featured,
+    })
+    expect(ids(row.games)).toEqual(ids(many.slice(FEATURED_LIMIT)))
+    expect(row.games).toHaveLength(POPULAR_LIMIT)
+    expect(row.ranked).toBe(true)
+  })
+
+  it('le repli sur les phares n’y répète pas non plus les jeux à la une', () => {
+    const row = buildPopularRow({ candidates: FAKE, popularIds: [], hiddenIds: [], mode: 'online', locale: 'fr', excludeIds: ['b'] })
+    expect(ids(row.games)).toEqual(['c'])
+    const all = buildPopularRow({ candidates: FAKE, popularIds: [], hiddenIds: [], mode: 'online', locale: 'fr', excludeIds: ['b', 'c'] })
+    expect(all.games).toEqual([])
+  })
+})
+
+describe('buildFeaturedRow', () => {
+  const row = (featuredIds: string[], extra: Partial<Parameters<typeof buildFeaturedRow<GameMeta>>[0]> = {}) =>
+    ids(buildFeaturedRow({ candidates: FAKE, featuredIds, hiddenIds: [], mode: 'online', locale: 'fr', ...extra }))
+
+  it('suit l’ordre de mise à la une de l’équipe, pas celui du catalogue ni du classement', () => {
+    expect(row(['g', 'a', 'b'])).toEqual(['g', 'a', 'b'])
+  })
+
+  it('rien à la une : pas de rangée', () => {
+    expect(row([])).toEqual([])
+  })
+
+  it('applique les mêmes filtres que « Les plus joués » : caché, retiré du code, hors du mode, hors de la langue', () => {
+    // a : caché par l'équipe ; f : retiré du code ; d : pas de table en ligne ; c : cartes en français seulement.
+    expect(row(['a', 'f', 'd', 'g'], { hiddenIds: ['a'] })).toEqual(['g'])
+    expect(row(['c', 'g'], { locale: 'en' })).toEqual(['g'])
+    expect(row(['e', 'd', 'a'], { mode: 'local' })).toEqual(['d', 'a'])
+  })
+
+  it('ne ressort pas un jeu que la page écarte déjà (candidats filtrés par la recherche ou le mode Sans alcool)', () => {
+    expect(ids(buildFeaturedRow({ candidates: FAKE.filter((g) => g.id !== 'b'), featuredIds: ['b', 'a'], hiddenIds: [], mode: 'online', locale: 'fr' }))).toEqual(['a'])
+  })
+
+  it('ignore les doublons et les ids inconnus, et ne dépasse pas la limite', () => {
+    expect(row(['a', 'a', 'zzz', 'b'])).toEqual(['a', 'b'])
+    expect(row(['a', 'b', 'g'], { limit: 2 })).toEqual(['a', 'b'])
+    expect(FEATURED_LIMIT).toBeGreaterThanOrEqual(POPULAR_LIMIT)
+  })
+
+  it('une rangée à la une et une rangée « les plus joués » ne partagent aucun jeu', () => {
+    const featured = buildFeaturedRow({ candidates: FAKE, featuredIds: ['a', 'g'], hiddenIds: [], mode: 'online', locale: 'fr' })
+    const popular = buildPopularRow({
+      candidates: FAKE,
+      popularIds: ['a', 'b', 'g', 'c'],
+      hiddenIds: [],
+      mode: 'online',
+      locale: 'fr',
+      excludeIds: ids(featured),
+    })
+    expect(ids(popular.games)).toEqual(['b', 'c'])
+    expect(ids(featured).filter((id) => ids(popular.games).includes(id))).toEqual([])
+  })
+})
+
+describe('orderLandingGames : jeux à la une', () => {
+  const popular = { local: ['d', 'a'], online: ['a', 'b'] }
+  const none = { local: [], online: [] }
+
+  it('passent avant les jeux populaires, dans l’ordre de l’équipe, sans doublon', () => {
+    const { games, highlightedIds, teamFeaturedIds } = orderLandingGames({
+      games: FAKE,
+      hiddenIds: [],
+      popular,
+      fallback: none,
+      featuredIds: ['b', 'g', 'b'],
+    })
+    expect(ids(games)).toEqual(['b', 'g', 'd', 'a', 'c', 'e', 'f'].filter((id) => id !== 'f'))
+    expect([...teamFeaturedIds]).toEqual(['b', 'g'])
+    // « b » garde sa pastille « À la une » : il n'est pas aussi « populaire ».
+    expect([...highlightedIds]).toEqual(['d', 'a'])
+  })
+
+  it('écartent un jeu caché ou retiré du code, et se limitent à FEATURED_LIMIT', () => {
+    const { games, teamFeaturedIds } = orderLandingGames({
+      games: FAKE,
+      hiddenIds: ['a'],
+      popular: none,
+      fallback: none,
+      featuredIds: ['a', 'f', 'g'],
+    })
+    expect([...teamFeaturedIds]).toEqual(['g'])
+    expect(ids(games)[0]).toBe('g')
+    expect(ids(games)).not.toContain('a')
+
+    const many = Array.from({ length: FEATURED_LIMIT + 3 }, (_, i) => game({ id: `x${i}` }))
+    const out = orderLandingGames({ games: many, hiddenIds: [], popular: none, fallback: none, featuredIds: many.map((g) => g.id) })
+    expect(out.teamFeaturedIds.size).toBe(FEATURED_LIMIT)
+    expect(out.games).toHaveLength(many.length)
+  })
+
+  it('les jeux à la une populaires ne vident pas les jeux populaires : coupe à POPULAR_LIMIT après exclusion', () => {
+    const many = Array.from({ length: POPULAR_RANKED_LIMIT }, (_, i) => game({ id: `p${i}` }))
+    const featuredIds = many.slice(0, FEATURED_LIMIT).map((g) => g.id)
+    const { highlightedIds, teamFeaturedIds, ranked } = orderLandingGames({
+      games: many,
+      hiddenIds: [],
+      popular: { local: ids(many), online: ids(many) },
+      fallback: none,
+      featuredIds,
+    })
+    expect([...teamFeaturedIds]).toEqual(featuredIds)
+    expect([...highlightedIds]).toEqual(ids(many.slice(FEATURED_LIMIT, FEATURED_LIMIT + POPULAR_LIMIT)))
+    expect(highlightedIds.size).toBe(POPULAR_LIMIT)
+    expect(ranked).toBe(true)
+  })
+
+  it('sans mise à la une, rien ne change', () => {
+    const base = orderLandingGames({ games: FAKE, hiddenIds: [], popular, fallback: none })
+    expect(base.teamFeaturedIds.size).toBe(0)
+    expect(ids(base.games)).toEqual(ids(orderLandingGames({ games: FAKE, hiddenIds: [], popular, fallback: none, featuredIds: [] }).games))
   })
 })

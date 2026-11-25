@@ -2,8 +2,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getGameById } from '@/lib/games'
 import type { Player } from '@/lib/players'
 import { revancheOf } from './actions'
-import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeCap, soireeHeat } from './catalog'
-import { SOIREE_LENGTH_ROUNDS, SOIREE_MAX_ROUNDS, addRound, buildProgram, moveRound, programHeat, removeRound, replaceRound } from './program'
+import {
+  SOIREE_CANDIDATE_IDS,
+  SOIREE_GAME_IDS,
+  isSoireeCandidate,
+  playableSoireeGameIds,
+  soireeCap,
+  soireeCounting,
+  soireeGameIdsWith,
+  soireeHeat,
+  soireeMinutes,
+} from './catalog'
+import { defaultVibesForLevel } from './vibes'
+import { SOIREE_LENGTH_ROUNDS, SOIREE_MAX_ROUNDS, addRound, buildProgram, monteQuotas, moveRound, programHeat, removeRound, replaceRound } from './program'
 import {
   closeRound,
   createSoiree,
@@ -108,6 +119,25 @@ describe('catalogue de la soirée', () => {
     }
   })
 
+  it('la liste effective ajoute et retire des jeux au défaut du code', () => {
+    expect(soireeGameIdsWith({})).toEqual([...SOIREE_GAME_IDS])
+    const ids = soireeGameIdsWith({ pyramide: true, purple: false })
+    expect(ids).toContain('pyramide')
+    expect(ids).not.toContain('purple')
+    // Ordre du catalogue, jeux hors candidats ignorés.
+    expect(ids).toEqual(SOIREE_CANDIDATE_IDS.filter((id) => ids.includes(id)))
+    expect(soireeGameIdsWith({ 'loup-garou': true })).toEqual([...SOIREE_GAME_IDS])
+    expect(playableSoireeGameIds(4, [], ids)).toContain('pyramide')
+  })
+
+  it('un jeu ajouté sans fiche prend les défauts (10 minutes, ardoise à la main, pas de borne)', () => {
+    expect(SOIREE_GAME_IDS).not.toContain('pyramide')
+    expect(soireeMinutes('pyramide')).toBe(10)
+    expect(soireeCounting('pyramide')).toBe('manual')
+    expect(soireeCap('pyramide')).toBeNull()
+    expect(soireeHeat('pyramide')).toBe(getGameById('pyramide')?.drinkLevel)
+  })
+
   it('ne propose pas un jeu que l’équipe a caché', () => {
     const ids = playableSoireeGameIds(4, ['hi-lo', 'purple'])
     expect(ids).toHaveLength(14)
@@ -159,6 +189,134 @@ describe('programme', () => {
     expect(programHeat(['purple', 'pmu'], heatOf)).toEqual([3, 1])
   })
 
+  it('l’apéro ne tire que des jeux « Peu » ou « Moyen », la grosse soirée que « Moyen » ou « Beaucoup »', () => {
+    for (const seed of [1, 3, 7, 11, 19]) {
+      const apero = buildProgram({ rounds: 7, vibe: 'apero', playerCount: 4, rng: seeded(seed) })
+      expect(apero).toHaveLength(7)
+      expect(apero.map(soireeHeat)).not.toContain(3)
+      const grosse = buildProgram({ rounds: 7, vibe: 'grosse', playerCount: 4, rng: seeded(seed) })
+      expect(grosse).toHaveLength(7)
+      expect(grosse.map(soireeHeat)).not.toContain(1)
+    }
+  })
+
+  it('« Ça monte » répartit les manches entre les trois niveaux, du plus doux au plus fort', () => {
+    expect(monteQuotas(3)).toEqual({ 1: 1, 2: 1, 3: 1 })
+    expect(monteQuotas(5)).toEqual({ 1: 1, 2: 2, 3: 2 })
+    expect(monteQuotas(7)).toEqual({ 1: 2, 2: 3, 3: 2 })
+    for (const seed of [1, 3, 7, 11]) {
+      const heats = buildProgram({ rounds: 5, vibe: 'monte', playerCount: 4, rng: seeded(seed) }).map(soireeHeat)
+      expect(heats).toEqual([1, 2, 2, 3, 3])
+    }
+  })
+
+  it('complète avec les autres niveaux quand ceux de l’ambiance manquent', () => {
+    // Deux jeux « Beaucoup » seulement : la grosse soirée prend aussi des « Peu » pour tenir ses 5 manches.
+    const heatOf = (id: string) => (id === 'purple' || id === 'pmu' ? 3 : 1)
+    const program = buildProgram({ rounds: 5, vibe: 'grosse', playerCount: 4, rng: seeded(), heatOf })
+    expect(program).toHaveLength(5)
+    expect(program.slice(-2).sort()).toEqual(['pmu', 'purple'])
+  })
+
+  describe('ambiances réglées par l’équipe', () => {
+    type Vibe = 'apero' | 'monte' | 'grosse'
+    const draw = (vibe: Vibe, rounds: number, vibesOf: (id: string) => readonly Vibe[], seed = 1) =>
+      buildProgram({ rounds, vibe, playerCount: 4, rng: seeded(seed), vibesOf })
+    const byDefault = (id: string) => defaultVibesForLevel(soireeHeat(id))
+    const SEEDS = [1, 2, 3, 5, 8, 13, 21, 34]
+
+    it('sans vibesOf, le défaut est celui du niveau « Fait boire »', () => {
+      for (const seed of SEEDS) {
+        expect(buildProgram({ rounds: 6, vibe: 'apero', playerCount: 4, rng: seeded(seed) })).toEqual(draw('apero', 6, byDefault, seed))
+      }
+    })
+
+    it('un jeu retiré d’une ambiance n’y est jamais tiré tant qu’il en reste assez', () => {
+      const without = (gone: string) => (id: string) => (id === gone ? byDefault(id).filter((v) => v !== 'apero') : byDefault(id))
+      for (const seed of SEEDS) {
+        expect(draw('apero', 11, without('monsieur-3'), seed)).not.toContain('monsieur-3')
+        expect(draw('apero', 5, without('purple'), seed)).not.toContain('purple')
+      }
+    })
+
+    it('un jeu « Beaucoup » rangé dans l’apéro peut y sortir', () => {
+      const withBig = (id: string): readonly Vibe[] => (id === 'coupe-du-roi' ? ['apero'] : byDefault(id))
+      expect(draw('apero', 1, (id) => (id === 'coupe-du-roi' ? ['apero'] : []))).toEqual(['coupe-du-roi'])
+      expect(SEEDS.some((seed) => draw('apero', 11, withBig, seed).includes('coupe-du-roi'))).toBe(true)
+      for (const seed of SEEDS) expect(draw('apero', 11, byDefault, seed)).not.toContain('coupe-du-roi')
+    })
+
+    it('un jeu « Peu » rangé dans la grosse soirée peut y sortir', () => {
+      const withLight = (id: string): readonly Vibe[] => (id === 'purple' ? ['grosse'] : byDefault(id))
+      expect(SEEDS.some((seed) => draw('grosse', 11, withLight, seed).includes('purple'))).toBe(true)
+      for (const seed of SEEDS) expect(draw('grosse', 11, byDefault, seed)).not.toContain('purple')
+    })
+
+    it('une liste vide : le jeu ne sort jamais, sauf pour compléter', () => {
+      const none = (id: string): readonly Vibe[] => (id === 'purple' ? [] : byDefault(id))
+      for (const vibe of ['apero', 'monte', 'grosse'] as const) {
+        for (const seed of SEEDS) expect(draw(vibe, 5, none, seed), vibe).not.toContain('purple')
+      }
+      expect(draw('apero', playableSoireeGameIds(4).length, none)).toContain('purple')
+    })
+
+    it('complète avec les autres jeux jouables quand l’ambiance manque de jeux rangés', () => {
+      const onlyPmu = (id: string): readonly Vibe[] => (id === 'pmu' ? ['apero'] : [])
+      for (const vibe of ['apero', 'monte', 'grosse'] as const) {
+        const program = draw(vibe, 3, onlyPmu)
+        expect(program, vibe).toHaveLength(3)
+        expect(new Set(program).size).toBe(3)
+        expect(program.includes('pmu')).toBe(vibe === 'apero')
+      }
+      expect(draw('grosse', 3, () => [])).toHaveLength(3)
+    })
+
+    it('ne rend jamais un jeu en double ni plus de manches que de jeux jouables', () => {
+      const program = draw('monte', 50, byDefault)
+      expect(program).toHaveLength(playableSoireeGameIds(4).length)
+      expect(new Set(program).size).toBe(program.length)
+    })
+
+    it('« Ça monte » répartit par niveaux parmi les jeux rangés, et sort du niveau vide avant de sortir de l’ambiance', () => {
+      for (const seed of SEEDS) {
+        expect(draw('monte', 5, byDefault, seed).map(soireeHeat)).toEqual([1, 2, 2, 3, 3])
+      }
+      // Plus aucun jeu « Beaucoup » dans « Ça monte » : ses deux manches vont aux autres niveaux de l'ambiance.
+      const noBig = (id: string): readonly Vibe[] => (soireeHeat(id) === 3 ? ['grosse'] : byDefault(id))
+      for (const seed of SEEDS) {
+        const program = draw('monte', 5, noBig, seed)
+        expect(program).toHaveLength(5)
+        expect(program.map(soireeHeat)).not.toContain(3)
+      }
+    })
+
+    it('les poids ne penchent que dans l’ambiance : l’apéro préfère les « Peu », la grosse soirée les « Beaucoup »', () => {
+      const all = (): readonly Vibe[] => ['apero', 'grosse']
+      const count = (vibe: Vibe, heat: 1 | 3) =>
+        Array.from({ length: 200 }, (_, i) => draw(vibe, 2, all, (i + 1) * 1_000_003))
+          .flat()
+          .filter((id) => soireeHeat(id) === heat).length
+      expect(count('apero', 1)).toBeGreaterThan(count('apero', 3))
+      expect(count('grosse', 3)).toBeGreaterThan(count('grosse', 1))
+    })
+
+    it('une revanche tire avec les mêmes ambiances', () => {
+      const base = createSoiree({
+        id: 's',
+        now: 1,
+        bandeId: null,
+        bandeName: '',
+        players: ['lea', 'sam', 'theo', 'nina'].map((id) => ({ id, name: id })),
+        vibe: 'apero',
+        soft: false,
+        length: 'court',
+        program: ['pmu', 'hi-lo', 'purple'],
+      })
+      const rematch = revancheOf(base, 2, [], undefined, (id): readonly Vibe[] => (['pmu', 'hi-lo', 'plinko'].includes(id) ? ['apero'] : []))
+      expect(rematch.rounds.map((r) => r.gameId).sort()).toEqual(['hi-lo', 'plinko', 'pmu'])
+    })
+  })
+
   it('ne tire jamais un jeu caché, même sur toutes les ambiances', () => {
     const hiddenIds = SOIREE_GAME_IDS.filter((_, i) => i % 2 === 0)
     for (const vibe of ['apero', 'monte', 'grosse'] as const) {
@@ -168,6 +326,43 @@ describe('programme', () => {
         for (const id of program) expect(hiddenIds).not.toContain(id)
       }
     }
+  })
+
+  it('tire un jeu que l’équipe a ajouté à la soirée, et plus un jeu qu’elle en a sorti', () => {
+    const withPyramide = soireeGameIdsWith({ pyramide: true })
+    const count = playableSoireeGameIds(4, [], withPyramide).length
+    const program = buildProgram({ rounds: count, vibe: 'monte', playerCount: 4, rng: seeded(), soireeIds: withPyramide })
+    expect(program).toHaveLength(count)
+    expect(program).toContain('pyramide')
+    expect(buildProgram({ rounds: count, vibe: 'monte', playerCount: 4, rng: seeded() })).not.toContain('pyramide')
+
+    const withoutPurple = soireeGameIdsWith({ purple: false })
+    for (const vibe of ['apero', 'monte', 'grosse'] as const) {
+      for (const seed of [1, 5, 9]) {
+        const drawn = buildProgram({ rounds: withoutPurple.length, vibe, playerCount: 4, rng: seeded(seed), soireeIds: withoutPurple })
+        expect(drawn).not.toContain('purple')
+        expect(drawn).toHaveLength(withoutPurple.length)
+      }
+    }
+  })
+
+  it('une revanche suit la liste réglée : la carte recopiée perd un jeu sorti, le tirage ajoute un jeu ajouté', () => {
+    const carte = createSoiree({
+      id: 's',
+      now: 1,
+      bandeId: null,
+      bandeName: '',
+      players: ['lea', 'sam', 'theo', 'nina'].map((id) => ({ id, name: id })),
+      vibe: 'monte',
+      soft: false,
+      length: 'carte',
+      program: ['hi-lo', 'purple', 'pyramide'],
+    })
+    const ids = soireeGameIdsWith({ purple: false, pyramide: true })
+    expect(revancheOf(carte, 2, [], undefined, undefined, ids).rounds.map((r) => r.gameId)).toEqual(['hi-lo', 'pyramide'])
+    const tout = { ...carte, length: 'long' as const }
+    const tire = revancheOf(tout, 2, [], undefined, undefined, soireeGameIdsWith({ purple: false }))
+    expect(tire.rounds.map((r) => r.gameId)).not.toContain('purple')
   })
 
   it('plus court quand presque tout est caché', () => {
@@ -270,18 +465,25 @@ describe('ardoise', () => {
     expect(s.rounds[1].playerIds).toEqual(['lea', 'sam', 'theo', 'nina'])
   })
 
-  it('une soirée enregistrée avec Dégaine le perd de la suite, pas de l’ardoise', () => {
-    const pending = play(soiree(['hi-lo', 'degaine', 'purple', 'degaine']), { lea: [2, 0] })
+  it('une soirée enregistrée avec un jeu retiré du catalogue le perd de la suite, pas de l’ardoise', () => {
+    const retired = 'loup-garou'
+    expect(isSoireeCandidate(retired)).toBe(false)
+    const pending = play(soiree(['hi-lo', retired, 'purple', retired]), { lea: [2, 0] })
     const cleaned = withoutRetiredGames(pending)
     expect(cleaned.rounds.map((r) => r.gameId)).toEqual(['hi-lo', 'purple'])
     expect(cleaned.current).toBe(1)
     // Déjà jouée ou en cours : elle reste.
-    const played = play(soiree(['degaine', 'hi-lo']), { lea: [3, 0] })
+    const played = play(soiree([retired, 'hi-lo']), { lea: [3, 0] })
     expect(withoutRetiredGames(played)).toBe(played)
-    const running = startRound(soiree(['degaine', 'hi-lo']), 2000)
-    expect(withoutRetiredGames(running).rounds.map((r) => r.gameId)).toEqual(['degaine', 'hi-lo'])
+    const running = startRound(soiree([retired, 'hi-lo']), 2000)
+    expect(withoutRetiredGames(running).rounds.map((r) => r.gameId)).toEqual([retired, 'hi-lo'])
     const clean = soiree(['hi-lo', 'purple'])
     expect(withoutRetiredGames(clean)).toBe(clean)
+  })
+
+  it('une soirée enregistrée garde un jeu que l’équipe peut ajouter (Dégaine, Pyramide)', () => {
+    const pending = play(soiree(['hi-lo', 'degaine', 'pyramide', 'purple']), { lea: [2, 0] })
+    expect(withoutRetiredGames(pending)).toBe(pending)
   })
 
   it('un jeu caché quitte la suite de la soirée, pas l’ardoise ni la manche en cours', () => {
@@ -385,10 +587,10 @@ describe('mémoire de l’appareil', () => {
     expect(isSoiree({ version: 1 })).toBe(false)
   })
 
-  it('relit une soirée enregistrée sans ses manches Dégaine à venir', () => {
+  it('relit une soirée enregistrée sans ses manches d’un jeu retiré du catalogue, mais avec celles d’un jeu ajoutable', () => {
     vi.stubGlobal('window', { localStorage: memoryStorage() })
-    writeSoiree(soiree(['hi-lo', 'degaine']))
-    expect(readSoiree()?.rounds.map((r) => r.gameId)).toEqual(['hi-lo'])
+    writeSoiree(soiree(['hi-lo', 'loup-garou', 'degaine']))
+    expect(readSoiree()?.rounds.map((r) => r.gameId)).toEqual(['hi-lo', 'degaine'])
   })
 
   it('garde les bandes et l’historique sans doublon', () => {

@@ -1,4 +1,6 @@
 import { GAMES, type GameDifficulty, type GameDrinkLevel, type GameMeta } from '@/lib/games'
+import { SOIREE_CANDIDATE_IDS, SOIREE_GAME_IDS } from '@/lib/soiree/catalog'
+import { SOIREE_VIBES, defaultVibesForLevel, type SoireeVibe } from '@/lib/soiree/vibes'
 
 /**
  * CATALOGUE DES JEUX TEL QUE L'ÉQUIPE LE RÈGLE — logique pure, partagée par
@@ -7,7 +9,10 @@ import { GAMES, type GameDifficulty, type GameDrinkLevel, type GameMeta } from '
  * - la difficulté réglée depuis la Supervision, qui remplace celle du code ;
  * - le niveau « fait boire » (barème 1 à 3), réglé de la même façon ;
  * - les catégories créées par l'équipe, des rubriques de jeux du hub ;
- * - les jeux mis en avant, choisis par la popularité des 30 derniers jours.
+ * - les ambiances du Mode Soirée où chaque jeu peut être tiré ;
+ * - les jeux mis en avant, choisis par la popularité des 30 derniers jours ;
+ * - les jeux ajoutés au Mode Soirée ou sortis de sa liste par défaut ;
+ * - les jeux mis à la une à la main, en tête du hub et de la vitrine.
  *
  * Le serveur stocke la liste cachée dans SiteSetting (src/lib/game-catalog-server.ts)
  * et sert l'état complet par GET /api/games/catalog ; le hub, la Soirée et le
@@ -38,7 +43,20 @@ export type GameCatalogState = {
   drinkLevel: Record<string, GameDrinkLevel>
   /** Rubriques de jeux créées par l'équipe, dans l'ordre où le hub les propose. */
   categories: GameCategory[]
-  /** Jeux mis en avant par mode, du plus joué au moins joué. */
+  /**
+   * Ambiances du Mode Soirée cochées par l'équipe (id → ambiances, dans l'ordre
+   * de SOIREE_VIBES), les SEULS jeux concernés : sans entrée, les ambiances
+   * découlent du niveau « fait boire » (gameVibes). Une liste vide est permise.
+   */
+  vibes: Record<string, SoireeVibe[]>
+  /**
+   * Écarts de l'équipe à la liste par défaut du Mode Soirée (id → ajouté ou
+   * sorti), les SEULS candidats concernés : jamais une valeur égale au défaut.
+   */
+  soiree: Record<string, boolean>
+  /** Jeux mis à la une par l'équipe, dans l'ordre de mise à la une, au plus FEATURED_LIMIT. */
+  featured: string[]
+  /** Jeux classés par mode, du plus joué au moins joué, au plus POPULAR_RANKED_LIMIT : un affichage coupe à POPULAR_LIMIT APRÈS avoir écarté les jeux à la une. */
   popular: Record<GameCatalogMode, string[]>
 }
 
@@ -47,11 +65,25 @@ export const EMPTY_GAME_CATALOG: GameCatalogState = {
   difficulty: {},
   drinkLevel: {},
   categories: [],
+  vibes: {},
+  soiree: {},
+  featured: [],
   popular: { local: [], online: [] },
 }
 
 /** Combien de jeux la rangée « les plus joués » met en avant, par mode. */
 export const POPULAR_LIMIT = 4
+
+/** Combien de jeux l'équipe peut mettre à la une : au-delà, la rangée n'est plus une sélection. */
+export const FEATURED_LIMIT = 8
+
+/**
+ * Combien d'ids le serveur classe par mode : les jeux à la une sont retirés de
+ * « Les plus joués » APRÈS le classement et ne sont pas remplacés, il en faut
+ * donc FEATURED_LIMIT de réserve pour que la rangée garde POPULAR_LIMIT jeux.
+ * Chaque affichage coupe à POPULAR_LIMIT une fois les jeux à la une exclus.
+ */
+export const POPULAR_RANKED_LIMIT = POPULAR_LIMIT + FEATURED_LIMIT
 
 /** Les jeux que l'équipe peut cacher ou remettre : ceux que le code n'a pas déjà retirés. */
 export const STAFF_TOGGLEABLE_GAME_IDS: readonly string[] = GAMES.filter((game) => !game.hidden).map((game) => game.id)
@@ -132,6 +164,96 @@ export function gameDifficulty(gameId: string, overrides: Readonly<Record<string
 /** Niveau « fait boire » effectif d'un jeu : le réglage de l'équipe, sinon le code, sinon Moyen. */
 export function gameDrinkLevel(gameId: string, overrides: Readonly<Record<string, GameDrinkLevel>>): GameDrinkLevel {
   return overrides[gameId] ?? CODE_DRINK_LEVEL.get(gameId) ?? 2
+}
+
+/** Les candidats du Mode Soirée que le code n'a pas retirés, dans l'ordre du catalogue : ceux que l'équipe peut ajouter ou sortir. */
+const SOIREE_TOGGLEABLE_GAME_IDS: readonly string[] = SOIREE_CANDIDATE_IDS.filter((id) => STAFF_TOGGLEABLE_GAME_IDS.includes(id))
+
+/** Les jeux dont l'équipe règle les ambiances : tout candidat du Mode Soirée, même hors de la liste par défaut (on peut les régler avant de les ajouter). */
+export const VIBE_GAME_IDS: readonly string[] = SOIREE_TOGGLEABLE_GAME_IDS
+
+const CODE_SOIREE_GAME_IDS: ReadonlySet<string> = new Set(SOIREE_GAME_IDS)
+
+function parseJsonOrValue(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Écarts à la liste du Mode Soirée stockés (texte JSON de SiteSetting, ou objet
+ * déjà lu) : candidats basculables seulement, booléens, et jamais une valeur
+ * égale au défaut du code (revenir au défaut = ne rien stocker), dans l'ordre
+ * du catalogue. Illisible → {} : un réglage abîmé ne doit pas changer la soirée.
+ */
+export function parseSoireeOverrides(raw: unknown): Record<string, boolean> {
+  const value = parseJsonOrValue(raw)
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const stored = value as Record<string, unknown>
+  const overrides: Record<string, boolean> = {}
+  for (const id of SOIREE_TOGGLEABLE_GAME_IDS) {
+    const on = stored[id]
+    if (typeof on === 'boolean' && on !== CODE_SOIREE_GAME_IDS.has(id)) overrides[id] = on
+  }
+  return overrides
+}
+
+/**
+ * Jeux à la une stockés (texte JSON de SiteSetting, ou tableau déjà lu) : ids
+ * basculables seulement, sans doublon, dans l'ordre de mise à la une, au plus
+ * FEATURED_LIMIT. Illisible → [].
+ */
+export function parseFeaturedGameIds(raw: unknown): string[] {
+  const value = parseJsonOrValue(raw)
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const ids: string[] = []
+  for (const id of value) {
+    if (ids.length >= FEATURED_LIMIT) break
+    if (typeof id !== 'string' || seen.has(id) || !STAFF_TOGGLEABLE_GAME_IDS.includes(id)) continue
+    seen.add(id)
+    ids.push(id)
+  }
+  return ids
+}
+
+/**
+ * Ambiances stockées (texte JSON de SiteSetting, ou objet déjà lu) : ids du
+ * Mode Soirée basculables seulement, ambiances connues sans doublon dans
+ * l'ordre de SOIREE_VIBES, liste vide gardée (« aucune ambiance » est un choix).
+ * Une entrée au mauvais format est écartée seule. Illisible → {}.
+ */
+export function parseVibeOverrides(raw: unknown): Record<string, SoireeVibe[]> {
+  let value = raw
+  if (typeof raw === 'string') {
+    try {
+      value = JSON.parse(raw)
+    } catch {
+      return {}
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const stored = value as Record<string, unknown>
+  const overrides: Record<string, SoireeVibe[]> = {}
+  for (const id of VIBE_GAME_IDS) {
+    const list = stored[id]
+    if (!Array.isArray(list)) continue
+    overrides[id] = SOIREE_VIBES.filter((vibe) => list.includes(vibe))
+  }
+  return overrides
+}
+
+/** Ambiances effectives d'un jeu : le réglage de l'équipe, sinon celles de son niveau « fait boire » effectif. */
+export function gameVibes(
+  gameId: string,
+  vibeOverrides: Readonly<Record<string, readonly SoireeVibe[]>>,
+  drinkLevelOverrides: Readonly<Record<string, GameDrinkLevel>>
+): SoireeVibe[] {
+  const override = vibeOverrides[gameId]
+  return override ? [...override] : defaultVibesForLevel(gameDrinkLevel(gameId, drinkLevelOverrides))
 }
 
 const CATEGORY_ID_PATTERN = /^[a-z0-9-]{1,40}$/
@@ -251,6 +373,8 @@ export function totalPlays(counts: GamePlayCounts, gameId: string): number {
 /**
  * Les jeux mis en avant dans un mode : listés, jouables dans ce mode, avec au
  * moins une partie, du plus joué au moins joué (égalité : ordre du catalogue).
+ * Le serveur en classe POPULAR_RANKED_LIMIT (voir cette constante) ; les rangées
+ * en gardent POPULAR_LIMIT après exclusion des jeux à la une.
  * Jamais complétée : un jeu sans partie ne passe pas pour populaire, la rangée
  * peut donc être plus courte que `limit`, voire vide (le hub et la landing
  * retombent alors sur les jeux phares du code, présentés comme tels).
@@ -283,9 +407,9 @@ export function featuredGameIds(hiddenIds: readonly string[], mode: GameCatalogM
 
 /**
  * Réponse de GET /api/games/catalog relue côté navigateur : null si illisible.
- * `drinkLevel` et `categories` sont facultatifs (réponse d'un serveur plus
- * ancien, copie gardée sur l'appareil avant ces champs) : absents, ils valent
- * {} et [].
+ * `drinkLevel`, `categories`, `vibes`, `soiree` et `featured` sont facultatifs
+ * (réponse d'un serveur plus ancien, copie gardée sur l'appareil avant ces
+ * champs) : absents, ils valent {}, [], {}, {} et [].
  */
 export function parseGameCatalogState(body: unknown): GameCatalogState | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
@@ -300,6 +424,9 @@ export function parseGameCatalogState(body: unknown): GameCatalogState | null {
     difficulty: parseDifficultyOverrides(raw.difficulty),
     drinkLevel: parseDrinkLevelOverrides(raw.drinkLevel),
     categories: parseGameCategories(raw.categories),
+    vibes: parseVibeOverrides(raw.vibes),
+    soiree: parseSoireeOverrides(raw.soiree),
+    featured: parseFeaturedGameIds(raw.featured),
     popular: { local: ids(byMode.local), online: ids(byMode.online) },
   }
 }
