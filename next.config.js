@@ -76,6 +76,12 @@ const nextConfig = {
         destination: '/fr/regles/:gameId',
         permanent: true,
       },
+      {
+        // Même cas que les règles : les listes /idees n'existent qu'en français.
+        source: '/idees/:slug',
+        destination: '/fr/idees/:slug',
+        permanent: true,
+      },
     ];
   },
   ...(basePath ? { basePath, assetPrefix: basePath } : {}),

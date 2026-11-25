@@ -117,6 +117,7 @@ function SoireeBanners() {
 /** L'accueil : deux cartes, Mode Soirée ou Jeu libre, et le détail de celle qu'on a choisie. */
 export function HomeLanding() {
   const t = useTranslations('soiree.home')
+  const tOg = useTranslations('og')
   const { user, loading } = useAuth()
   const { hiddenIds } = useGameCatalog()
   const { mode: ambiance } = useAmbianceMode()
@@ -178,7 +179,7 @@ export function HomeLanding() {
           ))}
         </div>
         <h1 className="relative w-full max-w-[360px]">
-          <BrandLogo />
+          <BrandLogo tagline={tOg('siteTagline')} />
         </h1>
         <p className="relative font-display text-[clamp(21px,5.6vw,26px)] font-bold italic text-cream">{t('ask')}</p>
       </section>

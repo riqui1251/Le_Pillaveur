@@ -80,3 +80,5 @@ jusqu'à 16, la révélation fait toujours son effet.
 
 Dilemmes se joue gratuitement sur Le Pillaveur : créez une table, partagez le
 code ou le QR, et découvrez qui, à la table, a vraiment déjà dormi au travail.
+
+Pour vous mettre en jambes, lisez nos listes de cartes : [50 questions « Je n’ai jamais »](/idees/je-n-ai-jamais) et [60 questions « Tu préfères »](/idees/tu-preferes).

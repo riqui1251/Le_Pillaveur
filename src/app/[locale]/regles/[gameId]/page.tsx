@@ -9,6 +9,7 @@ import {
   RULES_META,
   isRulesGameId,
   loadRulesDoc,
+  rulesPlayerBounds,
 } from '@/lib/rules/rules-content'
 import { GAMES } from '@/lib/games'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
@@ -20,11 +21,11 @@ import { OG_LOCALES, SITE_NAME } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 
 /**
- * Pages « règles » SEO — un article par jeu en ligne (contenu français,
- * voir docs/rules/fr/). Rendues UNE fois au build (un HTML par jeu et par
- * langue, croisement avec les langues du layout), liées depuis la landing,
- * l'index /regles et le sitemap : c'est le maillage long-tail (« règles loup
- * garou en ligne »…).
+ * Pages « règles » SEO — un article par jeu en ligne ou à boire sur un seul
+ * téléphone (contenu français, voir docs/rules/fr/). Rendues UNE fois au
+ * build (un HTML par jeu et par langue, croisement avec les langues du
+ * layout), liées depuis la landing, l'index /regles et le sitemap : c'est le
+ * maillage long-tail (« règles loup garou en ligne », « jeu du roi »…).
  */
 
 /** Langue de TOUT le contenu de la page : celle des articles (docs/rules/fr/). */
@@ -36,6 +37,9 @@ const CONTENT_LOCALE = 'fr'
  * (bouton « Jouer », essai avec des bots) sans redéploiement.
  */
 export const revalidate = 300
+
+const PLAY_LINK_CLASS =
+  'inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl py-2 text-center bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500'
 
 /**
  * Carte de partage peinte pour CE jeu (même route que les pages de jeu,
@@ -106,6 +110,7 @@ export default async function RulesPage({
   const drinkLevelOverrides = await getStaffGameDrinkLevel()
   const playable = game ? isGameListed(game, hiddenIds) : false
   const meta = RULES_META[gameId]
+  const bounds = game ? rulesPlayerBounds(game) : null
   // Textes de l'enveloppe en FRANÇAIS quelle que soit l'URL, comme l'article
   // qu'ils encadrent (voir le `lang="fr"` plus bas).
   const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
@@ -138,12 +143,12 @@ export default async function RulesPage({
           '@type': 'Game',
           name: game.title,
           url: `${SITE_URL}/${CONTENT_LOCALE}${game.path}`,
-          ...(game.minPlayers && game.maxPlayers
+          ...(bounds
             ? {
                 numberOfPlayers: {
                   '@type': 'QuantitativeValue',
-                  minValue: game.minPlayers,
-                  maxValue: game.maxPlayers,
+                  minValue: bounds.min,
+                  ...(bounds.max ? { maxValue: bounds.max } : {}),
                 },
               }
             : {}),
@@ -183,17 +188,19 @@ export default async function RulesPage({
       </Link>
 
       {/* Le jeu se vend AVANT l'article : faits + « Essayer avec des bots »
-          (le CTA n'apparaissait qu'après ~50 lignes de règles). L'effectif
-          vient du registre (src/lib/games.ts), jamais de l'article : c'est la
-          borne que le lobby applique, et un test tient l'article aligné. */}
+          (le CTA n'apparaissait qu'après ~50 lignes de règles), ou « Jouer
+          maintenant » pour un jeu sur un seul téléphone, sans table à remplir
+          de bots. L'effectif vient du registre (src/lib/games.ts), jamais de
+          l'article : c'est la borne que le jeu applique, et un test tient
+          l'article aligné. */}
       {game && (
         <div className="mb-6 rounded-2xl border border-gold/20 bg-felt-deep/80 p-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-gold/70">
-            {game.minPlayers && game.maxPlayers
-              ? `${t('players', { min: game.minPlayers, max: game.maxPlayers })} · `
+            {bounds
+              ? `${bounds.max ? t('players', { min: bounds.min, max: bounds.max }) : t('playersFrom', { min: bounds.min })} · `
               : ''}
             {t('showcaseFacts')}
-            {game.onlineReady ? ` · ${t('voiceChat')}` : ''}
+            {` · ${game.onlineReady ? t('voiceChat') : t('oneDevice')}`}
           </p>
           {/* Le libellé du niveau suit la langue de l'URL (socle commun),
               l'article reste français : `lang` posé sur la pastille. */}
@@ -202,8 +209,13 @@ export default async function RulesPage({
             <DrinkLevelBadge level={gameDrinkLevel(game.id, drinkLevelOverrides)} tone="felt" />
           </p>
           <div className="mx-auto mt-3 max-w-sm">
-            {playable ? (
+            {playable && game.onlineReady ? (
               <TryBotsGate gameId={game.id} />
+            ) : playable ? (
+              <Link href={game.path} className={PLAY_LINK_CLASS}>
+                <Play className="h-4 w-4" aria-hidden />
+                {t('playNow')}
+              </Link>
             ) : (
               <p lang={locale} className="text-sm font-semibold text-cream/80">
                 {tCommon('gameUnavailable.title')}
@@ -219,10 +231,7 @@ export default async function RulesPage({
 
       {game && playable && (
         <div className="mt-6 text-center">
-          <Link
-            href={game.path}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 px-8 text-base font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:from-amber-400 hover:to-orange-500"
-          >
+          <Link href={game.path} className={PLAY_LINK_CLASS}>
             <Play className="h-4 w-4" aria-hidden />
             {t('playNow')}
           </Link>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePingBody, planPing, type PingContext } from '@/lib/analytics-ping'
+import { parsePingAcquisition, parsePingBody, planPing, type PingContext } from '@/lib/analytics-ping'
 
 /** Contexte de base : aucun signal, aucun consentement, aucune session, aucun lp_vid. */
 function ctx(overrides: Partial<PingContext>): PingContext {
@@ -11,6 +11,7 @@ function ctx(overrides: Partial<PingContext>): PingContext {
     hasSession: false,
     accountRole: null,
     hasVisitorId: false,
+    hasAcquisition: false,
     ...overrides,
   }
 }
@@ -286,5 +287,62 @@ describe('planPing — visite du compte (AccountVisit)', () => {
     const body = parsePingBody({ beat: true })
     expect(planPing({ ...body, hasConsent: true, ...PLAYER })).toContain('account-visit')
     expect(body).toMatchObject({ active: false, inGame: false })
+  })
+})
+
+describe('planPing — provenance (AcquisitionDaily)', () => {
+  it('1re vue avec provenance et consentement : compteur du jour, après la présence', () => {
+    expect(planPing(ctx({ view: true, hasConsent: true, hasVisitorId: true, hasAcquisition: true }))).toEqual([
+      'visitor-view',
+      'acquisition',
+    ])
+  })
+
+  it('sans consentement : rien, même avec une provenance', () => {
+    expect(planPing(ctx({ view: true, hasAcquisition: true }))).toEqual([])
+    expect(planPing(ctx({ view: true, hasAcquisition: true, ...PLAYER }))).toEqual([])
+  })
+
+  it('vue suivante (sans acq) : présence seulement, aucun compteur', () => {
+    expect(planPing(ctx({ view: true, hasConsent: true, hasVisitorId: true }))).toEqual(['visitor-view'])
+  })
+
+  it('battement : jamais de provenance', () => {
+    expect(planPing(ctx({ beat: true, hasConsent: true, hasVisitorId: true, hasAcquisition: true }))).not.toContain(
+      'acquisition'
+    )
+  })
+})
+
+describe('parsePingAcquisition — la provenance n’accompagne qu’une vue', () => {
+  const acq = { ref: 'www.google.fr', path: '/fr/regles/loup-garou', utmSource: '', utmMedium: '', utmCampaign: '' }
+
+  it('vue avec acq : canal classé, chemin gardé', () => {
+    expect(parsePingAcquisition({ view: true, acq })).toEqual({
+      channel: 'google',
+      host: '',
+      utmSource: '',
+      utmMedium: '',
+      utmCampaign: '',
+      landingPath: '/fr/regles/loup-garou',
+    })
+  })
+
+  it('battement, synchro ou corps illisible : null', () => {
+    expect(parsePingAcquisition({ beat: true, acq })).toBeNull()
+    expect(parsePingAcquisition({ localPlayers: true, localPlayerNames: [], acq })).toBeNull()
+    expect(parsePingAcquisition({ view: 'true', acq })).toBeNull()
+    expect(parsePingAcquisition([acq])).toBeNull()
+    expect(parsePingAcquisition(null)).toBeNull()
+  })
+
+  it('vue sans acq ou acq hors gabarit : null', () => {
+    expect(parsePingAcquisition({ view: true })).toBeNull()
+    expect(parsePingAcquisition({ view: true, acq: 'google.fr' })).toBeNull()
+    expect(parsePingAcquisition({ view: true, acq: { ...acq, ref: 'https://google.fr/search?q=x' } })).toBeNull()
+  })
+
+  it('n’ajoute rien à parsePingBody', () => {
+    expect(parsePingBody({ view: true, acq })).not.toHaveProperty('acq')
   })
 })

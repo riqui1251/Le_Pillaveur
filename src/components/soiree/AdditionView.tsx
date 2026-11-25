@@ -13,7 +13,7 @@ import { readHistory } from '@/lib/soiree/storage'
 import type { Soiree } from '@/lib/soiree/state'
 import { playGameSound } from '@/lib/sound/game-sounds'
 import { GameBadge, SoireeCta, StepHeader, gameGradient, useSoireePlayer, useSoireeUnits } from './soiree-ui'
-import { drawAdditionImage } from './share-image'
+import { ADDITION_FORMATS, drawAdditionImage, type AdditionFormat } from './share-image'
 import { celebrate } from './confetti'
 import { SoireeVote } from './SoireeVote'
 
@@ -54,6 +54,7 @@ export function AdditionView({
   const nightNumber = soiree.bandeId ? readHistory().filter((e) => e.bandeId === soiree.bandeId).length : 1
   const [bandeName, setBandeName] = useState(soiree.bandeName || t('keep.default', { name: name(soiree.playerIds[0]) }))
   const [image, setImage] = useState<{ url: string; blob: Blob } | null>(null)
+  const [format, setFormat] = useState<AdditionFormat>('feed')
   const [status, setStatus] = useState<string | null>(null)
 
   // L'addition tombe : salve de confettis et fanfare, une fois par soirée affichée.
@@ -107,6 +108,14 @@ export function AdditionView({
     }
   }
 
+  const pickFormat = (next: AdditionFormat) => {
+    if (next === format) return
+    setFormat(next)
+    if (image) URL.revokeObjectURL(image.url)
+    setImage(null)
+    setStatus(null)
+  }
+
   const makeImage = async () => {
     setStatus(t('share.making'))
     try {
@@ -121,6 +130,7 @@ export function AdditionView({
         moment: summary.moments[0] ? momentText(summary.moments[0]) : null,
         footer: t('recap.footer'),
         soft: soiree.soft,
+        format,
       })
       setImage(made)
       setStatus(t('share.ready'))
@@ -131,7 +141,8 @@ export function AdditionView({
 
   const shareImage = async () => {
     if (!image) return
-    const file = new File([image.blob], 'addition-pillaveur.png', { type: 'image/png' })
+    const fileName = format === 'story' ? 'addition-pillaveur-story.png' : 'addition-pillaveur.png'
+    const file = new File([image.blob], fileName, { type: 'image/png' })
     try {
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: t('title') })
@@ -142,7 +153,7 @@ export function AdditionView({
     }
     const a = document.createElement('a')
     a.href = image.url
-    a.download = 'addition-pillaveur.png'
+    a.download = fileName
     a.click()
   }
 
@@ -253,9 +264,33 @@ export function AdditionView({
 
       <section className="space-y-3 rounded-2xl border border-gold/20 bg-felt-deep/50 p-4" aria-label={t('share.title')}>
         <h2 className="font-display text-2xl font-bold">{t('share.title')}</h2>
+        <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-gold/20 bg-felt-deep/50 p-1.5" role="group" aria-label={t('share.format')}>
+          {ADDITION_FORMATS.map((option) => {
+            const active = format === option
+            return (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={active}
+                onClick={() => pickFormat(option)}
+                className={cn(
+                  'rounded-xl px-2 py-2.5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+                  active ? 'bg-cream text-[#24201A]' : 'text-cream hover:bg-gold/10'
+                )}
+              >
+                <span className="block text-sm font-bold">{t(`share.formats.${option}.label`)}</span>
+                <span className={cn('block text-xs', active ? 'text-[#5E5444]' : 'text-cream/60')}>{t(`share.formats.${option}.hint`)}</span>
+              </button>
+            )
+          })}
+        </div>
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element -- image générée sur l'appareil (data/blob)
-          <img src={image.url} alt={t('share.alt')} className="w-full rounded-xl" />
+          <img
+            src={image.url}
+            alt={t('share.alt')}
+            className={cn('rounded-xl', format === 'story' ? 'mx-auto max-h-[70vh] w-auto' : 'w-full')}
+          />
         ) : (
           <Button variant="quiet" size="game" className="w-full" onClick={makeImage}>
             <ImageIcon aria-hidden className="mr-1.5 h-4 w-4" />

@@ -64,12 +64,14 @@
     "navLabel": "Explorar Le Pillaveur",
     "links": {
       "all": "Todos los juegos de fiesta",
+      "drinking": "Juegos para beber",
       "noAlcohol": "Juegos de fiesta sin alcohol",
       "duo": "Juegos para 2 jugadores",
       "bigGroup": "Juegos para grupos grandes",
       "solo": "Jugar solo con bots",
       "remote": "Juegos de fiesta a distancia",
-      "rules": "Reglas de los juegos"
+      "rules": "Reglas de los juegos",
+      "ideas": "Ideas de preguntas para la fiesta"
     }
   },
   "nav": {
@@ -120,7 +122,7 @@
       }
     },
     "legal": {
-      "cgu": "CGU",
+      "cgu": "Condiciones",
       "confidentialite": "Confidencialidad",
       "mentionsLegales": "Avisos legales",
       "analytics": "Estadísticas de visita"
@@ -402,6 +404,9 @@
     },
     "collections": {
       "chipsLabel": "Encuentra un juego según la velada",
+      "jeux-a-boire": {
+        "chip": "Juegos para beber"
+      },
       "a-2-joueurs": {
         "chip": "Para 2 jugadores"
       },
@@ -434,6 +439,12 @@
     "playersOnline": "De {min} a {max} jugadores en línea",
     "playersOnlineOpen": "Desde {min} jugadores en línea",
     "playersLocal": "Desde {min} jugadores, un solo móvil",
+    "jeux-a-boire": {
+      "title": "Juegos para beber gratis, online y sin app",
+      "description": "Pirámide, Copa del Rey, Purple, Carrera PMU, Verdad o reto: los clásicos juegos para beber, en un solo móvil o a distancia. Solo para mayores de 18 años.",
+      "intro": "Un juego para beber es un juego de fiesta en el que la ronda perdida, la apuesta fallida o el reto rechazado se pagan en tragos: cartas, dados, apuestas y retos para arrancar la noche con amigos. Aquí todo se juega en el navegador, gratis y sin instalar ninguna app. La mayoría de estos juegos funcionan en un solo móvil que pasa de mano en mano alrededor de la mesa: la Pirámide, la Copa del Rey, la Carrera PMU, Hi/Lo, Monsieur 3, Plinko, Verdad o reto y El Dedo del Destino. Otros se juegan también online, cada uno en su móvil, incluso a distancia con el chat de voz integrado: Purple, el 1220, El Pequeño Bebedor, el Blackjack y Patata Caliente. El sitio lleva la cuenta y recuerda las reglas; lo que cuenta es el juego, no lo que hay en el vaso. Solo para mayores de 18 años. ¿No bebe toda la mesa? Los juegos de fiesta sin alcohol tienen su propia colección, donde los tragos se convierten en prendas.",
+      "noAlcoholLink": "Ver los juegos de fiesta sin alcohol"
+    },
     "a-2-joueurs": {
       "title": "Juegos de fiesta para 2 jugadores",
       "description": "Juegos que empiezan con dos: dados y cartas en un móvil, o en línea con un código — El Mentiroso, quiz, Purple, Petit Bac… Gratis, sin instalar nada.",
@@ -442,7 +453,8 @@
     "sans-alcool": {
       "title": "Juegos de fiesta sin alcohol",
       "description": "Juegos de fiesta sin una gota: con el ambiente sin alcohol, los tragos se convierten en prendas. Hombre Lobo, quiz, dibujo, faroleo… Gratis, en línea.",
-      "intro": "No toda la mesa bebe, o esta noche no bebe nadie: Le Pillaveur tiene un ambiente sin alcohol que se activa desde el hub de juegos. Una vez elegido, los tragos y los «de un trago» de estos juegos en línea se convierten en prendas, y el sitio pasa a azul noche para que todos vean que la velada es soft. Las reglas, los roles y las puntuaciones no cambian: Hombre Lobo conserva sus lobos y su vidente, El Gran Pillaveur sigue siendo un quiz con pulsadores, Crobard un juego de dibujo en directo, Sans Filtre un concurso de mala fe, y Mots Codés, Petit Bac o Président se juegan exactamente como siempre. El Mentiroso, El Impostor, ¿Quién es el Espía?, El Gran Farol, Dilemmes, Tocado y Hundido y Teléfono Dibujado completan la selección. Este ambiente vale para los juegos en línea de esta selección, cada uno en su móvil con un código de mesa; Purple, 1220 y El Pequeño Bebedor siguen en modo aperitivo, como los juegos de dados que giran en un solo móvil (Monsieur 3, Pirámide…). Y como la mayoría de estos juegos admiten bots, una velada sin alcohol también se puede jugar a dos, o incluso en solitario."
+      "intro": "No toda la mesa bebe, o esta noche no bebe nadie: Le Pillaveur tiene un ambiente sin alcohol que se activa desde el hub de juegos. Una vez elegido, los tragos y los «de un trago» de los juegos de esta selección se convierten en prendas o en puntos, y el sitio pasa a azul noche para que todos vean que la velada es soft. Las reglas, los roles y las puntuaciones no cambian: Hombre Lobo conserva sus lobos y su vidente, El Gran Pillaveur sigue siendo un quiz con pulsadores, Crobard un juego de dibujo en directo, Sans Filtre un concurso de mala fe, y Mots Codés, Petit Bac o Président se juegan exactamente como siempre. El Mentiroso, El Impostor, ¿Quién es el Espía?, El Gran Farol, Dilemmes, Tocado y Hundido y Teléfono Dibujado completan la selección en línea, cada uno en su móvil con un código de mesa. En un solo móvil en el centro de la mesa, La Copa del Rey, ¿Verdad o reto?, Front Collé, Pile Poil, ¡Desenfunda! y El Dedo del Destino también tienen su versión sin alcohol: las penalizaciones se cuentan en puntos, y quien pierde cumple una prenda elegida por la mesa. Purple, 1220 y El Pequeño Bebedor siguen en modo aperitivo, como Monsieur 3, Pirámide o Hi/Lo. Y como la mayoría de los juegos en línea admiten bots, una velada sin alcohol también se puede jugar a dos, o incluso en solitario.",
+      "dryJanuary": "El Dry January, ese mes de enero sin alcohol, no obliga a dejar las noches de juegos en pausa: aquí se juega sin beber. Con el ambiente sin alcohol, cada trago se convierte en una prenda elegida por la mesa o en puntos en el marcador, según el juego; las reglas y la clasificación no cambian, y cada uno llena su vaso con lo que quiera. Funciona en enero, y el resto del año también."
     },
     "seul-avec-des-bots": {
       "title": "Jugar solo: los juegos con bots",
@@ -905,9 +917,9 @@
       "displayNameLabel": "Seudo",
       "displayNamePlaceholder": "Tu apodo",
       "passwordPlaceholder": "Letra + número, 8 caracteres. mín.",
-      "termsRequired": "Debe aceptar el CGU y la Política de privacidad.",
-      "termsPrefix": "Acepto el",
-      "termsAnd": "y el",
+      "termsRequired": "Debe aceptar las Condiciones y la Política de privacidad.",
+      "termsPrefix": "Acepto las",
+      "termsAnd": "y la",
       "termsSuffix": ".",
       "displayNameTaken": "Este apodo ya está en uso"
     },
@@ -920,7 +932,7 @@
       "termsPrefix": "Al jugar localmente, aceptas las",
       "termsAnd": "y la",
       "termsSuffix": ".",
-      "termsHint": "Al jugar localmente, aceptas el CGU y la Política de privacidad.",
+      "termsHint": "Al jugar localmente, aceptas las Condiciones y la Política de privacidad.",
       "button": "Juega localmente",
       "errorActivate": "No se puede habilitar el modo local",
       "errorRetry": "No se puede activar el modo local. Intentar otra vez."
@@ -1447,24 +1459,24 @@
         "description": "Hombre Lobo, quiz, dibujo, faroleo: abre una mesa gratis e invita a tus amigos con un enlace o QR — o juega solo, los bots completan la mesa."
       },
       "purple": {
-        "title": "Juega a Purple online gratis — ¿rojo, negro o purple?",
-        "description": "La apuesta de cartas más traicionera del bar: de 2 a 16 jugadores, chat de voz, sin instalación. Con amigos — o solo, los bots completan la mesa."
+        "title": "Juega a Purple online gratis — apuesta de cartas para beber",
+        "description": "Un juego para beber con cartas, la apuesta más traicionera del bar: de 2 a 16 jugadores, chat de voz, sin instalación. Con amigos — o solo, con bots."
       },
       "blackjack": {
         "title": "Jugar al Blackjack online gratis — 21 contra la banca",
         "description": "Acércate a 21 sin pasarte: pedir, plantarse, doblar, separar. De 1 a 7 jugadores, chat de voz, gratis, sin instalar — o solo, los bots completan la mesa."
       },
       "monsieur-3": {
-        "title": "Juega a Monsieur 3 gratis — esquiva el 3 o bebe",
-        "description": "El juego de dados del aperitivo: esquiva los 3 y los combos trampa, o bebe. Gratis, sin instalación, en un móvil que gira alrededor de la mesa."
+        "title": "Juega a Monsieur 3 gratis — el juego de dados para beber",
+        "description": "El juego para beber con dados del aperitivo: esquiva los 3 y los combos trampa, o bebe. Gratis, sin instalación, en un móvil que gira por la mesa."
       },
       "pmu": {
-        "title": "Juega a la Carrera PMU gratis — apuestas hípicas de fiesta",
-        "description": "Apuesta por tu caballo y sigue la carrera en directo: los perdedores reparten los tragos. Gratis, sin instalación, en un móvil en el centro de la mesa."
+        "title": "Juega a la Carrera PMU gratis — juego para beber hípico",
+        "description": "El juego para beber de apuestas hípicas: apuesta por tu caballo, sigue la carrera en directo, los perdedores reparten los tragos. Gratis, en un solo móvil."
       },
       "petit-buveur": {
-        "title": "Juega a El Pequeño Bebedor online gratis — tablero festivo",
-        "description": "Un tablero, un dado, casillas trampa y retos que hacen brindar. De 2 a 99 jugadores, chat de voz, gratis y sin instalación."
+        "title": "Juega a El Pequeño Bebedor gratis — tablero para beber",
+        "description": "Un juego para beber de tablero: un dado, casillas trampa y retos que hacen brindar. De 2 a 99 jugadores, online con chat de voz o en un móvil, gratis."
       },
       "toucher-coule": {
         "title": "Juega a Tocado y Hundido online gratis — batalla naval",
@@ -1487,20 +1499,20 @@
         "description": "Lobos, vidente, debates y votos: el clásico de las fiestas en versión aperitivo. De 4 a 12 jugadores, chat de voz, gratis — o solo con bots."
       },
       "hi-lo": {
-        "title": "Juega al Hi/Lo gratis — ¿más alta o más baja?",
-        "description": "Adivina si la próxima carta será más alta o más baja y reparte los tragos. Gratis, sin instalación, en un móvil que da la vuelta a la mesa."
+        "title": "Juega al Hi/Lo gratis — juego para beber: ¿alta o baja?",
+        "description": "El juego para beber con cartas más sencillo: adivina si la próxima carta será más alta o más baja y reparte los tragos. Gratis, en un solo móvil."
       },
       "pyramide": {
-        "title": "Juega a la Pirámide gratis — el juego de cartas de fiesta",
-        "description": "Da la vuelta a las cartas, sube la pirámide y reparte tragos en cada piso. Gratis, sin instalación, en un móvil en el centro de la mesa."
+        "title": "Juega a la Pirámide gratis — el juego de cartas para beber",
+        "description": "El juego de cartas para beber de las fiestas: da la vuelta a las cartas, sube la pirámide y reparte tragos en cada piso. Gratis, en un móvil en el centro."
       },
       "plinko": {
-        "title": "Juega al Plinko gratis — la bola que reparte tragos",
-        "description": "Suelta la bola, mírala rebotar y reza por la casilla buena. Gratis, sin instalación, en un móvil que gira alrededor de la mesa."
+        "title": "Juega al Plinko gratis — el juego para beber de la bola",
+        "description": "Un juego para beber lleno de rebotes: suelta la bola, mírala rebotar y reza por la casilla buena. Gratis, sin instalación, en un móvil que gira por la mesa."
       },
       "1220": {
-        "title": "Juega al 1220 online gratis — dos dados, cuatro apuestas",
-        "description": "Un dado de 12, un dado de 20 y apuestas para beber o hacer beber. De 2 a 16 jugadores, chat de voz, gratis, sin instalación — o solo con bots."
+        "title": "Juega al 1220 online gratis — dos dados, un juego para beber",
+        "description": "El juego para beber con dados online: un dado de 12, uno de 20 y apuestas para beber o hacer beber. De 2 a 16 jugadores, chat de voz, gratis — o solo con bots."
       },
       "bluff": {
         "title": "Juega a El Gran Farol online gratis — engaña a tus amigos",
@@ -1547,8 +1559,8 @@
         "description": "Un número trampa se esconde entre 1 y 100: propón, estrecha el cerco y no caigas en él. De 2 a 16 jugadores online con chat de voz, o en un solo móvil. Gratis."
       },
       "cap-ou-pas-cap": {
-        "title": "Juega a Verdad o reto gratis — cada carta tiene su precio",
-        "description": "Verdad o reto con un precio en cada carta: cúmplelo y reparte tragos, o bebe. Cuatro niveles, seis temas, gratis, en un móvil que da la vuelta a la mesa."
+        "title": "Juega a Verdad o reto gratis — versión juego para beber",
+        "description": "Verdad o reto como juego para beber: cada carta tiene su precio, cúmplelo y reparte tragos, o bebe. Cuatro niveles, seis temas, gratis, en un móvil."
       },
       "vue-de-nez": {
         "title": "A Ojo de Buen Cubero: el juego de estimar online gratis",
@@ -1556,27 +1568,27 @@
       },
       "front-colle": {
         "title": "Juega a Front Collé gratis — la palabra en tu frente",
-        "description": "Con el móvil en la frente, adivina la palabra que la mesa te describe, imita o tararea. Inclina para validar. Gratis y sin instalación."
+        "description": "Con el móvil en la frente, adivina la palabra que la mesa te describe, imita o tararea. Como juego para beber, cada palabra pasada es un trago. Gratis."
       },
       "coupe-du-roi": {
-        "title": "Juega a la Copa del Rey gratis — 13 cartas, 13 reglas",
-        "description": "El juego de cartas de culto de las fiestas: cada carta activa una regla, la app recuerda los roles y el 4.º rey se bebe la copa. Gratis, sin instalación."
+        "title": "Juega a la Copa del Rey gratis — juego para beber de culto",
+        "description": "El juego para beber de culto con cartas: cada carta activa una regla, la app recuerda los roles y el 4.º rey se bebe la copa. Gratis, sin instalación."
       },
       "patate-chaude": {
         "title": "Juega a Patata Caliente gratis — la bomba de mecha secreta",
         "description": "Una bomba con mecha secreta: di una palabra del tema y pásala antes de que explote. De 2 a 12 jugadores online con chat de voz, o en un solo móvil. Gratis."
       },
       "pile-poil": {
-        "title": "Juega a Pile Poil gratis — 10 segundos a ciegas",
-        "description": "Arranca el crono y páralo justo a los 10 segundos sin ver las cifras: el que más se aleje bebe. Gratis, sin instalación, en un solo móvil."
+        "title": "Juega a Pile Poil gratis — juego para beber del cronómetro",
+        "description": "Un juego para beber de precisión: arranca el crono y páralo justo a los 10 segundos sin ver las cifras, el que más se aleje bebe. Gratis, en un solo móvil."
       },
       "degaine": {
-        "title": "Juega a ¡Desenfunda! gratis — el duelo de reflejos",
-        "description": "Un móvil entre dos duelistas: al «¡FUEGO!», gana el más rápido y quien dispara antes de tiempo bebe. Torneo para toda la mesa, gratis."
+        "title": "Juega a ¡Desenfunda! gratis — duelo de reflejos para beber",
+        "description": "El juego para beber del oeste: un móvil entre dos duelistas, al «¡FUEGO!» gana el más rápido y quien dispara antes de tiempo bebe. Torneo para la mesa."
       },
       "doigt-du-destin": {
-        "title": "Juega al Dedo del Destino gratis — ¿a quién le tocará?",
-        "description": "Cada uno pone un dedo en la pantalla y el destino decide: víctima, dos equipos, orden de juego o supervivencia. Gratis, sin instalación, en un solo móvil."
+        "title": "Juega al Dedo del Destino gratis — juego para beber de azar",
+        "description": "Un juego para beber de azar: cada uno pone un dedo en la pantalla y el destino decide, víctima, dos equipos, orden de juego o supervivencia. Gratis."
       }
     },
     "catalog": {
@@ -7707,8 +7719,54 @@
       "noneRecorded": "Ninguna partida registrada por ahora.",
       "allTimeNote": "Acumulado desde siempre, todos los periodos juntos: partidas de los jugadores locales sincronizadas en las cuentas, estadísticas guardadas en la base de datos y partidas en línea clasificadas (una por partida, revanchas incluidas). No es la actividad reciente: para el periodo elegido, ver la tabla «Por juego»."
     },
+    "acquisition": {
+      "title": "Procedencia",
+      "description": "De dónde llegan los visitantes: primera página vista en cada sesión del navegador (estadísticas aceptadas), contada por día sin ningún identificador.",
+      "total": "{count, plural, one {# llegada} other {# llegadas}}",
+      "channelsTitle": "Llegadas por canal",
+      "landingsTitle": "Páginas de llegada",
+      "campaignsTitle": "Campañas (utm)",
+      "hostsTitle": "Otros sitios y apps",
+      "campaignHint": "fuente: {source} · medio: {medium}",
+      "appHint": "app Android",
+      "overflow": "otros (tope del día alcanzado)",
+      "overflowNote": "{count, plural, one {# llegada contada} other {# llegadas contadas}} sin detalle: por encima de {cap} combinaciones distintas en un mismo día, las nuevas ya no se detallan (solo se conserva su canal), para que un envío abusivo no llene la base de datos.",
+      "arrivals": "Llegadas",
+      "channel": "Canal",
+      "page": "Página",
+      "campaign": "Campaña",
+      "site": "Sitio",
+      "unset": "—",
+      "empty": "Ninguna llegada medida en este periodo.",
+      "emptyList": "Nada en este periodo.",
+      "loadError": "Procedencia no disponible por ahora.",
+      "forbidden": "Acceso denegado.",
+      "retry": "Reintentar",
+      "directNote": "«Directo» agrupa las direcciones escritas, los favoritos y la mayoría de los enlaces abiertos desde una mensajería (WhatsApp, Messenger…), que no dicen de dónde vienen. Una campaña etiquetada (utm) conserva su canal de origen.",
+      "channels": {
+        "google": "Google",
+        "bing": "Bing",
+        "duckduckgo": "DuckDuckGo",
+        "qwant": "Qwant",
+        "ecosia": "Ecosia",
+        "yahoo": "Yahoo",
+        "chatgpt": "ChatGPT",
+        "perplexity": "Perplexity",
+        "x": "X (Twitter)",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "tiktok": "TikTok",
+        "snapchat": "Snapchat",
+        "reddit": "Reddit",
+        "discord": "Discord",
+        "youtube": "YouTube",
+        "app": "Apps Android",
+        "direct": "Directo",
+        "autre": "Otros sitios"
+      }
+    },
     "geo": {
-      "onlineByCountry": "Navegadores activos por país",
+      "onlineByCountry":"Navegadores activos por país",
       "onlineByCountryWindowDesc": "Navegadores activos en los últimos {minutes} minutos.",
       "todayByCountry": "Conectados hoy por país",
       "todayByCountryDesc": "Navegadores (estadísticas aceptadas, equipo incluido) vistos desde la medianoche, hora de París.",
@@ -8950,9 +9008,11 @@
     },
     "kicker": "Cartas sobre la mesa",
     "title": "Reglas de los juegos de fiesta",
-    "intro": "Cada juego en línea de Le Pillaveur explicado en dos minutos: la idea, el desarrollo, cómo se gana, los tragos cuando los hay y las preguntas que más nos hacen. El número de jugadores es el de la mesa en línea, y cuando un juego se puede jugar solo con bots, lo decimos.",
+    "intro": "Cada juego de Le Pillaveur explicado en dos minutos, ya se juegue en línea o en un solo móvil que pasa de mano en mano: la idea, el desarrollo, cómo se gana, los tragos cuando los hay y las preguntas que más nos hacen. El número de jugadores es el de la mesa en línea, o el del móvil compartido en los juegos presenciales, y cuando un juego se puede jugar solo con bots, lo decimos.",
     "count": "{count, plural, one {# juego explicado} other {# juegos explicados}}",
     "players": "de {min} a {max} jugadores",
+    "playersFrom": "Desde {min} jugadores",
+    "oneDevice": "en un solo móvil",
     "botsBadge": "Se puede jugar con bots",
     "readRules": "Leer las reglas",
     "allGames": "Ver todos los juegos",
@@ -8965,6 +9025,45 @@
     "voiceChat": "chat de voz",
     "playNow": "Jugar ahora — es gratis",
     "otherRules": "Las reglas de los otros juegos"
+  },
+  "ideas": {
+    "meta": {
+      "title": "Ideas de preguntas para la fiesta",
+      "description": "Yo nunca, ¿Qué prefieres?, Verdad o reto: listas de preguntas sacadas de las cartas de nuestros juegos, con o sin alcohol, para jugar gratis."
+    },
+    "kicker": "Cartas sobre la mesa",
+    "title": "Ideas de preguntas para la fiesta",
+    "intro": "Las preguntas que se buscan antes de una fiesta, sacadas tal cual de las cartas reales de nuestros juegos: «Yo nunca», «¿Qué prefieres?» e ideas de verdad o reto. Solo hemos guardado las cartas suaves o moderadas, para leer, copiar o jugar directamente en Le Pillaveur, con o sin alcohol.",
+    "breadcrumb": {
+      "home": "Inicio",
+      "ideas": "Ideas de preguntas"
+    },
+    "backToIdeas": "Todas las listas",
+    "readList": "Leer la lista",
+    "cardsFrom": "Las cartas de {game}",
+    "players": "De {min} a {max} jugadores",
+    "playersFrom": "Desde {min} jugadores",
+    "showcaseFacts": "gratis · sin instalación",
+    "online": "online, chat de voz",
+    "oneDevice": "en un solo móvil",
+    "playWithCards": "Jugar con estas cartas",
+    "readRules": "Las reglas de {game}",
+    "otherLists": "Las otras listas",
+    "allGames": "Ver todos los juegos",
+    "lists": {
+      "je-n-ai-jamais": {
+        "name": "Yo nunca",
+        "blurb": "50 frases divertidas y sin incomodar para que toda la mesa confiese, sacadas de las cartas de Dilemmes."
+      },
+      "tu-preferes": {
+        "name": "¿Qué prefieres?",
+        "blurb": "60 dilemas absurdos o imposibles de decidir para debatir toda la noche, sacados de las cartas de Dilemmes."
+      },
+      "action-ou-verite": {
+        "name": "Verdad o reto",
+        "blurb": "60 preguntas y pequeños retos por tema, para hacer allí mismo y sin material, sacados de las cartas de Cap ou Pas Cap."
+      }
+    }
   },
   "tryBots": {
     "play": "Jugar ahora",
@@ -9358,7 +9457,18 @@
         "copy": "Copiar el resumen en texto",
         "copied": "Resumen copiado: pegadlo en el grupo.",
         "copyFailed": "La copia está bloqueada en este navegador.",
-        "alt": "La cuenta de la noche"
+        "alt": "La cuenta de la noche",
+        "format": "Formato de la imagen",
+        "formats": {
+          "feed": {
+            "label": "Publicación",
+            "hint": "Vertical, para el grupo o el feed"
+          },
+          "story": {
+            "label": "Historia",
+            "hint": "Pantalla completa, para Instagram o Snapchat"
+          }
+        }
       },
       "keep": {
         "title": "Guardar el grupo",

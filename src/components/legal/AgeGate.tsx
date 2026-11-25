@@ -14,7 +14,7 @@ import {
   hasAnsweredAnalyticsConsent,
   isAnalyticsConsentGranted,
 } from '@/lib/auth-cookies'
-import { resetLocalPlayersSync } from '@/lib/visit-ping-client'
+import { resetLocalPlayersSync, sendAcquisitionAfterConsent } from '@/lib/visit-ping-client'
 
 function hasCookie(name: string): boolean {
   if (typeof document === 'undefined') return false
@@ -336,6 +336,7 @@ export function AgeGate() {
         // navigateur et ses pseudos locaux : la synchro déjà confirmée dans ce
         // document ne vaut plus, la liste repartira au prochain battement.
         resetLocalPlayersSync()
+        if (analytics) sendAcquisitionAfterConsent()
         setConsentRequested(false)
         if (consentOnly) {
           setAnalyticsChecked(analytics)
@@ -370,6 +371,7 @@ export function AgeGate() {
     pathname === '/decouvrir' ||
     pathname.startsWith('/legal') ||
     pathname.startsWith('/regles') ||
+    pathname.startsWith('/idees') ||
     pathname === '/compte/rappel' ||
     pathname.startsWith('/compte/rappel/')
   const requestedHere = requestedOn === pathname

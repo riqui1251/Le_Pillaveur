@@ -1,6 +1,7 @@
 import { getStoredPlayers } from '@/lib/players'
 import { ANALYTICS_CONSENT_COOKIE, isAnalyticsConsentGranted } from '@/lib/auth-cookies'
 import { beatBody, type BeatDetail } from '@/lib/heartbeat'
+import { readAcquisition, type AcquisitionPayload } from '@/lib/acquisition'
 
 const PING_URL = '/api/analytics/ping'
 
@@ -60,15 +61,67 @@ function postPing(body: Record<string, unknown>): Promise<Record<string, unknown
 /** Requête « vue » de ce document ; null tant qu'elle n'est pas partie. */
 let viewRequest: Promise<unknown> | null = null
 
+/** Drapeau de session de navigateur : la provenance est déjà partie. */
+const ACQUISITION_SENT_KEY = 'lp_acq_sent'
+
+/**
+ * Provenance de ce document lue à sa vue, gardée EN MÉMOIRE seulement (rien
+ * dans le stockage du navigateur sans consentement) pour un accord donné
+ * ensuite dans le même document.
+ */
+let pendingAcquisition: AcquisitionPayload | null = null
+
+/**
+ * Vrai si la provenance part maintenant : 1re fois de la session, drapeau
+ * posé du même geste. Stockage indisponible : jamais, plutôt que de compter
+ * chaque chargement comme une arrivée.
+ */
+function claimAcquisition(): boolean {
+  try {
+    if (window.sessionStorage.getItem(ACQUISITION_SENT_KEY) === '1') return false
+    window.sessionStorage.setItem(ACQUISITION_SENT_KEY, '1')
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Vue de page : compte le lecteur qui ne touche à rien (pages de règles
  * arrivées par la recherche). Le serveur ne l'enregistre qu'avec le
  * consentement et ne touche jamais la dernière activité d'un compte.
  * Une seule par document, même si le traceur est remonté (StrictMode en dev).
+ *
+ * La 1re vue consentie d'une session porte `acq` : hôte du référent s'il est
+ * extérieur, chemin d'arrivée, utm (acquisition.ts).
  */
 export function sendView(): void {
   if (typeof window === 'undefined' || viewRequest) return
-  viewRequest = postPing({ view: true })
+  const acquisition = readAcquisition({
+    referrer: document.referrer,
+    siteHost: window.location.hostname,
+    pathname: window.location.pathname,
+    search: window.location.search,
+  })
+  if (!hasAnalyticsConsent()) {
+    pendingAcquisition = acquisition
+    viewRequest = postPing({ view: true })
+    return
+  }
+  viewRequest = postPing(claimAcquisition() ? { view: true, acq: acquisition } : { view: true })
+}
+
+/**
+ * Accord aux statistiques donné dans ce document (AgeGate) : la vue partie
+ * avant n'a rien compté. Une nouvelle vue, consentie, porte alors la
+ * provenance du document — sinon le visiteur arrivé de Google, qui accepte au
+ * premier écran, ne serait jamais attribué à Google.
+ */
+export function sendAcquisitionAfterConsent(): void {
+  if (typeof window === 'undefined' || !pendingAcquisition || !hasAnalyticsConsent()) return
+  const acq = pendingAcquisition
+  pendingAcquisition = null
+  if (claimAcquisition()) viewRequest = postPing({ view: true, acq })
 }
 
 /**

@@ -1,6 +1,6 @@
 # Política de privacidad
 
-**Última actualización:** 24 de noviembre de 2026
+**Última actualización:** 25 de noviembre de 2026
 
 ## 1. Introducción
 
@@ -58,6 +58,8 @@ Una **visita** es un periodo de uso del sitio sin interrupciones de más de 30 m
 La administración del sitio puede consultar el historial de visitas cuenta por cuenta; ni los moderadores ni los demás jugadores tienen acceso a él. Al consultarlo, cada visita se relaciona con las partidas en línea iniciadas durante ella (registro de partidas, véase 3.4) y se calculan totales de 7 y 30 días. La cronología solo muestra el día, la duración y una franja horaria (madrugada, mañana, tarde o noche, hora de París); la hora exacta solo aparece en el detalle de una visita.
 
 Las visitas también sirven, al consultar los datos y sin ningún dato adicional, para estadísticas de uso de conjunto que solo puede consultar la administración del sitio: número de cuentas activas y de jugadores únicos, cuentas nuevas y cuentas que regresan, regreso de las cuentas creadas recientemente al menos 1 día y luego al menos 7 días después de su creación, duración mediana de una visita, tiempo activo mediano por cuenta y parte del tiempo pasada en partida. Estas estadísticas no nombran a ninguna cuenta, salvo una lista interna de las 10 cuentas más activas en 7 días, que indica para cada una su tiempo activo y su número de partidas en línea (véase 3.4): nunca se muestra a los jugadores ni a los moderadores, y no da lugar a ninguna recompensa, recordatorio ni medida relativa a las cuentas que figuran en ella. Las cuentas del equipo de moderación y las cuentas de prueba quedan excluidas de estas estadísticas (véase 3.4).
+
+**Procedencia de las visitas.** Con este mismo consentimiento, en la primera página vista de cada sesión del navegador, también contamos de dónde llega: el nombre de dominio del sitio de origen si es externo a Le Pillaveur (por ejemplo google.es, o el nombre de una aplicación Android), la página de llegada al sitio (sin sus parámetros) y los posibles parámetros de campaña `utm_source`, `utm_medium` y `utm_campaign` del enlace seguido. Esta información solo se conserva en forma de contadores por día (hora de París) —tantas llegadas desde tal origen a tal página—, sin identificador de navegador, dirección IP ni cuenta: no puede vincularse a nadie y, por tanto, no se borra al retirar el consentimiento. No se registra ni la dirección completa de la página de origen ni su búsqueda. Estos contadores son consultables por la administración del sitio y se conservan 13 meses (véase 7).
 
 Si lo rechaza, no se registra ningún seguimiento de visita. Si retira su consentimiento (enlace «Estadísticas de visita» y, después, «Rechazar»), los datos recogidos por este concepto en este navegador (dirección IP, país, dispositivo, nombres de los jugadores locales, fechas de visita, direcciones IP registradas sin sesión iniciada, registros diarios de visita) se borran inmediatamente y se retira la cookie `lp_vid`; el historial de visitas de la cuenta conectada en ese momento también se borra, en todos los dispositivos. Rechazar en un navegador en el que no había aceptado las estadísticas de visita (un dispositivo nuevo, por ejemplo) no borra ese historial. La elección vale para este navegador: en otro navegador en el que las hubiera aceptado, las visitas se siguen registrando mientras no las rechace también allí.
 
@@ -186,6 +188,7 @@ El editor sigue siendo el responsable de los tratamientos descritos en esta pol�
 - **Registro de partidas iniciadas** (juego, fecha, duración de la mesa, motivo de finalización, participantes): **12 meses**.
 - **Trazas de moderación de apodos**: **12 meses**.
 - **Datos de medición de audiencia**: **13 meses**.
+- **Contadores de procedencia de las visitas** (día, canal o dominio de origen, página de llegada, parámetros de campaña, número de llegadas, sin identificador): **13 meses**.
 - **Contadores de partidas locales y de tragos** (juego, día, modo, número de partidas iniciadas y terminadas, total de tragos y de participaciones, sin ningún dato personal): **13 meses**.
 - **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud; el correo electrónico de contacto asociado se borra si elimina su cuenta.
 - **Cookies de edad y consentimiento**: 1 año, renovables en cada validación.

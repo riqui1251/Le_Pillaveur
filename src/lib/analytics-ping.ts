@@ -1,4 +1,5 @@
 import { parseLocalPlayerNamesInput } from '@/lib/visitor-local-players'
+import { parseAcquisition, type Acquisition } from '@/lib/acquisition'
 import type { UserRole } from '@/lib/roles'
 
 /**
@@ -8,7 +9,8 @@ import type { UserRole } from '@/lib/roles'
  * Trois corps reconnus, un par usage :
  * - `{ view: true }` : VUE, au montage de VisitTracker. Compte un lecteur
  *   (audience, pages de règles lues sans un clic) sans rien dire de son usage :
- *   jamais la dernière activité du compte.
+ *   jamais la dernière activité du compte. La 1re vue d'une session de
+ *   navigateur porte en plus `acq`, sa provenance (parsePingAcquisition).
  * - `{ beat: true }` : BATTEMENT, émis par VisitTracker seul, onglet visible et
  *   interaction réelle depuis 30 min au plus. SEUL signal de présence. Sous
  *   consentement de version 2 (lot 6), le client y ajoute `active` et
@@ -65,6 +67,17 @@ export function parsePingBody(json: unknown): PingBody {
 }
 
 /**
+ * Provenance portée par une VUE (`acq`, voir acquisition.ts) ; null hors vue
+ * ou si le champ est illisible. Lue à part de parsePingBody : elle ne change
+ * rien aux trois corps du contrat.
+ */
+export function parsePingAcquisition(json: unknown): Acquisition | null {
+  if (json === null || typeof json !== 'object' || Array.isArray(json)) return null
+  const raw = json as Record<string, unknown>
+  return raw.view === true ? parseAcquisition(raw.acq) : null
+}
+
+/**
  * Écritures qu'une requête de ping peut déclencher, dans l'ordre où la route
  * doit les faire.
  * - `account` : dernière activité du COMPTE — User.lastSeenAt, lastIp,
@@ -85,6 +98,8 @@ export function parsePingBody(json: unknown): PingBody {
  *   session, l'adresse va à l'historique du compte, écriture `account`).
  * - `local-players` : patch des pseudos locaux d'une SitePresence, sans la
  *   créer ni avancer lastSeen.
+ * - `acquisition` : +1 au compteur de provenance du jour (AcquisitionDaily),
+ *   sans aucun identifiant.
  */
 export type PingWrite =
   | 'account'
@@ -94,8 +109,11 @@ export type PingWrite =
   | 'visitor-beat'
   | 'visitor-ip'
   | 'local-players'
+  | 'acquisition'
 
 export type PingContext = Pick<PingBody, 'view' | 'beat' | 'syncLocalPlayers'> & {
+  /** La vue porte une provenance exploitable (parsePingAcquisition non null). Absent : non. */
+  hasAcquisition?: boolean
   /** Consentement aux statistiques de visite accepté sous le libellé actuel ('2', isAnalyticsConsentGranted). */
   hasConsent: boolean
   /** Session valide (compte connecté). */
@@ -138,6 +156,11 @@ export function planPing(ctx: PingContext): PingWrite[] {
   // requête. Sans identifiant de navigateur, rien à patcher : une synchro ne
   // crée ni cookie ni présence.
   if (ctx.syncLocalPlayers && (ctx.hasVisitorId || presence)) writes.push('local-players')
+
+  // Provenance : la 1re vue d'une session seulement (le client ne l'envoie
+  // qu'une fois), jamais un battement. Compteur sans identifiant, mais même
+  // règle que la vue : consentement exigé.
+  if (ctx.view && ctx.hasAcquisition) writes.push('acquisition')
 
   return writes
 }

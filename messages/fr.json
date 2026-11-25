@@ -64,12 +64,14 @@
     "navLabel": "Explorer Le Pillaveur",
     "links": {
       "all": "Tous les jeux de soirée",
+      "drinking": "Jeux à boire",
       "noAlcohol": "Jeux de soirée sans alcool",
       "duo": "Jeux à 2 joueurs",
       "bigGroup": "Jeux en grand groupe",
       "solo": "Jouer seul avec des bots",
       "remote": "Jeux de soirée à distance",
-      "rules": "Règles des jeux"
+      "rules": "Règles des jeux",
+      "ideas": "Idées de questions pour la soirée"
     }
   },
   "nav": {
@@ -402,6 +404,9 @@
     },
     "collections": {
       "chipsLabel": "Trouver un jeu selon la soirée",
+      "jeux-a-boire": {
+        "chip": "Jeux à boire"
+      },
       "a-2-joueurs": {
         "chip": "À 2 joueurs"
       },
@@ -434,6 +439,12 @@
     "playersOnline": "{min} à {max} joueurs en ligne",
     "playersOnlineOpen": "Dès {min} joueurs en ligne",
     "playersLocal": "Dès {min} joueurs, un seul téléphone",
+    "jeux-a-boire": {
+      "title": "Jeux à boire gratuits, en ligne et sans appli",
+      "description": "Pyramide, Coupe du Roi, Purple, Course PMU, Cap ou Pas Cap : les classiques des jeux à boire, sur un seul téléphone ou à distance. Réservé aux 18 ans et plus.",
+      "intro": "Un jeu à boire, c'est un jeu de soirée où la manche perdue, le pari raté ou le défi refusé se règle en gorgées : des cartes, des dés, des paris et des défis pour lancer l'apéro entre amis. Ici, tout se joue dans le navigateur, gratuitement et sans appli à installer. La plupart de ces jeux tournent sur un seul téléphone qui passe de main en main autour de la table : la Pyramide, la Coupe du Roi, la Course PMU, Hi/Lo, Monsieur 3, Plinko, Cap ou Pas Cap et le Doigt du Destin. D'autres se jouent aussi en ligne, chacun sur son téléphone, même à distance avec le chat vocal intégré : Purple, le 1220, le Petit Buveur, le Black Jack et la Patate Chaude. Le site tient les comptes et rappelle les règles ; c'est le jeu qui compte, pas ce qu'il y a dans le verre. Réservé aux 18 ans et plus. Toute la table ne boit pas ? Les jeux de soirée sans alcool ont leur propre collection, où les gorgées deviennent des gages.",
+      "noAlcoholLink": "Voir les jeux de soirée sans alcool"
+    },
     "a-2-joueurs": {
       "title": "Jeux de soirée à 2 joueurs",
       "description": "Les jeux qui se lancent à deux : dés et cartes sur un téléphone, ou en ligne avec un code — Menteur, quiz, Purple, Petit Bac… Gratuits, sans installation.",
@@ -442,7 +453,8 @@
     "sans-alcool": {
       "title": "Jeux de soirée sans alcool",
       "description": "Jeux de soirée sans une goutte : en ambiance « Sans alcool », les gorgées deviennent des gages. Loup-Garou, quiz, dessin, bluff… Gratuits, en ligne.",
-      "intro": "Toute la table ne boit pas, ou personne ce soir : Le Pillaveur a une ambiance « Sans alcool », à activer depuis le hub des jeux, dans le réglage « Ambiance des jeux ». Une fois choisie, les gorgées et les cul-secs de ces jeux en ligne deviennent des gages, et le site passe en bleu nuit pour que tout le monde voie que la soirée est soft. Les règles, les rôles et les scores ne bougent pas : le Loup-Garou garde ses loups et sa voyante, le Grand Pillaveur reste un quiz à buzzers, Crobard un jeu de dessin en direct, Sans Filtre un concours de mauvaise foi, et Mots Codés, le Petit Bac ou le Président se jouent exactement comme d'habitude. Le Menteur, L'Imposteur, Qui est l'Espion ?, le Grand Bluff, Dilemmes, Toucher-Coulé et le Téléphone Dessiné complètent la sélection. Cette ambiance vaut pour les jeux en ligne de cette sélection, chacun sur son téléphone avec un code de table ; Purple, 1220 et le Petit Buveur restent en ambiance apéro, comme les jeux de dés qui tournent sur un seul téléphone (Monsieur 3, Pyramide…). Et comme la plupart de ces jeux acceptent des bots, une soirée sans alcool peut aussi se jouer à deux, ou même seul."
+      "intro": "Toute la table ne boit pas, ou personne ce soir : Le Pillaveur a une ambiance « Sans alcool », à activer depuis le hub des jeux, dans le réglage « Ambiance des jeux ». Une fois choisie, les gorgées et les cul-secs des jeux de cette sélection deviennent des gages ou des points, et le site passe en bleu nuit pour que tout le monde voie que la soirée est soft. Les règles, les rôles et les scores ne bougent pas : le Loup-Garou garde ses loups et sa voyante, le Grand Pillaveur reste un quiz à buzzers, Crobard un jeu de dessin en direct, Sans Filtre un concours de mauvaise foi, et Mots Codés, le Petit Bac ou le Président se jouent exactement comme d'habitude. Le Menteur, L'Imposteur, Qui est l'Espion ?, le Grand Bluff, Dilemmes, Toucher-Coulé et le Téléphone Dessiné complètent la sélection en ligne, chacun sur son téléphone avec un code de table. Sur un seul téléphone posé au milieu de la table, la Coupe du Roi, Cap ou Pas Cap ?, Front Collé, Pile Poil, Dégaine ! et le Doigt du Destin ont aussi leur version sans alcool : les pénalités s'y comptent en points, et le perdant fait un gage choisi par la table. Purple, 1220 et le Petit Buveur restent en ambiance apéro, comme Monsieur 3, la Pyramide ou Hi/Lo. Et comme la plupart des jeux en ligne acceptent des bots, une soirée sans alcool peut aussi se jouer à deux, ou même seul.",
+      "dryJanuary": "Le Dry January, ce mois de janvier sans alcool, n'oblige pas à mettre les soirées entre parenthèses : ici, on joue sans boire. Avec l'ambiance « Sans alcool », chaque gorgée devient un gage choisi par la table ou des points au compteur, selon le jeu ; les règles et le classement ne changent pas, et chacun remplit son verre de ce qu'il veut. Ça marche en janvier, et le reste de l'année aussi."
     },
     "seul-avec-des-bots": {
       "title": "Jouer seul : les jeux avec des bots",
@@ -1447,24 +1459,24 @@
         "description": "Loup-Garou, quiz, dessin, bluff, jeux d'apéro : ouvre une table gratuite, invite tes amis par lien ou QR — ou joue seul, les bots complètent."
       },
       "purple": {
-        "title": "Jouer au Purple en ligne gratuit — rouge, noir ou purple ?",
-        "description": "Le pari de cartes le plus traître du comptoir : 2 à 16 joueurs, chat vocal, sans installation. Entre amis — ou seul, les bots complètent la table."
+        "title": "Jouer au Purple en ligne gratuit — le pari de cartes à boire",
+        "description": "Un jeu à boire aux cartes, le pari le plus traître du comptoir : 2 à 16 joueurs, chat vocal, sans installation. Entre amis — ou seul, les bots complètent."
       },
       "blackjack": {
         "title": "Jouer au Black Jack en ligne gratuit — 21 contre le croupier",
         "description": "Approche 21 sans le dépasser : tirer, rester, doubler, séparer. 1 à 7 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots complètent."
       },
       "monsieur-3": {
-        "title": "Jouer à Monsieur 3 gratuit — évite le 3 ou trinque",
-        "description": "Le jeu de dés d'apéro : évite les 3 et les combos piégés, ou bois. Gratuit, sans installation, sur un téléphone qui tourne autour de la table."
+        "title": "Jouer à Monsieur 3 gratuit — le jeu à boire aux dés",
+        "description": "Le jeu à boire aux dés de l'apéro : évite les 3 et les combos piégés, ou bois. Gratuit, sans installation, sur un téléphone qui tourne autour de la table."
       },
       "pmu": {
-        "title": "Jouer à la Course PMU gratuit — paris hippiques d'apéro",
-        "description": "Parie sur ton canasson et suis la course en direct : les perdants distribuent les gorgées. Gratuit, sans installation, sur un téléphone au centre de la table."
+        "title": "Jouer à la Course PMU gratuit — le jeu à boire hippique",
+        "description": "Le jeu à boire des paris hippiques : mise sur ton canasson, suis la course en direct, les perdants distribuent les gorgées. Gratuit, sur un seul téléphone."
       },
       "petit-buveur": {
-        "title": "Jouer au Petit Buveur en ligne gratuit — plateau d'apéro",
-        "description": "Un plateau, un dé, des cases pièges et des défis qui font trinquer. 2 à 99 joueurs, chat vocal, gratuit et sans installation."
+        "title": "Jouer au Petit Buveur gratuit — le plateau du jeu à boire",
+        "description": "Le jeu à boire sur plateau : un dé, des cases pièges et des défis qui font trinquer. 2 à 99 joueurs, en ligne avec chat vocal ou sur un téléphone, gratuit."
       },
       "toucher-coule": {
         "title": "Jouer au Toucher-Coulé en ligne gratuit — bataille navale",
@@ -1487,20 +1499,20 @@
         "description": "Loups, voyante, débats et votes : le classique des soirées, version apéro. 4 à 12 joueurs, chat vocal, gratuit, sans installation — ou seul avec des bots."
       },
       "hi-lo": {
-        "title": "Jouer au Hi/Lo gratuit — plus haut ou plus bas ?",
-        "description": "Devine si la prochaine carte sera plus haute ou plus basse, et distribue les gorgées. Gratuit, sans installation, sur un téléphone qui fait le tour."
+        "title": "Jouer au Hi/Lo gratuit — jeu à boire, plus haut ou plus bas",
+        "description": "Le jeu à boire aux cartes le plus simple : devine si la prochaine carte sera plus haute ou plus basse, et distribue les gorgées. Gratuit, sur un seul téléphone."
       },
       "pyramide": {
-        "title": "Jouer à la Pyramide gratuit — le jeu de cartes d'apéro",
-        "description": "Retourne les cartes, grimpe la pyramide et distribue les gorgées à chaque étage. Gratuit, sans installation, sur un téléphone au centre de la table."
+        "title": "Jouer à la Pyramide gratuit — le jeu à boire aux cartes",
+        "description": "Le jeu à boire aux cartes des soirées : retourne les cartes, grimpe la pyramide, distribue les gorgées à chaque étage. Gratuit, sur un téléphone au centre."
       },
       "plinko": {
-        "title": "Jouer au Plinko gratuit — la bille qui fait trinquer",
-        "description": "Lâche la bille, regarde-la rebondir et prie pour la bonne case. Gratuit, sans installation, sur un téléphone qui tourne autour de la table."
+        "title": "Jouer au Plinko gratuit — le jeu à boire de la bille",
+        "description": "Un jeu à boire tout en rebonds : lâche la bille, regarde-la rebondir et prie pour la bonne case. Gratuit, sans installation, sur un téléphone qui tourne."
       },
       "1220": {
-        "title": "Jouer au 1220 en ligne gratuit — deux dés, quatre paris",
-        "description": "Un dé 12, un dé 20 et des paris qui font boire ou faire boire. 2 à 16 joueurs, chat vocal, gratuit, sans installation — ou seul, les bots complètent."
+        "title": "Jouer au 1220 en ligne gratuit — deux dés, un jeu à boire",
+        "description": "Le jeu à boire aux dés en ligne : un dé 12, un dé 20 et des paris qui font boire ou faire boire. 2 à 16 joueurs, chat vocal, gratuit — ou seul avec des bots."
       },
       "bluff": {
         "title": "Jouer au Grand Bluff en ligne gratuit — piège tes amis",
@@ -1547,8 +1559,8 @@
         "description": "Un nombre piège se cache entre 1 et 100 : resserre l’étau sans tomber dessus. De 2 à 16 joueurs en ligne, chat vocal, ou sur un seul téléphone. Gratuit."
       },
       "cap-ou-pas-cap": {
-        "title": "Jouer à Cap ou Pas Cap gratuit — action ou vérité",
-        "description": "Action ou vérité avec un prix sur chaque carte : relève le défi et distribue, ou bois. Quatre niveaux, six thèmes, gratuit, sur un téléphone qui tourne."
+        "title": "Jouer à Cap ou Pas Cap gratuit — action ou vérité à boire",
+        "description": "Le jeu à boire action ou vérité, avec un prix sur chaque carte : relève le défi et distribue, ou bois. Quatre niveaux, six thèmes, gratuit, sur un téléphone."
       },
       "vue-de-nez": {
         "title": "À Vue de Nez : le jeu d’estimation gratuit en ligne",
@@ -1556,27 +1568,27 @@
       },
       "front-colle": {
         "title": "Jouer à Front Collé gratuit — devine le mot sur ton front",
-        "description": "Le téléphone collé au front, devine le mot que la table te décrit, te mime ou te fredonne. Incline pour valider. Gratuit, sans installation."
+        "description": "Le téléphone au front, devine le mot que la table te décrit, te mime ou te fredonne. En jeu à boire, chaque mot passé se boit. Gratuit, sans installation."
       },
       "coupe-du-roi": {
-        "title": "Jouer à la Coupe du Roi gratuit — 13 cartes, 13 règles",
-        "description": "Le jeu de cartes culte des soirées : chaque carte tirée lance une règle, l’appli retient les rôles et le 4e roi boit la coupe. Gratuit, sans installation."
+        "title": "Jouer à la Coupe du Roi gratuit — le jeu à boire culte",
+        "description": "Le jeu à boire culte des soirées : chaque carte tirée lance une règle, l’appli retient les rôles et le 4e roi boit la coupe. Gratuit, sans installation."
       },
       "patate-chaude": {
         "title": "Jouer à Patate Chaude gratuit — la bombe à mèche secrète",
         "description": "Une bombe à mèche secrète : dis un mot du thème et passe-la avant le boum. De 2 à 12 joueurs en ligne, chat vocal, ou sur un seul téléphone. Gratuit."
       },
       "pile-poil": {
-        "title": "Jouer à Pile Poil gratuit — 10 secondes à l’aveugle",
-        "description": "Lance le chrono et arrête-le pile à 10 secondes sans voir les chiffres : le plus loin boit. Gratuit, sans installation, sur un téléphone qui tourne."
+        "title": "Jouer à Pile Poil gratuit — jeu à boire, 10 s à l’aveugle",
+        "description": "Un jeu à boire de précision : lance le chrono et arrête-le pile à 10 secondes sans voir les chiffres, le plus loin boit. Gratuit, sur un téléphone qui tourne."
       },
       "degaine": {
-        "title": "Jouer à Dégaine ! gratuit — le duel de réflexes",
-        "description": "Un téléphone posé entre deux duellistes : au « FEU ! », le plus rapide gagne, qui tire trop tôt boit. Tournoi pour toute la table, gratuit."
+        "title": "Jouer à Dégaine ! gratuit — le duel de réflexes à boire",
+        "description": "Jeu à boire du western, un téléphone posé entre deux duellistes : au « FEU ! », le plus rapide gagne, qui tire trop tôt boit. Tournoi pour la table, gratuit."
       },
       "doigt-du-destin": {
-        "title": "Jouer au Doigt du Destin gratuit — qui sera choisi ?",
-        "description": "Chacun pose un doigt sur l’écran et le destin tranche : victime, deux camps, ordre de jeu ou survie. Gratuit, sans installation, sur un seul téléphone."
+        "title": "Jouer au Doigt du Destin, jeu à boire : qui sera choisi ?",
+        "description": "Jeu à boire de hasard, chacun pose un doigt sur l’écran et le destin tranche : victime, deux camps, ordre de jeu ou survie. Gratuit, sur un seul téléphone."
       }
     },
     "catalog": {
@@ -7707,8 +7719,54 @@
       "noneRecorded": "Aucune partie enregistrée pour le moment.",
       "allTimeNote": "Cumul depuis toujours, toutes périodes confondues : parties des joueurs locaux synchronisées sur les comptes, statistiques enregistrées en base et parties en ligne classées (une par partie, revanches comprises). Ce n'est pas l'activité récente : pour la période choisie, voir le tableau « Par jeu »."
     },
+    "acquisition": {
+      "title": "Provenance",
+      "description": "D'où arrivent les visiteurs : première page vue de chaque session de navigateur (statistiques acceptées), comptée par jour sans aucun identifiant.",
+      "total": "{count, plural, one {# arrivée} other {# arrivées}}",
+      "channelsTitle": "Arrivées par canal",
+      "landingsTitle": "Pages d'arrivée",
+      "campaignsTitle": "Campagnes (utm)",
+      "hostsTitle": "Autres sites et applis",
+      "campaignHint": "source : {source} · support : {medium}",
+      "appHint": "appli Android",
+      "overflow": "autres (plafond du jour atteint)",
+      "overflowNote": "{count, plural, one {# arrivée comptée} other {# arrivées comptées}} sans détail : au-delà de {cap} combinaisons différentes dans une même journée, les nouvelles ne sont plus détaillées (seul leur canal est gardé), pour qu'un envoi abusif ne remplisse pas la base.",
+      "arrivals": "Arrivées",
+      "channel": "Canal",
+      "page": "Page",
+      "campaign": "Campagne",
+      "site": "Site",
+      "unset": "—",
+      "empty": "Aucune arrivée mesurée sur cette période.",
+      "emptyList": "Rien sur cette période.",
+      "loadError": "Provenance indisponible pour le moment.",
+      "forbidden": "Accès refusé.",
+      "retry": "Réessayer",
+      "directNote": "« Direct » regroupe les adresses tapées, les favoris et la plupart des liens ouverts depuis une messagerie (WhatsApp, Messenger…), qui ne disent pas d'où ils viennent. Une campagne taguée (utm) garde son canal d'origine.",
+      "channels": {
+        "google": "Google",
+        "bing": "Bing",
+        "duckduckgo": "DuckDuckGo",
+        "qwant": "Qwant",
+        "ecosia": "Ecosia",
+        "yahoo": "Yahoo",
+        "chatgpt": "ChatGPT",
+        "perplexity": "Perplexity",
+        "x": "X (Twitter)",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "tiktok": "TikTok",
+        "snapchat": "Snapchat",
+        "reddit": "Reddit",
+        "discord": "Discord",
+        "youtube": "YouTube",
+        "app": "Applis Android",
+        "direct": "Direct",
+        "autre": "Autres sites"
+      }
+    },
     "geo": {
-      "onlineByCountry": "Navigateurs actifs par pays",
+      "onlineByCountry":"Navigateurs actifs par pays",
       "onlineByCountryWindowDesc": "Navigateurs actifs ces {minutes} dernières minutes.",
       "todayByCountry": "Connectés aujourd'hui par pays",
       "todayByCountryDesc": "Navigateurs (statistiques acceptées, équipe incluse) vus depuis minuit, heure de Paris.",
@@ -8950,9 +9008,11 @@
     },
     "kicker": "Cartes sur table",
     "title": "Règles des jeux de soirée",
-    "intro": "Chaque jeu en ligne du Pillaveur expliqué en deux minutes : le principe, le déroulement, comment on gagne, les gorgées quand il y en a, et les questions qu'on nous pose le plus. L'effectif affiché est celui de la table en ligne — et quand un jeu se joue seul avec des bots, c'est écrit.",
+    "intro": "Chaque jeu du Pillaveur expliqué en deux minutes, qu'il se joue en ligne ou sur un seul téléphone qui tourne autour de la table : le principe, le déroulement, comment on gagne, les gorgées quand il y en a, et les questions qu'on nous pose le plus. L'effectif affiché est celui de la table en ligne, ou du téléphone qui tourne pour les jeux sur place — et quand un jeu se joue seul avec des bots, c'est écrit.",
     "count": "{count, plural, one {# jeu expliqué} other {# jeux expliqués}}",
     "players": "{min} à {max} joueurs",
+    "playersFrom": "À partir de {min} joueurs",
+    "oneDevice": "sur un seul téléphone",
     "botsBadge": "Jouable avec des bots",
     "readRules": "Lire les règles",
     "allGames": "Voir tous les jeux",
@@ -8965,6 +9025,45 @@
     "voiceChat": "chat vocal",
     "playNow": "Jouer maintenant — c'est gratuit",
     "otherRules": "Les règles des autres jeux"
+  },
+  "ideas": {
+    "meta": {
+      "title": "Idées de questions pour la soirée",
+      "description": "Je n’ai jamais, Tu préfères, Action ou vérité : des listes de questions tirées des cartes de nos jeux, avec ou sans alcool, à jouer gratuitement."
+    },
+    "kicker": "Cartes sur table",
+    "title": "Idées de questions pour la soirée",
+    "intro": "Les questions qu’on cherche avant une soirée, tirées des vraies cartes de nos jeux et recopiées telles quelles : des « Je n’ai jamais », des « Tu préfères » et des idées d’action ou vérité. Nous n’avons gardé que les cartes sages ou modérées, à lire, à recopier, ou à jouer directement sur Le Pillaveur, avec ou sans alcool.",
+    "breadcrumb": {
+      "home": "Accueil",
+      "ideas": "Idées de questions"
+    },
+    "backToIdeas": "Toutes les listes",
+    "readList": "Lire la liste",
+    "cardsFrom": "Les cartes de {game}",
+    "players": "{min} à {max} joueurs",
+    "playersFrom": "À partir de {min} joueurs",
+    "showcaseFacts": "gratuit · sans installation",
+    "online": "en ligne, chat vocal",
+    "oneDevice": "sur un seul téléphone",
+    "playWithCards": "Jouer avec ces cartes",
+    "readRules": "Les règles de {game}",
+    "otherLists": "Les autres listes",
+    "allGames": "Voir tous les jeux",
+    "lists": {
+      "je-n-ai-jamais": {
+        "name": "Je n’ai jamais",
+        "blurb": "50 phrases drôles et sans malaise pour faire avouer toute la table, tirées des cartes de Dilemmes."
+      },
+      "tu-preferes": {
+        "name": "Tu préfères",
+        "blurb": "60 dilemmes absurdes ou impossibles à trancher, de quoi débattre toute la soirée, tirés des cartes de Dilemmes."
+      },
+      "action-ou-verite": {
+        "name": "Action ou vérité",
+        "blurb": "60 questions et petits défis rangés par thème, à faire sur place et sans matériel, tirés des cartes de Cap ou Pas Cap."
+      }
+    }
   },
   "tryBots": {
     "play": "Jouer maintenant",
@@ -9358,7 +9457,18 @@
         "copy": "Copier le récap en texte",
         "copied": "Récap copié : collez-le dans le groupe.",
         "copyFailed": "La copie est bloquée sur ce navigateur.",
-        "alt": "L’addition de la soirée"
+        "alt": "L’addition de la soirée",
+        "format": "Format de l’image",
+        "formats": {
+          "feed": {
+            "label": "Fil",
+            "hint": "Portrait, pour le groupe ou le fil"
+          },
+          "story": {
+            "label": "Story",
+            "hint": "Plein écran, pour Instagram ou Snapchat"
+          }
+        }
       },
       "keep": {
         "title": "Garder la bande",

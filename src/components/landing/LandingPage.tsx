@@ -70,6 +70,7 @@ export async function LandingPage({ locale }: { locale: string }) {
   const tCollections = await getTranslations({ locale, namespace: 'hub.collections' })
   const tRules = await getTranslations({ locale, namespace: 'rules' })
   const tFriday = await getTranslations({ locale, namespace: 'fridayTable' })
+  const tOg = await getTranslations({ locale, namespace: 'og' })
 
   // Jeux cachés par l'équipe écartés (en plus des `hidden` du code), puis les
   // jeux mis en avant — les plus joués, local puis en ligne — ouvrent la grille
@@ -146,7 +147,7 @@ export async function LandingPage({ locale }: { locale: string }) {
     <main className="mx-auto w-full max-w-5xl px-4 pb-16 text-white">
       {/* ── Héros ── */}
       <section className="pb-10 pt-10 text-center sm:pt-16">
-        <BrandLogo className="mx-auto w-72 max-w-full sm:w-96" />
+        <BrandLogo className="mx-auto w-72 max-w-full sm:w-96" tagline={tOg('siteTagline')} />
         <h1 className="mx-auto mt-6 max-w-2xl text-balance font-display text-3xl font-bold text-cream sm:text-4xl">
           {t('hero.title')}
         </h1>

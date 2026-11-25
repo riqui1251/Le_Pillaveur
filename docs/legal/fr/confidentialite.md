@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-**Dernière mise à jour :** 24 novembre 2026
+**Dernière mise à jour :** 25 novembre 2026
 
 ## 1. Introduction
 
@@ -58,6 +58,8 @@ Une **visite** est une période d'utilisation du site sans interruption de plus 
 L'historique des visites est consultable compte par compte par l'administration du site, mais ni par les modérateurs ni par les autres joueurs. À la lecture, chaque visite y est rapprochée des parties en ligne lancées pendant sa durée (journal des parties, voir 3.4), et des cumuls sur 7 et 30 jours sont calculés. La chronologie n'affiche que le jour, la durée et une tranche horaire (nuit, matin, après-midi ou soir, heure de Paris) ; l'heure exacte n'apparaît que dans le détail d'une visite.
 
 Les visites servent aussi, à la lecture et sans donnée supplémentaire, à des statistiques d'usage d'ensemble consultables par l'administration du site seulement : nombre de comptes actifs et de joueurs uniques, nouveaux comptes et comptes revenants, retour des comptes récemment créés au moins 1 jour puis au moins 7 jours après leur création, durée médiane d'une visite, temps actif médian par compte et part du temps passée en partie. Ces statistiques ne nomment aucun compte, sauf une liste interne des 10 comptes les plus actifs sur 7 jours, qui indique pour chacun son temps actif et son nombre de parties en ligne (voir 3.4) : elle n'est jamais montrée aux joueurs ni aux modérateurs, et ne déclenche ni récompense, ni relance, ni aucune mesure visant les comptes qui y figurent. Les comptes de l'équipe de modération et les comptes de test en sont exclus (voir 3.4).
+
+**Provenance des visites.** Avec ce même consentement, à la première page vue de chaque session de navigateur, nous comptons aussi d'où vous arrivez : le nom de domaine du site d'origine s'il est extérieur au Pillaveur (par exemple google.fr, ou le nom d'une application Android), la page d'arrivée sur le site (sans ses paramètres) et les éventuels paramètres de campagne `utm_source`, `utm_medium` et `utm_campaign` du lien suivi. Ces informations ne sont conservées que sous forme de compteurs par jour (heure de Paris) — tant d'arrivées depuis telle origine sur telle page —, sans identifiant de navigateur, adresse IP ni compte : elles ne peuvent être rattachées à personne et ne sont donc pas effacées au retrait du consentement. Ni l'adresse complète de la page d'origine ni votre recherche ne sont enregistrées. Ces compteurs sont consultables par l'administration du site et conservés 13 mois (voir 7).
 
 Si vous refusez, aucun suivi de visite n'est enregistré. Si vous retirez votre accord (lien « Statistiques de visite », puis « Refuser »), les données recueillies à ce titre sur ce navigateur (adresse IP, pays, appareil, noms des joueurs locaux, dates de passage, adresses IP enregistrées hors connexion, jours de visite) sont effacées immédiatement et le cookie `lp_vid` est retiré ; l'historique des visites du compte connecté à ce moment-là est effacé lui aussi, tous appareils confondus. Refuser sur un navigateur où vous n'aviez pas accepté les statistiques (un nouvel appareil, par exemple) n'efface pas cet historique. Le choix vaut pour ce navigateur : sur un autre navigateur où vous les aviez acceptées, les visites continuent d'être enregistrées tant que vous n'y refusez pas aussi.
 
@@ -186,6 +188,7 @@ L'éditeur reste responsable des traitements décrits dans la présente politiqu
 - **Journal des parties lancées** (jeu, date, durée de la table, motif de fin, participants) : **12 mois**.
 - **Traces de modération de pseudo** : **12 mois**.
 - **Données de mesure d'audience** : **13 mois**.
+- **Compteurs de provenance des visites** (jour, canal ou domaine d'origine, page d'arrivée, paramètres de campagne, nombre d'arrivées, sans identifiant) : **13 mois**.
 - **Compteurs de parties locales et de gorgées** (jeu, jour, mode, nombre de parties lancées et terminées, total de gorgées et de participations, sans aucune donnée personnelle) : **13 mois**.
 - **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande ; l'email de contact associé est effacé si vous supprimez votre compte.
 - **Cookies âge et consentement** : 1 an, renouvelables à chaque validation.

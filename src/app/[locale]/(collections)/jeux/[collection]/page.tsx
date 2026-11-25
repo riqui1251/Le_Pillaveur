@@ -21,7 +21,7 @@ import { SITE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
 
 /**
- * Pages « collections » — /jeux/a-2-joueurs, /jeux/sans-alcool,
+ * Pages « collections » — /jeux/jeux-a-boire, /jeux/a-2-joueurs, /jeux/sans-alcool,
  * /jeux/seul-avec-des-bots, /jeux/en-grand-groupe. Une porte d'entrée SEO
  * par intention de recherche (« jeu à boire à 2 », « jeu de soirée sans
  * alcool »…), là où le hub ne répond qu'à « jeux de soirée ».
@@ -115,6 +115,7 @@ export default async function CollectionPage({
   const tCatalogTags = await getTranslations({ locale, namespace: 'landing.catalog' })
   const tCommon = await getTranslations({ locale, namespace: 'common' })
   const tNav = await getTranslations({ locale, namespace: 'nav.links' })
+  const tHealth = await getTranslations({ locale, namespace: 'legal.ageGate' })
 
   const hiddenIds = await getStaffHiddenGameIds()
   const difficultyOverrides = await getStaffGameDifficulty()
@@ -192,6 +193,19 @@ export default async function CollectionPage({
           <p className="mt-3 text-pretty text-sm leading-relaxed text-cream/80 sm:text-base">
             {t(`${collection}.intro`)}
           </p>
+          {collection === 'sans-alcool' && (
+            <p className="mt-3 text-pretty text-sm leading-relaxed text-cream/80 sm:text-base">
+              {t('sans-alcool.dryJanuary')}
+            </p>
+          )}
+          {collection === 'jeux-a-boire' && (
+            <p className="mt-3 text-sm text-cream/80">
+              <strong className="font-semibold text-cream">{tHealth('healthWarning')}</strong>{' '}
+              <Link href="/jeux/sans-alcool" prefetch={false} className="text-amber-300 underline-offset-2 hover:underline">
+                {t('jeux-a-boire.noAlcoholLink')}
+              </Link>
+            </p>
+          )}
           <p className="mt-3 text-xs text-cream/70">{tCommon('gameCount', { count: games.length })}</p>
         </header>
 
@@ -248,7 +262,7 @@ export default async function CollectionPage({
           </div>
         </section>
 
-        {/* Les autres collections : le maillage entre les quatre pages. */}
+        {/* Les autres collections : le maillage entre les pages. */}
         <nav aria-label={tChips('chipsLabel')} className="mt-8 border-t border-white/10 pt-5">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-cream/70">{tChips('chipsLabel')}</p>
           <ul className="flex flex-wrap gap-2">

@@ -7,6 +7,7 @@ import robots from '@/app/robots'
 import sitemap from '@/app/sitemap'
 import { locales } from '@/i18n/routing'
 import { GAMES } from '@/lib/games'
+import { IDEAS_META, IDEAS_SLUGS } from '@/lib/ideas/ideas-content'
 import { RULES_GAME_IDS, RULES_META } from '@/lib/rules/rules-content'
 import { SITE_URL } from '@/lib/site'
 
@@ -101,6 +102,19 @@ describe('pages règles (RULES_META)', () => {
   })
 })
 
+describe('pages idées (IDEAS_META)', () => {
+  it(`a une entrée par liste, titre absolu ≤ ${TITLE_MAX} et extrait ≤ ${DESCRIPTION_MAX}`, () => {
+    const missing = IDEAS_SLUGS.filter((slug) => !IDEAS_META[slug]?.title || !IDEAS_META[slug]?.description)
+    expect(missing).toEqual([])
+    expect(IDEAS_SLUGS.flatMap((slug) => tooLong(slug, IDEAS_META[slug]))).toEqual([])
+  })
+
+  it('renvoie vers un jeu visible du hub', () => {
+    const visibleIds = new Set(visible.map((g) => g.id))
+    expect(IDEAS_SLUGS.filter((slug) => !visibleIds.has(IDEAS_META[slug].gameId))).toEqual([])
+  })
+})
+
 /**
  * Les autres pages dont la metadata vient du catalogue : titre tel que Google
  * l'affiche — suffixé « — Le Pillaveur » par le gabarit du layout de langue,
@@ -110,7 +124,7 @@ describe('pages règles (RULES_META)', () => {
  * mêmes bornes.
  */
 describe('metadata lue dans le catalogue — titres et extraits, par langue', () => {
-  const COLLECTION_SLUGS = ['a-2-joueurs', 'sans-alcool', 'seul-avec-des-bots', 'en-grand-groupe']
+  const COLLECTION_SLUGS = ['jeux-a-boire', 'a-2-joueurs', 'sans-alcool', 'seul-avec-des-bots', 'en-grand-groupe']
   const LEGAL_PAGES = ['cgu', 'confidentialite', 'mentionsLegales']
 
   type Node = Record<string, unknown>
@@ -130,6 +144,7 @@ describe('metadata lue dans le catalogue — titres et extraits, par langue', ()
         ['accueil (compteur)', at(catalogue, 'metadata.titleFull'), at(catalogue, 'metadata.descriptionCount').replace('{count}', '22')],
         ['hub /jeux', at(catalogue, 'games.meta.hub.title'), at(catalogue, 'games.meta.hub.description')],
         ['/regles', at(catalogue, 'rules.meta.title') + suffix, at(catalogue, 'rules.meta.description')],
+        ['/idees', at(catalogue, 'ideas.meta.title') + suffix, at(catalogue, 'ideas.meta.description')],
         ['/classement', at(catalogue, 'metadata.ranking.title') + suffix, at(catalogue, 'metadata.ranking.description')],
         ['/decouvrir', at(catalogue, 'metadata.discover.title') + suffix, at(catalogue, 'metadata.discover.description')],
         ['/application', at(catalogue, 'metadata.mobileApp.title') + suffix, at(catalogue, 'metadata.mobileApp.description')],
@@ -194,8 +209,16 @@ describe('sitemap.xml', () => {
     expect(index?.priority).toBe(0.7)
   })
 
-  it('liste les quatre collections du hub, mêmes slugs dans les quatre langues', () => {
-    for (const slug of ['a-2-joueurs', 'sans-alcool', 'seul-avec-des-bots', 'en-grand-groupe']) {
+  it("liste l'index des idées et chaque liste, en français seul (pas d'alternates)", () => {
+    for (const url of [`${SITE_URL}/fr/idees`, ...IDEAS_SLUGS.map((slug) => `${SITE_URL}/fr/idees/${slug}`)]) {
+      const entry = entries.find((e) => e.url === url)
+      expect(entry, url).toBeDefined()
+      expect(entry?.alternates, url).toBeUndefined()
+    }
+  })
+
+  it('liste les cinq collections du hub, mêmes slugs dans les quatre langues', () => {
+    for (const slug of ['jeux-a-boire', 'a-2-joueurs', 'sans-alcool', 'seul-avec-des-bots', 'en-grand-groupe']) {
       const entry = entries.find((e) => e.url === `${SITE_URL}/fr/jeux/${slug}`)
       expect(entry, slug).toBeDefined()
       expect(languagesOf(entry!)).toEqual({
@@ -260,7 +283,7 @@ describe('/decouvrir — metadata distincte de celle de l’accueil', () => {
 })
 
 describe('next.config.js — redirections', () => {
-  it('renvoie www.lepillaveur.fr vers le domaine nu en 301 et garde /regles', async () => {
+  it('renvoie www.lepillaveur.fr vers le domaine nu en 301 et garde /regles et /idees', async () => {
     const config = createRequire(import.meta.url)(join(ROOT, 'next.config.js'))
     const redirects = await (config.default ?? config).redirects()
     expect(redirects).toContainEqual({
@@ -270,5 +293,6 @@ describe('next.config.js — redirections', () => {
       statusCode: 301,
     })
     expect(redirects.some((r: { source: string }) => r.source === '/regles/:gameId')).toBe(true)
+    expect(redirects).toContainEqual({ source: '/idees/:slug', destination: '/fr/idees/:slug', permanent: true })
   })
 })

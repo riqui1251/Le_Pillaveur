@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { ArrowLeft, ArrowRight, Bot, Gamepad2, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bot, Gamepad2, Smartphone, Users } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { GameIconById } from '@/components/hub/GameIconById'
@@ -9,7 +9,7 @@ import { DifficultyBadge } from '@/components/game/DifficultyBadge'
 import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
 import { gameDifficulty, gameDrinkLevel, isGameListed } from '@/lib/game-catalog'
 import { getStaffGameDifficulty, getStaffGameDrinkLevel, getStaffHiddenGameIds } from '@/lib/game-catalog-server'
-import { RULES_GAME_IDS, RULES_META, type RulesGameId } from '@/lib/rules/rules-content'
+import { RULES_GAME_IDS, RULES_META, rulesPlayerBounds, type RulesGameId } from '@/lib/rules/rules-content'
 import { OG_LOCALES, SITE_NAME, siteOgImage } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
@@ -18,8 +18,10 @@ import { cn } from '@/lib/utils'
  * Index des règles — /regles. Les dix-sept articles de docs/rules/fr/ n'avaient
  * aucune page mère : chacun n'était atteignable que depuis la landing ou
  * depuis un autre article. Ici, une carte par jeu (titre, accroche du
- * catalogue, effectif EN LIGNE lu dans src/lib/games.ts — jamais recopié —,
- * et « jouable avec des bots » quand c'est vrai), qui mène à /regles/<id>.
+ * catalogue, effectif lu dans src/lib/games.ts — jamais recopié : celui de
+ * la table en ligne, ou du téléphone qui tourne pour un jeu sans version en
+ * ligne —, et « jouable avec des bots » quand c'est vrai), qui mène à
+ * /regles/<id>.
  *
  * Rendue UNE fois au build, par langue. Le contenu est FRANÇAIS sous les
  * quatre locales, comme les articles eux-mêmes (leur canonique pointe déjà
@@ -172,7 +174,7 @@ export default async function RulesIndexPage({
         <section aria-label={t('title')} className="mt-6">
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {entries.map(({ id, game }) => {
-              const { minPlayers, maxPlayers } = game
+              const bounds = rulesPlayerBounds(game)
               return (
                 <li key={id}>
                   <Link
@@ -202,10 +204,18 @@ export default async function RulesIndexPage({
                         {/* Effectif et bots : lus dans le registre, la seule
                             source que le lobby applique vraiment. */}
                         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3">
-                          {minPlayers !== undefined && maxPlayers !== undefined && (
+                          {bounds && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-[#24201A]/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#4A443A]">
                               <Users className="h-3 w-3" aria-hidden />
-                              {t('players', { min: minPlayers, max: maxPlayers })}
+                              {bounds.max
+                                ? t('players', { min: bounds.min, max: bounds.max })
+                                : t('playersFrom', { min: bounds.min })}
+                            </span>
+                          )}
+                          {!game.onlineReady && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#24201A]/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#4A443A]">
+                              <Smartphone className="h-3 w-3" aria-hidden />
+                              {t('oneDevice')}
                             </span>
                           )}
                           {game.botsFillable && (

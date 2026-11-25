@@ -19,7 +19,8 @@ import {
   recordVisitorPing,
   syncVisitorLocalPlayers,
 } from '@/lib/analytics-server'
-import { parsePingBody, planPing } from '@/lib/analytics-ping'
+import { parsePingAcquisition, parsePingBody, planPing } from '@/lib/analytics-ping'
+import { recordAcquisition } from '@/lib/acquisition-server'
 import { recordAccountBeat } from '@/lib/account-visits-server'
 import { recordIpSeen } from '@/lib/ip-history-server'
 import { runRetentionSweep } from '@/lib/retention-sweep'
@@ -39,7 +40,8 @@ export const runtime = 'nodejs'
  * processus, pas seulement l'appelant.
  *
  * 8 Ko : le corps se réduit à `{ view, beat, active, inGame, localPlayers,
- * localPlayerNames[] }`, la liste étant elle-même bornée à quelques pseudos.
+ * localPlayerNames[], acq }`, la liste étant elle-même bornée à quelques
+ * pseudos et `acq` à quelques centaines d'octets (acquisition.ts).
  * Même plafond que les routes auth (API_BODY_MAX_BYTES).
  */
 const PING_BODY_MAX_BYTES = 8 * 1024
@@ -100,7 +102,9 @@ export async function POST(request: Request) {
     // s'il s'agit d'une vue, d'un battement ou d'une synchro de pseudos, donc
     // ce qui peut être écrit. Toute la décision est dans planPing (pur, testé) ;
     // cette route ne fait qu'exécuter la liste, dans son ordre.
-    const body = parsePingBody(await readJsonBody(request))
+    const json = await readJsonBody(request)
+    const body = parsePingBody(json)
+    const acquisition = parsePingAcquisition(json)
     const writes = planPing({
       view: body.view,
       beat: body.beat,
@@ -109,6 +113,7 @@ export async function POST(request: Request) {
       hasSession: currentUser !== null,
       accountRole: currentUser?.role ?? null,
       hasVisitorId: Boolean(visitorId),
+      hasAcquisition: acquisition !== null,
     })
 
     // Dernière activité du compte (intérêt légitime) : battement seulement,
@@ -150,6 +155,16 @@ export async function POST(request: Request) {
       if (writes.includes('visitor-ip')) await recordIpSeen(null, visitorId, ip, country)
       if (writes.includes('local-players')) {
         localPlayersSynced = await syncVisitorLocalPlayers(visitorId, body.localPlayerNames)
+      }
+    }
+
+    // Provenance de la 1re vue : un compteur sans identifiant. Son échec ne
+    // coûte que ce comptage, jamais la présence ni la session.
+    if (acquisition && writes.includes('acquisition')) {
+      try {
+        await recordAcquisition(acquisition)
+      } catch (error) {
+        console.error('analytics ping: provenance non comptée:', error)
       }
     }
 

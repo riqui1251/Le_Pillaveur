@@ -1,6 +1,6 @@
 # Informativa sulla privacy
 
-**Ultimo aggiornamento:** 24 novembre 2026
+**Ultimo aggiornamento:** 25 novembre 2026
 
 ## 1. Introduzione
 
@@ -58,6 +58,8 @@ Una **visita** è un periodo di utilizzo del sito senza interruzioni superiori a
 L'amministrazione del sito può consultare lo storico delle visite account per account; i moderatori e gli altri giocatori non vi hanno accesso. Al momento della consultazione, ogni visita viene messa in relazione con le partite online avviate durante il suo svolgimento (registro delle partite, vedi 3.4) e vengono calcolati i totali su 7 e 30 giorni. La cronologia mostra solo il giorno, la durata e una fascia oraria (notte, mattina, pomeriggio o sera, ora di Parigi); l'ora esatta compare solo nel dettaglio di una visita.
 
 Le visite servono anche, al momento della consultazione e senza alcun dato aggiuntivo, a statistiche d'uso complessive consultabili solo dall'amministrazione del sito: numero di account attivi e di giocatori unici, account nuovi e account che ritornano, ritorno degli account creati di recente almeno 1 giorno e poi almeno 7 giorni dopo la loro creazione, durata mediana di una visita, tempo attivo mediano per account e quota del tempo trascorsa in partita. Queste statistiche non nominano alcun account, tranne un elenco interno dei 10 account più attivi su 7 giorni, che indica per ciascuno il tempo attivo e il numero di partite online (vedi 3.4): non viene mai mostrato ai giocatori né ai moderatori, e non comporta alcuna ricompensa, sollecitazione o misura nei confronti degli account che vi figurano. Gli account del team di moderazione e gli account di prova sono esclusi da queste statistiche (vedi 3.4).
+
+**Provenienza delle visite.** Con questo stesso consenso, alla prima pagina vista in ogni sessione del browser, contiamo anche da dove arrivi: il nome di dominio del sito di origine se è esterno a Le Pillaveur (ad esempio google.it, o il nome di un'app Android), la pagina di arrivo sul sito (senza i suoi parametri) e gli eventuali parametri di campagna `utm_source`, `utm_medium` e `utm_campaign` del link seguito. Queste informazioni sono conservate solo sotto forma di contatori giornalieri (ora di Parigi) — tanti arrivi da una certa origine su una certa pagina —, senza identificativo del browser, indirizzo IP né account: non possono essere ricondotte a nessuno e quindi non vengono cancellate alla revoca del consenso. Né l'indirizzo completo della pagina di origine né la tua ricerca vengono registrati. Questi contatori sono consultabili dall'amministrazione del sito e conservati 13 mesi (vedi 7).
 
 Se rifiuti, nessun tracciamento di visita viene registrato. Se revochi il consenso (link «Statistiche di visita», poi «Rifiuta»), i dati raccolti a questo titolo su questo browser (indirizzo IP, paese, dispositivo, nomi dei giocatori locali, date delle visite, indirizzi IP registrati senza accesso, registri giornalieri delle visite) vengono cancellati immediatamente e il cookie `lp_vid` viene rimosso; viene cancellato anche lo storico delle visite dell'account connesso in quel momento, su tutti i dispositivi. Rifiutare su un browser in cui non avevi accettato le statistiche di visita (un nuovo dispositivo, per esempio) non cancella questo storico. La scelta vale per questo browser: su un altro browser in cui le avevi accettate, le visite continuano a essere registrate finché non le rifiuti anche lì.
 
@@ -186,6 +188,7 @@ L'editore resta il titolare dei trattamenti descritti nella presente informativa
 - **Registro delle partite avviate** (gioco, data, durata del tavolo, motivo di chiusura, partecipanti): **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.
 - **Dati di misurazione dell'audience**: **13 mesi**.
+- **Contatori di provenienza delle visite** (giorno, canale o dominio di origine, pagina di arrivo, parametri di campagna, numero di arrivi, senza identificativo): **13 mesi**.
 - **Contatori delle partite locali e dei sorsi** (gioco, giorno, modalità, numero di partite avviate e concluse, totale dei sorsi e delle partecipazioni, senza alcun dato personale): **13 mesi**.
 - **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta; l'email di contatto associata viene cancellata se elimini il tuo account.
 - **Cookie di età e consenso**: 1 anno, rinnovabili a ogni convalida.

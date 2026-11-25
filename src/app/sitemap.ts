@@ -3,6 +3,7 @@ import { COLLECTION_SLUGS } from '@/lib/collections'
 import { GAMES } from '@/lib/games'
 import { isGameListed } from '@/lib/game-catalog'
 import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
+import { IDEAS_SLUGS } from '@/lib/ideas/ideas-content'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-content'
 import { buildAlternates } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
@@ -69,6 +70,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     ...RULES_GAME_IDS.map((id) => ({
       url: `${SITE_URL}/fr/regles/${id}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+    // Listes de questions tirées des cartes (docs/ideas/fr/) : même règle que
+    // les règles, français seul, canonical /fr, pas d'alternates.
+    {
+      url: `${SITE_URL}/fr/idees`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    },
+    ...IDEAS_SLUGS.map((slug) => ({
+      url: `${SITE_URL}/fr/idees/${slug}`,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     })),

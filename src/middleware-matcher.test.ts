@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
 // next-intl/middleware importe `next/server` sans extension, ce que la
-// résolution ESM de Node refuse sous vitest. Seul le `config` exporté
-// intéresse ce test : le middleware lui-même n'est jamais appelé.
+// résolution ESM de Node refuse sous vitest. La réponse i18n simulée est
+// `undefined` : un chemin public la renvoie telle quelle, un chemin protégé
+// sans cookie part en redirection vers /compte.
 vi.mock('next-intl/middleware', () => ({ default: () => () => undefined }))
 
-import { config } from '@/middleware'
+import { NextRequest } from 'next/server'
+import { config, middleware } from '@/middleware'
 
 // Le motif du matcher est une expression path-to-regexp réduite à un groupe :
 // ancrée, elle se juge comme une expression régulière ordinaire. On vérifie
@@ -44,5 +46,21 @@ describe('matcher du middleware', () => {
     for (const path of ['/', '/fr', '/fr/jeux', '/regles/loup-garou', '/en/games/tabou', '/well-known', '/xwell-known/a', '/swxjs', '/fr/sw.js']) {
       expect(matcher.test(path), path).toBe(true)
     }
+  })
+})
+
+describe('garde d’accès du middleware', () => {
+  const visit = (path: string) => middleware(new NextRequest(`https://lepillaveur.fr${path}`))
+
+  it('laisse lire les listes de questions sans session ni cookie mode local', () => {
+    for (const path of ['/fr/idees', '/fr/idees/je-n-ai-jamais', '/en/idees/tu-preferes', '/it/idees/action-ou-verite']) {
+      expect(visit(path), path).toBeUndefined()
+    }
+  })
+
+  it('renvoie toujours une page protégée vers /compte', () => {
+    const response = visit('/fr/stats')
+    expect(response?.status).toBe(307)
+    expect(response?.headers.get('location')).toContain('/fr/compte')
   })
 })

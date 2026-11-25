@@ -96,6 +96,16 @@ export type GameMeta = {
   /** Proposé en mode Soft (sans gorgées) — sous-ensemble des jeux onlineReady. */
   softModeReady?: boolean;
   /**
+   * Jeu LOCAL dont l'ambiance « Sans alcool » réécrit vraiment la partie :
+   * ses textes ont leur jeu complet de variantes `soft` (gorgées → points ou
+   * gage choisi par la table), pas une simple remise à zéro du compteur de
+   * gorgées. Pendant local de `softModeReady` : il fait entrer le jeu dans la
+   * collection « sans alcool ». Ni Plinko, 1220 ou le PMU (seul le compteur
+   * change), ni le Petit Buveur (ses variantes retombent sur la formulation
+   * alcoolisée quand elles manquent).
+   */
+  localSoftReady?: boolean;
+  /**
    * Jeu phare choisi à la main. La mise en avant du site suit la popularité
    * des 30 derniers jours (src/lib/game-catalog.ts) ; ces jeux ne servent plus
    * qu'à compléter la rangée tant que les parties manquent. Un jeu `hidden`
@@ -768,6 +778,7 @@ export const GAMES: GameMeta[] = [
     difficulty: 1,
     drinkLevel: 3,
     localMinPlayers: 2,
+    localSoftReady: true,
   },
   {
     id: 'vue-de-nez',
@@ -806,6 +817,7 @@ export const GAMES: GameMeta[] = [
     difficulty: 1,
     drinkLevel: 2,
     localMinPlayers: 2,
+    localSoftReady: true,
   },
   {
     id: 'coupe-du-roi',
@@ -823,6 +835,7 @@ export const GAMES: GameMeta[] = [
     difficulty: 2,
     drinkLevel: 3,
     localMinPlayers: 2,
+    localSoftReady: true,
   },
   {
     id: 'patate-chaude',
@@ -858,6 +871,7 @@ export const GAMES: GameMeta[] = [
     difficulty: 1,
     drinkLevel: 1,
     localMinPlayers: 2,
+    localSoftReady: true,
   },
   {
     id: 'degaine',
@@ -874,6 +888,7 @@ export const GAMES: GameMeta[] = [
     difficulty: 1,
     drinkLevel: 1,
     localMinPlayers: 2,
+    localSoftReady: true,
   },
   {
     id: 'doigt-du-destin',
@@ -890,6 +905,7 @@ export const GAMES: GameMeta[] = [
     difficulty: 1,
     drinkLevel: 2,
     localMinPlayers: 2,
+    localSoftReady: true,
   },
 ];
 

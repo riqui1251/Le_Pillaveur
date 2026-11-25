@@ -52,13 +52,22 @@ export function BrandMark({
   )
 }
 
-export function BrandLogo({ className }: { className?: string }) {
+/** Longueur de l'accroche française (« La maison des jeux de soirée ») : la plus longue qui tienne au naturel. */
+const NATURAL_TAGLINE_CHARS = 28
+
+/**
+ * `tagline` : l'accroche dans la langue de la page (og.siteTagline), écrite en
+ * capitales sous le nom. Plus longue que la française, elle est resserrée
+ * pour tenir dans le cadre intérieur (x 30-370) au lieu de déborder.
+ */
+export function BrandLogo({ className, tagline }: { className?: string; tagline: string }) {
+  const fitted = tagline.length > NATURAL_TAGLINE_CHARS
   return (
     <svg
       viewBox="0 0 400 120"
       className={cn('h-auto w-full', className)}
       role="img"
-      aria-label="Le Pillaveur — la maison des jeux de soirée"
+      aria-label={`Le Pillaveur — ${tagline.toLowerCase()}`}
       fill="none"
     >
       {/* cadre double filet */}
@@ -79,9 +88,11 @@ export function BrandLogo({ className }: { className?: string }) {
         x="200" y="84" textAnchor="middle"
         fontFamily="var(--font-display), Georgia, serif"
         fontSize="11" letterSpacing="5"
+        textLength={fitted ? 320 : undefined}
+        lengthAdjust={fitted ? 'spacing' : undefined}
         fill="var(--gold)"
       >
-        ✦ LA MAISON DES JEUX DE SOIRÉE ✦
+        {`✦ ${tagline.toUpperCase()} ✦`}
       </text>
       {/* cœur et pique d'angle */}
       <path

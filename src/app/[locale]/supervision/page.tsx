@@ -139,6 +139,7 @@ import { CosmeticGrantsDialog } from '@/components/supervision/CosmeticGrantsDia
 import { GameSessionsPanel } from '@/components/supervision/GameSessionsPanel'
 import { ClientErrorsPanel } from '@/components/supervision/ClientErrorsPanel'
 import { FirstGameFeedbackMeta, FirstGameFeedbackPanel } from '@/components/supervision/FirstGameFeedbackPanel'
+import { AcquisitionPanel } from '@/components/supervision/AcquisitionPanel'
 import { GamesEditingTab } from '@/components/supervision/GamesEditingTab'
 import { OpsStatusPanel } from '@/components/supervision/OpsStatusPanel'
 import { ACCOUNT_KIND_BADGES, AccountKindBadge } from '@/components/supervision/AccountKindBadge'
@@ -2554,8 +2555,8 @@ function PlayersBody({
  * Vue Audience : les NAVIGATEURS qui viennent (statistiques acceptées) —
  * une autre unité que les comptes, jamais additionnée à eux. Le nombre de la
  * période, les navigateurs actifs maintenant, deux chiffres de visites (7
- * jours, dit), la courbe par jour, les appareils, les pays ; la liste des
- * visiteurs par IP repliée.
+ * jours, dit), la courbe par jour, les appareils, les pays, la provenance
+ * (AcquisitionPanel) ; la liste des visiteurs par IP repliée.
  */
 function StatsAudienceView({
   period,
@@ -2696,6 +2697,8 @@ function StatsAudienceView({
           onCountryClick={onCountryClick}
         />
       </div>
+
+      <AcquisitionPanel period={period} />
 
       <Disclosure title={t('statsTab.audience.ipTitle')} icon={Network}>
         <IpVisitorList rows={stats?.visitorIpList ?? []} onIpClick={onIpClick} onNetworkClick={onNetworkClick} />

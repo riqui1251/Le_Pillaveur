@@ -64,12 +64,14 @@
     "navLabel": "Explore Le Pillaveur",
     "links": {
       "all": "All party games",
+      "drinking": "Drinking games",
       "noAlcohol": "Alcohol-free party games",
       "duo": "2-player games",
       "bigGroup": "Games for big groups",
       "solo": "Play solo with bots",
       "remote": "Remote party games",
-      "rules": "Game rules"
+      "rules": "Game rules",
+      "ideas": "Party question ideas"
     }
   },
   "nav": {
@@ -120,7 +122,7 @@
       }
     },
     "legal": {
-      "cgu": "CGU",
+      "cgu": "Terms",
       "confidentialite": "Privacy",
       "mentionsLegales": "Legal notices",
       "analytics": "Visit statistics"
@@ -402,6 +404,9 @@
     },
     "collections": {
       "chipsLabel": "Find a game for your night",
+      "jeux-a-boire": {
+        "chip": "Drinking games"
+      },
       "a-2-joueurs": {
         "chip": "For 2 players"
       },
@@ -434,6 +439,12 @@
     "playersOnline": "{min} to {max} players online",
     "playersOnlineOpen": "From {min} players online",
     "playersLocal": "From {min} players, one phone",
+    "jeux-a-boire": {
+      "title": "Free drinking games, online and no app",
+      "description": "Pyramid, King’s Cup, Purple, PMU Race, Truth or Dare: the classic drinking games, on a single phone or remotely. For adults 18 and over only.",
+      "intro": "A drinking game is a party game where a lost round, a missed bet or a refused dare is settled in sips: cards, dice, bets and dares to get the night started with friends. Here everything runs in the browser, free and with no app to install. Most of these games run on a single phone passed from hand to hand around the table: Pyramid, King’s Cup, PMU Race, Hi/Lo, Monsieur 3, Plinko, Truth or Dare and Finger of Fate. Others can also be played online, everyone on their own phone, even remotely with the built-in voice chat: Purple, 1220, The Little Drinker, Blackjack and Hot Potato. The site keeps the score and reminds you of the rules; it’s the game that counts, not what’s in the glass. For adults 18 and over only. Not everyone at the table drinks? Alcohol-free party games have their own collection, where sips become dares.",
+      "noAlcoholLink": "See the alcohol-free party games"
+    },
     "a-2-joueurs": {
       "title": "Party games for 2 players",
       "description": "Games that start with just two: dice and cards on one phone, or online with a table code — Liar's Dice, quiz, Purple, Petit Bac… Free, nothing to install.",
@@ -442,7 +453,8 @@
     "sans-alcool": {
       "title": "Alcohol-free party games",
       "description": "Party games without a drop: with the alcohol-free setting, sips become dares. Werewolf, quiz, drawing, bluffing… Free, with friends or with bots.",
-      "intro": "Not everyone at the table drinks, or nobody does tonight: Le Pillaveur has an alcohol-free setting, switched on from the games hub. Once chosen, the sips and chugs of these online games become dares, and the site turns midnight blue so everyone can see the night is soft. Rules, roles and scores stay the same: Werewolf keeps its wolves and its seer, The Big Pillaveur Quiz is still a buzzer quiz, Crobard a live drawing game, Sans Filtre a contest of bad faith, and Mots Codés, Petit Bac or Président play exactly as usual. Liar's Dice, The Impostor, Who's the Spy?, The Big Bluff, Dilemmes, Hit & Sunk and Drawn Telephone round out the selection. This setting applies to the online games in this selection, everyone on their own phone with a table code; Purple, 1220 and The Little Drinker stay in drinking mode, like the dice games that run on a single phone (Monsieur 3, Pyramid…). And since most of these games accept bots, an alcohol-free night can also be played by two, or even alone."
+      "intro": "Not everyone at the table drinks, or nobody does tonight: Le Pillaveur has an alcohol-free setting, switched on from the games hub. Once chosen, the sips and chugs of the games in this selection become dares or points, and the site turns midnight blue so everyone can see the night is soft. Rules, roles and scores stay the same: Werewolf keeps its wolves and its seer, The Big Pillaveur Quiz is still a buzzer quiz, Crobard a live drawing game, Sans Filtre a contest of bad faith, and Mots Codés, Petit Bac or Président play exactly as usual. Liar's Dice, The Impostor, Who's the Spy?, The Big Bluff, Dilemmes, Hit & Sunk and Drawn Telephone round out the online selection, everyone on their own phone with a table code. On a single phone in the middle of the table, King’s Cup, Truth or Dare?, Front Collé, Pile Poil, Draw! and Finger of Fate also have their alcohol-free version: penalties are counted in points, and the loser takes a dare chosen by the table. Purple, 1220 and The Little Drinker stay in drinking mode, like Monsieur 3, Pyramid or Hi/Lo. And since most of the online games accept bots, an alcohol-free night can also be played by two, or even alone.",
+      "dryJanuary": "Dry January, the alcohol-free month, doesn't mean putting game nights on hold: here, you play without drinking. With the alcohol-free setting, every sip becomes a dare chosen by the table or points on the scoreboard, depending on the game; the rules and the rankings stay the same, and everyone fills their glass with whatever they like. It works in January, and the rest of the year too."
     },
     "seul-avec-des-bots": {
       "title": "Play solo: games with bots",
@@ -905,7 +917,7 @@
       "displayNameLabel": "Pseudo",
       "displayNamePlaceholder": "Your nickname",
       "passwordPlaceholder": "Letter + number, 8 char. min.",
-      "termsRequired": "You must agree to the CGU and Privacy Policy.",
+      "termsRequired": "You must agree to the Terms and Privacy Policy.",
       "termsPrefix": "I accept the",
       "termsAnd": "and the",
       "termsSuffix": ".",
@@ -920,7 +932,7 @@
       "termsPrefix": "By playing locally, you accept the",
       "termsAnd": "and the",
       "termsSuffix": ".",
-      "termsHint": "By playing locally you agree to the CGU and Privacy Policy.",
+      "termsHint": "By playing locally you agree to the Terms and Privacy Policy.",
       "button": "Play locally",
       "errorActivate": "Unable to enable local mode",
       "errorRetry": "Unable to activate local mode. Try again."
@@ -1447,24 +1459,24 @@
         "description": "Werewolf, quizzes, drawing, bluffing and party games: open a free table, invite friends with a link or QR — or play solo, bots fill the seats."
       },
       "purple": {
-        "title": "Play Purple online for free — red, black or purple?",
-        "description": "The sneakiest card-colour bet around: 2–16 players, voice chat, free, no install. Play with friends — or solo, bots fill the table."
+        "title": "Play Purple online for free — the card-bet drinking game",
+        "description": "A drinking game of cards, the sneakiest colour bet around: 2–16 players, voice chat, free, no install. Play with friends — or solo, bots fill the table."
       },
       "blackjack": {
         "title": "Play Blackjack online for free — 21 against the dealer",
         "description": "Get close to 21 without going over: hit, stand, double, split. 1 to 7 players, voice chat, free, no install — or solo, bots fill the table."
       },
       "monsieur-3": {
-        "title": "Play Monsieur 3 for free — dodge the 3s or drink",
-        "description": "The dice game where 3s spell trouble: dodge the cursed combos or drink. Free, no install, on one phone passed around the table."
+        "title": "Play Monsieur 3 for free — the dice drinking game",
+        "description": "The dice drinking game where 3s spell trouble: dodge the cursed combos or drink. Free, no install, on one phone passed around the table."
       },
       "pmu": {
-        "title": "Play PMU Race for free — horse-race betting for parties",
-        "description": "Bet on your horse and watch the race live: losers hand out the sips. Free, no install, on one phone in the middle of the table."
+        "title": "Play PMU Race for free — the horse-race drinking game",
+        "description": "The horse-race betting drinking game: bet on your horse and watch the race live, losers hand out the sips. Free, no install, on one phone in the middle."
       },
       "petit-buveur": {
-        "title": "Play The Little Drinker online free — party board game",
-        "description": "A board, a die, trap squares and dares that make you drink. 2–99 players, voice chat, free and no install."
+        "title": "Play The Little Drinker for free — the board drinking game",
+        "description": "A drinking game on a board: a die, trap squares and dares that make you drink. 2–99 players, online with voice chat or on one phone, free, no install."
       },
       "toucher-coule": {
         "title": "Play Hit & Sunk online for free — team battleship",
@@ -1487,20 +1499,20 @@
         "description": "Wolves, seer, debates and votes: the party classic, aperitif style. 4–12 players, voice chat, free, no install — or solo, bots fill the village."
       },
       "hi-lo": {
-        "title": "Play Hi/Lo for free — higher or lower?",
-        "description": "Guess whether the next card is higher or lower and hand out the sips. Free, no install, on one phone passed around the table."
+        "title": "Play Hi/Lo for free — the higher-or-lower drinking game",
+        "description": "The simplest card drinking game: guess whether the next card is higher or lower and hand out the sips. Free, no install, on one phone passed around."
       },
       "pyramide": {
-        "title": "Play Pyramid for free — the party card game",
-        "description": "Flip the cards, climb the pyramid and hand out sips on every row. Free, no install, on one phone in the middle of the table."
+        "title": "Play Pyramid for free — the party card drinking game",
+        "description": "The party card drinking game: flip the cards, climb the pyramid and hand out sips on every row. Free, no install, on one phone in the middle of the table."
       },
       "plinko": {
-        "title": "Play Plinko for free — drop the ball, deal the sips",
-        "description": "Drop the ball, watch it bounce and pray for the right slot. Free, no install, on one phone passed around the table."
+        "title": "Play Plinko for free — the bouncing-ball drinking game",
+        "description": "A drinking game full of bounces: drop the ball, watch it bounce and pray for the right slot. Free, no install, on one phone passed around the table."
       },
       "1220": {
-        "title": "Play 1220 online for free — two dice, four bets",
-        "description": "A d12, a d20 and bets that make you drink or deal drinks. 2–16 players, voice chat, free, no install — or solo, bots fill the table."
+        "title": "Play 1220 online for free — the two-dice drinking game",
+        "description": "The online dice drinking game: a d12, a d20 and bets that make you drink or deal drinks. 2–16 players, voice chat, free — or solo, bots fill the table."
       },
       "bluff": {
         "title": "Play The Big Bluff online for free — fool your friends",
@@ -1547,8 +1559,8 @@
         "description": "A trap number hides between 1 and 100: guess, close in on it and don’t land on it. Online for 2–16 players with voice chat, or on a single phone. Free."
       },
       "cap-ou-pas-cap": {
-        "title": "Play Truth or Dare for free — every card has its price",
-        "description": "Truth or dare with a price on every card: take it on and hand out sips, or drink. Four levels, six themes, free, on one phone passed around."
+        "title": "Play Truth or Dare for free — the drinking game version",
+        "description": "Truth or dare as a drinking game: every card has its price, take it on and hand out sips, or drink. Four levels, six themes, free, on one phone passed around."
       },
       "vue-de-nez": {
         "title": "Play Ballpark for free — the party guessing game",
@@ -1556,27 +1568,27 @@
       },
       "front-colle": {
         "title": "Play Front Collé for free — guess the word on your forehead",
-        "description": "Phone stuck on your forehead, guess the word the table describes, mimes or hums for you. Tilt to score. Free, no install, on one phone."
+        "description": "Phone on your forehead, guess the word the table describes, mimes or hums. As a drinking game, every skipped word is a sip. Free, no install, on one phone."
       },
       "coupe-du-roi": {
-        "title": "Play King’s Cup for free — 13 cards, 13 rules",
-        "description": "The cult party card game: every card you draw sets off a rule, the app keeps track of the roles and the 4th king drinks the cup. Free, no install."
+        "title": "Play King’s Cup for free — the cult drinking card game",
+        "description": "The cult drinking card game: every card you draw sets off a rule, the app keeps track of the roles and the 4th king drinks the cup. Free, no install."
       },
       "patate-chaude": {
         "title": "Play Hot Potato for free — the bomb with a secret fuse",
         "description": "One theme, one bomb with a secret fuse: say a fitting word and pass it on before it blows. Online for 2–12 players with voice chat, or on a single phone. Free."
       },
       "pile-poil": {
-        "title": "Play Pile Poil for free — 10 seconds, blind",
-        "description": "Start the clock and stop it at exactly 10 seconds without seeing the digits: furthest off drinks. Free, no install, on one phone passed around."
+        "title": "Play Pile Poil for free — the blind stopwatch drinking game",
+        "description": "A precision drinking game: start the clock and stop it at exactly 10 seconds without seeing the digits, furthest off drinks. Free, on one phone passed around."
       },
       "degaine": {
-        "title": "Play Draw! for free — the quick-draw reflex duel",
-        "description": "One phone laid between two duellists: on “FIRE!”, the fastest wins and whoever shoots too soon drinks. A tournament for the whole table, free."
+        "title": "Play Draw! for free — the quick-draw drinking game",
+        "description": "The Wild West drinking game: one phone between two duellists, on “FIRE!” the fastest wins and whoever shoots too soon drinks. A tournament for the table, free."
       },
       "doigt-du-destin": {
-        "title": "Play Finger of Fate for free — who will it be?",
-        "description": "Everyone puts a finger on the screen and fate decides: a victim, two teams, the turn order or a survival round. Free, no install, on a single phone."
+        "title": "Play Finger of Fate for free — the chance drinking game",
+        "description": "A drinking game of pure chance: everyone puts a finger on the screen and fate decides, a victim, two teams, turn order or survival. Free, on a single phone."
       }
     },
     "catalog": {
@@ -7707,8 +7719,54 @@
       "noneRecorded": "No game recorded yet.",
       "allTimeNote": "All-time total, all periods combined: local players' games synced to accounts, statistics stored in the database and ranked online games (one per game, rematches included). This is not recent activity: for the selected period, see the “By game” table."
     },
+    "acquisition": {
+      "title": "Traffic sources",
+      "description": "Where visitors come from: first page viewed in each browser session (statistics accepted), counted per day without any identifier.",
+      "total": "{count, plural, one {# arrival} other {# arrivals}}",
+      "channelsTitle": "Arrivals by channel",
+      "landingsTitle": "Landing pages",
+      "campaignsTitle": "Campaigns (utm)",
+      "hostsTitle": "Other sites and apps",
+      "campaignHint": "source: {source} · medium: {medium}",
+      "appHint": "Android app",
+      "overflow": "others (daily cap reached)",
+      "overflowNote": "{count, plural, one {# arrival counted} other {# arrivals counted}} without detail: beyond {cap} different combinations in a single day, new ones are no longer detailed (only their channel is kept), so that abusive requests cannot fill the database.",
+      "arrivals": "Arrivals",
+      "channel": "Channel",
+      "page": "Page",
+      "campaign": "Campaign",
+      "site": "Site",
+      "unset": "—",
+      "empty": "No arrivals measured in this period.",
+      "emptyList": "Nothing in this period.",
+      "loadError": "Traffic sources unavailable right now.",
+      "forbidden": "Access denied.",
+      "retry": "Retry",
+      "directNote": "“Direct” covers typed addresses, bookmarks and most links opened from a messaging app (WhatsApp, Messenger…), which don't say where they come from. A tagged campaign (utm) keeps its original channel.",
+      "channels": {
+        "google": "Google",
+        "bing": "Bing",
+        "duckduckgo": "DuckDuckGo",
+        "qwant": "Qwant",
+        "ecosia": "Ecosia",
+        "yahoo": "Yahoo",
+        "chatgpt": "ChatGPT",
+        "perplexity": "Perplexity",
+        "x": "X (Twitter)",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "tiktok": "TikTok",
+        "snapchat": "Snapchat",
+        "reddit": "Reddit",
+        "discord": "Discord",
+        "youtube": "YouTube",
+        "app": "Android apps",
+        "direct": "Direct",
+        "autre": "Other sites"
+      }
+    },
     "geo": {
-      "onlineByCountry": "Active browsers by country",
+      "onlineByCountry":"Active browsers by country",
       "onlineByCountryWindowDesc": "Browsers active in the last {minutes} minutes.",
       "todayByCountry": "Connected today by country",
       "todayByCountryDesc": "Browsers (statistics accepted, staff included) seen since midnight, Paris time.",
@@ -8950,9 +9008,11 @@
     },
     "kicker": "Cards on the table",
     "title": "Party game rules",
-    "intro": "Every Le Pillaveur online game explained in two minutes: the idea, how a round goes, how you win, the sips when there are any, and the questions we get asked most. The player count shown is the online table's — and when a game can be played solo with bots, it says so.",
+    "intro": "Every Le Pillaveur game explained in two minutes, whether it's played online or on a single phone passed around the table: the idea, how a round goes, how you win, the sips when there are any, and the questions we get asked most. The player count shown is the online table's, or the shared phone's for games played in the same room — and when a game can be played solo with bots, it says so.",
     "count": "{count, plural, one {# game explained} other {# games explained}}",
     "players": "{min} to {max} players",
+    "playersFrom": "From {min} players",
+    "oneDevice": "on a single phone",
     "botsBadge": "Playable with bots",
     "readRules": "Read the rules",
     "allGames": "See all games",
@@ -8965,6 +9025,45 @@
     "voiceChat": "voice chat",
     "playNow": "Play now — it's free",
     "otherRules": "Rules of the other games"
+  },
+  "ideas": {
+    "meta": {
+      "title": "Party question ideas",
+      "description": "Never have I ever, Would you rather, Truth or dare: question lists taken from the cards of our games, with or without alcohol, free to play."
+    },
+    "kicker": "Cards on the table",
+    "title": "Party question ideas",
+    "intro": "The questions people look for before a party, taken word for word from the real cards of our games: “Never have I ever”, “Would you rather” and truth or dare ideas. We only kept the mild or moderate cards, to read, to copy, or to play straight away on Le Pillaveur, with or without alcohol.",
+    "breadcrumb": {
+      "home": "Home",
+      "ideas": "Question ideas"
+    },
+    "backToIdeas": "All the lists",
+    "readList": "Read the list",
+    "cardsFrom": "The cards of {game}",
+    "players": "{min} to {max} players",
+    "playersFrom": "From {min} players",
+    "showcaseFacts": "free · no install",
+    "online": "online, voice chat",
+    "oneDevice": "on a single phone",
+    "playWithCards": "Play with these cards",
+    "readRules": "The rules of {game}",
+    "otherLists": "The other lists",
+    "allGames": "See all games",
+    "lists": {
+      "je-n-ai-jamais": {
+        "name": "Never have I ever",
+        "blurb": "50 funny, awkwardness-free lines to get the whole table confessing, taken from the cards of Dilemmes."
+      },
+      "tu-preferes": {
+        "name": "Would you rather",
+        "blurb": "60 absurd or impossible dilemmas to argue about all night, taken from the cards of Dilemmes."
+      },
+      "action-ou-verite": {
+        "name": "Truth or dare",
+        "blurb": "60 questions and small dares sorted by theme, done on the spot with no props, taken from the cards of Cap ou Pas Cap."
+      }
+    }
   },
   "tryBots": {
     "play": "Play now",
@@ -9358,7 +9457,18 @@
         "copy": "Copy the text recap",
         "copied": "Recap copied: paste it in the group.",
         "copyFailed": "Copying is blocked on this browser.",
-        "alt": "The night’s bill"
+        "alt": "The night’s bill",
+        "format": "Image format",
+        "formats": {
+          "feed": {
+            "label": "Feed",
+            "hint": "Portrait, for the group chat or the feed"
+          },
+          "story": {
+            "label": "Story",
+            "hint": "Full screen, for Instagram or Snapchat"
+          }
+        }
       },
       "keep": {
         "title": "Keep the crew",

@@ -3,7 +3,11 @@ import { Link } from '@/i18n/navigation'
 import { GAMES } from '@/lib/games'
 import { COLLECTION_SLUGS } from '@/lib/collections'
 
-const COLLECTION_LABELS: Record<(typeof COLLECTION_SLUGS)[number], 'noAlcohol' | 'duo' | 'bigGroup' | 'solo'> = {
+const COLLECTION_LABELS: Record<
+  (typeof COLLECTION_SLUGS)[number],
+  'drinking' | 'noAlcohol' | 'duo' | 'bigGroup' | 'solo'
+> = {
+  'jeux-a-boire': 'drinking',
   'sans-alcool': 'noAlcohol',
   'a-2-joueurs': 'duo',
   'en-grand-groupe': 'bigGroup',
@@ -18,6 +22,7 @@ export async function HomeSiteLinks({ locale }: { locale: string }) {
     ...COLLECTION_SLUGS.map((slug) => ({ href: `/jeux/${slug}`, label: t(`links.${COLLECTION_LABELS[slug]}`) })),
     { href: '/decouvrir', label: t('links.remote') },
     { href: '/regles', label: t('links.rules') },
+    { href: '/idees', label: t('links.ideas') },
   ] as const
 
   return (

@@ -427,6 +427,29 @@ model GameDrinkDaily {
   @@id([day, gameId, mode])
 }
 
+// Provenance des visites : arrivées sur le site (1re vue d'une session de
+// navigateur, statistiques de visite acceptées) comptées par jour de Paris et
+// par combinaison canal / hôte / utm / page d'arrivée. Aucun identifiant (ni
+// navigateur, ni IP, ni compte). Chaînes vides plutôt que NULL : SQLite tient
+// deux NULL pour distincts, l'upsert sur la clé créerait des doublons.
+// Écrit par POST /api/analytics/ping (acquisition-server.ts), purge 13 mois.
+model AcquisitionDaily {
+  /// Jour Paris 'YYYY-MM-DD'.
+  day         String
+  /// Canal (src/lib/acquisition.ts) : 'google', 'direct', 'autre'…
+  channel     String
+  /// Hôte du site d'origine pour 'autre', paquet Android pour 'app' ; vide sinon.
+  host        String @default("")
+  utmSource   String @default("")
+  utmMedium   String @default("")
+  utmCampaign String @default("")
+  /// Chemin d'arrivée sans query, segments dynamiques masqués ('/fr/invite/:code').
+  landingPath String @default("")
+  visits      Int    @default(0)
+
+  @@id([day, channel, host, utmSource, utmMedium, utmCampaign, landingPath])
+}
+
 model DailyVisitor {
   visitorId String
   date      String

@@ -74,7 +74,7 @@ const BORROWED_GAMES: Readonly<Record<string, readonly string[]>> = {
  *
  * Ajouter un chemin ici : seulement s'il n'a AUCUN lecteur client.
  */
-export const SERVER_ONLY_PATHS: readonly string[] = ['collections', 'landing.faq', 'rules', 'legal.meta', 'reminder', 'homeLinks']
+export const SERVER_ONLY_PATHS: readonly string[] = ['collections', 'landing.faq', 'rules', 'legal.meta', 'reminder', 'homeLinks', 'ideas']
 
 /**
  * Sous-arbres chargés À LA DEMANDE par le navigateur : `tour`, les textes du

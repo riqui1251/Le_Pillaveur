@@ -64,12 +64,14 @@
     "navLabel": "Esplora Le Pillaveur",
     "links": {
       "all": "Tutti i giochi da festa",
+      "drinking": "Giochi alcolici",
       "noAlcohol": "Giochi da festa senza alcol",
       "duo": "Giochi per 2 giocatori",
       "bigGroup": "Giochi per grandi gruppi",
       "solo": "Giocare da soli con i bot",
       "remote": "Giochi da festa a distanza",
-      "rules": "Regole dei giochi"
+      "rules": "Regole dei giochi",
+      "ideas": "Idee di domande per la serata"
     }
   },
   "nav": {
@@ -120,7 +122,7 @@
       }
     },
     "legal": {
-      "cgu": "CGU",
+      "cgu": "Condizioni",
       "confidentialite": "Riservatezza",
       "mentionsLegales": "Avvisi legali",
       "analytics": "Statistiche di visita"
@@ -402,6 +404,9 @@
     },
     "collections": {
       "chipsLabel": "Trova un gioco per la serata",
+      "jeux-a-boire": {
+        "chip": "Giochi alcolici"
+      },
       "a-2-joueurs": {
         "chip": "In 2 giocatori"
       },
@@ -434,6 +439,12 @@
     "playersOnline": "Da {min} a {max} giocatori online",
     "playersOnlineOpen": "Da {min} giocatori online",
     "playersLocal": "Da {min} giocatori, un solo telefono",
+    "jeux-a-boire": {
+      "title": "Giochi alcolici gratis, online e senza app",
+      "description": "Piramide, Coppa del Re, Purple, Corsa PMU, Obbligo o verità: i classici giochi alcolici, su un solo telefono o a distanza. Riservato ai maggiori di 18 anni.",
+      "intro": "Un gioco alcolico è un gioco da festa in cui il turno perso, la scommessa sbagliata o la sfida rifiutata si pagano in sorsi: carte, dadi, scommesse e sfide per aprire la serata con gli amici. Qui si gioca tutto nel browser, gratis e senza app da installare. La maggior parte di questi giochi gira su un solo telefono che passa di mano in mano attorno al tavolo: la Piramide, la Coppa del Re, la Corsa PMU, Hi/Lo, Monsieur 3, Plinko, Obbligo o verità e Il Dito del Destino. Altri si giocano anche online, ognuno sul proprio telefono, anche a distanza con la chat vocale integrata: Purple, il 1220, Il Piccolo Bevitore, il Blackjack e Patata Bollente. Il sito tiene il conto e ricorda le regole; conta il gioco, non quello che c'è nel bicchiere. Riservato ai maggiori di 18 anni. Non tutto il tavolo beve? I giochi da festa senza alcol hanno la loro collezione, dove i sorsi diventano penitenze.",
+      "noAlcoholLink": "Vedi i giochi da festa senza alcol"
+    },
     "a-2-joueurs": {
       "title": "Giochi da festa per 2 giocatori",
       "description": "I giochi che partono in due: dadi e carte su un telefono, o online con un codice — Il Bugiardo, quiz, Purple, Petit Bac… Gratis, senza installare nulla.",
@@ -442,7 +453,8 @@
     "sans-alcool": {
       "title": "Giochi da festa senza alcol",
       "description": "Giochi da festa senza una goccia: con l'atmosfera senza alcol, i sorsi diventano penitenze. Lupo Mannaro, quiz, disegno, bluff… Gratis, con amici o bot.",
-      "intro": "Non tutto il tavolo beve, o stasera nessuno: Le Pillaveur ha un'atmosfera senza alcol, da attivare dall'hub dei giochi. Una volta scelta, i sorsi e i «tutto d'un fiato» di questi giochi online diventano penitenze, e il sito passa al blu notte perché tutti vedano che la serata è soft. Regole, ruoli e punteggi non cambiano: Lupo Mannaro tiene i suoi lupi e la sua veggente, Il Gran Pillaveur resta un quiz coi pulsanti, Crobard un gioco di disegno dal vivo, Sans Filtre una gara di malafede, e Mots Codés, Petit Bac o Président si giocano esattamente come sempre. Il Bugiardo, L'Impostore, Chi è la Spia?, Il Grande Bluff, Dilemmes, Colpito e Affondato e Telefono Disegnato completano la selezione. Questa atmosfera vale per i giochi online di questa selezione, ognuno sul proprio telefono con un codice tavolo; Purple, 1220 e Il Piccolo Bevitore restano in modalità aperitivo, come i giochi di dadi che girano su un solo telefono (Monsieur 3, Piramide…). E poiché la maggior parte di questi giochi accetta i bot, una serata senza alcol si può giocare anche in due, o persino da soli."
+      "intro": "Non tutto il tavolo beve, o stasera nessuno: Le Pillaveur ha un'atmosfera senza alcol, da attivare dall'hub dei giochi. Una volta scelta, i sorsi e i «tutto d'un fiato» dei giochi di questa selezione diventano penitenze o punti, e il sito passa al blu notte perché tutti vedano che la serata è soft. Regole, ruoli e punteggi non cambiano: Lupo Mannaro tiene i suoi lupi e la sua veggente, Il Gran Pillaveur resta un quiz coi pulsanti, Crobard un gioco di disegno dal vivo, Sans Filtre una gara di malafede, e Mots Codés, Petit Bac o Président si giocano esattamente come sempre. Il Bugiardo, L'Impostore, Chi è la Spia?, Il Grande Bluff, Dilemmes, Colpito e Affondato e Telefono Disegnato completano la selezione online, ognuno sul proprio telefono con un codice tavolo. Su un solo telefono al centro del tavolo, La Coppa del Re, Obbligo o verità?, Front Collé, Pile Poil, Estrai! e Il Dito del Destino hanno anche la loro versione senza alcol: le penalità si contano in punti, e chi perde fa una penitenza scelta dal tavolo. Purple, 1220 e Il Piccolo Bevitore restano in modalità aperitivo, come Monsieur 3, Piramide o Hi/Lo. E poiché la maggior parte dei giochi online accetta i bot, una serata senza alcol si può giocare anche in due, o persino da soli.",
+      "dryJanuary": "Il Dry January, il mese di gennaio senza alcol, non obbliga a mettere in pausa le serate di giochi: qui si gioca senza bere. Con l'atmosfera senza alcol, ogni sorso diventa una penitenza scelta dal tavolo o punti sul tabellone, a seconda del gioco; regole e classifica non cambiano, e ognuno riempie il bicchiere con quello che vuole. Funziona a gennaio, e anche nel resto dell'anno."
     },
     "seul-avec-des-bots": {
       "title": "Giocare da solo: i giochi con i bot",
@@ -905,9 +917,9 @@
       "displayNameLabel": "Pseudo",
       "displayNamePlaceholder": "Il tuo soprannome",
       "passwordPlaceholder": "Lettera + numero, 8 car. min.",
-      "termsRequired": "Devi accettare il CGU e l'Informativa sulla privacy.",
-      "termsPrefix": "Accetto il",
-      "termsAnd": "e il",
+      "termsRequired": "Devi accettare le Condizioni e l'Informativa sulla privacy.",
+      "termsPrefix": "Accetto le",
+      "termsAnd": "e la",
       "termsSuffix": ".",
       "displayNameTaken": "Questo nickname è già in uso"
     },
@@ -918,9 +930,9 @@
     "localPlay": {
       "hint": "Senza un account, i tuoi giocatori rimarranno registrati solo su questo dispositivo.",
       "termsPrefix": "Giocando in locale, accetti le",
-      "termsAnd": "e l'",
+      "termsAnd": "e la",
       "termsSuffix": ".",
-      "termsHint": "Giocando in locale accetti le CGU e l'Informativa sulla privacy.",
+      "termsHint": "Giocando in locale accetti le Condizioni e l'Informativa sulla privacy.",
       "button": "Gioca localmente",
       "errorActivate": "Impossibile abilitare la modalità locale",
       "errorRetry": "Impossibile attivare la modalità locale. Riprova."
@@ -1222,7 +1234,7 @@
       "enterAdult": "Ho 18 anni o più — Entra",
       "validating": "Convalida…",
       "termsPrefix": "Entrando, accetti le",
-      "termsAnd": "e l'",
+      "termsAnd": "e la",
       "termsSuffix": ".",
       "minorWarning": "Se hai meno di 18 anni devi abbandonare questo sito.",
       "cookiesBanner": "Consentire le statistiche di visita? Registrano un identificativo del browser (1 anno), il tuo indirizzo IP, il paese, il tipo di dispositivo, i nomi dei tuoi giocatori locali e la durata delle tue visite, collegati al tuo account se sei connesso. Consultabili dall'amministrazione del sito, senza condivisione con terzi.",
@@ -1447,24 +1459,24 @@
         "description": "Lupo Mannaro, quiz, disegno, bluff: apri un tavolo gratis e invita gli amici con link o QR — o gioca da solo, i bot completano il tavolo."
       },
       "purple": {
-        "title": "Gioca a Purple online gratis — rosso, nero o purple?",
-        "description": "La scommessa di carte più infida del bancone: da 2 a 16 giocatori, chat vocale, senza installazione. Con gli amici — o da solo, i bot completano."
+        "title": "Gioca a Purple online gratis — il gioco alcolico di carte",
+        "description": "Un gioco alcolico di carte, la scommessa più infida del bancone: da 2 a 16 giocatori, chat vocale, senza installazione. Con gli amici — o da solo, con i bot."
       },
       "blackjack": {
         "title": "Gioca a Blackjack online gratis — 21 contro il banco",
         "description": "Avvicinati a 21 senza sballare: carta, stai, raddoppia, dividi. Da 1 a 7 giocatori, chat vocale, gratis, senza installare — o da solo con i bot."
       },
       "monsieur-3": {
-        "title": "Gioca a Monsieur 3 gratis — schiva il 3 o bevi",
-        "description": "Il gioco di dadi dell'aperitivo: schiva i 3 e le combo trappola, o bevi. Gratis, senza installazione, su un telefono che gira attorno al tavolo."
+        "title": "Gioca a Monsieur 3 gratis — il gioco alcolico con i dadi",
+        "description": "Il gioco alcolico con i dadi dell'aperitivo: schiva i 3 e le combo trappola, o bevi. Gratis, senza installazione, su un telefono che gira attorno al tavolo."
       },
       "pmu": {
-        "title": "Gioca alla Corsa PMU gratis — scommesse ippiche da bar",
-        "description": "Scommetti sul tuo cavallo e segui la corsa in diretta: chi perde distribuisce i sorsi. Gratis, senza installazione, su un telefono al centro del tavolo."
+        "title": "Gioca alla Corsa PMU gratis — il gioco alcolico delle corse",
+        "description": "Il gioco alcolico delle scommesse ippiche: punta sul tuo cavallo, segui la corsa in diretta, chi perde distribuisce i sorsi. Gratis, su un solo telefono."
       },
       "petit-buveur": {
-        "title": "Gioca a Il Piccolo Bevitore online gratis — gioco da tavolo",
-        "description": "Un tabellone, un dado, caselle trappola e sfide che fanno brindare. Da 2 a 99 giocatori, chat vocale, gratis e senza installazione."
+        "title": "Gioca al Piccolo Bevitore gratis — gioco alcolico da tavolo",
+        "description": "Un gioco alcolico da tavolo: un dado, caselle trappola e sfide che fanno brindare. Da 2 a 99 giocatori, online con chat vocale o su un telefono, gratis."
       },
       "toucher-coule": {
         "title": "Gioca a Colpito e Affondato gratis — battaglia navale",
@@ -1487,20 +1499,20 @@
         "description": "Lupi, veggente, dibattiti e voti: il classico delle serate in versione aperitivo. Da 4 a 12 giocatori, chat vocale, gratis — o da solo coi bot."
       },
       "hi-lo": {
-        "title": "Gioca a Hi/Lo gratis — più alta o più bassa?",
-        "description": "Indovina se la prossima carta sarà più alta o più bassa e distribuisci i sorsi. Gratis, senza installazione, su un telefono che fa il giro del tavolo."
+        "title": "Gioca a Hi/Lo gratis — gioco alcolico: più alta o più bassa?",
+        "description": "Il gioco alcolico di carte più semplice: indovina se la prossima carta sarà più alta o più bassa e distribuisci i sorsi. Gratis, su un solo telefono."
       },
       "pyramide": {
-        "title": "Gioca alla Piramide gratis — il gioco di carte da aperitivo",
-        "description": "Gira le carte, scala la piramide e distribuisci sorsi a ogni piano. Gratis, senza installazione, su un telefono al centro del tavolo."
+        "title": "Gioca alla Piramide gratis — il gioco alcolico con le carte",
+        "description": "Il gioco alcolico con le carte delle feste: gira le carte, scala la piramide e distribuisci sorsi a ogni piano. Gratis, su un telefono al centro del tavolo."
       },
       "plinko": {
-        "title": "Gioca a Plinko gratis — la pallina che offre da bere",
-        "description": "Lascia cadere la pallina, guardala rimbalzare e prega per la casella giusta. Gratis, senza installazione, su un telefono che gira attorno al tavolo."
+        "title": "Gioca a Plinko gratis — il gioco alcolico della pallina",
+        "description": "Un gioco alcolico tutto rimbalzi: lascia cadere la pallina, guardala rimbalzare e prega per la casella giusta. Gratis, su un telefono che gira."
       },
       "1220": {
-        "title": "Gioca a 1220 online gratis — due dadi, quattro scommesse",
-        "description": "Un dado da 12, uno da 20 e scommesse per bere o far bere. Da 2 a 16 giocatori, chat vocale, gratis, senza installazione — o da solo, i bot completano."
+        "title": "Gioca a 1220 online gratis — due dadi, un gioco alcolico",
+        "description": "Il gioco alcolico con i dadi online: un dado da 12, uno da 20 e scommesse per bere o far bere. Da 2 a 16 giocatori, chat vocale, gratis — o da solo con i bot."
       },
       "bluff": {
         "title": "Gioca a Il Grande Bluff online gratis — inganna gli amici",
@@ -1547,8 +1559,8 @@
         "description": "Un numero trappola si nasconde tra 1 e 100: stringi il cerchio senza caderci sopra. Da 2 a 16 giocatori online con chat vocale, o su un solo telefono. Gratis."
       },
       "cap-ou-pas-cap": {
-        "title": "Gioca a Obbligo o verità gratis — ogni carta ha un prezzo",
-        "description": "Obbligo o verità con un prezzo su ogni carta: accetta e distribuisci sorsi, o bevi. Quattro livelli, sei temi, gratis, su un telefono che gira."
+        "title": "Gioca a Obbligo o verità gratis — versione gioco alcolico",
+        "description": "Obbligo o verità come gioco alcolico: ogni carta ha un prezzo, accetta e distribuisci sorsi, o bevi. Quattro livelli, sei temi, gratis, su un telefono che gira."
       },
       "vue-de-nez": {
         "title": "A Occhio e Croce: il gioco delle stime online gratis",
@@ -1556,27 +1568,27 @@
       },
       "front-colle": {
         "title": "Gioca a Front Collé gratis — la parola sulla fronte",
-        "description": "Con il telefono sulla fronte, indovina la parola che il tavolo descrive, mima o canticchia. Inclina per confermare. Gratis, senza installazione."
+        "description": "Con il telefono sulla fronte, indovina la parola che il tavolo descrive, mima o canticchia. Come gioco alcolico, ogni parola passata è un sorso. Gratis."
       },
       "coupe-du-roi": {
-        "title": "Gioca alla Coppa del Re gratis — 13 carte, 13 regole",
-        "description": "Il gioco di carte cult delle feste: ogni carta pescata fa scattare una regola, l’app ricorda i ruoli e il 4º re beve la coppa. Gratis, senza installazione."
+        "title": "Gioca alla Coppa del Re gratis — il gioco alcolico cult",
+        "description": "Il gioco alcolico cult con le carte: ogni carta pescata fa scattare una regola, l’app ricorda i ruoli e il 4º re beve la coppa. Gratis, senza installazione."
       },
       "patate-chaude": {
         "title": "Gioca a Patata Bollente gratis — la bomba a miccia segreta",
         "description": "Una bomba a miccia segreta: di’ una parola sul tema e passala prima che esploda. Da 2 a 12 giocatori online con chat vocale, o su un solo telefono. Gratis."
       },
       "pile-poil": {
-        "title": "Gioca a Pile Poil gratis — 10 secondi alla cieca",
-        "description": "Avvia il cronometro e fermalo a 10 secondi esatti senza vedere le cifre: chi sbaglia di più beve. Gratis, senza installazione, su un solo telefono."
+        "title": "Gioca a Pile Poil gratis — gioco alcolico del cronometro",
+        "description": "Un gioco alcolico di precisione: avvia il cronometro e fermalo a 10 secondi esatti senza vedere le cifre, chi sbaglia di più beve. Gratis, su un solo telefono."
       },
       "degaine": {
-        "title": "Gioca a Estrai! gratis — il duello di riflessi",
-        "description": "Un telefono tra due duellanti: al «FUOCO!» vince il più veloce e chi spara troppo presto beve. Torneo per tutto il tavolo, gratis."
+        "title": "Gioca a Estrai! gratis — il duello di riflessi alcolico",
+        "description": "Il gioco alcolico del west: un telefono tra due duellanti, al «FUOCO!» vince il più veloce e chi spara troppo presto beve. Torneo per tutto il tavolo, gratis."
       },
       "doigt-du-destin": {
-        "title": "Gioca al Dito del Destino gratis — chi sarà scelto?",
-        "description": "Ognuno posa un dito sullo schermo e il destino decide: vittima, due squadre, ordine di gioco o sopravvivenza. Gratis, senza installazione, su un solo telefono."
+        "title": "Gioca al Dito del Destino gratis — gioco alcolico del caso",
+        "description": "Un gioco alcolico del caso: ognuno posa un dito sullo schermo e il destino decide, vittima, due squadre, ordine di gioco o sopravvivenza. Gratis."
       }
     },
     "catalog": {
@@ -7707,8 +7719,54 @@
       "noneRecorded": "Nessuna partita registrata.",
       "allTimeNote": "Totale di sempre, tutti i periodi insieme: partite dei giocatori locali sincronizzate sugli account, statistiche salvate nel database e partite online classificate (una per partita, rivincite incluse). Non è l'attività recente: per il periodo scelto, vedi la tabella «Per gioco»."
     },
+    "acquisition": {
+      "title": "Provenienza",
+      "description": "Da dove arrivano i visitatori: prima pagina vista in ogni sessione del browser (statistiche accettate), contata per giorno senza alcun identificativo.",
+      "total": "{count, plural, one {# arrivo} other {# arrivi}}",
+      "channelsTitle": "Arrivi per canale",
+      "landingsTitle": "Pagine di arrivo",
+      "campaignsTitle": "Campagne (utm)",
+      "hostsTitle": "Altri siti e app",
+      "campaignHint": "fonte: {source} · mezzo: {medium}",
+      "appHint": "app Android",
+      "overflow": "altri (limite giornaliero raggiunto)",
+      "overflowNote": "{count, plural, one {# arrivo contato} other {# arrivi contati}} senza dettaglio: oltre {cap} combinazioni diverse in uno stesso giorno, le nuove non vengono più dettagliate (si conserva solo il canale), perché invii abusivi non riempiano il database.",
+      "arrivals": "Arrivi",
+      "channel": "Canale",
+      "page": "Pagina",
+      "campaign": "Campagna",
+      "site": "Sito",
+      "unset": "—",
+      "empty": "Nessun arrivo misurato in questo periodo.",
+      "emptyList": "Niente in questo periodo.",
+      "loadError": "Provenienza non disponibile al momento.",
+      "forbidden": "Accesso negato.",
+      "retry": "Riprova",
+      "directNote": "«Diretto» raggruppa gli indirizzi digitati, i preferiti e la maggior parte dei link aperti da un'app di messaggistica (WhatsApp, Messenger…), che non dicono da dove arrivano. Una campagna taggata (utm) mantiene il suo canale di origine.",
+      "channels": {
+        "google": "Google",
+        "bing": "Bing",
+        "duckduckgo": "DuckDuckGo",
+        "qwant": "Qwant",
+        "ecosia": "Ecosia",
+        "yahoo": "Yahoo",
+        "chatgpt": "ChatGPT",
+        "perplexity": "Perplexity",
+        "x": "X (Twitter)",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "tiktok": "TikTok",
+        "snapchat": "Snapchat",
+        "reddit": "Reddit",
+        "discord": "Discord",
+        "youtube": "YouTube",
+        "app": "App Android",
+        "direct": "Diretto",
+        "autre": "Altri siti"
+      }
+    },
     "geo": {
-      "onlineByCountry": "Browser attivi per paese",
+      "onlineByCountry":"Browser attivi per paese",
       "onlineByCountryWindowDesc": "Browser attivi negli ultimi {minutes} minuti.",
       "todayByCountry": "Connessi oggi per paese",
       "todayByCountryDesc": "Browser (statistiche accettate, staff incluso) visti dalla mezzanotte, ora di Parigi.",
@@ -8950,9 +9008,11 @@
     },
     "kicker": "Carte in tavola",
     "title": "Regole dei giochi da festa",
-    "intro": "Ogni gioco online di Le Pillaveur spiegato in due minuti: l'idea, lo svolgimento, come si vince, i sorsi quando ci sono e le domande che ci fanno più spesso. Il numero di giocatori è quello del tavolo online, e quando un gioco si può giocare da soli con i bot, è scritto.",
+    "intro": "Ogni gioco di Le Pillaveur spiegato in due minuti, che si giochi online o su un solo telefono che passa di mano in mano: l'idea, lo svolgimento, come si vince, i sorsi quando ci sono e le domande che ci fanno più spesso. Il numero di giocatori è quello del tavolo online, o del telefono condiviso per i giochi dal vivo, e quando un gioco si può giocare da soli con i bot, è scritto.",
     "count": "{count, plural, one {# gioco spiegato} other {# giochi spiegati}}",
     "players": "da {min} a {max} giocatori",
+    "playersFrom": "Da {min} giocatori in su",
+    "oneDevice": "su un solo telefono",
     "botsBadge": "Giocabile con i bot",
     "readRules": "Leggi le regole",
     "allGames": "Vedi tutti i giochi",
@@ -8965,6 +9025,45 @@
     "voiceChat": "chat vocale",
     "playNow": "Gioca ora — è gratis",
     "otherRules": "Le regole degli altri giochi"
+  },
+  "ideas": {
+    "meta": {
+      "title": "Idee di domande per la serata",
+      "description": "Non ho mai, Preferiresti, Obbligo o verità: liste di domande prese dalle carte dei nostri giochi, con o senza alcol, da giocare gratis."
+    },
+    "kicker": "Carte in tavola",
+    "title": "Idee di domande per la serata",
+    "intro": "Le domande che si cercano prima di una serata, prese parola per parola dalle vere carte dei nostri giochi: «Non ho mai», «Preferiresti» e idee di obbligo o verità. Abbiamo tenuto solo le carte leggere o moderate, da leggere, ricopiare o giocare subito su Le Pillaveur, con o senza alcol.",
+    "breadcrumb": {
+      "home": "Home",
+      "ideas": "Idee di domande"
+    },
+    "backToIdeas": "Tutte le liste",
+    "readList": "Leggi la lista",
+    "cardsFrom": "Le carte di {game}",
+    "players": "Da {min} a {max} giocatori",
+    "playersFrom": "Da {min} giocatori",
+    "showcaseFacts": "gratis · senza installazione",
+    "online": "online, chat vocale",
+    "oneDevice": "su un solo telefono",
+    "playWithCards": "Gioca con queste carte",
+    "readRules": "Le regole di {game}",
+    "otherLists": "Le altre liste",
+    "allGames": "Vedi tutti i giochi",
+    "lists": {
+      "je-n-ai-jamais": {
+        "name": "Non ho mai",
+        "blurb": "50 frasi divertenti e senza imbarazzo per far confessare tutto il tavolo, prese dalle carte di Dilemmes."
+      },
+      "tu-preferes": {
+        "name": "Preferiresti",
+        "blurb": "60 dilemmi assurdi o impossibili da decidere, per discutere tutta la sera, presi dalle carte di Dilemmes."
+      },
+      "action-ou-verite": {
+        "name": "Obbligo o verità",
+        "blurb": "60 domande e piccole sfide divise per tema, da fare sul posto e senza materiale, prese dalle carte di Cap ou Pas Cap."
+      }
+    }
   },
   "tryBots": {
     "play": "Gioca ora",
@@ -9358,7 +9457,18 @@
         "copy": "Copia il riepilogo in testo",
         "copied": "Riepilogo copiato: incollatelo nel gruppo.",
         "copyFailed": "La copia è bloccata su questo browser.",
-        "alt": "Il conto della serata"
+        "alt": "Il conto della serata",
+        "format": "Formato dell’immagine",
+        "formats": {
+          "feed": {
+            "label": "Post",
+            "hint": "Verticale, per il gruppo o il feed"
+          },
+          "story": {
+            "label": "Storia",
+            "hint": "Schermo intero, per Instagram o Snapchat"
+          }
+        }
       },
       "keep": {
         "title": "Salva la compagnia",

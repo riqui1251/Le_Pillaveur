@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 24 November 2026
+**Last updated:** 25 November 2026
 
 ## 1. Introduction
 
@@ -58,6 +58,8 @@ A **visit** is a period of use of the site without a break of more than 30 minut
 The site's administrators can view the visit history account by account; moderators and other players cannot. When it is read, each visit is matched with the online games launched during it (game log, see 3.4), and totals over 7 and 30 days are calculated. The timeline only shows the day, the duration and a time slot (night, morning, afternoon or evening, Paris time); the exact time only appears in the details of a visit.
 
 Visits are also used, when the data is read and without any additional data, for overall usage statistics that only the site's administrators can view: number of active accounts and unique players, new and returning accounts, return of recently created accounts at least 1 day and then at least 7 days after they were created, median length of a visit, median active time per account and share of time spent in a game. These statistics name no account, except an internal list of the 10 most active accounts over 7 days, which shows each account's active time and number of online games (see 3.4): it is never shown to players or moderators, and triggers no reward, no reminder and no action of any kind concerning the accounts on it. Moderation team accounts and test accounts are excluded from these statistics (see 3.4).
+
+**Visit sources.** With this same consent, on the first page viewed in each browser session, we also count where you arrive from: the domain name of the referring site if it is outside Le Pillaveur (for example google.com, or the name of an Android app), the landing page on the site (without its parameters) and any `utm_source`, `utm_medium` and `utm_campaign` campaign parameters of the link you followed. This information is only kept as daily counters (Paris time) — so many arrivals from a given source on a given page — with no browser identifier, IP address or account: it cannot be linked to anyone and is therefore not erased when you withdraw your consent. Neither the full address of the referring page nor your search is recorded. These counters are viewable by the site's administrators and kept for 13 months (see 7).
 
 If you decline, no visit tracking is recorded. If you withdraw your consent ("Visit statistics" link, then "Decline"), the data collected on this basis in this browser (IP address, country, device, local player names, dates of visits, IP addresses recorded while signed out, daily visit records) is erased immediately and the `lp_vid` cookie is removed; the visit history of the account signed in at that moment is erased too, across all devices. Declining in a browser where you had not accepted visit statistics (a new device, for example) does not erase that history. The choice applies to this browser: in another browser where you had accepted them, visits keep being recorded until you decline there too.
 
@@ -186,6 +188,7 @@ The publisher remains the controller of the processing described in this policy.
 - **Launched-game log** (game, date, table duration, end reason, participants): **12 months**.
 - **Nickname moderation traces**: **12 months**.
 - **Audience measurement data**: **13 months**.
+- **Visit source counters** (day, channel or referring domain, landing page, campaign parameters, number of arrivals, with no identifier): **13 months**.
 - **Local game and drink counters** (game, day, mode, number of games started and finished, total of drinks and participations, with no personal data): **13 months**.
 - **Feedback**: kept up to **24 months** or deleted on request; the associated contact email is erased if you delete your account.
 - **Age and consent cookies**: 1 year, renewed on each validation.

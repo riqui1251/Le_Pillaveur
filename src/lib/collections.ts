@@ -2,13 +2,13 @@ import { GAMES, hasContentIn, type GameMeta } from '@/lib/games'
 import { isGameListed } from '@/lib/game-catalog'
 
 /**
- * Collections de jeux — les pages /jeux/<collection> (« à 2 joueurs »,
- * « sans alcool », « seul avec des bots », « en grand groupe »).
+ * Collections de jeux — les pages /jeux/<collection> (« jeux à boire »,
+ * « à 2 joueurs », « sans alcool », « seul avec des bots », « en grand groupe »).
  *
  * Chaque collection est un FILTRE sur le registre (src/lib/games.ts), jamais
- * une liste tenue à la main : un jeu qui gagne des bots ou un mode Soft entre
- * dans la collection tout seul, et un jeu masqué en sort de même. Les textes
- * (titre, description, intro) vivent dans le catalogue i18n sous
+ * une liste tenue à la main : un jeu qui gagne des bots ou un mode Soft (ou
+ * une variante locale sans alcool) entre dans la collection tout seul, et un
+ * jeu masqué en sort de même. Les textes (titre, description, intro) vivent dans le catalogue i18n sous
  * `collections.<slug>` — lus par la seule page serveur, hors du socle client —
  * et la puce de chaque collection sous `hub.collections.<slug>.chip` (hub,
  * vitrine) ; ce module n'en connaît que les slugs.
@@ -21,6 +21,7 @@ import { isGameListed } from '@/lib/game-catalog'
  */
 
 export const COLLECTION_SLUGS = [
+  'jeux-a-boire',
   'a-2-joueurs',
   'sans-alcool',
   'seul-avec-des-bots',
@@ -44,10 +45,15 @@ function playableByTwo(game: GameMeta): boolean {
  * écartés avant, voir `gamesInCollection`), dans la langue de la page.
  */
 const CRITERIA: Record<CollectionSlug, (game: GameMeta, locale: string | undefined) => boolean> = {
+  // Le niveau par défaut du registre, pas le réglage de l'équipe : une page
+  // indexée ne change pas de liste au gré de la Supervision. Seuil 3 hors
+  // ♦ : au niveau 2, les jeux d'ambiance (quiz, Dilemmes, Front Collé…) où
+  // la gorgée n'est qu'une pénalité seraient entrés.
+  'jeux-a-boire': (game) => game.suit === 'diamond' || game.drinkLevel >= 3,
   'a-2-joueurs': playableByTwo,
-  // Le mode Soft n'existe que côté serveur : seuls les jeux en ligne le
-  // proposent (les jeux de dés locaux gardent leurs gorgées).
-  'sans-alcool': (game) => Boolean(game.softModeReady),
+  // Mode Soft en ligne, ou jeu local dont l'ambiance Sans alcool réécrit
+  // toute la partie (les jeux de dés locaux, eux, gardent leurs gorgées).
+  'sans-alcool': (game) => Boolean(game.softModeReady) || Boolean(game.localSoftReady),
   // Les bots complètent une table EN LIGNE : un jeu local n'en a pas. Et la
   // table ne s'ouvre que dans une langue où le jeu a ses cartes (création
   // refusée sinon, content_lang_unavailable) — même filtre que le raccourci

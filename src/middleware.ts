@@ -29,6 +29,9 @@ const PUBLIC_PREFIXES = [
   '/games',
   '/classement',
   '/regles',
+  // Listes de questions (Je n'ai jamais, Tu préfères, Action ou vérité) :
+  // vitrines SEO comme les règles.
+  '/idees',
   // Page de téléchargement de l'app mobile (liens stores) : publique.
   '/application',
   // Page de repli du service worker (jeux locaux sans réseau) : publique et
@@ -62,6 +65,7 @@ const KNOWN_SEGMENTS = new Set([
   'decouvrir',
   'games',
   'hors-ligne',
+  'idees',
   'invite',
   'jeux',
   'joueurs',

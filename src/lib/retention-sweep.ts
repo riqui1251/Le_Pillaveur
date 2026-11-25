@@ -333,6 +333,8 @@ export async function runRetentionSweep({ force = false }: RetentionSweepOptions
       // même format de jour de Paris (AAAA-MM-JJ, comparable comme une chaîne).
       ['LocalGameDaily', prisma.localGameDaily.deleteMany({ where: { day: { lt: dailyVisitorCutoff } } })],
       ['GameDrinkDaily', prisma.gameDrinkDaily.deleteMany({ where: { day: { lt: dailyVisitorCutoff } } })],
+      // Provenance des visites : mesure d'audience, même borne que DailyVisitor.
+      ['AcquisitionDaily', prisma.acquisitionDaily.deleteMany({ where: { day: { lt: dailyVisitorCutoff } } })],
       // Retours et avis de 1re partie : 24 mois après l'envoi, quel que soit
       // leur statut — un retour « ouvert » depuis deux ans ne sera plus traité.
       ['UserFeedback', prisma.userFeedback.deleteMany({ where: { createdAt: { lt: twentyFourMonthsAgo } } })],

@@ -78,7 +78,7 @@ export default function GamesHubPage() {
               375×667 : choisir un jeu demandait de faire défiler. La barre
               garde sa hauteur pendant le chargement de l'auth : rien ne saute. */}
           <PartyBar />
-          {/* Quatre portes par intention (« à 2 », « sans alcool »…) : des
+          {/* Une porte par intention (« jeux à boire », « à 2 »…) : des
               pages serveur indexables (/jeux/<collection>), liées d'ici pour
               le maillage — et pour le joueur qui sait déjà ce qu'il cherche.
               Sans condition : elles partent dans le HTML, session ou pas.
@@ -94,7 +94,7 @@ export default function GamesHubPage() {
                 key={slug}
                 href={`/jeux/${slug}`}
                 prefetch={false}
-                className="shrink-0 whitespace-nowrap rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/70 transition-colors hover:border-gold/50 hover:text-cream"
+                className={`shrink-0 whitespace-nowrap rounded-full border border-gold/25 px-3 py-1.5 text-xs font-semibold text-cream/70 transition-colors hover:border-gold/50 hover:text-cream${slug === 'jeux-a-boire' ? ' drink-level' : ''}`}
               >
                 {tCollections(`${slug}.chip`)}
               </Link>

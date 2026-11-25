@@ -2,12 +2,14 @@ import fs from 'fs'
 import path from 'path'
 
 /**
- * Pages « règles » SEO : un article markdown par jeu EN LIGNE, en français
+ * Pages « règles » SEO : un article markdown par jeu EN LIGNE, et par jeu à
+ * boire sur un seul téléphone (Pyramide, Coupe du Roi…), en français
  * (le gisement de recherche visé est francophone — les autres langues
  * viendront si la demande existe). Les fichiers vivent dans docs/rules/fr/
  * comme les documents légaux (embarqués tels quels dans l'image Docker).
  */
 
+import type { GameMeta } from '@/lib/games'
 import { RULES_GAME_IDS, isRulesGameId, type RulesGameId } from './rules-ids'
 
 export { RULES_GAME_IDS, isRulesGameId, type RulesGameId }
@@ -126,6 +128,79 @@ export const RULES_META: Record<RulesGameId, { title: string; description: strin
     description:
       'Un défi, une bombe à mèche secrète, un mot à trouver avant le BOUM : les règles. Puis joues-y gratuitement : 2 à 12 joueurs, chat vocal, sans installation.',
   },
+  pyramide: {
+    title: 'Règles de la Pyramide, le jeu à boire aux cartes',
+    description:
+      'Mode Cartes ou Classique, étages, pré-jeu et mémorisation : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'coupe-du-roi': {
+    title: 'Règles de la Coupe du Roi (King), le jeu à boire',
+    description:
+      'Les 13 cartes du jeu du roi, pouce, binôme, Valet et quatrième roi expliqués. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  pmu: {
+    title: 'Course PMU : règles de la course de chevaux à boire',
+    description:
+      'Quatre chevaux, mode Libre ou Paris, mises et gains doublés : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'cap-ou-pas-cap': {
+    title: 'Règles de Cap ou Pas Cap, l’action ou vérité à boire',
+    description:
+      'Vérité ou action, prix de 1 à 5, niveaux, thèmes et joker : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'hi-lo': {
+    title: 'Règles du Hi-Lo, le plus ou moins aux cartes à boire',
+    description:
+      'Plus haut, plus bas ou égalité, mise qui grimpe, mode Traversée : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'monsieur-3': {
+    title: 'Règles de Monsieur 3, le jeu de dés à boire',
+    description:
+      'Monsieur 3 désigné au dé, les 3, les 5, les sommes 3, 5 et 8 : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'front-colle': {
+    title: 'Règles de Front Collé, le jeu du mot sur le front',
+    description:
+      'Décris, mime ou fredonne, téléphone sur le front, équipes et thèmes : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  plinko: {
+    title: 'Règles du Plinko à boire : billes, cases et pions',
+    description:
+      'Bille rouge qui fait boire, verte qui distribue, pions spéciaux : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'pile-poil': {
+    title: 'Règles de Pile Poil, le défi du chrono à 10 secondes',
+    description:
+      'Arrêter le chrono pile à 10 s sans voir les chiffres : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  degaine: {
+    title: 'Dégaine ! : règles du duel de réflexes à boire',
+    description:
+      'Au signal, le plus rapide gagne ; faux départs, leurres et tournoi : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+  'doigt-du-destin': {
+    title: 'Règles du Doigt du Destin, le tirage au doigt',
+    description:
+      'Un doigt chacun sur l’écran, victime, camps, ordre ou survie : les règles. Puis joues-y gratuitement : dès 2 joueurs, sur un seul téléphone, sans appli.',
+  },
+}
+
+/**
+ * Effectif qu'une page de règles annonce : les bornes EN LIGNE d'un jeu en
+ * ligne, celles du téléphone qui tourne pour un jeu sans version en ligne
+ * (sans `max` tant qu'aucun plafond local n'existe). Null si le registre
+ * n'en dit rien.
+ */
+export function rulesPlayerBounds(
+  game: Pick<GameMeta, 'onlineReady' | 'minPlayers' | 'maxPlayers' | 'localMinPlayers' | 'localMaxPlayers'>
+): { min: number; max?: number } | null {
+  if (game.onlineReady) {
+    return game.minPlayers && game.maxPlayers ? { min: game.minPlayers, max: game.maxPlayers } : null
+  }
+  if (!game.localMinPlayers) return null
+  return game.localMaxPlayers
+    ? { min: game.localMinPlayers, max: game.localMaxPlayers }
+    : { min: game.localMinPlayers }
 }
 
 const RULES_ROOT = path.join(process.cwd(), 'docs', 'rules', 'fr')
