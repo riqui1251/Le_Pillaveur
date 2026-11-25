@@ -15,7 +15,7 @@ import { SITE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
 
 /**
- * Index des règles — /regles. Les dix-sept articles de docs/rules/fr/ n'avaient
+ * Index des règles — /regles. Les articles de docs/rules/fr/ n'avaient
  * aucune page mère : chacun n'était atteignable que depuis la landing ou
  * depuis un autre article. Ici, une carte par jeu (titre, accroche du
  * catalogue, effectif lu dans src/lib/games.ts — jamais recopié : celui de

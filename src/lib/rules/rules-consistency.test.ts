@@ -11,7 +11,7 @@ import { RULES_GAME_IDS, RULES_META, rulesPlayerBounds } from './rules-content'
  * Les articles sont écrits à la main ; le registre (src/lib/games.ts) est ce
  * que le lobby applique vraiment. Cinq d'entre eux annonçaient un effectif
  * périmé (« Purple, 2 à 10 joueurs » pour une table qui en accepte 16) :
- * personne ne relit dix-sept pages à chaque réglage d'un moteur. Ce test
+ * personne ne relit toutes les pages à chaque réglage d'un moteur. Ce test
  * tient donc l'intro de chaque article — la phrase « X à Y joueurs » — égale
  * aux bornes EN LIGNE du registre, et pareil pour les descriptions SEO de
  * RULES_META qui répètent l'effectif. Un jeu à boire sans version en ligne

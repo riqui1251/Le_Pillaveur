@@ -49,4 +49,11 @@ describe('staticPageKey', () => {
     expect(staticPageKey('/regles/purple')).toBe('regles')
     expect(staticPageKey('/games/purple')).toBeUndefined()
   })
+
+  it('les collections et les listes d’idées ont leur propre titre, pas la devise par défaut', () => {
+    expect(staticPageKey('/jeux/sans-alcool')).toBe('jeux')
+    expect(staticPageKey('/jeux/jeux-a-boire')).toBe('jeux')
+    expect(staticPageKey('/idees')).toBe('idees')
+    expect(staticPageKey('/idees/tu-preferes')).toBe('idees')
+  })
 })

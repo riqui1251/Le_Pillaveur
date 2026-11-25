@@ -173,6 +173,10 @@
         "title": "Règles",
         "subtitle": "Les règles de chaque jeu"
       },
+      "idees": {
+        "title": "Idées",
+        "subtitle": "Questions pour la soirée"
+      },
       "default": {
         "subtitle": "Jeux à boire entre amis"
       },
@@ -6261,7 +6265,7 @@
         "flashPassed": "Passé",
         "liveFound": "Trouvé ! {count, plural, one {# mot trouvé} other {# mots trouvés}}",
         "livePassed": "Passé. {count, plural, one {# mot passé} other {# mots passés}}",
-        "noWords": "Plus aucun mot dans ces thèmes.",
+        "noWords": "Aucun mot dans ces thèmes : choisissez-en d’autres.",
         "stop": "Arrêter le tour",
         "stopConfirm": {
           "title": "Arrêter ce tour ?",
@@ -9004,7 +9008,7 @@
   "rules": {
     "meta": {
       "title": "Règles des jeux de soirée",
-      "description": "Règles des jeux de soirée du Pillaveur : Loup-Garou, Imposteur, Président, Petit Bac… Effectif, déroulement et FAQ. Gratuit, en ligne, sans installation."
+      "description": "Règles des jeux de soirée et jeux à boire : Pyramide, Coupe du Roi, Loup-Garou… Effectif, déroulement et FAQ. Gratuit, en ligne ou sur un seul téléphone."
     },
     "kicker": "Cartes sur table",
     "title": "Règles des jeux de soirée",

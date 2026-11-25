@@ -173,6 +173,10 @@
         "title": "Regole",
         "subtitle": "Le regole di ogni gioco"
       },
+      "idees": {
+        "title": "Idee",
+        "subtitle": "Domande per la serata"
+      },
       "default": {
         "subtitle": "Giochi di bevute con gli amici"
       },
@@ -6261,7 +6265,7 @@
         "flashPassed": "Passata",
         "liveFound": "Indovinata! {count, plural, one {# parola indovinata} other {# parole indovinate}}",
         "livePassed": "Passata. {count, plural, one {# parola passata} other {# parole passate}}",
-        "noWords": "Non ci sono più parole in questi temi.",
+        "noWords": "Nessuna parola in questi temi: sceglietene altri.",
         "stop": "Ferma il turno",
         "stopConfirm": {
           "title": "Fermare questo turno?",
@@ -9004,7 +9008,7 @@
   "rules": {
     "meta": {
       "title": "Regole dei giochi da festa",
-      "description": "Regole dei giochi da festa di Le Pillaveur: Lupo Mannaro, Impostore, Presidente, Nomi Cose Città… Giocatori, svolgimento e FAQ. Gratis, online."
+      "description": "Regole dei giochi da festa e alcolici: Piramide, Coppa del Re, Lupo Mannaro, Presidente… Giocatori, svolgimento e FAQ. Gratis, online o su un solo telefono."
     },
     "kicker": "Carte in tavola",
     "title": "Regole dei giochi da festa",

@@ -156,7 +156,7 @@ export default async function RulesPage({
       : undefined,
   }
   // Fil d'Ariane Accueil › Règles › <jeu> : le même chemin que l'index
-  // /regles déclare, pour que Google relie les dix-sept articles à leur mère.
+  // /regles déclare, pour que Google relie chaque article à sa mère.
   const breadcrumbs = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',

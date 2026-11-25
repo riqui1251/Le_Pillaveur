@@ -173,6 +173,10 @@
         "title": "Rules",
         "subtitle": "The rules of every game"
       },
+      "idees": {
+        "title": "Ideas",
+        "subtitle": "Questions for the party"
+      },
       "default": {
         "subtitle": "Drinking games with friends"
       },
@@ -6261,7 +6265,7 @@
         "flashPassed": "Pass",
         "liveFound": "Got it! {count, plural, one {# word found} other {# words found}}",
         "livePassed": "Passed. {count, plural, one {# word passed} other {# words passed}}",
-        "noWords": "No words left in these themes.",
+        "noWords": "No words in these themes: pick other ones.",
         "stop": "Stop the turn",
         "stopConfirm": {
           "title": "Stop this turn?",
@@ -9004,7 +9008,7 @@
   "rules": {
     "meta": {
       "title": "Party game rules",
-      "description": "Rules of Le Pillaveur's party games: Werewolf, Impostor, President, Categories… Player counts, how to play and FAQ. Free, online, nothing to install."
+      "description": "Rules of party and drinking games: Pyramid, King’s Cup, Werewolf, President… Player counts, how to play and FAQ. Free, online or on a single phone."
     },
     "kicker": "Cards on the table",
     "title": "Party game rules",

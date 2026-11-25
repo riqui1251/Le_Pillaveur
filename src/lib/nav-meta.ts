@@ -21,6 +21,7 @@ type StaticPageKey =
   | 'stats'
   | 'application'
   | 'regles'
+  | 'idees'
   | 'soiree'
   | 'decouvrir'
 
@@ -36,6 +37,7 @@ const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
   '/stats': 'stats',
   '/application': 'application',
   '/regles': 'regles',
+  '/idees': 'idees',
   '/soiree': 'soiree',
   '/decouvrir': 'decouvrir',
 }
@@ -43,10 +45,13 @@ const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
 /**
  * Sections dont les sous-pages gardent le titre de la section : un article
  * /regles/<id> appartient à l'index des règles (sans ça, le header affichait
- * le titre de marque et « Jeux à boire entre amis »).
+ * le titre de marque et « Jeux à boire entre amis », y compris sur la
+ * collection « sans alcool »).
  */
 const SECTION_PREFIXES: ReadonlyArray<readonly [prefix: string, key: StaticPageKey]> = [
   ['/regles/', 'regles'],
+  ['/idees/', 'idees'],
+  ['/jeux/', 'jeux'],
   ['/soiree/', 'soiree'],
 ]
 

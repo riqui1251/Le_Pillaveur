@@ -173,6 +173,10 @@
         "title": "Reglas",
         "subtitle": "Las reglas de cada juego"
       },
+      "idees": {
+        "title": "Ideas",
+        "subtitle": "Preguntas para la fiesta"
+      },
       "default": {
         "subtitle": "Juegos de beber con amigos"
       },
@@ -6261,7 +6265,7 @@
         "flashPassed": "Pasada",
         "liveFound": "¡Acertada! {count, plural, one {# palabra acertada} other {# palabras acertadas}}",
         "livePassed": "Pasada. {count, plural, one {# palabra pasada} other {# palabras pasadas}}",
-        "noWords": "No quedan palabras en estos temas.",
+        "noWords": "No hay palabras en estos temas: elegid otros.",
         "stop": "Detener el turno",
         "stopConfirm": {
           "title": "¿Detener este turno?",
@@ -9004,7 +9008,7 @@
   "rules": {
     "meta": {
       "title": "Reglas de los juegos de fiesta",
-      "description": "Reglas de los juegos de fiesta de Le Pillaveur: Hombre Lobo, Impostor, Presidente, Tutti Frutti… Jugadores, desarrollo y FAQ. Gratis, en línea."
+      "description": "Reglas de juegos de fiesta y para beber: Pirámide, Copa del Rey, Hombre Lobo, Presidente… Jugadores, desarrollo y FAQ. Gratis, en línea o en un solo móvil."
     },
     "kicker": "Cartas sobre la mesa",
     "title": "Reglas de los juegos de fiesta",
