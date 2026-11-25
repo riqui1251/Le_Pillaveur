@@ -8,7 +8,7 @@ const { localGameDailyDb } = vi.hoisted(() => ({
 vi.mock('@/lib/prisma', () => ({ prisma: { localGameDaily: localGameDailyDb } }))
 
 import { GAMES } from './games'
-import { parseLocalGameReport, recordLocalGameEvent } from './local-games-server'
+import { parseLocalDrinksReport, parseLocalGameReport, recordLocalGameEvent } from './local-games-server'
 
 const LOCAL_ID = GAMES.find((g) => !g.hidden && !g.onlineOnly)!.id
 const HIDDEN_LOCAL_ID = GAMES.find((g) => g.hidden && !g.onlineOnly)!.id
@@ -44,6 +44,79 @@ describe('parseLocalGameReport', () => {
     expect(parseLocalGameReport([LOCAL_ID, 'start'])).toBeNull()
     expect(parseLocalGameReport(null)).toBeNull()
     expect(parseLocalGameReport('start')).toBeNull()
+  })
+})
+
+describe('parseLocalDrinksReport', () => {
+  it('garde un relevé de gorgées d’un jeu local, bornes comprises, sans recopier un champ en trop', () => {
+    expect(parseLocalDrinksReport({ gameId: LOCAL_ID, event: 'drinks', drinks: 12, plays: 4 })).toEqual({
+      gameId: LOCAL_ID,
+      event: 'drinks',
+      drinks: 12,
+      plays: 4,
+    })
+    expect(parseLocalDrinksReport({ gameId: HIDDEN_LOCAL_ID, event: 'drinks', drinks: 0, plays: 1 })).toEqual({
+      gameId: HIDDEN_LOCAL_ID,
+      event: 'drinks',
+      drinks: 0,
+      plays: 1,
+    })
+    // 15 participations, 20 gorgées chacune : le plus gros relevé d'une partie.
+    expect(parseLocalDrinksReport({ gameId: LOCAL_ID, event: 'drinks', drinks: 300, plays: 15 })).toEqual({
+      gameId: LOCAL_ID,
+      event: 'drinks',
+      drinks: 300,
+      plays: 15,
+    })
+    expect(
+      parseLocalDrinksReport({ gameId: LOCAL_ID, event: 'drinks', drinks: 3, plays: 2, pseudo: 'Suzon', players: ['a'] })
+    ).toEqual({ gameId: LOCAL_ID, event: 'drinks', drinks: 3, plays: 2 })
+  })
+
+  it('garde une correction : des gorgées sans participation, de 1 à 300', () => {
+    for (const drinks of [1, 300]) {
+      expect(parseLocalDrinksReport({ gameId: LOCAL_ID, event: 'drinks', drinks, plays: 0 })).toEqual({
+        gameId: LOCAL_ID,
+        event: 'drinks',
+        drinks,
+        plays: 0,
+      })
+    }
+  })
+
+  it('refuse hors bornes ou hors forme, sans écrêter', () => {
+    const base = { gameId: LOCAL_ID, event: 'drinks', drinks: 5, plays: 2 }
+    for (const body of [
+      // Ni participation ni gorgée : pas un relevé.
+      { ...base, plays: 0, drinks: 0 },
+      { ...base, plays: 0, drinks: 301 },
+      { ...base, plays: -1 },
+      { ...base, plays: 16 },
+      { ...base, plays: 1.5 },
+      { ...base, plays: '2' },
+      { ...base, plays: undefined },
+      { ...base, drinks: -1 },
+      { ...base, drinks: 2.5 },
+      { ...base, drinks: '5' },
+      { ...base, drinks: Number.NaN },
+      { ...base, drinks: undefined },
+      { ...base, drinks: 41 },
+      { ...base, plays: 15, drinks: 301 },
+      { ...base, gameId: ONLINE_ONLY_ID },
+      { ...base, gameId: 'jeu-inconnu' },
+      { ...base, event: 'start' },
+      { ...base, event: 'DRINKS' },
+      [base],
+      null,
+      'drinks',
+    ]) {
+      expect(parseLocalDrinksReport(body)).toBeNull()
+    }
+  })
+
+  it('un lancement ou une fin n’est pas un relevé, et un relevé n’est pas un lancement', () => {
+    expect(parseLocalDrinksReport({ gameId: LOCAL_ID, event: 'start' })).toBeNull()
+    expect(parseLocalGameReport({ gameId: LOCAL_ID, event: 'drinks', drinks: 5, plays: 2 })).toBeNull()
   })
 })
 

@@ -11,12 +11,13 @@ import { VoiceDockButton } from '@/components/voice/VoiceDockButton'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useOnlineRoom } from '@/hooks/useOnlineRoom'
 import { useOpenLobbies } from '@/hooks/useOpenLobbies'
-import { useGameCatalog } from '@/hooks/useGameCatalog'
+import { useGameCatalog, useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { useFriends } from '@/hooks/useFriends'
 import { useOnlineProgression } from '@/hooks/useOnlineProgression'
 import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
 import { OnlineCollection } from '@/components/online/OnlineCollection'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
 import { isGameListed } from '@/lib/game-catalog'
 import { isDefaultOnlineLook } from '@/lib/online/cosmetics'
 import { DEFAULT_ONLINE_PREFERENCES } from '@/lib/online-preferences'
@@ -118,6 +119,8 @@ function GameSwitchSheet({
   const busy = pendingId !== null
   const { mode: ambiance } = useAmbianceMode()
   const { hiddenIds } = useGameCatalog()
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   // Les jeux qu'on peut ouvrir en ligne (même garde que POST /rooms) ; celui de
   // la table reste, même caché depuis par l'équipe.
   const games = useMemo(
@@ -267,14 +270,17 @@ function GameSwitchSheet({
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold text-cream">{titleOf(g.id)}</span>
-                            <span className="flex items-center gap-x-2 text-xs">
-                              <span className={cn('min-w-0 truncate', blockedReason ? 'text-amber-200' : 'text-cream/70')}>
+                            {/* À la ligne plutôt que tronqué : avec la difficulté et la jauge, la raison
+                                d'un jeu bloqué tombait à quelques lettres à 360 px. */}
+                            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                              <span className={cn('min-w-0', blockedReason ? 'text-amber-200' : 'truncate text-cream/70')}>
                                 {blockedReason ??
                                   (g.maxPlayers && g.maxPlayers < 20
                                     ? tOnline('playersRange.bounded', { min: g.minPlayers ?? 2, max: g.maxPlayers })
                                     : tOnline('playersRange.open', { min: g.minPlayers ?? 2 }))}
                               </span>
-                              <DifficultyBadge level={g.difficulty} tone="felt" className="shrink-0" />
+                              <DifficultyBadge level={difficultyOf(g.id)} tone="felt" className="shrink-0" />
+                              <DrinkLevelBadge level={drinkLevelOf(g.id)} tone="felt" variant="icons" className="shrink-0" />
                             </span>
                           </span>
                           {current ? (
@@ -426,6 +432,8 @@ type CopyFeedback = 'copied' | 'failed' | null
 
 export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps) {
   const game = gameProp ?? GAMES.find((g) => g.id === gameId)
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   const pathname = usePathname()
   const { user } = useAuth()
   const { room, loading, error, setError, createRoom, joinRoom, leaveRoom, setReady, launchGame, updateSettings, setTeam, inviteFriend, kickMember, changeGame, refreshRoom } = useOnlineRoom()
@@ -758,7 +766,8 @@ export function GameOnlineLobby({ gameId, game: gameProp }: GameOnlineLobbyProps
                   ? tOnline('playersRange.bounded', { min: game?.minPlayers ?? 2, max: game.maxPlayers })
                   : tOnline('playersRange.open', { min: game?.minPlayers ?? 2 })}
               </span>
-              {game && <DifficultyBadge level={game.difficulty} tone="card" />}
+              {game && <DifficultyBadge level={difficultyOf(game.id)} tone="card" />}
+              {game && <DrinkLevelBadge level={drinkLevelOf(game.id)} tone="card" />}
             </p>
           </div>
         </div>

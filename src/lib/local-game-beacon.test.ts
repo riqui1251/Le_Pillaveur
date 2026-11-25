@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { GAMES } from './games'
 import {
+  LOCAL_DRINKS_EVENT,
+  LOCAL_DRINKS_MAX_CORRECTION,
+  LOCAL_DRINKS_MAX_PER_PLAY,
+  LOCAL_DRINKS_MAX_PLAYS,
   LOCAL_GAMES_WITHOUT_END_SCREEN,
   LOCAL_GAME_DEDUPE_MS,
   createLocalGameReporter,
@@ -13,6 +17,7 @@ import {
   isTvPath,
   measuredLocalGameIdFromPath,
   reportLocalGame,
+  type LocalDrinksReport,
   type LocalGameReport,
 } from './local-game-beacon'
 
@@ -46,6 +51,23 @@ describe('jeux mesurés', () => {
     expect(isLocalGameEvent('START')).toBe(false)
     expect(isLocalGameEvent('pause')).toBe(false)
     expect(isLocalGameEvent(undefined)).toBe(false)
+    // Le relevé des gorgées a sa propre forme, hors du rapporteur des lancements.
+    expect(isLocalGameEvent(LOCAL_DRINKS_EVENT)).toBe(false)
+  })
+
+  it('relevé des gorgées : bornes serrées, et le plus gros relevé tient dans le corps accepté par la route', () => {
+    expect(LOCAL_DRINKS_MAX_PLAYS).toBe(15)
+    expect(LOCAL_DRINKS_MAX_PER_PLAY).toBe(20)
+    expect(LOCAL_DRINKS_MAX_CORRECTION).toBe(LOCAL_DRINKS_MAX_PER_PLAY * LOCAL_DRINKS_MAX_PLAYS)
+    const longestId = GAMES.filter((g) => isMeasuredLocalGameId(g.id)).reduce((a, g) => (g.id.length > a.length ? g.id : a), '')
+    const biggest: LocalDrinksReport = {
+      gameId: longestId,
+      event: LOCAL_DRINKS_EVENT,
+      drinks: LOCAL_DRINKS_MAX_CORRECTION,
+      plays: LOCAL_DRINKS_MAX_PLAYS,
+    }
+    // 512 octets : LOCAL_GAME_BODY_MAX_BYTES de la route.
+    expect(new TextEncoder().encode(JSON.stringify(biggest)).length).toBeLessThan(512)
   })
 
   it('reconnaît la page exacte d’un jeu local, masqué compris', () => {

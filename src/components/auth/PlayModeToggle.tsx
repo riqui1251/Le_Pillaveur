@@ -3,6 +3,7 @@
 import { Smartphone, Globe } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/components/providers/AuthProvider'
+import { useAccountSheets } from '@/components/account/AccountSheets'
 import { useRouter } from '@/i18n/navigation'
 import { cn } from '@/lib/utils'
 import { enterLocalPlay } from '@/lib/local-play-client'
@@ -17,6 +18,7 @@ const MODES: { id: PlayMode; icon: typeof Smartphone }[] = [
 export function PlayModeToggle({ className }: { className?: string }) {
   const t = useTranslations('hub.playMode')
   const { user, setPlayMode, loading } = useAuth()
+  const { openAuth } = useAccountSheets()
   const router = useRouter()
 
   // Le visiteur sans compte ne voyait aucune bascule : il ignorait donc que le
@@ -29,16 +31,17 @@ export function PlayModeToggle({ className }: { className?: string }) {
   const activeMode: PlayMode = user ? user.playMode : 'local'
 
   // Le mode en ligne réclame une session (PUT /api/auth/mode répond 401 sans
-  // compte) : pour un visiteur, la bascule mène à la page compte au lieu de
-  // rater silencieusement. « Local » se pose, lui, via le cookie dédié — même
-  // porte d'entrée que le bouton « jouer en local » du formulaire de compte.
+  // compte) : pour un visiteur, la bascule ouvre la feuille de connexion (avec
+  // le compte invité) au lieu de rater silencieusement. « Local » se pose, lui,
+  // via le cookie dédié — même porte d'entrée que le bouton « jouer en local »
+  // du formulaire de compte.
   const selectMode = (mode: PlayMode) => {
     if (!isVisitor) {
       if (mode !== activeMode) void setPlayMode(mode)
       return
     }
     if (mode === 'online') {
-      router.push('/compte?redirect=/jeux')
+      openAuth({ reason: 'online', redirectTo: '/jeux' })
       return
     }
     void enterLocalPlay()

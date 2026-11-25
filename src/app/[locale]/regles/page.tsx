@@ -6,8 +6,9 @@ import { PlayingCard } from '@/components/ui/PlayingCard'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { getGameById, type GameMeta } from '@/lib/games'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
-import { isGameListed } from '@/lib/game-catalog'
-import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { gameDifficulty, gameDrinkLevel, isGameListed } from '@/lib/game-catalog'
+import { getStaffGameDifficulty, getStaffGameDrinkLevel, getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { RULES_GAME_IDS, RULES_META, type RulesGameId } from '@/lib/rules/rules-content'
 import { OG_LOCALES, SITE_NAME, siteOgImage } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
@@ -92,6 +93,8 @@ export default async function RulesIndexPage({
   const t = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'rules' })
   const tCatalog = await getTranslations({ locale: CONTENT_LOCALE, namespace: 'games.catalog' })
   const entries = rulesEntries(await getStaffHiddenGameIds())
+  const difficultyOverrides = await getStaffGameDifficulty()
+  const drinkLevelOverrides = await getStaffGameDrinkLevel()
   const url = `${SITE_URL}/${CONTENT_LOCALE}/regles`
 
   // Données structurées : la page de collection porte la liste ordonnée des
@@ -215,7 +218,10 @@ export default async function RulesIndexPage({
                               pourtant dans la langue de l'URL (le libellé vient du
                               socle commun), d'où le `lang` posé sur la pastille. */}
                           <span lang={locale}>
-                            <DifficultyBadge level={game.difficulty} tone="card" />
+                            <DifficultyBadge level={gameDifficulty(id, difficultyOverrides)} tone="card" />
+                          </span>
+                          <span lang={locale}>
+                            <DrinkLevelBadge level={gameDrinkLevel(id, drinkLevelOverrides)} tone="card" />
                           </span>
                         </div>
                         <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#24201A] transition-colors group-hover:text-suit-red">

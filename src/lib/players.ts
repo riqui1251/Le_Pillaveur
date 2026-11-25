@@ -1,4 +1,5 @@
 import { getSafeStorage } from './storage';
+import { noteLocalGameDrinks, type LocalTallyOptions } from './local-drink-tally';
 import {
   validateLocalPlayerName,
   type NameModerationReason,
@@ -299,7 +300,16 @@ export function updatePlayer(playerId: string, updates: Partial<Player>): Player
   return updatedPlayers;
 }
 
-export function updatePlayerStats(playerId: string, gameId: string, stats: Partial<PlayerStats>): Player[] {
+/**
+ * `tally` ne concerne que le relevé anonyme de tout le site
+ * (local-drink-tally.ts) ; les statistiques du téléphone n'en tiennent pas compte.
+ */
+export function updatePlayerStats(
+  playerId: string,
+  gameId: string,
+  stats: Partial<PlayerStats>,
+  tally?: LocalTallyOptions
+): Player[] {
   if (!playerId || !gameId) {
     console.error('updatePlayerStats: playerId ou gameId invalide', { playerId, gameId });
     return getStoredPlayers(); // Retourner les joueurs sans modification
@@ -381,7 +391,8 @@ export function updatePlayerStats(playerId: string, gameId: string, stats: Parti
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des joueurs:', error);
     }
-    
+
+    noteLocalGameDrinks(gameId, safeStats, tally);
     return updatedPlayers;
   } catch (error) {
     console.error('Erreur dans updatePlayerStats:', error);

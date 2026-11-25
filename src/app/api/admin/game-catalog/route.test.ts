@@ -6,11 +6,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * (comme les stats) ; écriture : super admin+, validée et journalisée.
  */
 
-const { userMock, state, counts, setHiddenMock, logMock } = vi.hoisted(() => ({
+const { userMock, state, counts, setHiddenMock, setDifficultyMock, setDrinkLevelMock, logMock } = vi.hoisted(() => ({
   userMock: vi.fn(),
-  state: { value: { hiddenIds: [] as string[], popular: { local: [] as string[], online: [] as string[] } } },
+  state: {
+    value: {
+      hiddenIds: [] as string[],
+      difficulty: {} as Record<string, number>,
+      drinkLevel: {} as Record<string, number>,
+      categories: [] as unknown[],
+      popular: { local: [] as string[], online: [] as string[] },
+    },
+  },
   counts: { value: {} as Record<string, { online: number; local: number }> },
   setHiddenMock: vi.fn(),
+  setDifficultyMock: vi.fn(),
+  setDrinkLevelMock: vi.fn(),
   logMock: vi.fn(),
 }))
 
@@ -23,6 +33,8 @@ vi.mock('@/lib/game-catalog-server', async (importOriginal) => {
     getGameCatalogState: vi.fn(async () => state.value),
     getGamePlayCounts30d: vi.fn(async () => counts.value),
     setGameHidden: setHiddenMock,
+    setGameDifficulty: setDifficultyMock,
+    setGameDrinkLevel: setDrinkLevelMock,
   }
 })
 vi.mock('@/lib/prisma', () => ({ prisma: {} }))
@@ -34,6 +46,20 @@ import { GameNotToggleableError } from '@/lib/game-catalog-server'
 
 const [A, B, C] = STAFF_TOGGLEABLE_GAME_IDS
 const retired = GAMES.find((g) => g.hidden)!
+const codeLevel = (id: string) => GAMES.find((g) => g.id === id)!.difficulty
+const otherLevel = (id: string): 1 | 2 | 3 => (codeLevel(id) === 3 ? 1 : ((codeLevel(id) + 1) as 2 | 3))
+const codeDrink = (id: string) => GAMES.find((g) => g.id === id)!.drinkLevel
+const otherDrink = (id: string): 1 | 2 | 3 => (codeDrink(id) === 3 ? 1 : ((codeDrink(id) + 1) as 2 | 3))
+const LABELS = { 1: 'Facile', 2: 'Moyen', 3: 'Difficile' } as const
+const DRINK_LABELS = { 1: 'Peu', 2: 'Moyen', 3: 'Beaucoup' } as const
+const emptyState = (over: Record<string, unknown> = {}) => ({
+  hiddenIds: [] as string[],
+  difficulty: {} as Record<string, number>,
+  drinkLevel: {} as Record<string, number>,
+  categories: [] as unknown[],
+  popular: { local: [] as string[], online: [] as string[] },
+  ...over,
+})
 
 const patch = (body: unknown) =>
   PATCH(
@@ -46,9 +72,11 @@ const patch = (body: unknown) =>
 beforeEach(() => {
   vi.resetAllMocks()
   userMock.mockResolvedValue({ id: 'staff', role: 'superadmin' })
-  state.value = { hiddenIds: [], popular: { local: [], online: [] } }
+  state.value = emptyState()
   counts.value = {}
   setHiddenMock.mockResolvedValue({ hiddenIds: [A], changed: true })
+  setDifficultyMock.mockResolvedValue({ difficulty: {}, changed: true })
+  setDrinkLevelMock.mockResolvedValue({ drinkLevel: {}, changed: true })
   logMock.mockResolvedValue(undefined)
 })
 
@@ -75,6 +103,32 @@ describe('GET /api/admin/game-catalog', () => {
     expect((await (await GET()).json()).canEdit).toBe(true)
   })
 
+  it('difficulty est la valeur effective, defaultDifficulty celle du code', async () => {
+    state.value = emptyState({ difficulty: { [A]: otherLevel(A) } })
+
+    const { games } = await (await GET()).json()
+
+    const rowA = games.find((g: { id: string }) => g.id === A)
+    expect(rowA.difficulty).toBe(otherLevel(A))
+    expect(rowA.defaultDifficulty).toBe(codeLevel(A))
+    const rowB = games.find((g: { id: string }) => g.id === B)
+    expect(rowB.difficulty).toBe(codeLevel(B))
+    expect(rowB.defaultDifficulty).toBe(codeLevel(B))
+  })
+
+  it('drinkLevel est la valeur effective, defaultDrinkLevel celle du code', async () => {
+    state.value = emptyState({ drinkLevel: { [A]: otherDrink(A) } })
+
+    const { games } = await (await GET()).json()
+
+    const rowA = games.find((g: { id: string }) => g.id === A)
+    expect(rowA.drinkLevel).toBe(otherDrink(A))
+    expect(rowA.defaultDrinkLevel).toBe(codeDrink(A))
+    const rowB = games.find((g: { id: string }) => g.id === B)
+    expect(rowB.drinkLevel).toBe(codeDrink(B))
+    expect(rowB.defaultDrinkLevel).toBe(codeDrink(B))
+  })
+
   it('retiredCount compte les jeux retirés du code, qui ne sont pas listés', async () => {
     const body = await (await GET()).json()
     expect(body.retiredCount).toBe(GAMES.filter((g) => g.hidden).length)
@@ -84,13 +138,17 @@ describe('GET /api/admin/game-catalog', () => {
 
   it('trie par parties décroissantes puis ordre du catalogue, avec parties et rangs', async () => {
     counts.value = { [C]: { online: 7, local: 3 }, [B]: { online: 0, local: 4 } }
-    state.value = { hiddenIds: [B], popular: { local: [C, A], online: [C] } }
+    state.value = emptyState({ hiddenIds: [B], popular: { local: [C, A], online: [C] } })
 
     const { games } = await (await GET()).json()
 
     expect(games[0]).toEqual({
       id: C,
       hidden: false,
+      difficulty: codeLevel(C),
+      defaultDifficulty: codeLevel(C),
+      drinkLevel: codeDrink(C),
+      defaultDrinkLevel: codeDrink(C),
       plays: { online: 7, local: 3, total: 10 },
       popularLocalRank: 1,
       popularOnlineRank: 1,
@@ -98,6 +156,10 @@ describe('GET /api/admin/game-catalog', () => {
     expect(games[1]).toEqual({
       id: B,
       hidden: true,
+      difficulty: codeLevel(B),
+      defaultDifficulty: codeLevel(B),
+      drinkLevel: codeDrink(B),
+      defaultDrinkLevel: codeDrink(B),
       plays: { online: 0, local: 4, total: 4 },
       popularLocalRank: null,
       popularOnlineRank: null,
@@ -123,7 +185,7 @@ describe('PATCH /api/admin/game-catalog', () => {
 
   it.each([['superadmin'], ['fondateur']])('%s : cache le jeu, journalisé, réponse = forme du GET', async (role) => {
     userMock.mockResolvedValue({ id: 'staff', role })
-    state.value = { hiddenIds: [A], popular: { local: [], online: [] } }
+    state.value = emptyState({ hiddenIds: [A] })
 
     const res = await patch({ gameId: A, hidden: true })
 
@@ -152,6 +214,186 @@ describe('PATCH /api/admin/game-catalog', () => {
     const res = await patch({ gameId: A, hidden: true })
     expect(res.status).toBe(200)
     expect(logMock).not.toHaveBeenCalled()
+  })
+
+  describe('réglage de la difficulté', () => {
+    it.each([['admin'], ['moderator'], ['user'], [null]])('%s : 403 sans rien écrire', async (role) => {
+      userMock.mockResolvedValue(role ? { id: 'joueur', role } : null)
+      const res = await patch({ gameId: A, difficulty: 3 })
+      expect(res.status).toBe(403)
+      expect(setDifficultyMock).not.toHaveBeenCalled()
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it.each([['superadmin'], ['fondateur']])('%s : règle la difficulté, journalisée, réponse = forme du GET', async (role) => {
+      userMock.mockResolvedValue({ id: 'staff', role })
+      const level = otherLevel(A)
+      state.value = emptyState({ difficulty: { [A]: level } })
+
+      const res = await patch({ gameId: A, difficulty: level })
+
+      expect(res.status).toBe(200)
+      expect(setDifficultyMock).toHaveBeenCalledWith(A, level)
+      expect(setHiddenMock).not.toHaveBeenCalled()
+      expect(logMock).toHaveBeenCalledTimes(1)
+      expect(logMock).toHaveBeenCalledWith({
+        actorId: 'staff',
+        action: 'site-setting',
+        detail: `Difficulté : ${GAMES.find((g) => g.id === A)!.title} → ${LABELS[level]}`,
+      })
+      const body = await res.json()
+      expect(body.games.find((g: { id: string }) => g.id === A).difficulty).toBe(level)
+      expect(Object.keys(body).sort()).toEqual(['canEdit', 'games', 'retiredCount'])
+    })
+
+    it('les trois niveaux sont acceptés avec leur libellé', async () => {
+      for (const level of [1, 2, 3] as const) {
+        logMock.mockClear()
+        const res = await patch({ gameId: B, difficulty: level })
+        expect(res.status).toBe(200)
+        expect(logMock.mock.calls[0][0].detail).toBe(`Difficulté : ${GAMES.find((g) => g.id === B)!.title} → ${LABELS[level]}`)
+      }
+    })
+
+    it('ne journalise rien quand rien n’a changé', async () => {
+      setDifficultyMock.mockResolvedValue({ difficulty: {}, changed: false })
+      const res = await patch({ gameId: A, difficulty: codeLevel(A) })
+      expect(res.status).toBe(200)
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it('plusieurs clés ensemble, ou aucune : invalid_action 400', async () => {
+      const bodies = [
+        { gameId: A, hidden: true, difficulty: 2 },
+        { gameId: A, hidden: true, drinkLevel: 2 },
+        { gameId: A, difficulty: 2, drinkLevel: 2 },
+        { gameId: A, hidden: true, difficulty: 2, drinkLevel: 2 },
+        { gameId: A },
+      ]
+      for (const body of bodies) {
+        const res = await patch(body)
+        expect(res.status, JSON.stringify(body)).toBe(400)
+        expect((await res.json()).error).toBe('invalid_action')
+      }
+      expect(setDifficultyMock).not.toHaveBeenCalled()
+      expect(setDrinkLevelMock).not.toHaveBeenCalled()
+      expect(setHiddenMock).not.toHaveBeenCalled()
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it('niveau invalide ou jeu non réglable : invalid_action 400', async () => {
+      const bodies = [
+        { gameId: A, difficulty: 0 },
+        { gameId: A, difficulty: 4 },
+        { gameId: A, difficulty: 1.5 },
+        { gameId: A, difficulty: '2' },
+        { gameId: A, difficulty: null },
+        { gameId: 'jeu-inexistant', difficulty: 2 },
+        { gameId: retired.id, difficulty: 2 },
+        { difficulty: 2 },
+      ]
+      for (const body of bodies) {
+        const res = await patch(body)
+        expect(res.status, JSON.stringify(body)).toBe(400)
+        expect((await res.json()).error).toBe('invalid_action')
+      }
+      expect(setDifficultyMock).not.toHaveBeenCalled()
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it('une erreur typée du serveur devient invalid_action, une panne d’écriture server_error', async () => {
+      setDifficultyMock.mockRejectedValue(new GameNotToggleableError(A))
+      const res = await patch({ gameId: A, difficulty: 3 })
+      expect(res.status).toBe(400)
+      expect((await res.json()).error).toBe('invalid_action')
+
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      setDifficultyMock.mockRejectedValue(new Error('locked'))
+      const down = await patch({ gameId: A, difficulty: 3 })
+      expect(down.status).toBe(500)
+      expect(logMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('réglage du niveau « fait boire »', () => {
+    it.each([['admin'], ['moderator'], ['user'], [null]])('%s : 403 sans rien écrire', async (role) => {
+      userMock.mockResolvedValue(role ? { id: 'joueur', role } : null)
+      const res = await patch({ gameId: A, drinkLevel: 3 })
+      expect(res.status).toBe(403)
+      expect(setDrinkLevelMock).not.toHaveBeenCalled()
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it.each([['superadmin'], ['fondateur']])('%s : règle le niveau, journalisé, réponse = forme du GET', async (role) => {
+      userMock.mockResolvedValue({ id: 'staff', role })
+      const level = otherDrink(A)
+      state.value = emptyState({ drinkLevel: { [A]: level } })
+
+      const res = await patch({ gameId: A, drinkLevel: level })
+
+      expect(res.status).toBe(200)
+      expect(setDrinkLevelMock).toHaveBeenCalledWith(A, level)
+      expect(setHiddenMock).not.toHaveBeenCalled()
+      expect(setDifficultyMock).not.toHaveBeenCalled()
+      expect(logMock).toHaveBeenCalledTimes(1)
+      expect(logMock).toHaveBeenCalledWith({
+        actorId: 'staff',
+        action: 'site-setting',
+        detail: `Fait boire : ${GAMES.find((g) => g.id === A)!.title} → ${DRINK_LABELS[level]}`,
+      })
+      const body = await res.json()
+      expect(body.games.find((g: { id: string }) => g.id === A).drinkLevel).toBe(level)
+      expect(Object.keys(body).sort()).toEqual(['canEdit', 'games', 'retiredCount'])
+    })
+
+    it('les trois niveaux sont acceptés avec leur libellé (Peu, Moyen, Beaucoup)', async () => {
+      for (const level of [1, 2, 3] as const) {
+        logMock.mockClear()
+        const res = await patch({ gameId: B, drinkLevel: level })
+        expect(res.status).toBe(200)
+        expect(logMock.mock.calls[0][0].detail).toBe(`Fait boire : ${GAMES.find((g) => g.id === B)!.title} → ${DRINK_LABELS[level]}`)
+      }
+    })
+
+    it('ne journalise rien quand rien n’a changé', async () => {
+      setDrinkLevelMock.mockResolvedValue({ drinkLevel: {}, changed: false })
+      const res = await patch({ gameId: A, drinkLevel: codeDrink(A) })
+      expect(res.status).toBe(200)
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it('niveau invalide ou jeu non réglable : invalid_action 400', async () => {
+      const bodies = [
+        { gameId: A, drinkLevel: 0 },
+        { gameId: A, drinkLevel: 4 },
+        { gameId: A, drinkLevel: 1.5 },
+        { gameId: A, drinkLevel: '2' },
+        { gameId: A, drinkLevel: null },
+        { gameId: 'jeu-inexistant', drinkLevel: 2 },
+        { gameId: retired.id, drinkLevel: 2 },
+        { drinkLevel: 2 },
+      ]
+      for (const body of bodies) {
+        const res = await patch(body)
+        expect(res.status, JSON.stringify(body)).toBe(400)
+        expect((await res.json()).error).toBe('invalid_action')
+      }
+      expect(setDrinkLevelMock).not.toHaveBeenCalled()
+      expect(logMock).not.toHaveBeenCalled()
+    })
+
+    it('une erreur typée du serveur devient invalid_action, une panne d’écriture server_error', async () => {
+      setDrinkLevelMock.mockRejectedValue(new GameNotToggleableError(A))
+      const res = await patch({ gameId: A, drinkLevel: 3 })
+      expect(res.status).toBe(400)
+      expect((await res.json()).error).toBe('invalid_action')
+
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      setDrinkLevelMock.mockRejectedValue(new Error('locked'))
+      const down = await patch({ gameId: A, drinkLevel: 3 })
+      expect(down.status).toBe(500)
+      expect(logMock).not.toHaveBeenCalled()
+    })
   })
 
   it('refuse un corps mal formé ou un jeu non cachable : invalid_action 400', async () => {

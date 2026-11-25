@@ -17,6 +17,7 @@ import {
   getPlayerStatsByGame as getPlayerStatsByGameFromStorage
 } from '../lib/players';
 import { useAuth } from '@/hooks/useAuth';
+import type { LocalTallyOptions } from '@/lib/local-drink-tally';
 import { clearSelectedPlayerIds } from '@/lib/selectedPlayers';
 import { noteSoireeStats } from '@/lib/soiree/storage';
 import { syncLocalPlayersNow } from '@/lib/visit-ping-client';
@@ -30,6 +31,17 @@ import {
 
 type PlayersListener = () => void;
 const playersListeners = new Set<PlayersListener>();
+
+/**
+ * Être prévenu qu'un écran de la page a changé les joueurs, sans monter tout
+ * usePlayers (et sa synchro cloud) : la barre du hub ne veut que leurs ids.
+ */
+export function subscribePlayersUpdated(listener: PlayersListener): () => void {
+  playersListeners.add(listener);
+  return () => {
+    playersListeners.delete(listener);
+  };
+}
 
 function notifyPlayersUpdated(except?: PlayersListener) {
   queueMicrotask(() => {
@@ -211,8 +223,8 @@ export function usePlayers() {
     return updatedPlayers;
   }, [notifyOthers, pushCloudIfReady]);
 
-  const updatePlayerStats = useCallback((playerId: string, gameId: string, stats: Partial<PlayerStats>) => {
-    const updatedPlayers = updatePlayerStatsInStorage(playerId, gameId, stats);
+  const updatePlayerStats = useCallback((playerId: string, gameId: string, stats: Partial<PlayerStats>, tally?: LocalTallyOptions) => {
+    const updatedPlayers = updatePlayerStatsInStorage(playerId, gameId, stats, tally);
     // Le seul passage commun aux jeux locaux en fin de partie : la manche en
     // cours du Mode Soirée y prend ses gorgées (src/lib/soiree/storage.ts).
     noteSoireeStats(playerId, gameId, stats);

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslations } from 'next-intl'
 import { Dices, RotateCcw, SlidersHorizontal } from "lucide-react"
 import { Player } from "@/lib/players"
+import type { LocalTallyOptions } from "@/lib/local-drink-tally"
 import { PlayerName } from "@/components/ui/PlayerName"
 import {
   type Choices1220,
@@ -160,11 +161,19 @@ export default function Game1220({ players, onGameEnd }: GameProps) {
   const countGame = () => {
     if (gameCountedRef.current) return
     gameCountedRef.current = true
+    // Terminée avant le premier lancer : la partie reste dans les statistiques
+    // du téléphone, pas dans le classement de tout le site (comme en ligne).
+    const siteTally: LocalTallyOptions | undefined = rollCount === 0 ? { tally: 'skip' } : undefined
     players.forEach(p => {
       try {
         // Gorgées BUES (tally.drink) ; celles à donner se distribuent à voix
         // haute, sans cible enregistrée. Sans alcool, rien n'est bu.
-        updatePlayerStats(p.id, '1220', { gamesPlayed: 1, totalDrinks: ambiance === 'soft' ? 0 : (tally[p.id]?.drink ?? 0) })
+        updatePlayerStats(
+          p.id,
+          '1220',
+          { gamesPlayed: 1, totalDrinks: ambiance === 'soft' ? 0 : (tally[p.id]?.drink ?? 0) },
+          siteTally
+        )
       } catch (error) {
         console.error('Erreur lors du comptage de la partie:', error)
       }

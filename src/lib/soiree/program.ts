@@ -45,19 +45,22 @@ export function buildProgram(options: {
   playerCount: number
   hiddenIds?: readonly string[]
   rng?: Rng
+  /** Intensité d'un jeu : le niveau « Fait boire » réglé par l'équipe (useGameDrinkLevel), sinon celui du code. */
+  heatOf?: (gameId: string) => SoireeHeat
 }): string[] {
   const rng = options.rng ?? Math.random
+  const heatOf = options.heatOf ?? soireeHeat
   const left = playableSoireeGameIds(options.playerCount, options.hiddenIds)
   const wanted = Math.max(0, Math.min(left.length, options.rounds))
   const weights = VIBE_WEIGHTS[options.vibe]
 
   const picked: string[] = []
   while (picked.length < wanted && left.length > 0) {
-    const total = left.reduce((sum, id) => sum + weights[soireeHeat(id)], 0)
+    const total = left.reduce((sum, id) => sum + weights[heatOf(id)], 0)
     let draw = rng() * total
     let index = left.length - 1
     for (let i = 0; i < left.length; i++) {
-      draw -= weights[soireeHeat(left[i])]
+      draw -= weights[heatOf(left[i])]
       if (draw < 0) {
         index = i
         break
@@ -67,7 +70,7 @@ export function buildProgram(options: {
   }
 
   return picked
-    .map((id) => ({ id, key: soireeHeat(id) + rng() * 0.9 }))
+    .map((id) => ({ id, key: heatOf(id) + rng() * 0.9 }))
     .sort((a, b) => a.key - b.key)
     .map((entry) => entry.id)
 }
@@ -101,6 +104,6 @@ export function programMinutes(program: readonly string[]): number {
 }
 
 /** Intensité de chaque manche, pour la courbe du programme. */
-export function programHeat(program: readonly string[]): SoireeHeat[] {
-  return program.map((id) => soireeHeat(id))
+export function programHeat(program: readonly string[], heatOf: (gameId: string) => SoireeHeat = soireeHeat): SoireeHeat[] {
+  return program.map((id) => heatOf(id))
 }

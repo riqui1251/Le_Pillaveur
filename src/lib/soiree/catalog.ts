@@ -1,7 +1,7 @@
-import { GAMES, getGameById, type GameDifficulty } from '@/lib/games'
+import { GAMES, getGameById, type GameDrinkLevel } from '@/lib/games'
 
-/** Intensité d'un jeu dans une soirée : 1 on se chauffe, 3 ça tape. */
-export type SoireeHeat = 1 | 2 | 3
+/** Intensité d'un jeu dans une soirée : 1 on se chauffe, 3 ça tape. C'est le barème « Fait boire » du jeu (GameMeta.drinkLevel). */
+export type SoireeHeat = GameDrinkLevel
 
 /**
  * Comment un jeu remplit l'ardoise :
@@ -15,7 +15,7 @@ export type SoireeHeat = 1 | 2 | 3
  */
 export type SoireeCounting = 'auto' | 'partial' | 'manual'
 
-type SoireeGameMeta = { heat: SoireeHeat; minutes: number; counting: SoireeCounting }
+type SoireeGameMeta = { minutes: number; counting: SoireeCounting }
 
 /**
  * Les jeux qu'une soirée peut enchaîner : les jeux LOCAUX visibles (un seul
@@ -26,24 +26,24 @@ type SoireeGameMeta = { heat: SoireeHeat; minutes: number; counting: SoireeCount
  * annoncé du programme, pas à minuter quoi que ce soit.
  */
 const SOIREE_GAME_META: Readonly<Record<string, SoireeGameMeta>> = {
-  'vue-de-nez': { heat: 1, minutes: 10, counting: 'auto' },
-  'pile-poil': { heat: 1, minutes: 8, counting: 'auto' },
-  purple: { heat: 1, minutes: 10, counting: 'auto' },
-  blackjack: { heat: 1, minutes: 12, counting: 'auto' },
+  'vue-de-nez': { minutes: 10, counting: 'auto' },
+  'pile-poil': { minutes: 8, counting: 'auto' },
+  purple: { minutes: 10, counting: 'auto' },
+  blackjack: { minutes: 12, counting: 'auto' },
   // En soirée, la manche s'arrête quand chacun a loupé deux fois (forcé par le jeu).
-  'hi-lo': { heat: 2, minutes: 6, counting: 'auto' },
-  'chiffre-piege': { heat: 2, minutes: 8, counting: 'auto' },
-  '1220': { heat: 2, minutes: 10, counting: 'auto' },
-  plinko: { heat: 2, minutes: 8, counting: 'auto' },
-  'monsieur-3': { heat: 2, minutes: 10, counting: 'auto' },
+  'hi-lo': { minutes: 6, counting: 'auto' },
+  'chiffre-piege': { minutes: 8, counting: 'auto' },
+  '1220': { minutes: 10, counting: 'auto' },
+  plinko: { minutes: 8, counting: 'auto' },
+  'monsieur-3': { minutes: 10, counting: 'auto' },
   // En soirée, une seule course en mode libre (forcé par le jeu) : les gorgées se distribuent à voix haute.
-  pmu: { heat: 2, minutes: 4, counting: 'manual' },
-  'front-colle': { heat: 2, minutes: 12, counting: 'auto' },
-  'doigt-du-destin': { heat: 2, minutes: 3, counting: 'manual' },
-  'patate-chaude': { heat: 3, minutes: 8, counting: 'auto' },
-  'cap-ou-pas-cap': { heat: 3, minutes: 15, counting: 'auto' },
-  'coupe-du-roi': { heat: 3, minutes: 20, counting: 'manual' },
-  'petit-buveur': { heat: 3, minutes: 25, counting: 'auto' },
+  pmu: { minutes: 4, counting: 'manual' },
+  'front-colle': { minutes: 12, counting: 'auto' },
+  'doigt-du-destin': { minutes: 3, counting: 'manual' },
+  'patate-chaude': { minutes: 8, counting: 'auto' },
+  'cap-ou-pas-cap': { minutes: 15, counting: 'auto' },
+  'coupe-du-roi': { minutes: 20, counting: 'manual' },
+  'petit-buveur': { minutes: 25, counting: 'auto' },
 }
 
 /**
@@ -82,17 +82,16 @@ export function isSoireeGame(gameId: string): boolean {
   return SOIREE_GAME_SET.has(gameId)
 }
 
+/**
+ * Intensité de départ d'un jeu : son niveau « Fait boire » du code. Le réglage
+ * de l'équipe (Supervision) passe par `heatOf`, voir buildProgram.
+ */
 export function soireeHeat(gameId: string): SoireeHeat {
-  return SOIREE_GAME_META[gameId]?.heat ?? 2
+  return getGameById(gameId)?.drinkLevel ?? 2
 }
 
 export function soireeMinutes(gameId: string): number {
   return SOIREE_GAME_META[gameId]?.minutes ?? 10
-}
-
-/** Difficulté des règles du jeu (1 facile à 3 difficile) : une échelle à part de l'intensité (`soireeHeat`, ce qu'on boit). */
-export function soireeDifficulty(gameId: string): GameDifficulty {
-  return getGameById(gameId)?.difficulty ?? 2
 }
 
 export function soireeCounting(gameId: string): SoireeCounting {

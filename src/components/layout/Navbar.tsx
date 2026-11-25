@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, usePathname } from '@/i18n/navigation'
-import { Menu, X, Home, User, Users, Gamepad2, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, ShieldAlert, Star, Loader2, BookOpen, GraduationCap, Wine, Sparkles } from 'lucide-react'
+import { Menu, X, Home, User, Users, ChevronRight, Shield, MessageCircle, Trophy, Smartphone, Maximize2, Minimize2, Loader2, BookOpen, GraduationCap } from 'lucide-react'
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useLocale, useTranslations } from 'next-intl'
@@ -18,6 +18,8 @@ import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { BrandMark } from '@/components/brand/BrandLogo'
 import { openAnalyticsConsent } from '@/components/legal/AgeGate'
 import { useTour } from '@/components/tour/TourProvider'
+import { useAccountSheets } from '@/components/account/AccountSheets'
+import { scrollPageTop } from '@/lib/scroll-page-top'
 import { cn } from '@/lib/utils'
 
 /**
@@ -83,20 +85,102 @@ const ChatPanel = dynamic<ChatPanelProps>(
   { ssr: false, loading: PanelLoading }
 )
 
+function NeutralAccountIcon() {
+  return <User className="h-4 w-4 text-amber-300" aria-hidden />
+}
+
+// Le catalogue des icônes de compte (≈ 140 Ko de tracés) ne voyage qu'avec
+// un compte qui en a choisi une, pas avec chaque page de chaque visiteur.
+const AccountIcon = dynamic(
+  () => import('@/components/icons/PlayerIcons').then((m) => m.PlayerIconById),
+  { ssr: false, loading: NeutralAccountIcon }
+)
+
+/**
+ * Accès au compte, à droite de la barre : « Se connecter » pour un visiteur,
+ * sinon une pastille (icône, pseudo, niveau — ou « Invité », en ambre : c'est
+ * le chemin vers la sauvegarde du compte). Les deux ouvrent une feuille. Rien
+ * tant que la session n'est pas lue, ni quand elle n'a pas pu l'être (hors
+ * ligne) : on ne propose pas de se connecter à qui l'est peut-être déjà.
+ */
+function AccountControl({ level }: { level: number | null }) {
+  const t = useTranslations('nav')
+  const tAuth = useTranslations('auth')
+  const { user, loading, unavailable } = useAuth()
+  const { openAuth, openAccount } = useAccountSheets()
+
+  if (loading || (!user && unavailable)) return null
+
+  if (!user) {
+    return (
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => openAuth()}
+        className="flex h-11 min-w-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/[0.45] bg-amber-500/[0.15] px-3 text-sm font-bold text-amber-200 transition-all duration-200 hover:bg-amber-500/25 active:scale-95 sm:shrink-0 sm:px-3.5"
+      >
+        <User className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="min-w-0 truncate">{tAuth('login.submit')}</span>
+      </button>
+    )
+  }
+
+  const name = user.displayName
+  const icon = user.onlinePreferences?.icon
+  const label = user.isGuest
+    ? t('account.openGuest', { name })
+    : level !== null
+      ? t('account.openLevel', { name, level })
+      : t('account.open', { name })
+
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-label={label}
+      title={name}
+      onClick={openAccount}
+      className={cn(
+        'flex h-11 min-w-0 max-w-[13rem] items-center gap-1.5 rounded-xl border pl-1.5 pr-2.5 text-sm font-bold transition-all duration-200 active:scale-95 sm:shrink-0 sm:gap-2',
+        user.isGuest
+          ? 'border-amber-400/40 bg-amber-500/[0.15] text-amber-100 hover:border-amber-400/60 hover:bg-amber-500/25'
+          : 'border-white/10 bg-white/[0.04] text-white hover:border-amber-400/[0.35] hover:bg-amber-500/10'
+      )}
+    >
+      <span
+        aria-hidden
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-felt shadow-md ring-2 ring-inset ring-gold"
+      >
+        {icon ? <AccountIcon id={icon} className="h-5 w-5" /> : <NeutralAccountIcon />}
+      </span>
+      {/* Le pseudo ne s'affiche que là où il tient sans écraser le titre de
+          la page : de `xs` à `sm` (amis et chat sont alors dans le tiroir) et
+          dès `lg`. Sous 480 px, il réduisait le titre à « L… » ; entre `sm` et
+          `lg`, amis, chat, langue et page active remplissent déjà la barre. Il
+          reste toujours dans aria-label et title. */}
+      <span className="hidden min-w-0 truncate xs:block sm:hidden lg:block">{name}</span>
+      {user.isGuest ? (
+        <span className="shrink-0 whitespace-nowrap text-[11px] font-extrabold text-amber-200">{t('account.guest')}</span>
+      ) : level !== null ? (
+        <span className="shrink-0 whitespace-nowrap text-[11px] font-extrabold tabular-nums text-amber-200">
+          {t('levelBadge', { level })}
+        </span>
+      ) : null}
+    </button>
+  )
+}
+
 const NAV_LINK_KEYS = [
-  // Le Mode Soirée est l'accueil depuis le 22/11/2026 ; l'ancienne vitrine
-  // reste à portée de menu (« Découvrir Le Pillaveur », plus bas). /soiree
-  // et non / : l'accueil renvoie les comptes en mode en ligne vers /jeux.
-  { href: '/soiree', key: 'soiree', icon: Wine },
-  { href: '/joueurs', key: 'joueurs', icon: User },
-  { href: '/jeux', key: 'jeux', icon: Gamepad2 },
+  // Ni Mode Soirée, ni Joueurs, ni Jeux, ni l'ancienne vitrine /decouvrir
+  // (choix du 25/11) : on change de jeu ou de joueurs en repassant par les
+  // deux cartes de l'accueil.
+  { href: '/', key: 'accueil', icon: Home },
   // Français seulement : les articles de /regles n'existent qu'en français
   // (docs/rules/fr/) — le proposer à un anglophone serait une promesse non
   // tenue, même règle que la section règles de la landing.
   { href: '/regles', key: 'regles', icon: BookOpen },
   { href: '/classement', key: 'classement', icon: Trophy },
-  { href: '/compte', key: 'compte', icon: Home },
-  { href: '/decouvrir', key: 'decouvrir', icon: Sparkles },
+  { href: '/compte', key: 'compte', icon: User },
   // Masquée dans la coquille Capacitor (on n'envoie pas vers les stores
   // quelqu'un qui est déjà dans l'app).
   { href: '/application', key: 'application', icon: Smartphone },
@@ -181,8 +265,8 @@ export default function Navbar() {
   }, [user, t, inApp, locale])
 
   // « Revoir le tuto » se range sous « Règles » ; hors français, où cette
-  // entrée n'existe pas, sous « Jeux ».
-  const tourAfter = links.some((l) => l.key === 'regles') ? 'regles' : 'jeux'
+  // entrée n'existe pas, sous « Accueil ».
+  const tourAfter = links.some((l) => l.key === 'regles') ? 'regles' : 'accueil'
 
   const activeHref =
     links.find((l) => pathname === l.href || pathname.startsWith(`${l.href}/`))?.href ?? null
@@ -289,19 +373,34 @@ export default function Navbar() {
             </button>
           )}
 
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gold/40 bg-felt-deep p-1 shadow-md sm:h-10 sm:w-10">
+          {/* Plancher sous `sm` : c'est le bouton du compte qui cède (pseudo
+              tronqué), pas le logo qui le chevauche. Le logo ramène aux deux
+              cartes de l'accueil ; déjà dessus, il remonte en haut (sur
+              téléphone c'est body qui défile, pas window). */}
+          <Link
+            href="/"
+            onClick={(event) => {
+              // Un clic modifié (nouvel onglet, nouvelle fenêtre) suit le lien normalement.
+              if (pathname !== '/' || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              scrollPageTop()
+            }}
+            className="flex min-w-[4.5rem] flex-1 items-center gap-2.5 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 sm:min-w-0 sm:gap-3"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gold/40 bg-felt-deep p-1 shadow-md transition-transform duration-200 active:scale-95 sm:h-10 sm:w-10">
               <BrandMark />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold leading-tight text-white sm:text-base">
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold leading-tight text-white sm:text-base">
                 {mounted ? pageMeta.title : t('brand')}
-              </p>
-              <p className="truncate text-[10px] text-white/45 sm:text-xs">
+              </span>
+              <span className="block truncate text-[10px] text-white/45 sm:text-xs">
                 {mounted ? pageMeta.subtitle : t('loading')}
-              </p>
-            </div>
-          </div>
+              </span>
+            </span>
+            {/* Après le titre visible, pas à sa place : un aria-label le masquerait au lecteur d'écran. */}
+            <span className="sr-only">{t('homeLink')}</span>
+          </Link>
 
           {/* Joueurs actifs sur le site — pastille verte discrète, reprise
               telle quelle dans le tiroir sous `sm`. */}
@@ -319,30 +418,7 @@ export default function Navbar() {
             </span>
           )}
 
-          {/* Progression visible : niveau pour un compte enregistré, rappel
-              « sauvegarder » pour un invité — les deux mènent à la page Compte. */}
-          {user && (user.isGuest ? (
-            // Sous `sm`, le libellé est coupé faute de place : le badge devient
-            // une icône carrée (le libellé reste dans aria-label/title) — il ne
-            // disparaît JAMAIS, c'est le seul chemin vers la conversion.
-            <Link
-              href="/compte"
-              aria-label={t('guestBadge')}
-              title={t('guestBadge')}
-              className="touch-target flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-amber-400/40 bg-amber-500/[0.15] text-[11px] font-bold text-amber-200 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-500/25 active:scale-95 sm:h-11 sm:w-auto sm:px-3 sm:text-xs"
-            >
-              <ShieldAlert className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">{t('guestBadge')}</span>
-            </Link>
-          ) : progression ? (
-            <Link
-              href="/compte"
-              className="touch-target flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-[11px] font-bold tabular-nums text-amber-200 transition-all duration-200 hover:border-amber-400/[0.35] hover:bg-amber-500/10 active:scale-95 sm:h-11 sm:px-3 sm:text-xs"
-            >
-              <Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
-              {t('levelBadge', { level: progression.level })}
-            </Link>
-          ) : null)}
+          <AccountControl level={progression?.level ?? null} />
 
           {mounted && !inApp && fsSupported && (
             <button

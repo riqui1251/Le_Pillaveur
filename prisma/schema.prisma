@@ -406,6 +406,27 @@ model LocalGameDaily {
   @@id([day, gameId])
 }
 
+// « Quel jeu fait le plus boire ? » tous joueurs confondus : gorgées et
+// participations par jour, par jeu et par mode. Compteurs ANONYMES comme
+// LocalGameDaily (ni compte, ni appareil, ni IP) : en local, le signal du
+// téléphone en fin de partie (POST /api/analytics/local-game) ; en ligne, le
+// serveur à la fin de la partie (état final du moteur). Ambiance « Sans
+// alcool » jamais comptée. Purge 13 mois (retention-sweep).
+model GameDrinkDaily {
+  /// Jour Paris 'YYYY-MM-DD'.
+  day    String
+  /// Id du jeu (src/lib/games.ts).
+  gameId String
+  /// 'local' (un téléphone qui tourne) | 'online' (table en ligne).
+  mode   String
+  /// Gorgées distribuées.
+  drinks Int    @default(0)
+  /// Participations : une partie jouée par un joueur.
+  plays  Int    @default(0)
+
+  @@id([day, gameId, mode])
+}
+
 model DailyVisitor {
   visitorId String
   date      String

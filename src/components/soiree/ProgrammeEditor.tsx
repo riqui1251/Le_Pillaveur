@@ -5,17 +5,19 @@ import { useTranslations } from 'next-intl'
 import { ArrowDown, ArrowUp, Plus, RefreshCw, Shuffle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { useLocalizedGames } from '@/lib/games-i18n'
-import { soireeCounting, soireeDifficulty, soireeGameColors, soireeHeat, soireeMinutes } from '@/lib/soiree/catalog'
+import { soireeCounting, soireeGameColors, soireeMinutes, type SoireeHeat } from '@/lib/soiree/catalog'
 import { addRound, moveRound, programHeat, programMinutes, removeRound, replaceRound, SOIREE_MAX_ROUNDS } from '@/lib/soiree/program'
-import { GameBadge, HeatPips, gameGradient } from './soiree-ui'
+import { GameBadge, gameGradient } from './soiree-ui'
 import { GamePickerDialog } from './GamePickerDialog'
 
 /** Courbe d'intensité du programme, de la chauffe au final (échelle 1 à 3). */
-function HeatCurve({ program }: { program: readonly string[] }) {
+function HeatCurve({ program, heatOf }: { program: readonly string[]; heatOf: (gameId: string) => SoireeHeat }) {
   const t = useTranslations('soiree.programme')
   if (program.length < 2) return null
-  const heats = programHeat(program)
+  const heats = programHeat(program, heatOf)
   const W = 300
   const x0 = 18
   const x1 = W - 18
@@ -58,6 +60,8 @@ export function ProgrammeEditor({
 }) {
   const t = useTranslations('soiree.programme')
   const games = useLocalizedGames()
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   const title = (id: string) => games.find((g) => g.id === id)?.title ?? id
   const [picking, setPicking] = useState<Picking>(null)
   const full = program.length >= maxRounds
@@ -73,7 +77,7 @@ export function ProgrammeEditor({
       <p className="text-sm font-semibold text-cream/70">
         {program.length > 0 ? t('summary', { count: program.length, minutes: programMinutes(program) }) : t('empty')}
       </p>
-      <HeatCurve program={program} />
+      <HeatCurve program={program} heatOf={drinkLevelOf} />
 
       <ol className="space-y-2.5" aria-label={t('listLabel')}>
         {program.map((gameId, i) => {
@@ -94,8 +98,8 @@ export function ProgrammeEditor({
                       {title(gameId)}
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#5E5444]">
-                      <HeatPips heat={soireeHeat(gameId)} />
-                      <DifficultyBadge level={soireeDifficulty(gameId)} tone="card" />
+                      <DrinkLevelBadge level={drinkLevelOf(gameId)} tone="card" />
+                      <DifficultyBadge level={difficultyOf(gameId)} tone="card" />
                       <span>{t('minutes', { minutes: soireeMinutes(gameId) })}</span>
                       {counting !== 'auto' && <span className="font-semibold">{t(`counting.${counting}`)}</span>}
                     </p>

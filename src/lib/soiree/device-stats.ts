@@ -1,10 +1,12 @@
 import type { Player } from '@/lib/players'
 import type { SoireeHistoryEntry } from './summary'
 
-// « Quel jeu fait le plus boire ? » — calculé SUR L'APPAREIL (choix du
-// 22/11/2026) à partir de ce que les jeux locaux enregistrent déjà pour
-// chaque joueur (Player.stats.gameStats : parties et gorgées par jeu) et de
-// l'historique des soirées. Rien ne part au serveur.
+// « Quel jeu fait le plus boire ? », partie « Chez vous » — calculée SUR
+// L'APPAREIL à partir de ce que les jeux locaux enregistrent déjà pour chaque
+// joueur (Player.stats.gameStats : parties et gorgées par jeu) et de
+// l'historique des soirées. Rien de ce module ne part au serveur : le
+// classement de tout le site vient de compteurs anonymes à part
+// (src/lib/game-drinks-server.ts, GET /api/stats/game-drinks).
 
 export type GameDrinkStat = {
   gameId: string

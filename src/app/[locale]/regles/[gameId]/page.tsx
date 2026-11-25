@@ -12,8 +12,9 @@ import {
 } from '@/lib/rules/rules-content'
 import { GAMES } from '@/lib/games'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
-import { isGameListed } from '@/lib/game-catalog'
-import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { gameDifficulty, gameDrinkLevel, isGameListed } from '@/lib/game-catalog'
+import { getStaffGameDifficulty, getStaffGameDrinkLevel, getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { TryBotsGate } from '@/components/online/TryBotsGate'
 import { OG_LOCALES, SITE_NAME } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
@@ -101,6 +102,8 @@ export default async function RulesPage({
   const game = GAMES.find((g) => g.id === gameId)
   // Caché par l'équipe : l'article reste en ligne (référencement), sans accès au jeu.
   const hiddenIds = await getStaffHiddenGameIds()
+  const difficultyOverrides = await getStaffGameDifficulty()
+  const drinkLevelOverrides = await getStaffGameDrinkLevel()
   const playable = game ? isGameListed(game, hiddenIds) : false
   const meta = RULES_META[gameId]
   // Textes de l'enveloppe en FRANÇAIS quelle que soit l'URL, comme l'article
@@ -194,8 +197,9 @@ export default async function RulesPage({
           </p>
           {/* Le libellé du niveau suit la langue de l'URL (socle commun),
               l'article reste français : `lang` posé sur la pastille. */}
-          <p lang={locale} className="mt-2 flex justify-center">
-            <DifficultyBadge level={game.difficulty} tone="felt" />
+          <p lang={locale} className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <DifficultyBadge level={gameDifficulty(game.id, difficultyOverrides)} tone="felt" />
+            <DrinkLevelBadge level={gameDrinkLevel(game.id, drinkLevelOverrides)} tone="felt" />
           </p>
           <div className="mx-auto mt-3 max-w-sm">
             {playable ? (

@@ -30,6 +30,7 @@ import { GameShell } from '@/components/game/GameShell'
 import { PassPhoneOverlay } from '@/components/game/PassPhoneOverlay'
 import { EndActionDock } from '@/components/game/EndActionDock'
 import { recordWinnerStats } from '@/lib/petit-buveur/local-stats'
+import { beginLocalGameDrinks } from '@/lib/local-drink-tally'
 // Plateau (grille, cases, pions) : la feuille suit le composant — servie avec
 // ce morceau seulement, pas avec chaque page de /games (idem PetitBuveurOnline).
 import '@/styles/petit-buveur-board.css'
@@ -1997,6 +1998,9 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
     if (playersRef.current.length >= 2) {
       const resetPlayers = resetPlayersForNewGame(playersRef.current)
 
+      // Les gorgées se notent tour par tour, la partie à la victoire : celles
+      // d'une partie abandonnée ne doivent pas gonfler celle-ci.
+      beginLocalGameDrinks('petit-buveur')
       resetTurnRefs()
       resetCastTurn()
 
@@ -2033,6 +2037,7 @@ export default function Game({ players: initialPlayers, onGameEnd, difficulty = 
   // « Rejouer » : la table et la difficulté de la partie jouée (une partie reprise
   // ne correspond pas forcément aux props du prélobby).
   const resetGame = () => {
+    beginLocalGameDrinks('petit-buveur')
     resetTurnRefs()
     resetCastTurn()
     clearTurnBlockingUi()

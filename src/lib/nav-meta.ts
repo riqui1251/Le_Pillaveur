@@ -25,6 +25,8 @@ type StaticPageKey =
   | 'decouvrir'
 
 const STATIC_PAGE_KEYS: Record<string, StaticPageKey> = {
+  // L'accueil (Mode Soirée ou Jeu libre) porte la devise de la maison, comme /decouvrir.
+  '/': 'decouvrir',
   '/joueurs': 'joueurs',
   '/jeux': 'jeux',
   '/classement': 'classement',
@@ -47,6 +49,11 @@ const SECTION_PREFIXES: ReadonlyArray<readonly [prefix: string, key: StaticPageK
   ['/regles/', 'regles'],
   ['/soiree/', 'soiree'],
 ]
+
+/** La page fixe dont la navbar reprend titre et sous-titre, pour un chemin sans langue. */
+export function staticPageKey(path: string): StaticPageKey | undefined {
+  return STATIC_PAGE_KEYS[path] ?? SECTION_PREFIXES.find(([prefix]) => path.startsWith(prefix))?.[1]
+}
 
 /**
  * Sous-titre de la navbar sur la page d'un jeu : OÙ il se joue, pas son état.
@@ -73,8 +80,7 @@ export function usePageMeta(pathname: string): PageMeta {
 
   return useMemo(() => {
     const path = stripLocalePrefix(pathname)
-    const pageKey =
-      STATIC_PAGE_KEYS[path] ?? SECTION_PREFIXES.find(([prefix]) => path.startsWith(prefix))?.[1]
+    const pageKey = staticPageKey(path)
 
     if (pageKey) {
       // « Connexion et profil » n'a de sens que déconnecté.

@@ -13,7 +13,9 @@ import {
 } from '@/lib/collections'
 import type { GameMeta } from '@/lib/games'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
-import { getStaffHiddenGameIds } from '@/lib/game-catalog-server'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { gameDifficulty, gameDrinkLevel } from '@/lib/game-catalog'
+import { getStaffGameDifficulty, getStaffGameDrinkLevel, getStaffHiddenGameIds } from '@/lib/game-catalog-server'
 import { buildAlternates, pageOpenGraph, pageTwitter } from '@/lib/seo/alternates'
 import { SITE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
@@ -115,6 +117,8 @@ export default async function CollectionPage({
   const tNav = await getTranslations({ locale, namespace: 'nav.links' })
 
   const hiddenIds = await getStaffHiddenGameIds()
+  const difficultyOverrides = await getStaffGameDifficulty()
+  const drinkLevelOverrides = await getStaffGameDrinkLevel()
   const games = gamesInCollection(collection, undefined, locale, hiddenIds)
   const url = `${SITE_URL}/${locale}/jeux/${collection}`
   const others = COLLECTION_SLUGS.filter((slug) => slug !== collection)
@@ -217,7 +221,8 @@ export default async function CollectionPage({
                         {tCatalog(`${game.id}.title`)}
                       </h2>
                       {players && <p className="mt-0.5 text-[11px] font-bold text-[#4A443A]">{players}</p>}
-                      <DifficultyBadge level={game.difficulty} tone="card" className="mt-1" />
+                      <DifficultyBadge level={gameDifficulty(game.id, difficultyOverrides)} tone="card" className="mt-1" />
+                      <DrinkLevelBadge level={gameDrinkLevel(game.id, drinkLevelOverrides)} tone="card" variant="icons" className="mt-1" />
                       <p className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-[#4A443A]">
                         {tCatalog(`${game.id}.description`)}
                       </p>

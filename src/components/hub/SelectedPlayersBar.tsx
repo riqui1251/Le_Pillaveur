@@ -3,12 +3,15 @@
 import { Link, useRouter } from "@/i18n/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
-import { ChevronDown, Trophy, Users, X } from "lucide-react"
+import { Check, ChevronDown, Plus, Trophy, Users, X } from "lucide-react"
 import { usePlayers } from "@/hooks/usePlayers"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
 import { useAuth } from "@/hooks/useAuth"
 import { useNightSummary } from "@/lib/gameMetrics-i18n"
 import { enterLocalPlay } from "@/lib/local-play-client"
+import { validateLocalPlayerName } from "@/lib/name-moderation"
+import { PLAYER_NAME_MAX_LENGTH } from "@/lib/players"
+import { cn } from "@/lib/utils"
 import { PlayerIcon } from "@/components/ui/PlayerIcon"
 import { PlayerName } from "@/components/ui/PlayerName"
 import { Button } from "@/components/ui/button"
@@ -34,26 +37,27 @@ function useSelectedLocalPlayers() {
 
 /**
  * Les joueurs de la soirée, dans la feuille « Réglages de la soirée » du hub
- * (PartyBar) : leurs puces et le geste pour les choisir ou les changer. Le
- * hub n'en montre plus que le NOMBRE, dans la barre : la liste complète, avec
- * Records et pont vers le compte, repoussait la première carte de jeu sous la
- * ligne de flottaison (≈ 280 px à elle seule).
+ * (PartyBar) : on coche ou décoche ceux qui jouent, et on ajoute un prénom sur
+ * place. Le menu n'a plus d'entrée « Joueurs » : c'est ici, en touchant le
+ * nombre de joueurs de la barre, qu'on change la table. Icônes, couleurs et
+ * statistiques restent sur /joueurs, en lien discret.
  */
 export function SelectedPlayersPanel() {
   const t = useTranslations("hub.selectedPlayers")
-  const { selectedPlayers, loading } = useSelectedLocalPlayers()
+  const tCommon = useTranslations("common")
+  const { players, loading, addPlayers } = usePlayers()
+  const { selectedIds, add, remove } = useSelectedPlayers()
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const [draft, setDraft] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [announce, setAnnounce] = useState("")
 
-  // Un visiteur (ni compte ni mode local) qui touchait « Choisir les joueurs »
-  // suivait un lien nu vers /joueurs, route protégée : le middleware le
-  // renvoyait sur le formulaire de compte, à rebours du « zéro inscription »
-  // promis par la vitrine. Même porte que la bascule PlayModeToggle : le
-  // cookie de mode local se pose d'abord (POST /api/auth/local-play), la
-  // navigation suit. Si la pose échoue, on navigue quand même — il retombe
-  // sur /compte comme avant, jamais sur un bouton qui ne fait rien. Tant que
-  // l'auth n'a pas répondu, le lien nu reste : un compte n'a pas besoin du
-  // cookie, et le poser pour lui serait sans effet.
+  // Un visiteur (ni compte ni mode local) qui suivait un lien nu vers
+  // /joueurs, route protégée, retombait sur le formulaire de compte : le
+  // cookie de mode local se pose d'abord (même porte que PlayModeToggle), la
+  // navigation suit, même si la pose échoue. Tant que l'auth n'a pas répondu,
+  // le lien nu reste : un compte n'a pas besoin du cookie.
   const isVisitor = !authLoading && !user
   const goToPlayers = () => {
     void enterLocalPlay()
@@ -63,41 +67,129 @@ export function SelectedPlayersPanel() {
 
   if (loading) return <div aria-busy="true" className="h-12 rounded-2xl bg-cream/[0.06] motion-safe:animate-pulse" />
 
-  const none = selectedPlayers.length === 0
-  const label = none ? t("choose") : t("modify")
-  const content = (
+  const selected = new Set(selectedIds)
+  const count = players.filter((p) => selected.has(p.id)).length
+
+  const toggle = (id: string, name: string) => {
+    setError(null)
+    if (selected.has(id)) {
+      remove(id)
+      setAnnounce(t("announceRemoved", { name }))
+    } else {
+      add(id)
+      setAnnounce(t("announceAdded", { name }))
+    }
+  }
+
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault()
+    const name = draft.trim()
+    if (!name) return
+    // Un prénom déjà connu de l'appareil : on le coche, on n'en crée pas un double.
+    const known = players.find((p) => p.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase())
+    if (known) {
+      add(known.id)
+      setDraft("")
+      setError(null)
+      setAnnounce(t("announceAdded", { name: known.name }))
+      return
+    }
+    if (!validateLocalPlayerName(name, PLAYER_NAME_MAX_LENGTH).ok) {
+      setError(t("refused", { name }))
+      return
+    }
+    const { created } = addPlayers([name])
+    if (!created[0]) {
+      setError(t("refused", { name }))
+      return
+    }
+    add(created[0].id)
+    setDraft("")
+    setError(null)
+    setAnnounce(t("announceAdded", { name: created[0].name }))
+  }
+
+  const manage = (
     <>
       <Users className="mr-2 h-4 w-4" aria-hidden />
-      {label}
+      {t("manage")}
     </>
   )
 
   return (
     <div className="space-y-3">
-      {none ? (
-        <p className="text-sm text-cream/70">{t("none")}</p>
+      <p className="text-sm text-cream/70">
+        <span className="font-semibold text-cream">{tCommon("playerCount", { count })}</span>
+        {players.length > 0 && <> · {t("editHint")}</>}
+      </p>
+
+      {players.length === 0 ? (
+        <p className="text-sm text-cream/70">{t("noneSaved")}</p>
       ) : (
         <ul className="flex flex-wrap gap-2">
-          {selectedPlayers.map((player) => (
-            <li
-              key={player.id}
-              className="flex items-center gap-2 rounded-full border border-gold/20 bg-black/25 px-3 py-1.5"
-            >
-              <PlayerIcon player={player} size="sm" className="h-7 w-7 text-base" />
-              <span className="text-sm font-medium text-cream">
-                <PlayerName player={player} />
-              </span>
-            </li>
-          ))}
+          {players.map((player) => {
+            const on = selected.has(player.id)
+            return (
+              <li key={player.id}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggle(player.id, player.name)}
+                  className={cn(
+                    "flex min-h-[44px] items-center gap-2 rounded-full border py-1 pl-1.5 pr-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+                    on
+                      ? "border-gold bg-gold/[0.15] text-cream"
+                      : "border-gold/20 bg-black/25 text-cream/60 hover:border-gold/50 hover:text-cream"
+                  )}
+                >
+                  <PlayerIcon player={player} size="sm" className={cn("h-8 w-8 text-base", !on && "opacity-50 grayscale")} />
+                  <PlayerName player={player} />
+                  {on && <Check className="h-4 w-4 text-gold" aria-hidden />}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
+
+      <form onSubmit={submit} className="flex gap-2">
+        <label htmlFor="party-bar-new-player" className="sr-only">
+          {t("addLabel")}
+        </label>
+        <input
+          id="party-bar-new-player"
+          value={draft}
+          onChange={(event) => {
+            setError(null)
+            setDraft(event.target.value)
+          }}
+          placeholder={t("addPlaceholder")}
+          maxLength={PLAYER_NAME_MAX_LENGTH}
+          autoComplete="off"
+          enterKeyHint="done"
+          className="min-w-0 flex-1 rounded-2xl border border-gold/20 bg-black/25 px-3.5 py-2.5 text-base font-semibold text-cream placeholder:text-cream/40 focus:border-gold focus:outline-none"
+        />
+        <Button type="submit" variant="quiet" size="game" disabled={!draft.trim()}>
+          <Plus className="mr-1 h-4 w-4" aria-hidden />
+          {t("add")}
+        </Button>
+      </form>
+      {error && (
+        <p role="alert" className="text-sm text-red-300">
+          {error}
+        </p>
+      )}
+      <p className="sr-only" aria-live="polite">
+        {announce}
+      </p>
+
       {isVisitor ? (
-        <Button type="button" onClick={goToPlayers} variant={none ? "primary" : "quiet"} size="game" className="w-full">
-          {content}
+        <Button type="button" onClick={goToPlayers} variant="quiet" size="game" className="w-full">
+          {manage}
         </Button>
       ) : (
-        <Button asChild variant={none ? "primary" : "quiet"} size="game" className="w-full">
-          <Link href="/joueurs">{content}</Link>
+        <Button asChild variant="quiet" size="game" className="w-full">
+          <Link href="/joueurs">{manage}</Link>
         </Button>
       )}
     </div>

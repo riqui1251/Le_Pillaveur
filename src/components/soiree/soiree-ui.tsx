@@ -7,7 +7,7 @@ import { suitGlyph, suitIsRed } from '@/components/ui/PlayingCard'
 import { GAME_ICONS, GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
 import { usePlayers } from '@/hooks/usePlayers'
-import { soireeGameColors, type SoireeHeat } from '@/lib/soiree/catalog'
+import { soireeGameColors } from '@/lib/soiree/catalog'
 import type { Soiree, SoireeMetric } from '@/lib/soiree/state'
 import { useSiteBackdrop } from './site-backdrop'
 import { badgeBackground, badgeInkFor } from './badge-contrast'
@@ -35,11 +35,7 @@ export function StepHeader({ eyebrow, title, lead, center = false }: { eyebrow?:
   )
 }
 
-/** Sur téléphone, c'est body qui défile (globals.css, .is-mobile-device) : window.scrollTo n'y suffit pas. */
-export function scrollPageTop() {
-  window.scrollTo(0, 0)
-  document.body.scrollTo(0, 0)
-}
+export { scrollPageTop } from '@/lib/scroll-page-top'
 
 /** Barre d'action fixée sous le pouce, au-dessus de la zone de sécurité du téléphone. */
 export function SoireeCta({ children }: { children: React.ReactNode }) {
@@ -47,19 +43,6 @@ export function SoireeCta({ children }: { children: React.ReactNode }) {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-felt-deep via-felt-deep/95 to-transparent px-4 pb-[calc(0.9rem+env(safe-area-inset-bottom,0px))] pt-8">
       <div className="pointer-events-auto mx-auto flex w-full max-w-lg flex-col gap-2">{children}</div>
     </div>
-  )
-}
-
-export function HeatPips({ heat, className }: { heat: SoireeHeat; className?: string }) {
-  const t = useTranslations('soiree.programme')
-  return (
-    <span role="img" aria-label={t('heat', { value: heat })} className={cn('inline-flex gap-0.5 text-[11px] text-suit-red', className)}>
-      {[1, 2, 3].map((level) => (
-        <span key={level} aria-hidden className={level <= heat ? 'opacity-100' : 'opacity-25'}>
-          ♦
-        </span>
-      ))}
-    </span>
   )
 }
 

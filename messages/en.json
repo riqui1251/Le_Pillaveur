@@ -55,6 +55,7 @@
   },
   "nav": {
     "brand": "Le Pillaveur",
+    "homeLink": "Back to the home page",
     "loading": "Loading…",
     "navigation": "Navigation",
     "menuLabel": "Navigation menu",
@@ -66,22 +67,6 @@
     "chat": "Chat",
     "languageSwitcher": "Change language",
     "links": {
-      "soiree": {
-        "label": "Party Mode",
-        "description": "Plan a party night"
-      },
-      "decouvrir": {
-        "label": "Discover Le Pillaveur",
-        "description": "The former home page and every game"
-      },
-      "joueurs": {
-        "label": "Players",
-        "description": "Manage players"
-      },
-      "jeux": {
-        "label": "Games",
-        "description": "Choose a game"
-      },
       "classement": {
         "label": "Ranking",
         "description": "Online scores"
@@ -105,6 +90,14 @@
       "tuto": {
         "label": "Replay the tutorial",
         "description": "The step-by-step for new players"
+      },
+      "accueil": {
+        "label": "Home",
+        "description": "Party Mode or Free play"
+      },
+      "jeux": {
+        "label": "Games",
+        "description": "Choose a game"
       }
     },
     "legal": {
@@ -168,8 +161,13 @@
       }
     },
     "levelBadge": "Lv. {level}",
-    "guestBadge": "Guest — save it",
-    "activePlayers": "{count, plural, one {# player online} other {# players online}}"
+    "activePlayers": "{count, plural, one {# player online} other {# players online}}",
+    "account": {
+      "guest": "Guest",
+      "open": "My account: {name}",
+      "openLevel": "My account: {name}, level {level}",
+      "openGuest": "My account: {name}, guest account"
+    }
   },
   "common": {
     "back": "Back",
@@ -241,6 +239,15 @@
       "text": "It’s off the catalog for now. Check back soon!",
       "back": "See the other games",
       "staffBanner": "Hidden from players: you can see it because you’re on the team."
+    },
+    "drinkLevel": {
+      "label": "Drinking level",
+      "aria": "Drinking level: {level}",
+      "levels": {
+        "1": "Light",
+        "2": "Medium",
+        "3": "Heavy"
+      }
     }
   },
   "hub": {
@@ -295,6 +302,10 @@
       "localSection": {
         "title": "On this phone · {count, plural, one {# game} other {# games}}",
         "hint": "One phone passed from hand to hand, no account needed."
+      },
+      "categories": {
+        "label": "Game categories",
+        "all": "All"
       }
     },
     "recentLocal": {
@@ -331,16 +342,22 @@
       "moderation": "Alcohol abuse is dangerous for your health. Consume in moderation."
     },
     "selectedPlayers": {
-      "none": "No players selected",
-      "choose": "Choose the players",
-      "modify": "Edit",
       "bridge": {
         "guestText": "A free account keeps your players and their stats from one night to the next.",
         "guestCta": "Create an account",
         "memberText": "Someone missing from the table?",
         "memberCta": "Open an online table",
         "dismiss": "Don't show again"
-      }
+      },
+      "editHint": "Tap a name to add or remove it.",
+      "noneSaved": "No players on this phone yet: add tonight’s names.",
+      "addLabel": "Add a player",
+      "addPlaceholder": "Name",
+      "add": "Add",
+      "refused": "“{name}” isn’t accepted as a name.",
+      "manage": "Icons, colours and stats",
+      "announceAdded": "{name} is playing.",
+      "announceRemoved": "{name} is no longer playing."
     },
     "nightAwards": {
       "toggle": "Table records",
@@ -388,7 +405,8 @@
       "modeHint": {
         "local": "A single phone passed around the table.",
         "online": "Everyone plays on their own phone, joined by a table code."
-      }
+      },
+      "playersTitle": "Who’s playing?"
     }
   },
   "collections": {
@@ -907,6 +925,11 @@
     "googleNative": {
       "button": "Continue with Google",
       "error": "Google sign-in failed. Please try again."
+    },
+    "sheet": {
+      "onlineWhy": "Everyone plays on their own phone: we need to know who’s who at the table.",
+      "toGuest": "Or play as a guest, with just a nickname",
+      "guestTitle": "Don’t want to create an account?"
     }
   },
   "account": {
@@ -1113,6 +1136,18 @@
         "allDone": "All done: here's your reward.",
         "dismissLabel": "Hide the reward"
       }
+    },
+    "sheet": {
+      "eyebrow": "Account",
+      "description": "Profile and preferences.",
+      "cardLevel": "Le Pillaveur · level {level}",
+      "cardGuest": "Le Pillaveur · guest account",
+      "noEmail": "No e-mail",
+      "profileTitle": "Online profile",
+      "onlineNameLabel": "Online nickname",
+      "preferencesTitle": "Preferences",
+      "language": "Language",
+      "fullAccount": "My tables, friends and players"
     }
   },
   "reminder": {
@@ -7809,13 +7844,13 @@
     },
     "gameCatalog": {
       "title": "Game catalog",
-      "desc": "Hide a game to remove it from the site (hub, Party Mode, lobby, showcase), or bring it back. Featured games pick themselves: the most played over 30 days.",
+      "desc": "Hide a game to remove it from the site (hub, Party Mode, lobby, showcase), or bring it back, and set its difficulty (Easy, Medium, Hard) and its drinking level (Light, Medium, Heavy) as players see them. Featured games pick themselves: the most played over 30 days.",
       "refresh": "Refresh",
       "loadError": "Couldn’t load the game catalog.",
       "forbidden": "Session expired or access removed: sign in again.",
       "colGame": "Game",
       "colPlays": "Plays over 30 days",
-      "colDifficulty": "Difficulty",
+      "colScales": "Ratings",
       "colStatus": "On the site",
       "visible": "Visible",
       "hidden": "Hidden",
@@ -7825,13 +7860,66 @@
       "popularOnline": "Featured online · #{rank}",
       "plays": "{count, plural, =0 {No plays} one {# play} other {# plays}}",
       "playsDetail": "{online} online · {local} local",
-      "readOnly": "Read only: only super admins can hide or bring back a game.",
+      "readOnly": "Read only: only super admins can hide a game or change its difficulty or its drinking level.",
       "saveError": "The change wasn’t saved. Try again.",
       "hiddenCount": "{count, plural, =0 {No hidden game} one {# hidden game} other {# hidden games}}",
       "retiredNote": "{count, plural, one {# old game stays retired} other {# old games stay retired}} in the code.",
       "sortedHint": "From most to least played over the last 30 days.",
       "announceHidden": "{game} is now hidden from players.",
-      "announceShown": "{game} is visible to players again."
+      "announceShown": "{game} is visible to players again.",
+      "difficultyGroup": "Difficulty of {game}",
+      "difficultyModified": "Changed · {level} in the code",
+      "announceDifficulty": "Difficulty of {game}: {level}.",
+      "scaleDifficulty": "Difficulty",
+      "scaleDrink": "Drinking level",
+      "drinkGroup": "Drinking level of {game}",
+      "drinkModified": "Changed · {level} in the code",
+      "announceDrinkLevel": "Drinking level of {game}: {level}."
+    },
+    "gameCategories": {
+      "title": "Game categories",
+      "desc": "Sort games into sections: the Games page offers them as filters, in the order below. A game can belong to several categories.",
+      "refresh": "Refresh",
+      "loadError": "Couldn’t load the game categories.",
+      "forbidden": "Session expired or access removed: sign in again.",
+      "readOnly": "Read only: only super admins can create, edit or delete a category.",
+      "saveError": "The change wasn’t saved. Try again.",
+      "notFound": "This category no longer exists: the list has been refreshed.",
+      "limitReached": "Limit reached: {max} categories at most. Delete one to create another.",
+      "count": "{count, plural, =0 {No categories} one {# category} other {# categories}}",
+      "emptyEdit": "No categories yet. Create the first one above.",
+      "emptyReadOnly": "No categories yet.",
+      "createTitle": "New category",
+      "create": "Create category",
+      "nameFr": "Name (French)",
+      "nameCounter": "{count}/{max}",
+      "nameHint": "Required, {max} characters at most.",
+      "nameInvalid": "Enter a name in French.",
+      "otherLanguages": "Names in other languages (optional)",
+      "otherLanguagesHint": "A language left empty shows the French name.",
+      "nameEn": "Name (English)",
+      "nameEs": "Name (Spanish)",
+      "nameIt": "Name (Italian)",
+      "gamesCount": "{count, plural, =0 {No games} one {# game} other {# games}}",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "rename": "Rename {name}",
+      "delete": "Delete {name}",
+      "deleteGroup": "Delete the category {name}",
+      "deleteConfirm": "Delete the category “{name}”? Its games stay in the catalog: only the grouping goes away.",
+      "deleteConfirmButton": "Yes, delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "chooseGames": "Choose games ({count})",
+      "searchLabel": "Search for a game",
+      "searchPlaceholder": "Search for a game",
+      "noResult": "No game matches.",
+      "gamesGroup": "Games in the category {name}",
+      "announceCreated": "Category “{name}” created.",
+      "announceRenamed": "Category renamed: “{name}”.",
+      "announceGames": "Games in “{name}”: {count}.",
+      "announceMoved": "“{name}” is now in position {position} of {total}.",
+      "announceDeleted": "Category “{name}” deleted."
     },
     "history": {
       "activeConnection": "Active sign-in",
@@ -8886,7 +8974,6 @@
       "less": "One player fewer",
       "more": "One more player",
       "start": "Plan our night",
-      "single": "Play a single game",
       "stats": "Which game makes you drink most?",
       "resume": {
         "eyebrow": "Party in progress",
@@ -8915,14 +9002,42 @@
           "text": "The night’s awards, ready to send to the group chat."
         }
       },
-      "about": {
-        "title": "Le Pillaveur, the house of party games",
-        "text": "{count} free party games, on one phone or one phone each: dice, cards, quizzes, bluffing and dares. Party Mode chains them for you, from the calmest to the wildest.",
-        "discover": "Discover Le Pillaveur",
-        "allGames": "See every game"
+      "health": "Drink responsibly. Without alcohol, the tab counts wins.",
+      "ask": "What are we playing tonight?",
+      "modes": {
+        "label": "Choose a game mode",
+        "hint": "Tap a card to <b>pick your mode</b>.",
+        "range": "{min} to {max}",
+        "libre": {
+          "title": "Free play",
+          "subtitle": "Local or online",
+          "allAges": "All ages"
+        },
+        "picked": {
+          "soiree": "Party Mode selected. Set the number of players below.",
+          "libre": "Free play selected. Choose this phone or online below.",
+          "none": "No mode selected."
+        }
       },
-      "note": "One phone is enough · free · no sign-up.",
-      "health": "Drink responsibly. Without alcohol, the tab counts wins."
+      "libre": {
+        "title": "Just one game, your pick",
+        "lead": "Party games and board games for all ages. Choose where to play, then the game.",
+        "whereLabel": "Where the game is played",
+        "local": "On this phone",
+        "localCount": "{count, plural, one {# game} other {# games}} · pass it around",
+        "onlineCount": "{count, plural, one {# game} other {# games}} · one phone each",
+        "note": {
+          "local": "One phone passed from hand to hand around the table, no account needed. Works offline too.",
+          "online": "Signed in as <b>{name}</b>. Create a table and share its code, or join a friend’s.",
+          "visitor": "To play online you need a free account, or a guest nickname. We’ll ask on the next step."
+        },
+        "cta": {
+          "local": "{count, plural, one {See the game} other {See all # games}}",
+          "online": "{count, plural, one {See the online game} other {See all # online games}}",
+          "visitor": "Play online"
+        }
+      },
+      "footer": "Free · no install · {count, plural, one {# party game} other {# party games}}, on one phone or one each"
     },
     "units": {
       "drinks": "{count, plural, one {# sip} other {# sips}}",
@@ -8989,7 +9104,6 @@
       "eyebrow": "Step 3 of 3",
       "title": "Your lineup",
       "lead": "Swap a game, move it up or down: it’s your night.",
-      "heat": "Intensity {value} of 3",
       "curve": "Intensity curve of the night, from warm-up to finale",
       "warm": "WARM-UP",
       "final": "FINALE",
@@ -9163,9 +9277,7 @@
       "gameTopAll": "all for {name}"
     },
     "stats": {
-      "eyebrow": "On this phone",
       "title": "Which game makes you drink most?",
-      "lead": "Average sips per player per game, from the games played on this phone.",
       "empty": "Not enough games on this phone yet to rank them. Start a party!",
       "rankingLabel": "Games ranked from wettest to driest",
       "perPlayUnit": "sips / player",
@@ -9178,8 +9290,23 @@
       "soireesAverage": "{value} sips per night on average.",
       "soireesRecord": "Record: {count} sips, on {date}.",
       "soireesFavorite": "Most scheduled game: {game} ({count, plural, one {# round} other {# rounds}}).",
-      "note": "Alcohol-free games count zero sips. King’s Cup and Finger of Fate only count what was entered during a party.",
-      "cta": "Plan a party"
+      "cta": "Plan a party",
+      "pageEyebrow": "Game ranking",
+      "pageLead": "Average sips per player per game: across the whole site, then on your phone.",
+      "site": {
+        "title": "Across all of Le Pillaveur",
+        "lead": "Every game from the last {days} days, local and online, counted without knowing who plays.",
+        "label": "Games across the whole site, ranked from wettest to driest",
+        "online": "{percent}% online",
+        "empty": "Not enough games across the site yet to rank them: each game needs {minPlays} plays over {days} days, and the counter has only just started. Come back after a few party nights!",
+        "error": "Couldn’t load the site ranking. Check your connection and try again."
+      },
+      "home": {
+        "title": "On your phone",
+        "lead": "The games played on this phone."
+      },
+      "footnoteSite": "“Across all of Le Pillaveur” adds up the sips and games of every player, local and online, with no account, nickname or device: just one counter per game per day. Alcohol-free games aren’t included.",
+      "footnoteHome": "“On your phone” stays on this phone: players, records and party nights never leave the device. Alcohol-free games count zero sips there; King’s Cup and Finger of Fate only count what was entered during a party night."
     },
     "launching": "Opening {game}…",
     "intro": {

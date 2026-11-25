@@ -1,6 +1,6 @@
 # Política de privacidad
 
-**Última actualización:** 20 de noviembre de 2026
+**Última actualización:** 24 de noviembre de 2026
 
 ## 1. Introducción
 
@@ -69,7 +69,7 @@ Se considera actividad el uso de una página mostrada en pantalla: se envía una
 
 En las herramientas de moderación del sitio, las direcciones IPv6 de una misma red (mismo prefijo /64, por lo general un mismo router o un mismo lugar) se agrupan en la visualización: esta agrupación se calcula al consultar los datos y no almacena ningún dato adicional.
 
-**Partidas jugadas en modo local.** Independientemente de cualquier consentimiento, el sitio cuenta las partidas jugadas en un solo teléfono: cuando la página de un juego se abre en modo local con una mesa de jugadores y, después, cuando la partida llega a su pantalla final, su navegador solo envía el juego en cuestión y el evento (partida iniciada o terminada). El servidor solo conserva dos contadores por juego y por día (hora de París): el número de partidas iniciadas y el número de partidas terminadas. No se registra ninguna cuenta, ningún apodo ni ningún identificador de dispositivo o de navegador, no se lee ninguna cookie y la dirección IP nunca se conserva: solo se utiliza, en memoria y de forma pasajera, para limitar el número de envíos por red con el fin de prevenir abusos. Como nada permite relacionar un contador con una persona, estos contadores no son datos personales y no dependen de su elección sobre las estadísticas de visita; los mencionamos por transparencia. La administración del sitio puede consultarlos y se conservan 13 meses (véase 7).
+**Partidas jugadas en modo local.** Independientemente de cualquier consentimiento, el sitio cuenta las partidas jugadas en un solo teléfono: cuando la página de un juego se abre en modo local con una mesa de jugadores y, después, cuando la partida llega a su pantalla final, su navegador envía el juego en cuestión y el evento (partida iniciada o terminada). Unos minutos después de su última partida, o al cerrar la página, envía también, para cada juego, el total de tragos bebidos en la mesa y el número de participaciones (una partida jugada por un jugador), sin enviar nada en el ambiente «Sin alcohol»; no figuran ni nombre, ni cuenta, ni dispositivo. En las partidas **en línea**, al terminar una partida, el servidor añade del mismo modo el total de tragos bebidos y el número de participaciones de los jugadores humanos, sin vincular estas cifras a la mesa ni a las cuentas; una partida en la que alguna de las cuentas de la mesa esté en «Sin alcohol» no se cuenta. El servidor solo conserva contadores por juego, por día (hora de París) y por modo (local o en línea): el número de partidas iniciadas y terminadas en local, así como el total de tragos y de participaciones, que sirven para la clasificación pública «¿Qué juego hace beber más?» (últimos 90 días). No se registra ninguna cuenta, ningún apodo ni ningún identificador de dispositivo o de navegador, no se lee ninguna cookie y la dirección IP nunca se conserva: solo se utiliza, en memoria y de forma pasajera, para limitar el número de envíos por red con el fin de prevenir abusos. Como nada permite relacionar un contador con una persona, estos contadores no son datos personales y no dependen de su elección sobre las estadísticas de visita; los mencionamos por transparencia. La administración del sitio puede consultarlos y se conservan 13 meses (véase 7).
 
 ### 3.4 Chat y partidas en línea
 
@@ -186,7 +186,7 @@ El editor sigue siendo el responsable de los tratamientos descritos en esta pol�
 - **Registro de partidas iniciadas** (juego, fecha, duración de la mesa, motivo de finalización, participantes): **12 meses**.
 - **Trazas de moderación de apodos**: **12 meses**.
 - **Datos de medición de audiencia**: **13 meses**.
-- **Contadores de partidas locales** (juego, día, número de partidas iniciadas y terminadas, sin ningún dato personal): **13 meses**.
+- **Contadores de partidas locales y de tragos** (juego, día, modo, número de partidas iniciadas y terminadas, total de tragos y de participaciones, sin ningún dato personal): **13 meses**.
 - **Comentarios**: conservación hasta **24 meses** o supresión previa solicitud; el correo electrónico de contacto asociado se borra si elimina su cuenta.
 - **Cookies de edad y consentimiento**: 1 año, renovables en cada validación.
 - **Copias de seguridad de la base de datos** (copia de todos los datos anteriores): **16 días como máximo** en el servidor y **31 días como máximo** para la réplica externa; un dato eliminado desaparece de las copias de seguridad cuando estas caducan.

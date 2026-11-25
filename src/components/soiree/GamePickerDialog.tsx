@@ -4,10 +4,11 @@ import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
-import { useGameCatalog } from '@/hooks/useGameCatalog'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { useGameCatalog, useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { cn } from '@/lib/utils'
-import { SOIREE_GAME_IDS, soireeCounting, soireeDifficulty, soireeHeat, soireeMinPlayers, soireeMinutes } from '@/lib/soiree/catalog'
-import { GameBadge, HeatPips, gameGradient } from './soiree-ui'
+import { SOIREE_GAME_IDS, soireeCounting, soireeMinPlayers, soireeMinutes } from '@/lib/soiree/catalog'
+import { GameBadge, gameGradient } from './soiree-ui'
 
 /** Choisir un jeu à ajouter (ou à mettre à la place d'une manche) parmi les jeux de la soirée. */
 export function GamePickerDialog({
@@ -28,10 +29,12 @@ export function GamePickerDialog({
   const t = useTranslations('soiree.picker')
   const games = useLocalizedGames()
   const { hiddenIds } = useGameCatalog()
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   const byId = new Map(games.map((g) => [g.id, g]))
   const rows = SOIREE_GAME_IDS.filter((id) => !hiddenIds.includes(id)).map((id) => ({ id, game: byId.get(id) }))
     .filter((row) => row.game)
-    .sort((a, b) => soireeHeat(a.id) - soireeHeat(b.id) || a.game!.title.localeCompare(b.game!.title))
+    .sort((a, b) => drinkLevelOf(a.id) - drinkLevelOf(b.id) || a.game!.title.localeCompare(b.game!.title))
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
@@ -60,8 +63,8 @@ export function GamePickerDialog({
                   <span className="min-w-0 flex-1">
                     <span className="block font-display text-base font-bold leading-tight">{game!.title}</span>
                     <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#5E5444]">
-                      <HeatPips heat={soireeHeat(id)} />
-                      <DifficultyBadge level={soireeDifficulty(id)} tone="card" />
+                      <DrinkLevelBadge level={drinkLevelOf(id)} tone="card" />
+                      <DifficultyBadge level={difficultyOf(id)} tone="card" />
                       <span>{t('minutes', { minutes: soireeMinutes(id) })}</span>
                       {counting !== 'auto' && <span className="font-semibold">{t(`counting.${counting}`)}</span>}
                       {inProgram.includes(id) && <span className="font-semibold text-suit-red">{t('inProgram')}</span>}

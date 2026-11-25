@@ -1,6 +1,7 @@
 import type { GameAdapter, ServiceTick, ServiceTickOptions } from '@/lib/online/game-adapters'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { humanDrinkTally } from '@/lib/online/drink-tally'
 import {
   applyChiffrePiegeRoomAction,
   chiffrePiegeClientViewJson,
@@ -102,6 +103,11 @@ export const chiffrePiegeAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertChiffrePiegePlayerToBot(state as ChiffrePiegeOnlineState, userId),
   isFinished: (state) => (state as ChiffrePiegeOnlineState).phase === 'finished',
+  // Pénalités cumulées (BOUM et jokers) : des gorgées hors « Sans alcool ».
+  drinkTally(rawState) {
+    const { players, game } = rawState as ChiffrePiegeOnlineState
+    return humanDrinkTally(players, (p) => game.penalties[p.id])
+  },
   currentActorId: (state) => currentChiffrePiegeActorId(state as ChiffrePiegeOnlineState),
   clientViewJson: (state) => chiffrePiegeClientViewJson(state as ChiffrePiegeOnlineState),
   spectatorViewJson: (state) => chiffrePiegeSpectatorViewJson(state as ChiffrePiegeOnlineState),

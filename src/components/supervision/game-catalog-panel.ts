@@ -1,4 +1,5 @@
 import type { AdminGameCatalogResponse, AdminGameCatalogRow } from '@/app/api/admin/game-catalog/route'
+import type { GameDifficulty, GameDrinkLevel } from '@/lib/games'
 
 /**
  * Lecture défensive de GET/PATCH /api/admin/game-catalog : une page d'erreur du
@@ -14,6 +15,10 @@ function isRank(value: unknown): value is number | null {
   return value === null || (typeof value === 'number' && Number.isInteger(value) && value >= 1)
 }
 
+function isLevel(value: unknown): value is GameDifficulty & GameDrinkLevel {
+  return value === 1 || value === 2 || value === 3
+}
+
 function parseRow(raw: unknown): AdminGameCatalogRow | null {
   if (!raw || typeof raw !== 'object') return null
   const row = raw as Record<string, unknown>
@@ -21,6 +26,10 @@ function parseRow(raw: unknown): AdminGameCatalogRow | null {
   if (
     typeof row.id !== 'string' ||
     typeof row.hidden !== 'boolean' ||
+    !isLevel(row.difficulty) ||
+    !isLevel(row.defaultDifficulty) ||
+    !isLevel(row.drinkLevel) ||
+    !isLevel(row.defaultDrinkLevel) ||
     !plays ||
     typeof plays !== 'object' ||
     !isCount(plays.online) ||
@@ -34,6 +43,10 @@ function parseRow(raw: unknown): AdminGameCatalogRow | null {
   return {
     id: row.id,
     hidden: row.hidden,
+    difficulty: row.difficulty,
+    defaultDifficulty: row.defaultDifficulty,
+    drinkLevel: row.drinkLevel,
+    defaultDrinkLevel: row.defaultDrinkLevel,
     plays: { online: plays.online, local: plays.local, total: plays.total },
     popularLocalRank: row.popularLocalRank,
     popularOnlineRank: row.popularOnlineRank,

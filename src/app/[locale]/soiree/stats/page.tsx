@@ -8,7 +8,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: t('title'), robots: { index: false, follow: true } }
 }
 
-/** « Quel jeu fait le plus boire ? » — calculé sur l'appareil (src/lib/soiree/device-stats.ts). */
+/**
+ * « Quel jeu fait le plus boire ? » — tout le site d'abord (compteurs anonymes,
+ * GET /api/stats/game-drinks), puis « Chez vous », calculé sur l'appareil
+ * (src/lib/soiree/device-stats.ts).
+ */
 export default function SoireeStatsPage() {
   return <SoireeStatsView />
 }

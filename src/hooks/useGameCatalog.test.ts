@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { EMPTY_GAME_CATALOG } from '@/lib/game-catalog'
+import { EMPTY_GAME_CATALOG, gameDifficulty, gameDrinkLevel } from '@/lib/game-catalog'
+import { GAMES } from '@/lib/games'
 import { GAME_CATALOG_CACHE_KEY, GAME_CATALOG_MAX_AGE_MS, GAME_CATALOG_RETRY_MS, createGameCatalogStore } from './useGameCatalog'
 
 function memoryStorage(initial: Record<string, string> = {}) {
@@ -13,7 +14,16 @@ function memoryStorage(initial: Record<string, string> = {}) {
   }
 }
 
-const SERVER_STATE = { hiddenIds: ['plinko'], popular: { local: ['pmu', 'hi-lo'], online: ['imposteur'] } }
+const CODE_DRINK = (id: string) => GAMES.find((g) => g.id === id)!.drinkLevel
+const OTHER_DRINK = CODE_DRINK('pmu') === 3 ? 1 : 3
+const CATEGORIES = [{ id: 'chaud', names: { fr: 'Chaud', en: 'Hot' }, gameIds: ['pmu', 'hi-lo'] }]
+const SERVER_STATE = {
+  hiddenIds: ['plinko'],
+  difficulty: { pmu: 3 },
+  drinkLevel: { pmu: OTHER_DRINK },
+  categories: CATEGORIES,
+  popular: { local: ['pmu', 'hi-lo'], online: ['imposteur'] },
+}
 
 function setup(options: { stored?: unknown; fetchState?: (fresh: boolean) => Promise<unknown> } = {}) {
   let clock = 1_000
@@ -37,6 +47,45 @@ describe('catalogue des jeux côté navigateur', () => {
   it('montre la copie de l’appareil avant toute réponse', () => {
     const { store } = setup({ stored: SERVER_STATE })
     expect(store.getSnapshot()).toEqual({ state: SERVER_STATE, source: 'cache' })
+  })
+
+  it('une copie d’avant la difficulté reste lisible : difficulty vaut {}', () => {
+    const { store } = setup({ stored: { hiddenIds: ['plinko'], popular: { local: [], online: [] } } })
+    expect(store.getSnapshot().source).toBe('cache')
+    expect(store.getSnapshot().state.difficulty).toEqual({})
+  })
+
+  it('une copie d’avant le barème et les catégories reste lisible : drinkLevel vaut {}, categories vaut []', () => {
+    const { store } = setup({ stored: { hiddenIds: ['plinko'], difficulty: { pmu: 3 }, popular: { local: [], online: [] } } })
+    expect(store.getSnapshot().source).toBe('cache')
+    expect(store.getSnapshot().state.drinkLevel).toEqual({})
+    expect(store.getSnapshot().state.categories).toEqual([])
+  })
+
+  it('le barème du serveur passe par gameDrinkLevel, comme useGameDrinkLevel', async () => {
+    const { store } = setup()
+    await store.refresh()
+    const { drinkLevel } = store.getSnapshot().state
+    expect(gameDrinkLevel('pmu', drinkLevel)).toBe(OTHER_DRINK)
+    expect(gameDrinkLevel('hi-lo', drinkLevel)).toBe(CODE_DRINK('hi-lo'))
+  })
+
+  it('les catégories du serveur sont gardées dans l’ordre, sur l’appareil aussi', async () => {
+    const { store, storage } = setup()
+    await store.refresh()
+    expect(store.getSnapshot().state.categories).toEqual(CATEGORIES)
+    expect(JSON.parse(storage.data.get(GAME_CATALOG_CACHE_KEY) ?? 'null').categories).toEqual(CATEGORIES)
+
+    const reopened = setup({ stored: JSON.parse(storage.data.get(GAME_CATALOG_CACHE_KEY)!) })
+    expect(reopened.store.getSnapshot().state.categories).toEqual(CATEGORIES)
+  })
+
+  it('la difficulté du serveur passe par gameDifficulty, comme useGameDifficulty', async () => {
+    const { store } = setup()
+    await store.refresh()
+    const { difficulty } = store.getSnapshot().state
+    expect(gameDifficulty('pmu', difficulty)).toBe(3)
+    expect(gameDifficulty('hi-lo', difficulty)).toBe(gameDifficulty('hi-lo', {}))
   })
 
   it('une copie abîmée ne cache rien', () => {

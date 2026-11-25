@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
@@ -20,6 +20,7 @@ import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
 import { impliesOnlineMode, safeAuthRedirect } from '@/lib/auth-redirect'
 import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { takeOAuthErrorFromUrl } from '@/lib/oauth'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,24 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-export function AuthForm() {
+export type AuthFormMode = 'login' | 'register'
+
+/**
+ * Sans props : la page /compte. La feuille de connexion (AuthSheet) passe
+ * `compact` (son en-tête porte le titre, pas de « Jouer en local »), sa
+ * destination et, si elle s'est ouverte pour jouer en ligne, `intent`.
+ */
+export type AuthFormProps = {
+  /** Chemin interne sans langue ; prime sur ?redirect=. */
+  redirectTo?: string
+  /** 'online' : le mode en ligne est posé après la connexion comme après l'inscription. */
+  intent?: 'online'
+  compact?: boolean
+  initialMode?: AuthFormMode
+  onModeChange?: (mode: AuthFormMode) => void
+}
+
+export function AuthForm({ redirectTo: redirectProp, intent, compact = false, initialMode, onModeChange }: AuthFormProps = {}) {
   const t = useTranslations('auth')
   const tCommon = useTranslations('common')
   // Les routes /api/auth ne renvoient plus de phrase française mais un CODE
@@ -39,7 +57,8 @@ export function AuthForm() {
   const tNav = useTranslations('nav.legal')
   const { login, register, refresh, setPlayMode } = useAuth()
   const searchParams = useSearchParams()
-  const redirectTo = safeAuthRedirect(searchParams?.get('redirect') ?? null)
+  const redirectTo = safeAuthRedirect(redirectProp ?? searchParams?.get('redirect') ?? null)
+  const fieldId = useId()
 
   // Navigation DOCUMENT (pas SPA) après établissement de session : le cache
   // de préchargement du routeur peut contenir la redirection « pas de
@@ -51,11 +70,12 @@ export function AuthForm() {
     window.location.assign(`/${locale}${redirectTo}`)
   }
 
-  // Appelée UNIQUEMENT à la création d'un compte (jamais sur une connexion :
-  // le mode choisi par un joueur qui revient lui appartient). Un échec réseau
+  // Sans `intent`, seulement à la création d'un compte : le mode choisi par
+  // un joueur qui revient lui appartient. Avec `intent` 'online', il vient de
+  // demander à jouer en ligne : la connexion le pose aussi. Un échec réseau
   // est sans gravité — la bascule de la vitrine reste là.
-  const applyIntendedPlayMode = async () => {
-    if (!impliesOnlineMode(redirectTo)) return
+  const applyIntendedPlayMode = async (created: boolean) => {
+    if (intent !== 'online' && !(created && impliesOnlineMode(redirectTo))) return
     try {
       await setPlayMode('online')
     } catch {
@@ -63,20 +83,27 @@ export function AuthForm() {
     }
   }
 
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [mode, setMode] = useState<AuthFormMode>(initialMode ?? 'login')
   const [email, setEmail] = useState('')
 
   // Premier passage sur cet appareil (flag « lp-has-logged-in » jamais posé) :
   // le visiteur du funnel est un NOUVEAU — on ouvre sur l'inscription plutôt
   // que la connexion (bascule toujours possible d'un clic). En useEffect pour
-  // rester SSR-safe ; le flag est posé à chaque auth réussie ci-dessous.
+  // rester SSR-safe ; le flag est posé à chaque auth réussie ci-dessous. Un
+  // onglet demandé par l'appelant prime.
   useEffect(() => {
+    if (initialMode) return
     try {
       if (!window.localStorage.getItem('lp-has-logged-in')) setMode('register')
     } catch {
       // stockage indisponible — on garde la connexion par défaut
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- lu une fois, au montage
   }, [])
+
+  useEffect(() => {
+    onModeChange?.(mode)
+  }, [mode, onModeChange])
 
   // Mémorise qu'une session a déjà existé sur cet appareil (voir ci-dessus).
   const rememberHasLoggedIn = () => {
@@ -130,7 +157,7 @@ export function AuthForm() {
       if (err) {
         setError(apiErrorMessage(err, tApiErrors, t('errors.generic')))
       } else {
-        if (mode === 'register') await applyIntendedPlayMode()
+        await applyIntendedPlayMode(mode === 'register')
         rememberHasLoggedIn()
         goToApp()
       }
@@ -172,9 +199,9 @@ export function AuthForm() {
           setError(apiErrorMessage(data?.code ?? data?.error, tApiErrors, t('errors.generic')))
           return
         }
-        // `created` distingue l'inscription de la reconnexion : on ne
-        // repose le mode de jeu que pour un compte tout neuf.
-        if (data?.created) await applyIntendedPlayMode()
+        // `created` distingue l'inscription de la reconnexion : sans
+        // `intent`, on ne repose le mode de jeu que pour un compte tout neuf.
+        await applyIntendedPlayMode(Boolean(data?.created))
         await refresh()
         rememberHasLoggedIn()
         goToApp()
@@ -272,72 +299,96 @@ export function AuthForm() {
     }
   }
 
-  return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
-          {t('brand')}
-        </p>
-        <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
-          {mode === 'login' ? t('login.title') : t('register.title')}
-        </h1>
-        <p className="mt-2 text-sm text-white/50">
-          {mode === 'login' ? t('login.subtitle') : t('register.subtitle')}
-        </p>
-      </div>
+  const tabs = (
+    <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+      {(['login', 'register'] as const).map((tab) => {
+        const Icon = tab === 'login' ? LogIn : UserPlus
+        return (
+          <button
+            key={tab}
+            type="button"
+            aria-pressed={mode === tab}
+            onClick={() => { setMode(tab); setError(null) }}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors',
+              compact && 'min-h-[44px]',
+              mode === tab ? 'bg-amber-500/20 text-amber-100' : 'text-white/50 hover:text-white/80'
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden />
+            {t(`${tab}.tab`)}
+          </button>
+        )
+      })}
+    </div>
+  )
 
-      <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
-        <button
-          type="button"
-          onClick={() => { setMode('login'); setError(null) }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors ${
-            mode === 'login' ? 'bg-amber-500/20 text-amber-100' : 'text-white/50 hover:text-white/80'
-          }`}
-        >
-          <LogIn className="h-4 w-4" />
-          {t('login.tab')}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setMode('register'); setError(null) }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition-colors ${
-            mode === 'register' ? 'bg-amber-500/20 text-amber-100' : 'text-white/50 hover:text-white/80'
-          }`}
-        >
-          <UserPlus className="h-4 w-4" />
-          {t('register.tab')}
-        </button>
-      </div>
-
-      {/* Google D'ABORD : c'est le chemin sans friction (zéro champ) — le
-          formulaire email reste dessous pour qui n'a pas de compte Google. */}
-      <div className="space-y-3">
-        {nativeGoogle ? (
-          <NativeGoogleButton
-            disabled={loading}
-            onCredential={(credential) => googleCallbackRef.current(credential)}
-          />
-        ) : (
-          <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
-        )}
-        <OAuthButtons
-          intent="login"
-          redirect={redirectTo}
+  // Google D'ABORD : c'est le chemin sans friction (zéro champ) — le
+  // formulaire email reste dessous pour qui n'a pas de compte Google.
+  const providers = (
+    <div className="space-y-3">
+      {nativeGoogle ? (
+        <NativeGoogleButton
           disabled={loading}
-          onError={setError}
+          onCredential={(credential) => googleCallbackRef.current(credential)}
         />
-        <div className="flex items-center gap-3" aria-hidden>
-          <span className="h-px flex-1 bg-white/10" />
-          <span className="text-xs uppercase tracking-wide text-white/35">{t('orDivider')}</span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
+      ) : (
+        <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
+      )}
+      <OAuthButtons
+        intent="login"
+        redirect={redirectTo}
+        disabled={loading}
+        onError={setError}
+      />
+      <div className="flex items-center gap-3" aria-hidden>
+        <span className="h-px flex-1 bg-white/10" />
+        <span className="text-xs uppercase tracking-wide text-white/[0.35]">{t('orDivider')}</span>
+        <span className="h-px flex-1 bg-white/10" />
       </div>
+    </div>
+  )
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-md">
+  return (
+    <div className={compact ? 'w-full space-y-4' : 'mx-auto w-full max-w-md space-y-6'}>
+      {!compact && (
+        <div className="text-center">
+          <p className="text-xs font-semibold uppercase tracking-widest text-amber-300/70">
+            {t('brand')}
+          </p>
+          <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+            {mode === 'login' ? t('login.title') : t('register.title')}
+          </h1>
+          <p className="mt-2 text-sm text-white/50">
+            {mode === 'login' ? t('login.subtitle') : t('register.subtitle')}
+          </p>
+        </div>
+      )}
+
+      {/* Dans la feuille, son titre dit déjà Connexion ou Inscription : les
+          fournisseurs (valables pour les deux) passent devant les onglets. */}
+      {compact ? (
+        <>
+          {providers}
+          {tabs}
+        </>
+      ) : (
+        <>
+          {tabs}
+          {providers}
+        </>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        className={compact ? 'space-y-4' : 'space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur-md'}
+      >
         {mode === 'register' && (
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-white/60">{t('register.displayNameLabel')}</label>
+            <label htmlFor={`${fieldId}-name`} className="mb-1.5 block text-xs font-medium text-white/60">{t('register.displayNameLabel')}</label>
             <Input
+              id={`${fieldId}-name`}
+              autoComplete="nickname"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder={t('register.displayNamePlaceholder')}
@@ -348,9 +399,11 @@ export function AuthForm() {
           </div>
         )}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-white/60">{t('emailLabel')}</label>
+          <label htmlFor={`${fieldId}-email`} className="mb-1.5 block text-xs font-medium text-white/60">{t('emailLabel')}</label>
           <Input
+            id={`${fieldId}-email`}
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t('emailPlaceholder')}
@@ -360,7 +413,7 @@ export function AuthForm() {
         </div>
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-xs font-medium text-white/60">{t('passwordLabel')}</label>
+            <label htmlFor={`${fieldId}-password`} className="text-xs font-medium text-white/60">{t('passwordLabel')}</label>
             {mode === 'login' && (
               <button
                 type="button"
@@ -377,7 +430,9 @@ export function AuthForm() {
             )}
           </div>
           <Input
+            id={`${fieldId}-password`}
             type="password"
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={mode === 'register' ? t('register.passwordPlaceholder') : t('passwordPlaceholderLogin')}
@@ -388,7 +443,7 @@ export function AuthForm() {
         </div>
 
         {error && (
-          <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>
+          <p role="alert" className="rounded-lg bg-red-500/[0.15] px-3 py-2 text-sm text-red-300">{error}</p>
         )}
 
         {mode === 'register' && (
@@ -425,30 +480,32 @@ export function AuthForm() {
         </Button>
       </form>
 
-      <div className="space-y-3 text-center">
-        <p className="text-xs text-white/35">{t('localPlay.hint')}</p>
-        <p className="text-xs text-white/30">
-          {t('localPlay.termsPrefix')}{' '}
-          <Link href="/legal/cgu" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
-            {tNav('cgu')}
-          </Link>{' '}
-          {t('localPlay.termsAnd')}{' '}
-          <Link href="/legal/confidentialite" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
-            {tNav('confidentialite')}
-          </Link>
-          {t('localPlay.termsSuffix')}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={localLoading}
-          onClick={handleLocalPlay}
-          className="w-full border-white/[0.15] bg-transparent text-white/70 hover:bg-white/[0.06] hover:text-white"
-        >
-          <Gamepad2 className="mr-2 h-4 w-4" />
-          {localLoading ? tCommon('loading') : t('localPlay.button')}
-        </Button>
-      </div>
+      {!compact && (
+        <div className="space-y-3 text-center">
+          <p className="text-xs text-white/[0.35]">{t('localPlay.hint')}</p>
+          <p className="text-xs text-white/30">
+            {t('localPlay.termsPrefix')}{' '}
+            <Link href="/legal/cgu" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
+              {tNav('cgu')}
+            </Link>{' '}
+            {t('localPlay.termsAnd')}{' '}
+            <Link href="/legal/confidentialite" className="text-amber-400/80 underline underline-offset-2 hover:text-amber-300">
+              {tNav('confidentialite')}
+            </Link>
+            {t('localPlay.termsSuffix')}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={localLoading}
+            onClick={handleLocalPlay}
+            className="w-full border-white/[0.15] bg-transparent text-white/70 hover:bg-white/[0.06] hover:text-white"
+          >
+            <Gamepad2 className="mr-2 h-4 w-4" />
+            {localLoading ? tCommon('loading') : t('localPlay.button')}
+          </Button>
+        </div>
+      )}
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="border-white/10 bg-felt-deep text-white">
@@ -468,10 +525,10 @@ export function AuthForm() {
               className="border-white/10 bg-white/[0.05] text-white"
             />
             {forgotError && (
-              <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{forgotError}</p>
+              <p className="rounded-lg bg-red-500/[0.15] px-3 py-2 text-sm text-red-300">{forgotError}</p>
             )}
             {forgotMessage && (
-              <p className="rounded-lg bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300">{forgotMessage}</p>
+              <p className="rounded-lg bg-emerald-500/[0.15] px-3 py-2 text-sm text-emerald-300">{forgotMessage}</p>
             )}
             <DialogFooter>
               <Button

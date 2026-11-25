@@ -5,6 +5,8 @@ import { useLocale, useTranslations } from 'next-intl'
 import { BookOpen, Play } from 'lucide-react'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGame } from '@/lib/games-i18n'
@@ -68,6 +70,8 @@ export function GameShowcase({
   const tAbout = useTranslations(`games.${gameId}.about`)
   const tCommon = useTranslations('common')
   const locale = useLocale()
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   // Titre et accroche du catalogue, adoucis en mode Soft : le visiteur
   // retrouve exactement ce qu'il vient de lire sur la carte du hub.
   const game = useLocalizedGame(gameId)
@@ -138,7 +142,11 @@ export function GameShowcase({
               </li>
             ))}
             <li className="rounded-full border border-gold/25 px-2.5 py-1">
-              <DifficultyBadge level={game.difficulty} tone="felt" />
+              <DifficultyBadge level={difficultyOf(game.id)} tone="felt" />
+            </li>
+            {/* `drink-level` sur la pastille entière : masquée en « Sans alcool », sans bordure vide. */}
+            <li className="drink-level rounded-full border border-gold/25 px-2.5 py-1">
+              <DrinkLevelBadge level={drinkLevelOf(game.id)} tone="felt" />
             </li>
           </ul>
           {note && <p className="mx-auto mt-4 max-w-sm text-sm leading-snug text-cream/70">{note}</p>}

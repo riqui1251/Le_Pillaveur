@@ -12,22 +12,56 @@ vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 
 import {
   CATALOG_STATE_TTL_MS,
+  DIFFICULTY_SETTING_KEY,
+  DRINK_LEVEL_SETTING_KEY,
+  GAME_CATEGORIES_SETTING_KEY,
+  GameCategoryInvalidError,
+  GameCategoryLimitError,
+  GameCategoryNotFoundError,
   GameNotToggleableError,
   HIDDEN_GAMES_SETTING_KEY,
   HIDDEN_IDS_TTL_MS,
   PLAY_COUNTS_TTL_MS,
+  createGameCategory,
+  deleteGameCategory,
   getGameCatalogState,
+  getGameCategories,
   getGamePlayCounts30d,
+  getStaffGameDifficulty,
+  getStaffGameDrinkLevel,
   getStaffHiddenGameIds,
   invalidateGameCatalogCaches,
   isGameHiddenByStaff,
+  moveGameCategory,
+  setGameDifficulty,
+  setGameDrinkLevel,
   setGameHidden,
+  setGameInCategory,
+  updateGameCategory,
 } from './game-catalog-server'
-import { STAFF_TOGGLEABLE_GAME_IDS } from './game-catalog'
+import { EMPTY_GAME_CATALOG, GAME_CATEGORY_LIMITS, STAFF_TOGGLEABLE_GAME_IDS } from './game-catalog'
 import { GAMES } from './games'
 
 const [A, B, C] = STAFF_TOGGLEABLE_GAME_IDS
 const retired = GAMES.find((g) => g.hidden)!.id
+const codeLevel = (id: string) => GAMES.find((g) => g.id === id)!.difficulty
+const otherLevel = (id: string): 1 | 2 | 3 => (codeLevel(id) === 3 ? 1 : ((codeLevel(id) + 1) as 2 | 3))
+const codeDrink = (id: string) => GAMES.find((g) => g.id === id)!.drinkLevel
+const otherDrink = (id: string): 1 | 2 | 3 => (codeDrink(id) === 3 ? 1 : ((codeDrink(id) + 1) as 2 | 3))
+const lastLevel = (id: string): 1 | 2 | 3 => ([1, 2, 3] as const).find((l) => l !== codeLevel(id) && l !== otherLevel(id))!
+
+/** Une base où chaque clé de SiteSetting a sa valeur : difficulté et jeux cachés ne se mélangent pas. */
+function storeSettings(initial: Record<string, string> = {}) {
+  const rows = new Map(Object.entries(initial))
+  prismaMock.siteSetting.findUnique.mockImplementation(async ({ where }: { where: { key: string } }) =>
+    rows.has(where.key) ? { key: where.key, value: rows.get(where.key) } : null
+  )
+  prismaMock.siteSetting.upsert.mockImplementation(async (args: { where: { key: string }; update: { value: string } }) => {
+    rows.set(args.where.key, args.update.value)
+    return {}
+  })
+  return rows
+}
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -157,6 +191,115 @@ describe('setGameHidden', () => {
   })
 })
 
+describe('getStaffGameDifficulty', () => {
+  it('lit la clé games.difficulty de SiteSetting', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [B]: otherLevel(B), [A]: otherLevel(A) }) })
+    expect(await getStaffGameDifficulty()).toEqual({ [A]: otherLevel(A), [B]: otherLevel(B) })
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledWith({ where: { key: 'games.difficulty' } })
+  })
+
+  it('valeur abîmée ou absente : aucun réglage', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: '{pas du json' })
+    expect(await getStaffGameDifficulty()).toEqual({})
+    invalidateGameCatalogCaches({ forget: true })
+    storeSettings()
+    expect(await getStaffGameDifficulty()).toEqual({})
+  })
+
+  it('erreur de base : dernière valeur connue, sans lever', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [A]: otherLevel(A) }) })
+    expect(await getStaffGameDifficulty()).toEqual({ [A]: otherLevel(A) })
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('locked'))
+    vi.advanceTimersByTime(HIDDEN_IDS_TTL_MS + 1)
+    expect(await getStaffGameDifficulty()).toEqual({ [A]: otherLevel(A) })
+  })
+
+  it('garde le résultat 30 s', async () => {
+    storeSettings()
+    await getStaffGameDifficulty()
+    await getStaffGameDifficulty()
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('setGameDifficulty', () => {
+  it('ajoute un réglage : upsert du JSON dans l’ordre du catalogue, changed vrai', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [C]: otherLevel(C) }) })
+    expect(await getStaffGameDifficulty()).toEqual({ [C]: otherLevel(C) })
+
+    const result = await setGameDifficulty(A, otherLevel(A))
+
+    const expected = { [A]: otherLevel(A), [C]: otherLevel(C) }
+    expect(result).toEqual({ difficulty: expected, changed: true })
+    const value = JSON.stringify(expected)
+    expect(prismaMock.siteSetting.upsert).toHaveBeenCalledWith({
+      where: { key: 'games.difficulty' },
+      create: { key: 'games.difficulty', value },
+      update: { value },
+    })
+    expect(await getStaffGameDifficulty()).toEqual(expected)
+  })
+
+  it('change un réglage existant', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [A]: otherLevel(A) }) })
+    const result = await setGameDifficulty(A, lastLevel(A))
+    expect(result).toEqual({ difficulty: { [A]: lastLevel(A) }, changed: true })
+  })
+
+  it('revenir au niveau du code supprime l’entrée', async () => {
+    const rows = storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [A]: otherLevel(A), [B]: otherLevel(B) }) })
+    const result = await setGameDifficulty(A, codeLevel(A))
+    expect(result).toEqual({ difficulty: { [B]: otherLevel(B) }, changed: true })
+    expect(rows.get(DIFFICULTY_SETTING_KEY)).toBe(JSON.stringify({ [B]: otherLevel(B) }))
+  })
+
+  it('niveau du code sans réglage, ou même niveau déjà posé : changed faux, rien d’écrit', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [B]: otherLevel(B) }) })
+    expect(await setGameDifficulty(A, codeLevel(A))).toEqual({ difficulty: { [B]: otherLevel(B) }, changed: false })
+    expect(await setGameDifficulty(B, otherLevel(B))).toEqual({ difficulty: { [B]: otherLevel(B) }, changed: false })
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('part de la valeur stockée, pas du cache périmé', async () => {
+    const rows = storeSettings()
+    expect(await getStaffGameDifficulty()).toEqual({})
+    rows.set(DIFFICULTY_SETTING_KEY, JSON.stringify({ [B]: otherLevel(B) }))
+
+    const result = await setGameDifficulty(A, otherLevel(A))
+
+    expect(result.difficulty).toEqual({ [A]: otherLevel(A), [B]: otherLevel(B) })
+  })
+
+  it('refuse un id inconnu ou retiré du code, sans toucher à la base', async () => {
+    for (const id of ['nope', retired, '']) {
+      await expect(setGameDifficulty(id, 3)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuse un niveau hors 1, 2, 3', async () => {
+    for (const level of [0, 4, 1.5, '2', null, NaN]) {
+      await expect(setGameDifficulty(A, level as never), String(level)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('laisse remonter une panne d’écriture', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValue(new Error('locked'))
+    await expect(setGameDifficulty(A, otherLevel(A))).rejects.toThrow('locked')
+  })
+
+  it('la valeur écrite sert de repli si la relecture échoue', async () => {
+    storeSettings()
+    await setGameDifficulty(A, otherLevel(A))
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffGameDifficulty()).toEqual({ [A]: otherLevel(A) })
+  })
+})
+
 describe('getGamePlayCounts30d', () => {
   it('fusionne lancements en ligne et débuts locaux par jeu', async () => {
     prismaMock.onlineGameSession.groupBy.mockResolvedValue([
@@ -234,7 +377,20 @@ describe('getGameCatalogState', () => {
     await getGameCatalogState()
     vi.advanceTimersByTime(CATALOG_STATE_TTL_MS - 1)
     await getGameCatalogState()
-    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(1)
+    // Une lecture par réglage (jeux cachés, difficulté, « fait boire », catégories), pas une de plus.
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledTimes(4)
+  })
+
+  it('inclut les difficultés réglées, et setGameDifficulty fait relire l’état tout de suite', async () => {
+    storeSettings()
+    expect((await getGameCatalogState()).difficulty).toEqual({})
+    await setGameDifficulty(A, otherLevel(A))
+    expect((await getGameCatalogState()).difficulty).toEqual({ [A]: otherLevel(A) })
+  })
+
+  it('base illisible : difficulty vaut {}', async () => {
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect((await getGameCatalogState()).difficulty).toEqual({})
   })
 
   it('setGameHidden fait relire l’état tout de suite', async () => {
@@ -246,5 +402,468 @@ describe('getGameCatalogState', () => {
     await setGameHidden(A, true)
     const state = await getGameCatalogState()
     expect(state.hiddenIds).toEqual([A])
+  })
+})
+
+describe('getStaffGameDrinkLevel', () => {
+  it('lit la clé games.drinkLevel de SiteSetting', async () => {
+    storeSettings({ [DRINK_LEVEL_SETTING_KEY]: JSON.stringify({ [B]: otherDrink(B), [A]: otherDrink(A) }) })
+    expect(await getStaffGameDrinkLevel()).toEqual({ [A]: otherDrink(A), [B]: otherDrink(B) })
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledWith({ where: { key: 'games.drinkLevel' } })
+  })
+
+  it('valeur abîmée ou absente : aucun réglage', async () => {
+    storeSettings({ [DRINK_LEVEL_SETTING_KEY]: '{pas du json' })
+    expect(await getStaffGameDrinkLevel()).toEqual({})
+    invalidateGameCatalogCaches({ forget: true })
+    storeSettings()
+    expect(await getStaffGameDrinkLevel()).toEqual({})
+  })
+
+  it('erreur de base : dernière valeur connue, sans lever', async () => {
+    storeSettings({ [DRINK_LEVEL_SETTING_KEY]: JSON.stringify({ [A]: otherDrink(A) }) })
+    expect(await getStaffGameDrinkLevel()).toEqual({ [A]: otherDrink(A) })
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('locked'))
+    vi.advanceTimersByTime(HIDDEN_IDS_TTL_MS + 1)
+    expect(await getStaffGameDrinkLevel()).toEqual({ [A]: otherDrink(A) })
+  })
+
+  it('ne se mélange pas avec la difficulté', async () => {
+    storeSettings({ [DIFFICULTY_SETTING_KEY]: JSON.stringify({ [A]: otherLevel(A) }) })
+    expect(await getStaffGameDrinkLevel()).toEqual({})
+  })
+})
+
+describe('setGameDrinkLevel', () => {
+  it('ajoute un réglage : upsert du JSON dans l’ordre du catalogue, changed vrai', async () => {
+    storeSettings({ [DRINK_LEVEL_SETTING_KEY]: JSON.stringify({ [C]: otherDrink(C) }) })
+    expect(await getStaffGameDrinkLevel()).toEqual({ [C]: otherDrink(C) })
+
+    const result = await setGameDrinkLevel(A, otherDrink(A))
+
+    const expected = { [A]: otherDrink(A), [C]: otherDrink(C) }
+    expect(result).toEqual({ drinkLevel: expected, changed: true })
+    const value = JSON.stringify(expected)
+    expect(prismaMock.siteSetting.upsert).toHaveBeenCalledWith({
+      where: { key: 'games.drinkLevel' },
+      create: { key: 'games.drinkLevel', value },
+      update: { value },
+    })
+    expect(await getStaffGameDrinkLevel()).toEqual(expected)
+  })
+
+  it('revenir au niveau du code supprime l’entrée', async () => {
+    const rows = storeSettings({ [DRINK_LEVEL_SETTING_KEY]: JSON.stringify({ [A]: otherDrink(A), [B]: otherDrink(B) }) })
+    const result = await setGameDrinkLevel(A, codeDrink(A))
+    expect(result).toEqual({ drinkLevel: { [B]: otherDrink(B) }, changed: true })
+    expect(rows.get(DRINK_LEVEL_SETTING_KEY)).toBe(JSON.stringify({ [B]: otherDrink(B) }))
+  })
+
+  it('niveau du code sans réglage, ou même niveau déjà posé : changed faux, rien d’écrit', async () => {
+    storeSettings({ [DRINK_LEVEL_SETTING_KEY]: JSON.stringify({ [B]: otherDrink(B) }) })
+    expect(await setGameDrinkLevel(A, codeDrink(A))).toEqual({ drinkLevel: { [B]: otherDrink(B) }, changed: false })
+    expect(await setGameDrinkLevel(B, otherDrink(B))).toEqual({ drinkLevel: { [B]: otherDrink(B) }, changed: false })
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('part de la valeur stockée, pas du cache périmé', async () => {
+    const rows = storeSettings()
+    expect(await getStaffGameDrinkLevel()).toEqual({})
+    rows.set(DRINK_LEVEL_SETTING_KEY, JSON.stringify({ [B]: otherDrink(B) }))
+
+    const result = await setGameDrinkLevel(A, otherDrink(A))
+
+    expect(result.drinkLevel).toEqual({ [A]: otherDrink(A), [B]: otherDrink(B) })
+  })
+
+  it('n’écrit jamais dans la clé de la difficulté', async () => {
+    const rows = storeSettings()
+    await setGameDrinkLevel(A, otherDrink(A))
+    expect(rows.has(DIFFICULTY_SETTING_KEY)).toBe(false)
+  })
+
+  it('refuse un id inconnu ou retiré du code, ou un niveau hors 1, 2, 3, sans toucher à la base', async () => {
+    for (const id of ['nope', retired, '']) {
+      await expect(setGameDrinkLevel(id, 3)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    for (const level of [0, 4, 1.5, '2', null, NaN]) {
+      await expect(setGameDrinkLevel(A, level as never), String(level)).rejects.toBeInstanceOf(GameNotToggleableError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('laisse remonter une panne d’écriture, et la valeur écrite sert de repli si la relecture échoue', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValueOnce(new Error('locked'))
+    await expect(setGameDrinkLevel(A, otherDrink(A))).rejects.toThrow('locked')
+
+    await setGameDrinkLevel(A, otherDrink(A))
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    expect(await getStaffGameDrinkLevel()).toEqual({ [A]: otherDrink(A) })
+  })
+})
+
+describe('getGameCategories', () => {
+  const stored = [{ id: 'chaud', names: { fr: 'Chaud' }, gameIds: [B, A] }]
+
+  it('lit la clé games.categories de SiteSetting, jeux dans l’ordre du catalogue', async () => {
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify(stored) })
+    expect(await getGameCategories()).toEqual([{ id: 'chaud', names: { fr: 'Chaud' }, gameIds: [A, B] }])
+    expect(prismaMock.siteSetting.findUnique).toHaveBeenCalledWith({ where: { key: 'games.categories' } })
+  })
+
+  it('valeur abîmée ou absente : aucune catégorie', async () => {
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: '{pas du json' })
+    expect(await getGameCategories()).toEqual([])
+    invalidateGameCatalogCaches({ forget: true })
+    storeSettings()
+    expect(await getGameCategories()).toEqual([])
+  })
+
+  it('erreur de base : dernière valeur connue, sans lever', async () => {
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify(stored) })
+    expect(await getGameCategories()).toHaveLength(1)
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('locked'))
+    vi.advanceTimersByTime(HIDDEN_IDS_TTL_MS + 1)
+    expect(await getGameCategories()).toHaveLength(1)
+  })
+})
+
+describe('createGameCategory', () => {
+  it('crée une catégorie vide en dernière position, avec un id généré [a-z0-9-], noms nettoyés', async () => {
+    const rows = storeSettings()
+
+    const first = await createGameCategory({ fr: '  Soirée   chaude ', en: ' Hot ' })
+    const second = await createGameCategory({ fr: 'Calme' })
+
+    expect(first.id).toMatch(/^[a-z0-9-]{1,40}$/)
+    expect(first).toEqual({ id: first.id, names: { fr: 'Soirée chaude', en: 'Hot' }, gameIds: [] })
+    expect(second.id).not.toBe(first.id)
+    expect(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!)).toEqual([first, second])
+    expect(prismaMock.siteSetting.upsert).toHaveBeenLastCalledWith({
+      where: { key: 'games.categories' },
+      create: { key: 'games.categories', value: JSON.stringify([first, second]) },
+      update: { value: JSON.stringify([first, second]) },
+    })
+  })
+
+  it('part de la valeur stockée, et fait relire la liste tout de suite', async () => {
+    const rows = storeSettings()
+    expect(await getGameCategories()).toEqual([])
+    rows.set(GAME_CATEGORIES_SETTING_KEY, JSON.stringify([{ id: 'deja', names: { fr: 'Déjà' }, gameIds: [] }]))
+
+    const created = await createGameCategory({ fr: 'Neuve' })
+
+    expect((await getGameCategories()).map((c) => c.id)).toEqual(['deja', created.id])
+  })
+
+  it('refuse un nom français vide, trop long ou absent, sans toucher à la base', async () => {
+    const bad = [{ fr: '' }, { fr: '   ' }, { fr: 'x'.repeat(GAME_CATEGORY_LIMITS.maxNameLength + 1) }, { en: 'Hot' }, null, 'Chaud']
+    for (const names of bad) {
+      await expect(createGameCategory(names as never), JSON.stringify(names)).rejects.toBeInstanceOf(GameCategoryInvalidError)
+    }
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuse la 25e catégorie', async () => {
+    const full = Array.from({ length: GAME_CATEGORY_LIMITS.maxCategories }, (_, i) => ({
+      id: `c${i}`,
+      names: { fr: `C${i}` },
+      gameIds: [],
+    }))
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify(full) })
+
+    await expect(createGameCategory({ fr: 'De trop' })).rejects.toBeInstanceOf(GameCategoryLimitError)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('accepte la dernière place libre (24e)', async () => {
+    const almost = Array.from({ length: GAME_CATEGORY_LIMITS.maxCategories - 1 }, (_, i) => ({
+      id: `c${i}`,
+      names: { fr: `C${i}` },
+      gameIds: [],
+    }))
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify(almost) })
+    await expect(createGameCategory({ fr: 'Dernière' })).resolves.toBeTruthy()
+  })
+
+  it('laisse remonter une panne d’écriture', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValue(new Error('locked'))
+    await expect(createGameCategory({ fr: 'X' })).rejects.toThrow('locked')
+  })
+})
+
+describe('updateGameCategory', () => {
+  const seed = (extra: Record<string, unknown>[] = []) =>
+    storeSettings({
+      [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify([
+        { id: 'un', names: { fr: 'Un', en: 'One' }, gameIds: [A] },
+        { id: 'deux', names: { fr: 'Deux' }, gameIds: [] },
+        ...extra,
+      ]),
+    })
+
+  it('renomme : noms nettoyés et REMPLACÉS (une langue absente du patch disparaît), jeux et id intacts', async () => {
+    const rows = seed()
+
+    const { category: updated, changed } = await updateGameCategory('un', { names: { fr: '  Premier  choix ' } })
+
+    expect(changed).toBe(true)
+    expect(updated).toEqual({ id: 'un', names: { fr: 'Premier choix' }, gameIds: [A] })
+    expect(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!).map((c: { id: string }) => c.id)).toEqual(['un', 'deux'])
+  })
+
+  it('change les jeux : liste complète, ordre du catalogue, sans doublon', async () => {
+    const rows = seed()
+
+    const { category: updated } = await updateGameCategory('deux', { gameIds: [C, A, A, B] })
+
+    expect(updated.gameIds).toEqual([A, B, C])
+    expect(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!)[1].gameIds).toEqual([A, B, C])
+  })
+
+  it('vider la liste de jeux est permis', async () => {
+    seed()
+    expect((await updateGameCategory('un', { gameIds: [] })).category.gameIds).toEqual([])
+  })
+
+  it('une modification sans effet n’écrit rien et rend changed faux', async () => {
+    seed()
+    expect((await updateGameCategory('un', { gameIds: [A] })).changed).toBe(false)
+    expect((await updateGameCategory('un', { names: { fr: ' Un ', en: 'One' } })).changed).toBe(false)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('catégorie introuvable : GameCategoryNotFoundError, rien d’écrit', async () => {
+    seed()
+    await expect(updateGameCategory('fantome', { gameIds: [A] })).rejects.toBeInstanceOf(GameCategoryNotFoundError)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('refuse un nom invalide, un jeu inconnu ou retiré du code, une liste mal formée, un patch vide', async () => {
+    seed()
+    const bad: Array<[Parameters<typeof updateGameCategory>[1], string]> = [
+      [{ names: { fr: '' } }, 'nom vide'],
+      [{ names: { fr: 'x'.repeat(41) } }, 'nom long'],
+      [{ names: { en: 'Only' } as never }, 'sans français'],
+      [{ gameIds: ['nope'] }, 'jeu inconnu'],
+      [{ gameIds: [A, retired] }, 'jeu retiré'],
+      [{ gameIds: 'pmu' as never }, 'pas un tableau'],
+      [{ gameIds: [3] as never }, 'pas un id'],
+      [{}, 'patch vide'],
+    ]
+    for (const [patch, label] of bad) {
+      await expect(updateGameCategory('un', patch), label).rejects.toBeInstanceOf(GameCategoryInvalidError)
+    }
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('un patch invalide est refusé avant toute lecture de la base', async () => {
+    await expect(updateGameCategory('fantome', { names: { fr: '' } })).rejects.toBeInstanceOf(GameCategoryInvalidError)
+    expect(prismaMock.siteSetting.findUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe('moveGameCategory', () => {
+  const ids = (list: Array<{ id: string }>) => list.map((c) => c.id)
+  const seed = () =>
+    storeSettings({
+      [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify(
+        ['a', 'b', 'c'].map((id) => ({ id, names: { fr: id.toUpperCase() }, gameIds: [] }))
+      ),
+    })
+
+  it('monte et descend d’un cran, écrit l’ordre et rend la liste complète', async () => {
+    const rows = seed()
+
+    expect(await moveGameCategory('b', 'up')).toMatchObject({ changed: true })
+    expect(ids(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!))).toEqual(['b', 'a', 'c'])
+    expect(ids((await moveGameCategory('b', 'down')).categories)).toEqual(['a', 'b', 'c'])
+    expect(ids((await moveGameCategory('a', 'down')).categories)).toEqual(['b', 'a', 'c'])
+    expect(ids(await getGameCategories())).toEqual(['b', 'a', 'c'])
+  })
+
+  it('aux bornes : la première ne monte pas, la dernière ne descend pas, changed faux, rien n’est écrit', async () => {
+    seed()
+    const top = await moveGameCategory('a', 'up')
+    const bottom = await moveGameCategory('c', 'down')
+    expect([ids(top.categories), top.changed]).toEqual([['a', 'b', 'c'], false])
+    expect([ids(bottom.categories), bottom.changed]).toEqual([['a', 'b', 'c'], false])
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('une seule catégorie : aucun déplacement possible', async () => {
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify([{ id: 'seule', names: { fr: 'Seule' }, gameIds: [] }]) })
+    expect(ids((await moveGameCategory('seule', 'up')).categories)).toEqual(['seule'])
+    expect((await moveGameCategory('seule', 'down')).changed).toBe(false)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('introuvable : GameCategoryNotFoundError', async () => {
+    seed()
+    await expect(moveGameCategory('fantome', 'up')).rejects.toBeInstanceOf(GameCategoryNotFoundError)
+  })
+})
+
+describe('setGameInCategory', () => {
+  const seed = () =>
+    storeSettings({
+      [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify([
+        { id: 'un', names: { fr: 'Un' }, gameIds: [B] },
+        { id: 'deux', names: { fr: 'Deux' }, gameIds: [] },
+      ]),
+    })
+
+  it('ajoute un jeu à partir de la valeur stockée, dans l’ordre du catalogue, et fait relire la liste', async () => {
+    const rows = seed()
+    expect((await getGameCategories())[0].gameIds).toEqual([B])
+    rows.set(GAME_CATEGORIES_SETTING_KEY, JSON.stringify([{ id: 'un', names: { fr: 'Un' }, gameIds: [B, C] }]))
+
+    const { category, changed } = await setGameInCategory('un', A, true)
+
+    expect(changed).toBe(true)
+    expect(category.gameIds).toEqual([A, B, C])
+    expect((await getGameCategories())[0].gameIds).toEqual([A, B, C])
+  })
+
+  it('retire un jeu sans toucher aux autres', async () => {
+    seed()
+    const { category, changed } = await setGameInCategory('un', B, false)
+    expect(changed).toBe(true)
+    expect(category.gameIds).toEqual([])
+  })
+
+  it('déjà ajouté ou déjà absent : changed faux, rien d’écrit', async () => {
+    seed()
+    expect((await setGameInCategory('un', B, true)).changed).toBe(false)
+    expect((await setGameInCategory('un', A, false)).changed).toBe(false)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('deux cases cochées en même temps gardent les deux jeux', async () => {
+    seed()
+    await Promise.all([setGameInCategory('deux', A, true), setGameInCategory('deux', C, true)])
+    expect((await getGameCategories()).find((c) => c.id === 'deux')!.gameIds).toEqual([A, C])
+  })
+
+  it('refuse un jeu inconnu ou retiré, un booléen mal typé ; introuvable : GameCategoryNotFoundError', async () => {
+    seed()
+    for (const gameId of ['nope', retired, '']) {
+      await expect(setGameInCategory('un', gameId, true), gameId).rejects.toBeInstanceOf(GameCategoryInvalidError)
+    }
+    await expect(setGameInCategory('un', A, 'oui' as never)).rejects.toBeInstanceOf(GameCategoryInvalidError)
+    await expect(setGameInCategory('fantome', A, true)).rejects.toBeInstanceOf(GameCategoryNotFoundError)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+})
+
+describe('écritures concurrentes', () => {
+  it('deux créations simultanées gardent les deux catégories', async () => {
+    const rows = storeSettings()
+    // Une lecture lente laisserait la seconde écriture lire la même valeur périmée si rien ne les ordonnait.
+    const read = prismaMock.siteSetting.findUnique.getMockImplementation()!
+    prismaMock.siteSetting.findUnique.mockImplementation(async (args: { where: { key: string } }) => {
+      const value = await read(args)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      return value
+    })
+
+    const pending = Promise.all([createGameCategory({ fr: 'Une' }), createGameCategory({ fr: 'Autre' })])
+    await vi.advanceTimersByTimeAsync(50)
+    const [first, second] = await pending
+
+    expect(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!)).toEqual([first, second])
+  })
+
+  it('une écriture en échec ne bloque pas les suivantes', async () => {
+    storeSettings()
+    prismaMock.siteSetting.upsert.mockRejectedValueOnce(new Error('locked'))
+    const [failed, ok] = await Promise.allSettled([createGameCategory({ fr: 'Perdue' }), createGameCategory({ fr: 'Gardée' })])
+    expect(failed.status).toBe('rejected')
+    expect(ok.status).toBe('fulfilled')
+  })
+
+  it('catégories, jeux cachés, difficulté et « fait boire » partagent la même file sans se mélanger', async () => {
+    const rows = storeSettings()
+    await Promise.all([
+      createGameCategory({ fr: 'Chaud' }),
+      setGameHidden(A, true),
+      setGameDifficulty(B, otherLevel(B)),
+      setGameDrinkLevel(C, otherDrink(C)),
+    ])
+    expect(JSON.parse(rows.get(HIDDEN_GAMES_SETTING_KEY)!)).toEqual([A])
+    expect(JSON.parse(rows.get(DIFFICULTY_SETTING_KEY)!)).toEqual({ [B]: otherLevel(B) })
+    expect(JSON.parse(rows.get(DRINK_LEVEL_SETTING_KEY)!)).toEqual({ [C]: otherDrink(C) })
+    expect(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!)).toHaveLength(1)
+  })
+})
+
+describe('deleteGameCategory', () => {
+  it('supprime la catégorie sans toucher aux autres', async () => {
+    const rows = storeSettings({
+      [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify([
+        { id: 'a', names: { fr: 'A' }, gameIds: [A] },
+        { id: 'b', names: { fr: 'B' }, gameIds: [B] },
+      ]),
+    })
+
+    await deleteGameCategory('a')
+
+    expect(JSON.parse(rows.get(GAME_CATEGORIES_SETTING_KEY)!)).toEqual([{ id: 'b', names: { fr: 'B' }, gameIds: [B] }])
+    expect((await getGameCategories()).map((c) => c.id)).toEqual(['b'])
+  })
+
+  it('supprimer la dernière laisse une liste vide', async () => {
+    const rows = storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify([{ id: 'a', names: { fr: 'A' }, gameIds: [] }]) })
+    await deleteGameCategory('a')
+    expect(rows.get(GAME_CATEGORIES_SETTING_KEY)).toBe('[]')
+    expect(await getGameCategories()).toEqual([])
+  })
+
+  it('introuvable : GameCategoryNotFoundError, rien d’écrit', async () => {
+    storeSettings()
+    await expect(deleteGameCategory('fantome')).rejects.toBeInstanceOf(GameCategoryNotFoundError)
+    expect(prismaMock.siteSetting.upsert).not.toHaveBeenCalled()
+  })
+
+  it('laisse remonter une panne d’écriture', async () => {
+    storeSettings({ [GAME_CATEGORIES_SETTING_KEY]: JSON.stringify([{ id: 'a', names: { fr: 'A' }, gameIds: [] }]) })
+    prismaMock.siteSetting.upsert.mockRejectedValue(new Error('locked'))
+    await expect(deleteGameCategory('a')).rejects.toThrow('locked')
+  })
+})
+
+describe('getGameCatalogState : barème et catégories', () => {
+  it('inclut niveaux « fait boire » et catégories, et leurs écritures font relire l’état tout de suite', async () => {
+    storeSettings()
+    const empty = await getGameCatalogState()
+    expect(empty.drinkLevel).toEqual({})
+    expect(empty.categories).toEqual([])
+
+    await setGameDrinkLevel(A, otherDrink(A))
+    const created = await createGameCategory({ fr: 'Chaud' })
+    await updateGameCategory(created.id, { gameIds: [B] })
+    await setGameInCategory(created.id, A, true)
+
+    const state = await getGameCatalogState()
+    expect(state.drinkLevel).toEqual({ [A]: otherDrink(A) })
+    expect(state.categories).toEqual([{ id: created.id, names: { fr: 'Chaud' }, gameIds: [A, B] }])
+  })
+
+  it('base illisible : drinkLevel vaut {} et categories vaut []', async () => {
+    prismaMock.siteSetting.findUnique.mockRejectedValue(new Error('down'))
+    const state = await getGameCatalogState()
+    expect(state.drinkLevel).toEqual({})
+    expect(state.categories).toEqual([])
+  })
+
+  it('l’état oublié repart avec des champs neufs, jamais partagés avec EMPTY_GAME_CATALOG', async () => {
+    invalidateGameCatalogCaches({ forget: true })
+    const state = await getGameCatalogState()
+    expect(state.drinkLevel).not.toBe(EMPTY_GAME_CATALOG.drinkLevel)
+    expect(state.categories).not.toBe(EMPTY_GAME_CATALOG.categories)
   })
 })

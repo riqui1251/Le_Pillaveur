@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Check, Flag, LogOut, Minus, Plus, RotateCcw, Tv, UserMinus } from 'lucide-react'
 import { Player as BasePlayer } from '@/lib/players'
+import type { LocalTallyOptions } from '@/lib/local-drink-tally'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useCastRoom } from '@/hooks/useCastRoom'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
@@ -346,7 +347,8 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
   // gagnant envoie le double de la sienne au joueur choisi. Le mode libre
   // distribue à voix haute, sans cible : rien à compter (la soirée le fait
   // vérifier à l'entracte). Gorgées seules, comme le Petit Buveur : la partie
-  // est déjà comptée à l'arrivée de la course.
+  // est déjà comptée à l'arrivée de la course, et peut être déjà partie au
+  // classement de tout le site si la distribution a traîné — d'où la correction.
   useEffect(() => {
     if (phase !== 'results' || !winner) {
       drinksCountedRef.current = false
@@ -361,7 +363,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
       for (const giver of winner.players) {
         if (payoutTargetsById[giver.id] === player.id) drinks += betOf(giver.id) * 2
       }
-      if (drinks > 0) updatePlayerStats(player.id, 'pmu', { totalDrinks: drinks })
+      if (drinks > 0) updatePlayerStats(player.id, 'pmu', { totalDrinks: drinks }, { tally: 'correction' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, winner])
@@ -546,10 +548,14 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
       clearInterval(id)
       setIntervalId(null)
       setWinner(w)
-      w.players.forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 1 }))
+      // Le mode libre n'enregistre aucune gorgée hors Mode Soirée (où l'entracte
+      // les fait saisir) : la course reste dans les statistiques du téléphone,
+      // pas dans le classement de tout le site, dont elle ferait baisser la moyenne.
+      const siteTally: LocalTallyOptions | undefined = mode === 'libre' && !inSoiree ? { tally: 'skip' } : undefined
+      w.players.forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 1 }, siteTally))
       initialPlayersRef.current
         .filter(p => !w.players.some(x => x.id === p.id))
-        .forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 0 }))
+        .forEach(p => updatePlayerStats(p.id, 'pmu', { gamesPlayed: 1, wins: 0 }, siteTally))
 
       if (mode === 'libre') {
         setDistSips(Math.floor(Math.random() * 7) + 2) // 2-8

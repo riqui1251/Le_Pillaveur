@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 20 November 2026
+**Last updated:** 24 November 2026
 
 ## 1. Introduction
 
@@ -69,7 +69,7 @@ Activity means using a page displayed on screen: a signal is sent at most once a
 
 In the site's moderation tools, IPv6 addresses from the same network (same /64 prefix, usually the same router or the same place) are grouped together on display: this grouping is computed when the data is read and stores no additional data.
 
-**Games played in local mode.** Regardless of any consent, the site counts games played on a single phone: when a game page opens in local mode with a table of players, and then when the game reaches its end screen, your browser only sends the game concerned and the event (game started or finished). The server only keeps two counters per game and per day (Paris time): the number of games started and the number of games finished. No account, nickname, or device or browser identifier is recorded, no cookie is read, and the IP address is never stored: it is only used, in memory and temporarily, to limit the number of submissions per network in order to prevent abuse. As nothing makes it possible to link a counter to a person, these counters are not personal data and do not depend on your visit statistics choice; we mention them for transparency. The site's administrators can view them, and they are kept for 13 months (see 7).
+**Games played in local mode.** Regardless of any consent, the site counts games played on a single phone: when a game page opens in local mode with a table of players, and then when the game reaches its end screen, your browser sends the game concerned and the event (game started or finished). A few minutes after your last game, or when you close the page, it also sends, for each game, the total number of drinks taken at the table and the number of participations (one game played by one player), and sends nothing in the "Alcohol-free" mode; no first name, account or device is included. For **online** games, when a game ends, the server adds in the same way the total number of drinks taken and the number of participations of the human players, without linking these numbers to the table or to accounts; a game in which one of the table's accounts is in "Alcohol-free" mode is not counted. The server only keeps counters per game, per day (Paris time) and per mode (local or online): the number of games started and finished in local mode, as well as the total of drinks and participations, which feed the public ranking "Which game makes you drink most?" (last 90 days). No account, nickname, or device or browser identifier is recorded, no cookie is read, and the IP address is never stored: it is only used, in memory and temporarily, to limit the number of submissions per network in order to prevent abuse. As nothing makes it possible to link a counter to a person, these counters are not personal data and do not depend on your visit statistics choice; we mention them for transparency. The site's administrators can view them, and they are kept for 13 months (see 7).
 
 ### 3.4 Chat and online games
 
@@ -186,7 +186,7 @@ The publisher remains the controller of the processing described in this policy.
 - **Launched-game log** (game, date, table duration, end reason, participants): **12 months**.
 - **Nickname moderation traces**: **12 months**.
 - **Audience measurement data**: **13 months**.
-- **Local game counters** (game, day, number of games started and finished, with no personal data): **13 months**.
+- **Local game and drink counters** (game, day, mode, number of games started and finished, total of drinks and participations, with no personal data): **13 months**.
 - **Feedback**: kept up to **24 months** or deleted on request; the associated contact email is erased if you delete your account.
 - **Age and consent cookies**: 1 year, renewed on each validation.
 - **Database backups** (a copy of all the data above): **at most 16 days** on the server, **at most 31 days** for the off-site copy; deleted data disappears from the backups when they expire.

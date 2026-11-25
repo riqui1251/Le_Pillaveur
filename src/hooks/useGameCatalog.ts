@@ -1,10 +1,18 @@
 'use client'
 
 import { useEffect, useSyncExternalStore } from 'react'
-import { EMPTY_GAME_CATALOG, parseGameCatalogState, type GameCatalogState } from '@/lib/game-catalog'
+import {
+  EMPTY_GAME_CATALOG,
+  gameDifficulty,
+  gameDrinkLevel,
+  parseGameCatalogState,
+  type GameCatalogState,
+  type GameCategory,
+} from '@/lib/game-catalog'
+import type { GameDifficulty, GameDrinkLevel } from '@/lib/games'
 
 /**
- * Le catalogue tel que l'équipe le règle (jeux cachés, jeux les plus joués),
+ * Le catalogue tel que l'équipe le règle (jeux cachés, difficulté, niveau « fait boire », catégories, jeux les plus joués),
  * côté navigateur : servi par GET /api/games/catalog, gardé sur l'appareil.
  *
  * La copie de l'appareil s'affiche tout de suite (et hors ligne : les jeux
@@ -137,4 +145,21 @@ export function useGameCatalogSnapshot(): GameCatalogSnapshot {
 
 export function useGameCatalog(): GameCatalogState {
   return useGameCatalogSnapshot().state
+}
+
+/** La difficulté effective d'un jeu (réglage de la Supervision, sinon celle du code). */
+export function useGameDifficulty(): (gameId: string) => GameDifficulty {
+  const { difficulty } = useGameCatalog()
+  return (gameId) => gameDifficulty(gameId, difficulty)
+}
+
+/** Le niveau « fait boire » effectif d'un jeu (réglage de la Supervision, sinon celui du code). */
+export function useGameDrinkLevel(): (gameId: string) => GameDrinkLevel {
+  const { drinkLevel } = useGameCatalog()
+  return (gameId) => gameDrinkLevel(gameId, drinkLevel)
+}
+
+/** Les catégories de jeux créées par l'équipe, dans l'ordre où le hub les propose. */
+export function useGameCategories(): GameCategory[] {
+  return useGameCatalog().categories
 }

@@ -3,52 +3,33 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
-import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, ShieldCheck, Copy, Check, Hash, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown, ChevronRight, FileText, Trophy } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Trash2, User, BarChart3, Gamepad2, Calendar, LogOut, Users, Mail, Cloud, Shield, Pencil, TextCursorInput, AlertTriangle, X, Globe, ChevronDown, ChevronRight, FileText, Trophy } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { PlayingCard } from '@/components/ui/PlayingCard'
-import { apiErrorMessage } from '@/lib/api-response'
 import { usePlayers } from '@/hooks/usePlayers'
 import { useAuth } from '@/hooks/useAuth'
-import { useOnlineProgression } from '@/hooks/useOnlineProgression'
-import { useSaveOnlinePreferences } from '@/hooks/useSaveOnlinePreferences'
 import { FriendsManager } from '@/components/friends/FriendsManager'
 import { GuestUpgradeCard } from '@/components/auth/GuestUpgradeCard'
-import { NativeGoogleButton } from '@/components/auth/NativeGoogleButton'
-import { OAuthButtons } from '@/components/auth/OAuthButtons'
-import { isOAuthProvider, takeOAuthErrorFromUrl, type OAuthProvider } from '@/lib/oauth'
-import { GOOGLE_CLIENT_ID, getGoogleAccountsId } from '@/lib/google-auth'
-import { isNativeGoogleAvailable } from '@/lib/native-google-login'
-import { copyText } from '@/lib/native-share'
 import { MyOnlineStats } from '@/components/online/MyOnlineStats'
 import { RecentTables } from '@/components/online/RecentTables'
 import { canAccessSupervision } from '@/lib/roles'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
 import { PlayerName } from '@/components/ui/PlayerName'
 import { PlayerCustomizer } from '@/components/ui/PlayerCustomizer'
-import { OnlineCollection } from '@/components/online/OnlineCollection'
 import { FirstStepsCard, revealElement } from '@/components/online/FirstStepsCard'
 import { FridayReminderSetting } from '@/components/ui/FridayReminderSetting'
-import { OnlinePlayerIcon, OnlinePlayerName, RankCrest } from '@/components/online/OnlinePlayerTag'
+import { ACCOUNT_ROW_CLASS } from '@/components/account/account-row'
+import { AccountCodeButton } from '@/components/account/AccountCodeButton'
+import { AccountLogoutButton } from '@/components/account/AccountLogoutButton'
+import { DeleteAccountSection } from '@/components/account/DeleteAccountSection'
+import { GuestExpiryNotice } from '@/components/account/GuestExpiryNotice'
+import { AccountOnlineCollection, OnlineProfileEditor, useOnlineIdentity } from '@/components/account/OnlineProfileEditor'
 import { Player, getPlayerNameValidationError } from '@/lib/players'
 import { nameValidationI18nKey } from '@/lib/name-moderation'
 import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
 import { getSafeStorage } from '@/lib/storage'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { cn } from '@/lib/utils'
-
-/* Ligne de compte uniforme (Direction B) : icône + libellé + chevron,
-   ≥48px de haut — la même qu'elle déplie une section ou qu'elle navigue. */
-const ACCOUNT_ROW_CLASS =
-  'flex w-full min-h-[48px] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06]'
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -59,28 +40,9 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   )
 }
 
-/**
- * Compte INVITÉ : nombre de jours d'inactivité avant purge automatique.
- * Doit rester aligné avec GUEST_INACTIVITY_DAYS de src/lib/retention-sweep.ts
- * — ce module-là importe Prisma, il ne peut pas être importé côté client.
- */
-const GUEST_INACTIVITY_DAYS = 90
-
-/**
- * Compte INVITÉ sans plus aucune session valide en base (déconnexion,
- * connexion à un autre compte dans ce navigateur) : nombre de jours avant sa
- * suppression. Un cookie simplement effacé laisse la session valide en base :
- * ce compte-là, inaccessible lui aussi, ne part qu'à l'échéance de sa session.
- * Même contrainte d'alignement, avec ORPHAN_GUEST_INACTIVITY_DAYS de
- * src/lib/retention-sweep.ts.
- */
-const ORPHAN_GUEST_INACTIVITY_DAYS = 7
-
 export function AccountInfo() {
   const t = useTranslations('account')
   const tCommon = useTranslations('common')
-  const tAuthErrors = useTranslations('auth.errors')
-  const tApiErrors = useTranslations('onlineLobby.errors')
   const tNameValidation = useTranslations('common.nameValidation')
   const locale = useLocale()
   const games = useLocalizedGames()
@@ -88,14 +50,11 @@ export function AccountInfo() {
     () => Object.fromEntries(games.map((g) => [g.id, g.title])),
     [games]
   )
-  const { user, logout, refresh } = useAuth()
+  const { user } = useAuth()
   // Les effets réseau ne dépendent que de l'identité du compte, pas de
   // l'objet `user` (nouvelle référence à chaque rafraîchissement de session).
   const userId = user?.id
-  const { progression, loading: progressionLoading } = useOnlineProgression()
-  // Enregistre les TROIS champs (icône, effet, cadre) fusionnés avec le
-  // profil, puis rafraîchit session et progression partagées.
-  const { save: saveOnlinePreferences } = useSaveOnlinePreferences()
+  const { name: onlineDisplayName, progression, progressionLoading } = useOnlineIdentity()
   const { players, loading, removePlayer, updatePlayer, updatePlayerPreferences } = usePlayers()
   const tFriends = useTranslations('account.friends')
   const tNav = useTranslations('nav')
@@ -105,71 +64,16 @@ export function AccountInfo() {
   const [renamingPlayerId, setRenamingPlayerId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [renameError, setRenameError] = useState<string | null>(null)
-  const [codeCopied, setCodeCopied] = useState(false)
   const [customizingPlayer, setCustomizingPlayer] = useState<Player | null>(null)
   const [nameModerationWarning, setNameModerationWarning] = useState(false)
 
-  // Échéance d'un compte invité : la purge compte à partir de la DERNIÈRE
-  // activité, et le joueur est justement en train d'en avoir une — la date
-  // affichée est donc « aujourd'hui + délai », et elle recule à chaque visite
-  // depuis ce navigateur (sa session, seule clé du compte, glisse avec elle).
-  // C'est la date la plus PROCHE possible : la session d'invité dure un jour
-  // de plus que ce délai (GUEST_SESSION_DAYS, auth-server), donc elle
-  // n'expire — et le compte ne part — jamais avant.
-  // Calculée après montage : Date.now() diffère entre serveur et client.
-  const [guestDeadline, setGuestDeadline] = useState<string | null>(null)
-  useEffect(() => {
-    if (!user?.isGuest) {
-      setGuestDeadline(null)
-      return
-    }
-    const at = new Date(Date.now() + GUEST_INACTIVITY_DAYS * 24 * 60 * 60 * 1000)
-    setGuestDeadline(
-      new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(at)
-    )
-  }, [user?.isGuest, locale])
-
-  // Déconnexion d'un INVITÉ : son cookie de session est sa seule clé (ni
-  // email, ni mot de passe, ni Google). Se déconnecter le rend inaccessible
-  // pour toujours — on le dit avant, avec la sortie « sauvegarder » en premier.
-  const [confirmGuestLogout, setConfirmGuestLogout] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
-  const [logoutError, setLogoutError] = useState<string | null>(null)
   const upgradeCardRef = useRef<HTMLDivElement>(null)
-  // Posé par « Sauvegarder mon compte » : à la fermeture de la confirmation,
-  // le focus va à la carte de pérennisation au lieu de revenir au bouton.
-  const goToUpgradeOnCloseRef = useRef(false)
 
-  const logoutGuestAnyway = async () => {
-    setLoggingOut(true)
-    setLogoutError(null)
-    try {
-      await logout()
-      setConfirmGuestLogout(false)
-    } catch {
-      setLogoutError(tAuthErrors('network'))
-    } finally {
-      setLoggingOut(false)
-    }
-  }
-
-  const onGuestLogoutCloseAutoFocus = (event: Event) => {
-    if (!goToUpgradeOnCloseRef.current) return
-    goToUpgradeOnCloseRef.current = false
-    event.preventDefault()
-    // Image suivante : le verrou de défilement de la modale est levé.
-    window.requestAnimationFrame(() => revealElement(upgradeCardRef.current))
-  }
-
-  const [onlineName, setOnlineName] = useState('')
-  const [onlineNameError, setOnlineNameError] = useState<string | null>(null)
-  const [onlineNameSaved, setOnlineNameSaved] = useState(false)
   const [customizingOnline, setCustomizingOnline] = useState(false)
   // Liste des joueurs locaux repliée par défaut (elle peut être très longue).
   const [showLocalPlayers, setShowLocalPlayers] = useState(false)
   const [showOnlineSection, setShowOnlineSection] = useState(false)
   const [showFriends, setShowFriends] = useState(false)
-  const [showDangerZone, setShowDangerZone] = useState(false)
 
   // Ouvrir la Collection, c'est aussi déplier la section en ligne : à la
   // fermeture, le joueur voit tout de suite son aperçu avec le nouveau look.
@@ -217,157 +121,6 @@ export function AccountInfo() {
     window.requestAnimationFrame(() => revealElement(upgradeCardRef.current))
   }, [pendingUpgradeFocus, loading])
 
-  const [deletePassword, setDeletePassword] = useState('')
-  const [deleteArmed, setDeleteArmed] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [deletingAccount, setDeletingAccount] = useState(false)
-  // Moyen de confirmation exigé par la route de suppression : mot de passe,
-  // Google (compte lié à Google, sans mot de passe) ou la seule session
-  // (invité). Le profil /api/auth/me ne dit pas si le compte a un mot de
-  // passe : c'est la route elle-même qui répond (sonde GET), déclenchée à
-  // l'ouverture de la zone de danger.
-  const [deleteMethod, setDeleteMethod] = useState<'password' | 'google' | 'session' | null>(null)
-  // Services (Discord, Facebook) liés au compte, qui peuvent eux aussi
-  // confirmer la suppression d'un compte sans mot de passe.
-  const [deleteProviders, setDeleteProviders] = useState<OAuthProvider[]>([])
-
-  // Refus renvoyé par le retour Discord / Facebook d'une suppression.
-  useEffect(() => {
-    const code = takeOAuthErrorFromUrl('delete')
-    if (!code) return
-    setShowDangerZone(true)
-    setDeleteError(
-      code === 'founder_protected'
-        ? t('deleteAccount.founderProtected')
-        : apiErrorMessage(code, tApiErrors, t('deleteAccount.genericError'))
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- lu une fois, au montage
-  }, [])
-
-  useEffect(() => {
-    if (!showDangerZone || !userId || deleteMethod) return
-    let cancelled = false
-    fetch('/api/auth/delete-account', { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled) return
-        // Repli prudent sur le mot de passe : c'est le cas le plus courant,
-        // et le serveur reste seul juge de la preuve exigée.
-        setDeleteMethod(data?.method === 'google' || data?.method === 'session' ? data.method : 'password')
-        setDeleteProviders(Array.isArray(data?.providers) ? data.providers.filter(isOAuthProvider) : [])
-      })
-      .catch(() => {
-        if (!cancelled) setDeleteMethod('password')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [showDangerZone, userId, deleteMethod])
-
-  const handleDeleteAccount = async (credential?: string) => {
-    setDeletingAccount(true)
-    setDeleteError(null)
-    try {
-      const res = await fetch('/api/auth/delete-account', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credential ? { credential } : { password: deletePassword }),
-      })
-      if (res.ok) {
-        // Compte supprimé, session invalidée côté serveur : repartir de zéro.
-        window.location.href = '/'
-        return
-      }
-      const data = await res.json().catch(() => ({}))
-      setDeleteError(
-        data?.code === 'wrong_password'
-          ? t('deleteAccount.wrongPassword')
-          : data?.code === 'google_confirmation_required'
-            ? t('deleteAccount.googleRequired')
-            : data?.code === 'founder_protected'
-              ? t('deleteAccount.founderProtected')
-              : t('deleteAccount.genericError')
-      )
-      setDeleteArmed(false)
-    } finally {
-      setDeletingAccount(false)
-    }
-  }
-
-  // ── Confirmation Google (GIS, flux ID token) — même montage que AuthForm
-  // et la carte de pérennisation. Dans l'app mobile (webview), GIS est
-  // bloqué : fenêtre Google native. Le bouton n'est monté qu'une fois la
-  // suppression armée, donc jamais en même temps que celui de
-  // GuestUpgradeCard (réservé aux invités, qui n'ont pas de compte Google).
-  const [nativeGoogle, setNativeGoogle] = useState(false)
-  useEffect(() => {
-    setNativeGoogle(isNativeGoogleAvailable())
-  }, [])
-  const googleButtonRef = useRef<HTMLDivElement>(null)
-  const googleCallbackRef = useRef<(credential: string) => void>(() => {})
-  useEffect(() => {
-    googleCallbackRef.current = (credential: string) => {
-      void handleDeleteAccount(credential)
-    }
-  })
-
-  const googleConfirmVisible = deleteMethod === 'google' && deleteArmed
-  useEffect(() => {
-    if (!googleConfirmVisible || nativeGoogle) return
-    let cancelled = false
-    const render = () => {
-      if (cancelled) return
-      const gis = getGoogleAccountsId()
-      const parent = googleButtonRef.current
-      if (!gis || !parent) return
-      gis.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          if (response.credential) googleCallbackRef.current(response.credential)
-        },
-      })
-      parent.innerHTML = ''
-      gis.renderButton(parent, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'continue_with',
-        shape: 'pill',
-        // Même largeur que les boutons Discord / Facebook juste dessous.
-        width: 300,
-        locale,
-      })
-    }
-    if (getGoogleAccountsId()) {
-      render()
-      return
-    }
-    const src = 'https://accounts.google.com/gsi/client'
-    let script = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
-    if (!script) {
-      script = document.createElement('script')
-      script.src = src
-      script.async = true
-      document.head.appendChild(script)
-    }
-    script.addEventListener('load', render)
-    return () => {
-      cancelled = true
-      script?.removeEventListener('load', render)
-    }
-  }, [locale, googleConfirmVisible, nativeGoogle])
-
-  const onlineDisplayName = user?.onlineDisplayName ?? user?.displayName ?? 'Joueur'
-  const onlineMemberCosmetics = useMemo(
-    () => ({
-      preferences: { color: 'bg-amber-500' as const, ...user?.onlinePreferences },
-      level: progression?.level ?? 1,
-      role: user?.role ?? 'user',
-    }),
-    [user?.onlinePreferences, user?.role, progression?.level]
-  )
-
   // Ce que mesure la carte Premiers pas et qui change sur cette page même :
   // icône, effet (Collection), statut d'invité (sauvegarde), XP. Une
   // nouvelle clé = la liste est redemandée. Null tant que la progression de
@@ -402,10 +155,6 @@ export function AccountInfo() {
       cancelled = true
     }
   }, [userId])
-
-  useEffect(() => {
-    setOnlineName(user?.onlineDisplayName ?? user?.displayName ?? '')
-  }, [user?.id, user?.onlineDisplayName, user?.displayName])
 
   const startRename = (player: Player) => {
     setConfirmDelete(null)
@@ -444,44 +193,6 @@ export function AccountInfo() {
   const dismissModerationWarning = async () => {
     setNameModerationWarning(false)
     await fetch('/api/name-moderation/dismiss-warning', { method: 'POST', credentials: 'include' })
-  }
-
-  const copyAccountCode = async () => {
-    if (!user?.accountCode) return
-    // copyText tente aussi l'ancienne copie quand le presse-papiers asynchrone
-    // est refusé (WebView de l'app). En cas d'échec, le code reste lisible
-    // sur le bouton même : pas de coche, rien de plus à dire.
-    if (!(await copyText(user.accountCode))) return
-    setCodeCopied(true)
-    window.setTimeout(() => setCodeCopied(false), 2000)
-  }
-
-  const saveOnlineName = async () => {
-    const value = onlineName.trim()
-    if (!value) return
-    setOnlineNameError(null)
-    setOnlineNameSaved(false)
-    const response = await fetch('/api/auth/online-display-name', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ onlineDisplayName: value }),
-    })
-    const data = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      // `error` porte un CODE quand le refus vient de l'enveloppe des routes
-      // (401 auth_required, 500 server_error) : l'afficher brut montrait un
-      // identifiant snake_case. Les refus de pseudo, eux, y mettent une phrase
-      // DÉJÀ traduite par le serveur, qu'apiErrorMessage laisse passer telle
-      // quelle — d'où `data.error` et non `data.code`, qui vaudrait
-      // « profanity » ou « display_name_taken », sans traduction.
-      setOnlineNameError(apiErrorMessage(data?.error, tApiErrors, tApiErrors('server_error')))
-      return
-    }
-    setOnlineName(value)
-    await refresh()
-    setOnlineNameSaved(true)
-    window.setTimeout(() => setOnlineNameSaved(false), 1500)
   }
 
   useEffect(() => {
@@ -525,22 +236,7 @@ export function AccountInfo() {
             <h1 className="mt-0.5 truncate font-display text-2xl font-bold text-[#24201A] sm:text-3xl">
               {user?.displayName ?? t('title')}
             </h1>
-            {user?.accountCode && (
-              <button
-                type="button"
-                onClick={copyAccountCode}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#24201A]/[0.15] bg-[#24201A]/5 px-2.5 py-1 font-mono text-xs text-[#4A443A] transition-colors hover:bg-[#24201A]/10"
-                title={t('copyAccountCode')}
-              >
-                <Hash className="h-3 w-3" />
-                {user.accountCode}
-                {codeCopied ? (
-                  <Check className="h-3 w-3 text-emerald-700" />
-                ) : (
-                  <Copy className="h-3 w-3 opacity-60" />
-                )}
-              </button>
-            )}
+            {user?.accountCode && <AccountCodeButton code={user.accountCode} className="mt-2" />}
             {user?.email && (
               <p className="mt-1 flex items-center gap-1.5 text-xs text-[#6B6455]">
                 <Mail className="h-3 w-3" />
@@ -559,41 +255,18 @@ export function AccountInfo() {
               <span className="hidden sm:inline">{t('supervision')}</span>
             </Link>
           )}
-          <button
-            onClick={() => {
-              if (user?.isGuest) {
-                setLogoutError(null)
-                setConfirmGuestLogout(true)
-                return
-              }
-              void logout()
-            }}
-            aria-label={t('logout')}
+          <AccountLogoutButton
+            ariaLabel={t('logout')}
+            saveTargetRef={upgradeCardRef}
             className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-300"
           >
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">{t('logout')}</span>
-          </button>
+          </AccountLogoutButton>
         </div>
       </div>
 
-      {/* Avertissement AVANT la perte : un invité découvrait le vide (pseudo
-          libre, niveau 1, succès effacés) en revenant le samedi suivant. On
-          annonce donc ce qui part, quand, et ce qui le rend inaccessible
-          sur-le-champ (déconnexion, cookies effacés) — sans dramatiser : la carte de
-          pérennisation juste en dessous règle le problème en un clic. */}
-      {user?.isGuest && (
-        <div className="flex gap-3 rounded-2xl border border-gold/20 bg-felt-deep/50 px-4 py-3 text-sm text-white/70">
-          <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-          <div className="min-w-0 flex-1">
-            <p>{t('guestExpiry.rule', { days: GUEST_INACTIVITY_DAYS })}</p>
-            <p className="mt-1">{t('guestExpiry.loss', { days: ORPHAN_GUEST_INACTIVITY_DAYS })}</p>
-            {guestDeadline && (
-              <p className="mt-1 text-white/50">{t('guestExpiry.deadline', { date: guestDeadline })}</p>
-            )}
-          </div>
-        </div>
-      )}
+      {user?.isGuest && <GuestExpiryNotice />}
 
       {/* Cible de « Sauvegarder mon compte » (confirmation de déconnexion).
           `empty:hidden` : la carte ne rend rien pour un compte déjà
@@ -610,75 +283,6 @@ export function AccountInfo() {
         onSave={() => revealElement(upgradeCardRef.current)}
         focusOnReady={focusFirstSteps}
       />
-
-      <Dialog
-        open={confirmGuestLogout}
-        onOpenChange={(open) => {
-          if (loggingOut) return
-          setConfirmGuestLogout(open)
-        }}
-      >
-        {/* Sans la croix (cible de 16 px sur téléphone, libellé non traduit) :
-            un vrai bouton Annuler la remplace. Échap reste actif hors envoi —
-            le composant le bloque dès que la croix est retirée, d'où ce
-            gestionnaire explicite. */}
-        <DialogContent
-          showCloseButton={false}
-          onEscapeKeyDown={(event) => {
-            if (loggingOut) event.preventDefault()
-          }}
-          className="border-gold/25 bg-felt-deep text-white"
-          onCloseAutoFocus={onGuestLogoutCloseAutoFocus}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display text-cream">{t('guestLogout.title')}</DialogTitle>
-            <DialogDescription className="text-white/70">
-              {t('guestLogout.body', { days: ORPHAN_GUEST_INACTIVITY_DAYS })}
-            </DialogDescription>
-          </DialogHeader>
-          {logoutError && (
-            <p role="alert" className="flex items-center gap-2 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {logoutError}
-            </p>
-          )}
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              onClick={() => {
-                goToUpgradeOnCloseRef.current = true
-                setConfirmGuestLogout(false)
-              }}
-              disabled={loggingOut}
-              className="h-auto min-h-[44px] w-full whitespace-normal rounded-2xl bg-amber-500 font-bold text-black hover:bg-amber-400"
-            >
-              <ShieldCheck className="mr-2 h-4 w-4 shrink-0" />
-              {/* Même libellé que le bouton de la carte vers laquelle il mène. */}
-              {t('guestUpgrade.submit')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => { void logoutGuestAnyway() }}
-              disabled={loggingOut}
-              className="h-auto min-h-[44px] w-full whitespace-normal rounded-2xl border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
-            >
-              <LogOut className="mr-2 h-4 w-4 shrink-0" />
-              {loggingOut ? tCommon('loading') : t('guestLogout.logoutAnyway')}
-            </Button>
-            <DialogClose asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={loggingOut}
-                className="h-auto min-h-[44px] w-full whitespace-normal rounded-2xl text-white/70 hover:bg-white/10 hover:text-white"
-              >
-                {tCommon('cancel')}
-              </Button>
-            </DialogClose>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {nameModerationWarning && (
         <div
@@ -750,59 +354,7 @@ export function AccountInfo() {
             </div>
           )}
 
-          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/70">
-              <Cloud className="h-4 w-4 text-cyan-300" />
-              {t('onlineName.title')}
-            </div>
-            <p className="mb-2 text-xs text-cyan-100/80">
-              {t('onlineName.hint')}
-            </p>
-
-            {/* Aperçu de l'identité en ligne (écusson de rang + icône encadrée + effet) */}
-            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
-              <RankCrest role={user?.role} />
-              <OnlinePlayerIcon cosmetics={onlineMemberCosmetics} className="h-10 w-10 text-xl" />
-              <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-                <OnlinePlayerName name={onlineDisplayName} cosmetics={onlineMemberCosmetics} />
-              </p>
-              {/* Libellé visible PARTOUT : un crayon seul ne disait pas que
-                  les niveaux débloquent de quoi s'habiller (23 joueurs de
-                  niveau 2+ n'y avaient jamais touché). En mobile, le bouton
-                  passe sur sa propre ligne, pleine largeur : le pseudo garde
-                  la place (il se tronquait à 3 caractères à 375px). */}
-              <button
-                type="button"
-                onClick={() => setCustomizingOnline(true)}
-                className="flex min-h-[44px] w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-500/25 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/[0.35] sm:w-auto"
-              >
-                <Pencil className="h-3.5 w-3.5" aria-hidden />
-                {t('playersList.customize')}
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                value={onlineName}
-                onChange={(e) => {
-                  setOnlineName(e.target.value)
-                  if (onlineNameError) setOnlineNameError(null)
-                }}
-                maxLength={30}
-                placeholder={t('onlineName.placeholder')}
-                className="h-9 border-cyan-300/25 bg-black/20 text-sm text-white placeholder:text-white/35"
-              />
-              <button
-                type="button"
-                onClick={() => { void saveOnlineName() }}
-                className="rounded-lg bg-cyan-500/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/[0.35]"
-              >
-                {tCommon('save')}
-              </button>
-            </div>
-            {onlineNameError && <p className="mt-2 text-xs text-orange-300">{onlineNameError}</p>}
-            {onlineNameSaved && <p className="mt-2 text-xs text-emerald-300">{t('onlineName.saved')}</p>}
-          </div>
+          <OnlineProfileEditor onCustomize={() => setCustomizingOnline(true)} />
 
           <RecentTables />
 
@@ -990,15 +542,7 @@ export function AccountInfo() {
         onSave={updatePlayerPreferences}
       />
 
-      <OnlineCollection
-        open={customizingOnline}
-        onOpenChange={setCustomizingOnline}
-        displayName={onlineDisplayName}
-        role={user?.role ?? 'user'}
-        preferences={onlineMemberCosmetics.preferences}
-        progression={progression}
-        onSave={(preferences) => { void saveOnlinePreferences(preferences) }}
-      />
+      <AccountOnlineCollection open={customizingOnline} onOpenChange={setCustomizingOnline} />
 
       <section>
         <button
@@ -1050,106 +594,7 @@ export function AccountInfo() {
       </section>
 
       {/* Zone de danger : suppression du compte (droit à l'effacement). */}
-      <section>
-        <button
-          type="button"
-          onClick={() => setShowDangerZone((v) => !v)}
-          aria-expanded={showDangerZone}
-          className={cn(ACCOUNT_ROW_CLASS, 'border-red-500/20 text-red-200/80 hover:bg-red-500/10')}
-        >
-          <Trash2 className="h-4 w-4 shrink-0 text-red-400" />
-          {t('deleteAccount.title')}
-          <ChevronDown
-            className={cn('ml-auto h-4 w-4 shrink-0 text-red-300/40 transition-transform', showDangerZone && 'rotate-180')}
-          />
-        </button>
-        <div className={cn('mt-3 space-y-3 rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4', !showDangerZone && 'hidden')}>
-          <p className="text-sm text-red-100/70">{t('deleteAccount.warning')}</p>
-          {/* Champ mot de passe UNIQUEMENT pour un compte qui en a un : sur un
-              compte Google (ou invité) il resterait vide et bloquerait tout. */}
-          {deleteMethod === 'password' && (
-            <Input
-              type="password"
-              value={deletePassword}
-              onChange={(e) => {
-                setDeletePassword(e.target.value)
-                setDeleteArmed(false)
-                setDeleteError(null)
-              }}
-              placeholder={t('deleteAccount.passwordPlaceholder')}
-              autoComplete="current-password"
-              className="border-red-500/20 bg-black/20 text-white placeholder:text-white/30"
-            />
-          )}
-          {deleteError && (
-            <p className="flex items-center gap-2 text-sm text-red-300">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {deleteError}
-            </p>
-          )}
-          {googleConfirmVisible ? (
-            /* Compte Google armé : la confirmation EST la connexion Google
-               (le jeton obtenu est posté à la place du mot de passe). */
-            <div className="space-y-2">
-              <p className="text-sm text-red-100/70">
-                {deleteProviders.length > 0
-                  ? t('deleteAccount.externalConfirmHint')
-                  : t('deleteAccount.googleConfirmHint')}
-              </p>
-              {nativeGoogle ? (
-                <NativeGoogleButton
-                  disabled={deletingAccount}
-                  onCredential={(credential) => googleCallbackRef.current(credential)}
-                />
-              ) : (
-                <div ref={googleButtonRef} className="flex min-h-[44px] justify-center" />
-              )}
-              {deleteProviders.length > 0 && (
-                <OAuthButtons
-                  intent="delete"
-                  providers={deleteProviders}
-                  disabled={deletingAccount}
-                  onError={setDeleteError}
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => setDeleteArmed(false)}
-                className="min-h-[44px] w-full rounded-2xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/[0.06]"
-              >
-                {tCommon('cancel')}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                if (!deleteArmed) {
-                  setDeleteArmed(true)
-                  return
-                }
-                void handleDeleteAccount()
-              }}
-              disabled={
-                !deleteMethod || deletingAccount || (deleteMethod === 'password' && !deletePassword)
-              }
-              className={cn(
-                'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors disabled:opacity-40',
-                deleteArmed
-                  ? 'bg-red-600 text-white hover:bg-red-500'
-                  : 'border border-red-500/40 bg-transparent text-red-300 hover:bg-red-500/10'
-              )}
-            >
-              <Trash2 className="h-4 w-4 shrink-0" />
-              {deletingAccount
-                ? t('deleteAccount.deleting')
-                : deleteArmed
-                  ? t('deleteAccount.confirm')
-                  : t('deleteAccount.button')}
-            </button>
-          )}
-        </div>
-      </section>
+      <DeleteAccountSection />
     </div>
   )
 }

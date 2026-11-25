@@ -6,13 +6,15 @@ import { Bot, Flame, Globe, Search, Smartphone, Sparkles } from 'lucide-react'
 import { Link } from '@/i18n/navigation'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { hasContentIn, splitBySoloFit } from '@/lib/games'
-import { isGameListed } from '@/lib/game-catalog'
+import { categoryName, isGameListed } from '@/lib/game-catalog'
 import { GameCard } from '@/components/hub/GameCard'
+import { categoriesToOffer, filterByCategory, resolveActiveCategory } from '@/components/hub/category-filter'
 import { buildPopularRow } from '@/components/hub/popular-row'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
-import { useGameCatalog } from '@/hooks/useGameCatalog'
+import { useGameCatalog, useGameCategories } from '@/hooks/useGameCatalog'
 import { useBrowserOnline } from '@/hooks/useBrowserOnline'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 
@@ -103,6 +105,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const games = useLocalizedGames()
   const { user } = useAuth()
   const { hiddenIds, popular } = useGameCatalog()
+  const categories = useGameCategories()
   const isOnline = user?.playMode === 'online'
   // Navigateur hors ligne : une table en ligne ne peut pas s'ouvrir — les
   // jeux « en ligne uniquement » s'éteignent, et TOUT le catalogue en mode en
@@ -121,6 +124,7 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const { mode: ambiance } = useAmbianceMode()
   const isSoft = ambiance === 'soft'
   const [query, setQuery] = useState('')
+  const [categoryId, setCategoryId] = useState<string | null>(null)
 
   // Visiteur sans session : la vitrine montre TOUT (comme la landing) —
   // Loup-Garou et les autres jeux online-only étaient introuvables ici alors
@@ -156,16 +160,26 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
     [games, hiddenIds, isOnline, isSoft, soloBots, locale]
   )
 
+  // Rubriques de l'équipe : une puce par catégorie qui range au moins un jeu
+  // du catalogue affiché (avant la recherche : chercher ne fait pas disparaître
+  // les puces). Une catégorie supprimée côté serveur repasse à « Toutes ».
+  const offeredCategories = useMemo(
+    () => categoriesToOffer(categories, new Set(visible.map((g) => g.id))),
+    [categories, visible]
+  )
+  const activeCategory = resolveActiveCategory(offeredCategories, categoryId)
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return visible
-    return visible.filter(
+    const inCategory = filterByCategory(visible, activeCategory)
+    if (!q) return inCategory
+    return inCategory.filter(
       (g) =>
         g.title.toLowerCase().includes(q) ||
         g.description.toLowerCase().includes(q) ||
         g.id.toLowerCase().includes(q)
     )
-  }, [visible, query])
+  }, [visible, query, activeCategory])
 
   // Séparation « jouable ce soir sur ce téléphone » / « en ligne uniquement ».
   // Elle s'applique aussi pendant une recherche : c'est justement là que le
@@ -191,10 +205,10 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   const mode = isOnline ? 'online' : 'local'
   const popularRow = useMemo(
     () =>
-      query.trim() || soloBots
+      query.trim() || soloBots || activeCategory
         ? { games: [] as typeof localGames, ranked: false }
         : buildPopularRow({ candidates: localGames, popularIds: popular[mode], hiddenIds, mode, locale }),
-    [localGames, popular, hiddenIds, mode, locale, query, soloBots]
+    [localGames, popular, hiddenIds, mode, locale, query, soloBots, activeCategory]
   )
   const popularTitle = popularRow.ranked ? (
     <>
@@ -214,19 +228,19 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
   // « Mieux à plusieurs » à l'appui. Remplace phares et familles : un même
   // jeu n'a pas à paraître deux fois dans une liste aussi courte.
   const soloSections = useMemo(
-    () => (soloBots && !query.trim() ? splitBySoloFit(localGames) : null),
-    [soloBots, localGames, query]
+    () => (soloBots && !query.trim() && !activeCategory ? splitBySoloFit(localGames) : null),
+    [soloBots, localGames, query, activeCategory]
   )
 
   // Sections par enseigne, en ligne et hors recherche — grille plate quand on
   // cherche. Le catalogue local se range, lui, par mode (voir ModeTitle).
   const sections = useMemo(() => {
-    if (query.trim() || soloBots || localCatalog) return null
+    if (query.trim() || activeCategory || soloBots || localCatalog) return null
     return FAMILIES.map((f) => ({
       ...f,
       games: localGames.filter((g) => g.suit === f.suit),
     })).filter((s) => s.games.length > 0)
-  }, [localGames, query, soloBots, localCatalog])
+  }, [localGames, query, activeCategory, soloBots, localCatalog])
 
   return (
     <>
@@ -254,6 +268,40 @@ export function GamesGrid({ solo = false }: { solo?: boolean }) {
           </span>
         </div>
       </div>
+
+      {/* Rubriques créées par l'équipe : défilement horizontal sur téléphone
+          (marges négatives pour aller bord à bord, sans élargir la page), à la
+          ligne dès sm où une molette ne défile pas en largeur. py-1 : l'anneau
+          de focus n'est pas rogné par le conteneur qui défile. */}
+      {offeredCategories.length > 0 && (
+        <div
+          role="group"
+          aria-label={t('categories.label')}
+          className="-mx-4 mb-2 flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden"
+        >
+          {[{ id: null, label: t('categories.all') }, ...offeredCategories.map((c) => ({ id: c.id, label: categoryName(c, locale) }))].map(
+            (chip) => {
+              const active = (activeCategory?.id ?? null) === chip.id
+              return (
+                <button
+                  key={chip.id ?? 'all'}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setCategoryId(chip.id)}
+                  className={cn(
+                    'min-h-[40px] shrink-0 whitespace-nowrap rounded-full border px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold',
+                    active
+                      ? 'border-gold bg-gold text-[#24201A]'
+                      : 'border-gold/30 bg-white/[0.05] text-cream hover:border-gold/60 hover:bg-gold/10'
+                  )}
+                >
+                  {chip.label}
+                </button>
+              )
+            }
+          )}
+        </div>
+      )}
 
       {/* Atterrissage « Jouer seul avec les bots » : la liste a rétréci sans
           un mot d'explication — on dit pourquoi, et comment tout revoir. */}

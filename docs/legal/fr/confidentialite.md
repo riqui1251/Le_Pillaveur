@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-**Dernière mise à jour :** 20 novembre 2026
+**Dernière mise à jour :** 24 novembre 2026
 
 ## 1. Introduction
 
@@ -69,7 +69,7 @@ Est considérée comme activité l'utilisation d'une page affichée à l'écran 
 
 Dans les outils de modération du site, les adresses IPv6 d'un même réseau (même préfixe /64, en général une même box ou un même lieu) sont regroupées à l'affichage : ce regroupement est calculé à la lecture et n'enregistre aucune donnée supplémentaire.
 
-**Parties jouées en mode local.** Indépendamment de tout consentement, le site compte les parties jouées sur un seul téléphone : quand la page d'un jeu s'ouvre en mode local avec une table de joueurs, puis quand la partie atteint son écran de fin, votre navigateur envoie seulement le jeu concerné et l'événement (partie lancée ou terminée). Le serveur n'en garde que deux compteurs par jeu et par jour (heure de Paris) : le nombre de parties lancées et le nombre de parties terminées. Aucun compte, aucun pseudo, aucun identifiant d'appareil ou de navigateur n'est enregistré, aucun cookie n'est lu, et l'adresse IP n'est jamais conservée : elle ne sert, en mémoire et de façon passagère, qu'à limiter le nombre d'envois par réseau pour prévenir les abus. Comme rien ne permet de relier un compteur à une personne, ces compteurs ne sont pas des données personnelles et ne dépendent pas de votre choix sur les statistiques de visite ; nous les mentionnons par transparence. Ils sont consultables par l'administration du site et conservés 13 mois (voir 7).
+**Parties jouées en mode local.** Indépendamment de tout consentement, le site compte les parties jouées sur un seul téléphone : quand la page d'un jeu s'ouvre en mode local avec une table de joueurs, puis quand la partie atteint son écran de fin, votre navigateur envoie le jeu concerné et l'événement (partie lancée ou terminée). Quelques minutes après votre dernière partie, ou à la fermeture de la page, il envoie aussi, pour chaque jeu, le total de gorgées bues à la table et le nombre de participations (une partie jouée par un joueur), sans rien envoyer en ambiance « Sans alcool » ; ni prénom, ni compte, ni appareil n'y figurent. Pour les parties **en ligne**, à la fin d'une partie, le serveur ajoute de la même façon le total de gorgées bues et le nombre de participations des joueurs humains, sans rattacher ces nombres à la table ni aux comptes ; une partie où l'un des comptes de la table est en « Sans alcool » n'est pas comptée. Le serveur n'en garde que des compteurs par jeu, par jour (heure de Paris) et par mode (local ou en ligne) : le nombre de parties lancées et terminées en local, ainsi que le total de gorgées et de participations, qui servent au classement public « Quel jeu fait le plus boire ? » (90 derniers jours). Aucun compte, aucun pseudo, aucun identifiant d'appareil ou de navigateur n'est enregistré, aucun cookie n'est lu, et l'adresse IP n'est jamais conservée : elle ne sert, en mémoire et de façon passagère, qu'à limiter le nombre d'envois par réseau pour prévenir les abus. Comme rien ne permet de relier un compteur à une personne, ces compteurs ne sont pas des données personnelles et ne dépendent pas de votre choix sur les statistiques de visite ; nous les mentionnons par transparence. Ils sont consultables par l'administration du site et conservés 13 mois (voir 7).
 
 ### 3.4 Chat et parties en ligne
 
@@ -186,7 +186,7 @@ L'éditeur reste responsable des traitements décrits dans la présente politiqu
 - **Journal des parties lancées** (jeu, date, durée de la table, motif de fin, participants) : **12 mois**.
 - **Traces de modération de pseudo** : **12 mois**.
 - **Données de mesure d'audience** : **13 mois**.
-- **Compteurs de parties locales** (jeu, jour, nombre de parties lancées et terminées, sans aucune donnée personnelle) : **13 mois**.
+- **Compteurs de parties locales et de gorgées** (jeu, jour, mode, nombre de parties lancées et terminées, total de gorgées et de participations, sans aucune donnée personnelle) : **13 mois**.
 - **Feedback** : conservation jusqu'à **24 mois** ou suppression sur demande ; l'email de contact associé est effacé si vous supprimez votre compte.
 - **Cookies âge et consentement** : 1 an, renouvelables à chaque validation.
 - **Sauvegardes de la base de données** (copie de l'ensemble des données ci-dessus) : **16 jours au plus** sur le serveur, **31 jours au plus** pour la copie hors site ; une donnée supprimée disparaît des sauvegardes à leur expiration.

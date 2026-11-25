@@ -523,3 +523,8 @@ textarea,
 .soiree-breathe { animation: soiree-breathe 9s ease-in-out infinite; }
 .soiree-rise { animation: soiree-rise 26s linear infinite; }
 .soiree-twinkle { animation: soiree-twinkle 4.6s ease-in-out infinite; }
+
+/* « Fait boire » n'a pas de sens en ambiance « Sans alcool » : une règle CSS
+   plutôt qu'un test dans chaque écran, pour que les pages serveur (règles,
+   collections, landing) le cachent aussi. */
+[data-ambiance='soft'] .drink-level { display: none; }

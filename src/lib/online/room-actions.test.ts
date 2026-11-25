@@ -13,6 +13,9 @@ const {
   recordMatchResultsMock,
   armForStateMock,
   applyActionMock,
+  drinkTallyMock,
+  userCountMock,
+  recordGameDrinksMock,
 } = vi.hoisted(() => ({
   roomRow: { current: null as Record<string, unknown> | null },
   findUniqueMock: vi.fn(),
@@ -23,11 +26,15 @@ const {
   recordMatchResultsMock: vi.fn(),
   armForStateMock: vi.fn(),
   applyActionMock: vi.fn(),
+  drinkTallyMock: vi.fn(),
+  userCountMock: vi.fn(),
+  recordGameDrinksMock: vi.fn(),
 }))
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     onlineRoom: { findUnique: findUniqueMock, updateMany: updateManyMock },
+    user: { count: userCountMock },
     $transaction: transactionMock,
   },
 }))
@@ -35,6 +42,7 @@ vi.mock('@/lib/online/room-bus', () => ({ publishRoomChanged: publishMock }))
 vi.mock('@/lib/online-room', () => ({ kickMember: kickMemberMock }))
 vi.mock('@/lib/online/match-results', () => ({ recordMatchResults: recordMatchResultsMock }))
 vi.mock('@/lib/online/room-ticker', () => ({ armRoomTickerForState: armForStateMock }))
+vi.mock('@/lib/game-drinks-server', () => ({ recordGameDrinks: recordGameDrinksMock }))
 vi.mock('@/lib/online/game-adapters', () => ({
   getGameAdapter: (gameId: string | null) =>
     gameId === 'fake'
@@ -49,11 +57,13 @@ vi.mock('@/lib/online/game-adapters', () => ({
           isFinished: (state: { finished?: boolean }) => state.finished === true,
           currentActorId: (state: { turn?: string }) => state.turn ?? null,
           actionResponse: (_state: unknown, viewerId: string) => ({ viewJson: `vue de ${viewerId}` }),
+          drinkTally: drinkTallyMock,
         }
       : null,
 }))
 
-import { SERVICE_ACTOR_ID, applyRoomAction } from '@/lib/online/room-actions'
+import { SERVICE_ACTOR_ID, applyRoomAction, recordOnlineGameDrinks } from '@/lib/online/room-actions'
+import type { GameAdapter } from '@/lib/online/game-adapters'
 
 const PLAYING = { turn: 'bot-1', players: [{ id: 'u1' }, { id: 'bot-1', isBot: true }] }
 
@@ -79,6 +89,9 @@ beforeEach(() => {
   updateManyMock.mockResolvedValue({ count: 1 })
   transactionMock.mockImplementation(async (run: (tx: unknown) => Promise<unknown>) => run({}))
   applyActionMock.mockReturnValue({ ok: true, state: { ...PLAYING, turn: 'u1' } })
+  drinkTallyMock.mockReturnValue(null)
+  userCountMock.mockResolvedValue(0)
+  recordGameDrinksMock.mockResolvedValue(undefined)
 })
 
 describe('applyRoomAction — tick de service (acteur null)', () => {
@@ -205,5 +218,87 @@ describe('applyRoomAction — joueur (contrat de la route inchangé)', () => {
     expect(result).toMatchObject({ status: 409, body: { error: 'not_afk_yet' } })
     expect(updateManyMock).not.toHaveBeenCalled()
     expect(kickMemberMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('fin de partie : relevé anonyme des gorgées', () => {
+  /** La promesse du relevé n'est pas attendue par la fin de partie : on la laisse aboutir. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
+  const FINISHED = {
+    finished: true,
+    players: [{ id: 'u1' }, { id: 'online-u3' }, { id: 'bot-1', isBot: true }],
+  }
+
+  beforeEach(() => {
+    applyActionMock.mockReturnValue({ ok: true, state: FINISHED })
+    drinkTallyMock.mockReturnValue({ drinks: 7, plays: 2 })
+  })
+
+  it('une partie qui se termine : un relevé « online » sur l’état final', async () => {
+    const result = await applyRoomAction('r1', 'u1', { action: 'play' })
+    expect(result.status).toBe(200)
+    await vi.waitFor(() => expect(recordGameDrinksMock).toHaveBeenCalledTimes(1))
+    expect(drinkTallyMock).toHaveBeenCalledWith(FINISHED)
+    expect(recordGameDrinksMock).toHaveBeenCalledWith({ gameId: 'fake', mode: 'online', drinks: 7, plays: 2 })
+    // L'ambiance est lue sur les comptes de la table : hôte, membres, sièges (préfixe retiré).
+    const where = userCountMock.mock.calls[0][0].where
+    expect(where.ambianceMode).toBe('soft')
+    expect(where.id.in).toEqual(expect.arrayContaining(['u1', 'u2', 'u3']))
+  })
+
+  it('partie déjà finie (action tardive sur l’écran de fin) : rien de plus', async () => {
+    setRoom({ gameStateJson: JSON.stringify(FINISHED) })
+    await applyRoomAction('r1', 'u1', { action: 'play' })
+    await settle()
+    expect(drinkTallyMock).not.toHaveBeenCalled()
+    expect(recordGameDrinksMock).not.toHaveBeenCalled()
+  })
+
+  it('compare-and-swap perdu : l’autre écriture a fini la partie, pas celle-ci', async () => {
+    updateManyMock.mockResolvedValue({ count: 0 })
+    await applyRoomAction('r1', 'u1', { action: 'play' })
+    await settle()
+    expect(recordGameDrinksMock).not.toHaveBeenCalled()
+  })
+
+  it('un compte « Sans alcool » à la table : ses gorgées étaient des gages, rien n’est compté', async () => {
+    userCountMock.mockResolvedValue(1)
+    await applyRoomAction('r1', 'u1', { action: 'play' })
+    await vi.waitFor(() => expect(userCountMock).toHaveBeenCalledTimes(1))
+    await settle()
+    expect(recordGameDrinksMock).not.toHaveBeenCalled()
+  })
+
+  it('rien à relever (jeu sans compteur, partie vide) : pas même la lecture des comptes', async () => {
+    drinkTallyMock.mockReturnValue(null)
+    await applyRoomAction('r1', 'u1', { action: 'play' })
+    await settle()
+    expect(userCountMock).not.toHaveBeenCalled()
+    expect(recordGameDrinksMock).not.toHaveBeenCalled()
+  })
+
+  it('base en échec : erreur avalée et journalisée sans détail, la fin de partie répond quand même', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    recordGameDrinksMock.mockRejectedValue(new Error('SQLITE_BUSY : ligne de Riri'))
+    const result = await applyRoomAction('r1', 'u1', { action: 'play' })
+    expect(result.status).toBe(200)
+    expect(publishMock).toHaveBeenCalledWith('r1', { type: 'finished', stateVersion: 6 })
+    await vi.waitFor(() => expect(errorSpy).toHaveBeenCalledWith('[game-drinks] relevé échoué', 'Error'))
+    errorSpy.mockRestore()
+  })
+
+  it('recordOnlineGameDrinks ne lève jamais, même si le relevé du moteur plante', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const adapter = {
+      drinkTally: () => {
+        throw new TypeError('état illisible')
+      },
+    } as unknown as GameAdapter
+    await expect(
+      recordOnlineGameDrinks({ gameId: 'fake', adapter, state: {}, hostUserId: 'u1', memberIds: [] })
+    ).resolves.toBeUndefined()
+    expect(errorSpy).toHaveBeenCalledWith('[game-drinks] relevé échoué', 'TypeError')
+    expect(recordGameDrinksMock).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
   })
 })

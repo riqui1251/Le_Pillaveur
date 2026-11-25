@@ -11,9 +11,14 @@ import { SOIREE_GAME_IDS } from '@/lib/soiree/catalog'
 import { gameDrinkStats, historyDrinks, historyStats, topDrinkers } from '@/lib/soiree/device-stats'
 import { readHistory } from '@/lib/soiree/storage'
 import type { SoireeHistoryEntry } from '@/lib/soiree/summary'
-import { GameBadge, MEDALS, SoireeCta, SoireeShell, StepHeader, gameGradient } from './soiree-ui'
+import { DrinkRankingList, RankingSectionHeader, SiteDrinkRanking } from './SiteDrinkRanking'
+import { SoireeCta, SoireeShell, StepHeader } from './soiree-ui'
 
-/** « Quel jeu fait le plus boire ? » — tout est calculé sur ce téléphone. */
+/**
+ * « Quel jeu fait le plus boire ? » — d'abord tout le site (compteurs anonymes
+ * lus sur le serveur), puis « Chez vous » : calculé sur ce téléphone, rien
+ * de cette partie ne part au serveur.
+ */
 export function SoireeStatsView() {
   const t = useTranslations('soiree.stats')
   const locale = useLocale()
@@ -28,54 +33,35 @@ export function SoireeStatsView() {
   const rows = useMemo(() => gameDrinkStats(players, SOIREE_GAME_IDS), [players])
   const drinkers = useMemo(() => topDrinkers(players), [players])
   const soirees = useMemo(() => historyStats(history), [history])
-  const max = Math.max(0.1, ...rows.map((r) => r.perPlay))
 
   return (
     <SoireeShell>
-      <StepHeader eyebrow={t('eyebrow')} title={t('title')} lead={t('lead')} />
+      <StepHeader eyebrow={t('pageEyebrow')} title={t('title')} lead={t('pageLead')} />
 
-      {!loading && rows.length === 0 && (
-        <p className="rounded-2xl border border-gold/20 bg-felt-deep/50 p-4 text-cream/70">{t('empty')}</p>
-      )}
+      <SiteDrinkRanking />
 
-      {rows.length > 0 && (
-        <ol className="space-y-2" aria-label={t('rankingLabel')}>
-          {rows.map((row, i) => (
-            <li key={row.gameId} className="soiree-deal rounded-xl border border-gold/20 bg-felt-deep/50 p-3" style={{ animationDelay: `${i * 60}ms` }}>
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={i < 3 ? 'grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold text-[#24201A]' : 'w-7 shrink-0 text-center font-display text-lg font-bold text-gold'}
-                  style={i < 3 ? { background: MEDALS[i] } : undefined}
-                >
-                  {i + 1}
-                </span>
-                <GameBadge gameId={row.gameId} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-display text-base font-bold">{title(row.gameId)}</p>
-                  <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-black/30">
-                    <div
-                      className="soiree-grow h-full rounded-full"
-                      style={{ width: `${Math.round((row.perPlay / max) * 100)}%`, background: gameGradient(row.gameId, 90), animationDelay: `${150 + i * 60}ms` }}
-                    />
-                  </div>
-                </div>
-                <span className="text-right">
-                  <span className="block font-display text-xl font-bold tabular-nums">{decimal.format(row.perPlay)}</span>
-                  <span className="block text-[11px] leading-tight text-cream/60">{t('perPlayUnit')}</span>
-                </span>
-              </div>
-              <p className="mt-2 pl-[5rem] text-xs text-cream/60">
-                {t('rowDetail', { drinks: row.drinks, plays: row.plays })}
-                {row.topPlayerId && row.topDrinks > 0 ? ` · ${t('rowTop', { name: playerName(row.topPlayerId), count: row.topDrinks })}` : ''}
-              </p>
-            </li>
-          ))}
-        </ol>
-      )}
+      <section className="space-y-3" aria-labelledby="stats-home">
+        <RankingSectionHeader id="stats-home" title={t('home.title')} lead={t('home.lead')} />
+
+        {!loading && rows.length === 0 && (
+          <p className="rounded-2xl border border-gold/20 bg-felt-deep/50 p-4 text-cream/70">{t('empty')}</p>
+        )}
+
+        {rows.length > 0 && (
+          <DrinkRankingList
+            rows={rows}
+            label={t('rankingLabel')}
+            detail={(row) =>
+              t('rowDetail', { drinks: row.drinks, plays: row.plays }) +
+              (row.topPlayerId && row.topDrinks > 0 ? ` · ${t('rowTop', { name: playerName(row.topPlayerId), count: row.topDrinks })}` : '')
+            }
+          />
+        )}
+      </section>
 
       {drinkers.length > 0 && (
         <section className="space-y-2" aria-label={t('drinkersTitle')}>
-          <h2 className="font-display text-2xl font-bold">{t('drinkersTitle')}</h2>
+          <h3 className="font-display text-xl font-bold">{t('drinkersTitle')}</h3>
           <ul className="space-y-1.5">
             {drinkers.map((d) => {
               const player = players.find((p) => p.id === d.playerId)
@@ -93,7 +79,7 @@ export function SoireeStatsView() {
 
       {soirees.count > 0 && (
         <section className="space-y-2 rounded-2xl border border-gold/20 bg-felt-deep/50 p-4" aria-label={t('soireesTitle')}>
-          <h2 className="font-display text-2xl font-bold">{t('soireesTitle')}</h2>
+          <h3 className="font-display text-xl font-bold">{t('soireesTitle')}</h3>
           <p>{t('soireesCount', { count: soirees.count })}</p>
           {soirees.drinkingCount > 0 && <p className="text-cream/80">{t('soireesAverage', { value: decimal.format(soirees.averageDrinks) })}</p>}
           {soirees.record && (
@@ -108,7 +94,10 @@ export function SoireeStatsView() {
         </section>
       )}
 
-      <p className="text-xs text-cream/50">{t('note')}</p>
+      <div className="space-y-1.5 text-xs text-cream/50">
+        <p>{t('footnoteSite')}</p>
+        <p>{t('footnoteHome')}</p>
+      </div>
 
       <SoireeCta>
         <Button variant="primary" size="gameLg" className="w-full" asChild>

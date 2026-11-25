@@ -1,5 +1,7 @@
 import type { GameAdapter, ServiceTick, ServiceTickOptions } from '@/lib/online/game-adapters'
 import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
+import { humanDrinkTally } from '@/lib/online/drink-tally'
+import { pcTally } from './engine'
 import {
   PC_ONLINE_MAX_PLAYERS,
   PC_ONLINE_MIN_PLAYERS,
@@ -117,6 +119,17 @@ export const patateChaudeAdapter: GameAdapter = {
   // côté (deux explosions sans rien jouer, jamais à deux) jusqu'à son « Je suis là ». Rien à remplacer.
   convertToBot: () => null,
   isFinished: (state) => (state as PcOnlineState).phase === 'finished',
+  // Le moteur ne compte que des événements neutres : le barème « alcool » les
+  // convertit en gorgées, comme les statistiques du jeu local.
+  drinkTally(rawState) {
+    const { players, game } = rawState as PcOnlineState
+    // « Terminer » avant la première explosion ou pénalité : pas une partie.
+    const happened = [...Object.values(game.explosions), ...Object.values(game.penalties)].some((n) => n > 0)
+    if (!happened) return null
+    return humanDrinkTally(players, (p) =>
+      pcTally({ explosions: game.explosions[p.id] ?? 0, penalties: game.penalties[p.id] ?? 0 }, 'alcool')
+    )
+  },
   currentActorId: (state) => currentPcActorId(state as PcOnlineState),
   clientViewJson: (state) => pcClientViewJson(state as PcOnlineState),
   spectatorViewJson: (state) => pcSpectatorViewJson(state as PcOnlineState),

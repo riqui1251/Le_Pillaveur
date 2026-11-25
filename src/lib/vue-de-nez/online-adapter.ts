@@ -2,7 +2,8 @@ import type { GameAdapter, ServiceTick, ServiceTickOptions } from '@/lib/online/
 import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { botTickDelayMs } from '@/lib/online/bot-personas'
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
-import { VDN_MIN_PLAYERS } from './engine'
+import { humanDrinkTally } from '@/lib/online/drink-tally'
+import { VDN_MIN_PLAYERS, sipsDrunk } from './engine'
 import { VDN_ONLINE_MAX_PLAYERS, vdnBotDueAt, vdnPendingBot } from './online-view'
 import {
   applyVdnRoomAction,
@@ -98,6 +99,15 @@ export const vueDeNezAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertVdnPlayerToBot(state as VdnOnlineState, userId),
   isFinished: (state) => (state as VdnOnlineState).phase === 'finished',
+  // Gorgées BUES (« plus loin ») ; celles du plus proche et du dans le mille
+  // se donnent sans destinataire enregistré — comme au jeu local.
+  drinkTally(rawState) {
+    const state = rawState as VdnOnlineState
+    return humanDrinkTally(state.players, (p) => {
+      const tally = state.game.tallies[p.id]
+      return tally ? sipsDrunk(tally) : 0
+    })
+  },
   // Phases simultanées : personne « au tour », l'échéance fait l'arbitre (pas d'anti-AFK).
   currentActorId: () => null,
   clientViewJson: (state, viewerId) => vdnClientViewJson(state as VdnOnlineState, viewerId),

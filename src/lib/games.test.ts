@@ -238,7 +238,7 @@ describe('soloAlternativeFor', () => {
   })
 
   it('ne se propose jamais lui-même et écarte un candidat hors langue ou hors Sans alcool', () => {
-    const base = { title: 't', description: 'd', emoji: '', gradient: '', fallbackColor: '', difficulty: 1 as const }
+    const base = { title: 't', description: 'd', emoji: '', gradient: '', fallbackColor: '', difficulty: 1 as const, drinkLevel: 1 as const }
     const fake: GameMeta[] = [
       { ...base, id: 'groupe', path: '/games/groupe', suit: 'heart', botsFillable: true, onlineReady: true, soloFit: 'group' },
       { ...base, id: 'fr-seul', path: '/games/fr-seul', suit: 'heart', featured: true, botsFillable: true, onlineReady: true, softModeReady: true, soloFit: 'great', contentLangs: ['fr'] },

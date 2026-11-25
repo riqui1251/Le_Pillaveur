@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Beer, Leaf } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useAuth } from '@/components/providers/AuthProvider'
@@ -32,6 +32,10 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
   useEffect(() => {
     setInApp(isCapacitorApp())
   }, [])
+  // L'accueil et la feuille « Mon compte » l'affichent en même temps : des id
+  // fixes s'y dédoubleraient et aria-describedby viserait le premier.
+  const hintId = useId()
+  const moderationId = useId()
 
   if (loading) return null
 
@@ -45,7 +49,7 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
       <div
         role="radiogroup"
         aria-label={t('label')}
-        aria-describedby={hint ? (showModeration ? 'ambiance-hint ambiance-moderation' : 'ambiance-hint') : undefined}
+        aria-describedby={hint ? (showModeration ? `${hintId} ${moderationId}` : hintId) : undefined}
         className="inline-flex w-full rounded-full border border-white/10 bg-black/30 p-1 shadow-inner"
       >
         {MODES.map(({ id, icon: Icon }) => {
@@ -78,12 +82,12 @@ export function AmbianceModeToggle({ className, hint = true }: { className?: str
       {/* Ce que la bascule change vraiment, en une ligne : sans elle, le
           joueur voit le site changer de couleur sans comprendre pourquoi. */}
       {hint && (
-        <p id="ambiance-hint" className="mt-1 px-2 text-xs leading-snug text-cream/70">
+        <p id={hintId} className="mt-1 px-2 text-xs leading-snug text-cream/70">
           {t(mode === 'soft' ? 'hintSoft' : 'hintAlcool')}
         </p>
       )}
       {showModeration && (
-        <p id="ambiance-moderation" className="mt-1 px-2 text-xs font-medium leading-snug text-cream/80">
+        <p id={moderationId} className="mt-1 px-2 text-xs font-medium leading-snug text-cream/80">
           {t('moderation')}
         </p>
       )}

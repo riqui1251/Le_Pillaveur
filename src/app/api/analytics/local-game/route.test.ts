@@ -2,19 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GAMES } from '@/lib/games'
 
 /**
- * POST /api/analytics/local-game — compteurs anonymes des parties locales.
- * Vraie route, vrais quotas (rate-limit.ts, en mémoire), base simulée :
- * réponses nues, aucune donnée personnelle écrite, aucune session lue, refus
- * d'un autre site, jeux en ligne et corps hors contrat refusés, quotas par
- * réseau puis global.
+ * POST /api/analytics/local-game — compteurs anonymes des parties locales
+ * (lancements, fins, relevés de gorgées). Vraie route, vrais quotas
+ * (rate-limit.ts, en mémoire), base simulée : réponses nues, aucune donnée
+ * personnelle écrite, aucune session lue, refus d'un autre site, jeux en
+ * ligne et corps hors contrat refusés, quotas par réseau puis global.
  */
 
-const { localGameDailyDb, sessionReader } = vi.hoisted(() => ({
+const { localGameDailyDb, gameDrinkDailyDb, sessionReader } = vi.hoisted(() => ({
   localGameDailyDb: { upsert: vi.fn() },
+  gameDrinkDailyDb: { upsert: vi.fn() },
   sessionReader: vi.fn(),
 }))
 
-vi.mock('@/lib/prisma', () => ({ prisma: { localGameDaily: localGameDailyDb } }))
+vi.mock('@/lib/prisma', () => ({ prisma: { localGameDaily: localGameDailyDb, gameDrinkDaily: gameDrinkDailyDb } }))
 // La route ne doit RIEN lire de la session : tout appel serait une fuite.
 vi.mock('@/lib/auth-server', () => ({ getCurrentUser: sessionReader, getCurrentSession: sessionReader }))
 
@@ -51,6 +52,7 @@ beforeEach(async () => {
   seq += 1
   ip = `198.51.100.${seq}`
   localGameDailyDb.upsert.mockResolvedValue({})
+  gameDrinkDailyDb.upsert.mockResolvedValue({})
   route ??= await import('./route')
 })
 
@@ -88,6 +90,74 @@ describe('compteur pris', () => {
       })
     )
     expect(res.status).toBe(204)
+  })
+})
+
+describe('relevé des gorgées', () => {
+  it('204 : jeu, mode local, gorgées et participations ajoutés au jour, rien d’autre', async () => {
+    const res = await send({ gameId: LOCAL_ID, event: 'drinks', drinks: 17, plays: 4, pseudo: 'Suzon' })
+
+    expect(res.status).toBe(204)
+    expect(await res.text()).toBe('')
+    expect(localGameDailyDb.upsert).not.toHaveBeenCalled()
+    expect(gameDrinkDailyDb.upsert).toHaveBeenCalledTimes(1)
+    const args = gameDrinkDailyDb.upsert.mock.calls[0][0]
+    expect(Object.keys(args.create).sort()).toEqual(['day', 'drinks', 'gameId', 'mode', 'plays'])
+    expect(args.create).toMatchObject({ gameId: LOCAL_ID, mode: 'local', drinks: 17, plays: 4 })
+    expect(args.update).toEqual({ drinks: { increment: 17 }, plays: { increment: 4 } })
+    const written = JSON.stringify(args)
+    for (const leak of [ip, 'secret', 'visiteur', 'Suzon']) expect(written).not.toContain(leak)
+    expect(sessionReader).not.toHaveBeenCalled()
+  })
+
+  it('une correction (gorgées arrivées après leur partie) : 204, gorgées ajoutées sans participation', async () => {
+    const res = await send({ gameId: LOCAL_ID, event: 'drinks', drinks: 4, plays: 0 })
+
+    expect(res.status).toBe(204)
+    const args = gameDrinkDailyDb.upsert.mock.calls[0][0]
+    expect(args.create).toMatchObject({ gameId: LOCAL_ID, mode: 'local', drinks: 4, plays: 0 })
+    expect(args.update).toEqual({ drinks: { increment: 4 }, plays: { increment: 0 } })
+  })
+
+  it('hors bornes ou hors contrat : 400, rien d’écrit', async () => {
+    const base = { gameId: LOCAL_ID, event: 'drinks', drinks: 5, plays: 2 }
+    for (const body of [
+      { ...base, plays: 0, drinks: 0 },
+      { ...base, plays: 0, drinks: 301 },
+      { ...base, plays: 16 },
+      { ...base, plays: 2.5 },
+      { ...base, drinks: -1 },
+      { ...base, drinks: 41 },
+      { ...base, drinks: '5' },
+      { ...base, gameId: ONLINE_ONLY_ID },
+      { gameId: LOCAL_ID, event: 'drinks' },
+    ]) {
+      const res = await send(body)
+      expect(res.status).toBe(400)
+      expect(await res.text()).toBe('')
+    }
+    expect(gameDrinkDailyDb.upsert).not.toHaveBeenCalled()
+    expect(localGameDailyDb.upsert).not.toHaveBeenCalled()
+  })
+
+  it('même quota réseau que les lancements et les fins', async () => {
+    for (let i = 0; i < 30; i += 1) {
+      expect((await send({ gameId: LOCAL_ID, event: 'start' })).status).toBe(204)
+      expect((await send({ gameId: LOCAL_ID, event: 'drinks', drinks: 3, plays: 1 })).status).toBe(204)
+    }
+    expect((await send({ gameId: LOCAL_ID, event: 'drinks', drinks: 3, plays: 1 })).status).toBe(429)
+    expect(gameDrinkDailyDb.upsert).toHaveBeenCalledTimes(30)
+  })
+
+  it('panne de la base : 500 générique, sans détail', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    gameDrinkDailyDb.upsert.mockRejectedValue(new Error('database is locked'))
+
+    const res = await send({ gameId: LOCAL_ID, event: 'drinks', drinks: 3, plays: 1 })
+
+    expect(res.status).toBe(500)
+    expect(JSON.stringify(await res.json())).not.toContain('locked')
+    errorSpy.mockRestore()
   })
 })
 

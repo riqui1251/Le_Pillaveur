@@ -55,6 +55,7 @@
   },
   "nav": {
     "brand": "Le Pillaveur",
+    "homeLink": "Torna alla home",
     "loading": "Caricamento…",
     "navigation": "Navigazione",
     "menuLabel": "Menù di navigazione",
@@ -66,22 +67,6 @@
     "chat": "Chat",
     "languageSwitcher": "Cambia lingua",
     "links": {
-      "soiree": {
-        "label": "Modalità Serata",
-        "description": "Organizzare una serata"
-      },
-      "decouvrir": {
-        "label": "Scopri Le Pillaveur",
-        "description": "La vecchia home e tutti i giochi"
-      },
-      "joueurs": {
-        "label": "Giocatori",
-        "description": "Gestisci i giocatori"
-      },
-      "jeux": {
-        "label": "Giochi",
-        "description": "Scegli un gioco"
-      },
       "classement": {
         "label": "Classifica",
         "description": "Punteggi online"
@@ -105,6 +90,14 @@
       "tuto": {
         "label": "Rivedi il tutorial",
         "description": "Il passo dopo passo per i nuovi giocatori"
+      },
+      "accueil": {
+        "label": "Home",
+        "description": "Modalità Serata o Gioco libero"
+      },
+      "jeux": {
+        "label": "Giochi",
+        "description": "Scegli un gioco"
       }
     },
     "legal": {
@@ -168,8 +161,13 @@
       }
     },
     "levelBadge": "Lv. {level}",
-    "guestBadge": "Ospite — salva",
-    "activePlayers": "{count, plural, one {# giocatore online} other {# giocatori online}}"
+    "activePlayers": "{count, plural, one {# giocatore online} other {# giocatori online}}",
+    "account": {
+      "guest": "Ospite",
+      "open": "Il mio account: {name}",
+      "openLevel": "Il mio account: {name}, livello {level}",
+      "openGuest": "Il mio account: {name}, account ospite"
+    }
   },
   "common": {
     "back": "Indietro",
@@ -241,6 +239,15 @@
       "text": "Per ora è stato tolto dal catalogo. Torna presto!",
       "back": "Vedi gli altri giochi",
       "staffBanner": "Nascosto ai giocatori: lo vedi perché fai parte del team."
+    },
+    "drinkLevel": {
+      "label": "Fa bere",
+      "aria": "Fa bere: {level}",
+      "levels": {
+        "1": "Poco",
+        "2": "Medio",
+        "3": "Molto"
+      }
     }
   },
   "hub": {
@@ -295,6 +302,10 @@
       "localSection": {
         "title": "Su questo telefono · {count, plural, one {# gioco} other {# giochi}}",
         "hint": "Un solo telefono che passa di mano in mano, senza account."
+      },
+      "categories": {
+        "label": "Categorie di giochi",
+        "all": "Tutte"
       }
     },
     "recentLocal": {
@@ -325,16 +336,22 @@
       "moderation": "L’abuso di alcol è pericoloso per la salute. Consumare con moderazione."
     },
     "selectedPlayers": {
-      "none": "Nessun giocatore selezionato",
-      "choose": "Scegli i giocatori",
-      "modify": "Modifica",
       "bridge": {
         "guestText": "Un account gratuito conserva i tuoi giocatori e le loro statistiche da una serata all'altra.",
         "guestCta": "Crea un account",
         "memberText": "Manca qualcuno al tavolo?",
         "memberCta": "Apri un tavolo online",
         "dismiss": "Non mostrare più"
-      }
+      },
+      "editHint": "Tocca un nome per aggiungerlo o toglierlo.",
+      "noneSaved": "Ancora nessun giocatore su questo telefono: aggiungi i nomi della serata.",
+      "addLabel": "Aggiungi un giocatore",
+      "addPlaceholder": "Nome",
+      "add": "Aggiungi",
+      "refused": "«{name}» non è accettato come nome.",
+      "manage": "Icone, colori e statistiche",
+      "announceAdded": "{name} gioca.",
+      "announceRemoved": "{name} non gioca più."
     },
     "playMode": {
       "label": "Modalità di gioco",
@@ -388,7 +405,8 @@
       "modeHint": {
         "local": "Un solo telefono che passa di mano in mano attorno al tavolo.",
         "online": "Ognuno gioca sul proprio telefono, riuniti da un codice del tavolo."
-      }
+      },
+      "playersTitle": "Chi gioca?"
     }
   },
   "collections": {
@@ -907,6 +925,11 @@
     "googleNative": {
       "button": "Continua con Google",
       "error": "Accesso con Google non riuscito. Riprova."
+    },
+    "sheet": {
+      "onlineWhy": "Ognuno gioca sul proprio telefono: bisogna sapere chi è chi al tavolo.",
+      "toGuest": "Oppure gioca da ospite, solo con un nome",
+      "guestTitle": "Non hai voglia di creare un account?"
     }
   },
   "account": {
@@ -1113,6 +1136,18 @@
         "allDone": "Tutto fatto: ecco la tua ricompensa.",
         "dismissLabel": "Nascondi la ricompensa"
       }
+    },
+    "sheet": {
+      "eyebrow": "Account",
+      "description": "Profilo e preferenze.",
+      "cardLevel": "Le Pillaveur · livello {level}",
+      "cardGuest": "Le Pillaveur · account ospite",
+      "noEmail": "Senza e-mail",
+      "profileTitle": "Profilo online",
+      "onlineNameLabel": "Nome online",
+      "preferencesTitle": "Preferenze",
+      "language": "Lingua",
+      "fullAccount": "I miei tavoli, amici e giocatori"
     }
   },
   "reminder": {
@@ -7809,13 +7844,13 @@
     },
     "gameCatalog": {
       "title": "Catalogo dei giochi",
-      "desc": "Nascondi un gioco per toglierlo dal sito (hub, Modalità Serata, lobby, vetrina) o rimettilo. I giochi in evidenza si scelgono da soli: i più giocati negli ultimi 30 giorni.",
+      "desc": "Nascondi un gioco per toglierlo dal sito (hub, Modalità Serata, lobby, vetrina) o rimettilo, e regola la sua difficoltà (Facile, Media, Difficile) e il suo livello «fa bere» (Poco, Medio, Molto) come li vedono i giocatori. I giochi in evidenza si scelgono da soli: i più giocati negli ultimi 30 giorni.",
       "refresh": "Aggiorna",
       "loadError": "Impossibile caricare il catalogo dei giochi.",
       "forbidden": "Sessione scaduta o accesso revocato: accedi di nuovo.",
       "colGame": "Gioco",
       "colPlays": "Partite in 30 giorni",
-      "colDifficulty": "Difficoltà",
+      "colScales": "Scale",
       "colStatus": "Sul sito",
       "visible": "Visibile",
       "hidden": "Nascosto",
@@ -7825,13 +7860,66 @@
       "popularOnline": "In evidenza online · n. {rank}",
       "plays": "{count, plural, =0 {Nessuna partita} one {# partita} other {# partite}}",
       "playsDetail": "{online} online · {local} in locale",
-      "readOnly": "Sola lettura: solo i super admin possono nascondere o rimettere un gioco.",
+      "readOnly": "Sola lettura: solo i super admin possono nascondere un gioco o cambiarne la difficoltà o il livello «fa bere».",
       "saveError": "La modifica non è stata salvata. Riprova.",
       "hiddenCount": "{count, plural, =0 {Nessun gioco nascosto} one {# gioco nascosto} other {# giochi nascosti}}",
       "retiredNote": "{count, plural, one {# vecchio gioco resta ritirato} other {# vecchi giochi restano ritirati}} nel codice.",
       "sortedHint": "Dal più al meno giocato negli ultimi 30 giorni.",
       "announceHidden": "{game} ora è nascosto ai giocatori.",
-      "announceShown": "{game} è di nuovo visibile ai giocatori."
+      "announceShown": "{game} è di nuovo visibile ai giocatori.",
+      "difficultyGroup": "Difficoltà di {game}",
+      "difficultyModified": "Modificata · {level} nel codice",
+      "announceDifficulty": "Difficoltà di {game}: {level}.",
+      "scaleDifficulty": "Difficoltà",
+      "scaleDrink": "Fa bere",
+      "drinkGroup": "Livello «fa bere» di {game}",
+      "drinkModified": "Modificato · {level} nel codice",
+      "announceDrinkLevel": "Livello «fa bere» di {game}: {level}."
+    },
+    "gameCategories": {
+      "title": "Categorie di giochi",
+      "desc": "Raggruppa i giochi in sezioni: la pagina Giochi le propone come filtri, nell’ordine qui sotto. Un gioco può stare in più categorie.",
+      "refresh": "Aggiorna",
+      "loadError": "Impossibile caricare le categorie di giochi.",
+      "forbidden": "Sessione scaduta o accesso revocato: accedi di nuovo.",
+      "readOnly": "Sola lettura: solo i super admin possono creare, modificare o eliminare una categoria.",
+      "saveError": "La modifica non è stata salvata. Riprova.",
+      "notFound": "Questa categoria non esiste più: l’elenco è stato aggiornato.",
+      "limitReached": "Limite raggiunto: al massimo {max} categorie. Eliminane una per crearne un’altra.",
+      "count": "{count, plural, =0 {Nessuna categoria} one {# categoria} other {# categorie}}",
+      "emptyEdit": "Ancora nessuna categoria. Crea la prima qui sopra.",
+      "emptyReadOnly": "Ancora nessuna categoria.",
+      "createTitle": "Nuova categoria",
+      "create": "Crea la categoria",
+      "nameFr": "Nome (francese)",
+      "nameCounter": "{count}/{max}",
+      "nameHint": "Obbligatorio, al massimo {max} caratteri.",
+      "nameInvalid": "Inserisci un nome in francese.",
+      "otherLanguages": "Nomi nelle altre lingue (facoltativo)",
+      "otherLanguagesHint": "Una lingua lasciata vuota mostra il nome francese.",
+      "nameEn": "Nome (inglese)",
+      "nameEs": "Nome (spagnolo)",
+      "nameIt": "Nome (italiano)",
+      "gamesCount": "{count, plural, =0 {Nessun gioco} one {# gioco} other {# giochi}}",
+      "moveUp": "Sposta {name} in su",
+      "moveDown": "Sposta {name} in giù",
+      "rename": "Rinomina {name}",
+      "delete": "Elimina {name}",
+      "deleteGroup": "Elimina la categoria {name}",
+      "deleteConfirm": "Eliminare la categoria «{name}»? I suoi giochi restano nel catalogo: sparisce solo il raggruppamento.",
+      "deleteConfirmButton": "Sì, elimina",
+      "save": "Salva",
+      "cancel": "Annulla",
+      "chooseGames": "Scegli i giochi ({count})",
+      "searchLabel": "Cerca un gioco",
+      "searchPlaceholder": "Cerca un gioco",
+      "noResult": "Nessun gioco corrisponde.",
+      "gamesGroup": "Giochi della categoria {name}",
+      "announceCreated": "Categoria «{name}» creata.",
+      "announceRenamed": "Categoria rinominata: «{name}».",
+      "announceGames": "Giochi di «{name}»: {count}.",
+      "announceMoved": "«{name}» è ora in posizione {position} di {total}.",
+      "announceDeleted": "Categoria «{name}» eliminata."
     },
     "history": {
       "activeConnection": "Connessione attiva",
@@ -8886,7 +8974,6 @@
       "less": "Un giocatore in meno",
       "more": "Un giocatore in più",
       "start": "Organizza la nostra serata",
-      "single": "Gioca a un solo gioco",
       "stats": "Quale gioco fa bere di più?",
       "resume": {
         "eyebrow": "Serata in corso",
@@ -8915,14 +9002,42 @@
           "text": "I premi della serata, da mandare nel gruppo."
         }
       },
-      "about": {
-        "title": "Le Pillaveur, la casa dei giochi da serata",
-        "text": "{count} giochi da serata gratis, su un solo telefono o un telefono a testa: dadi, carte, quiz, bluff e sfide. La Modalità Serata li concatena per voi, dal più tranquillo al più intenso.",
-        "discover": "Scopri Le Pillaveur",
-        "allGames": "Vedi tutti i giochi"
+      "health": "Bevi responsabilmente. Senza alcol, la lavagna conta le vittorie.",
+      "ask": "Cosa giochiamo stasera?",
+      "modes": {
+        "label": "Scegli una modalità di gioco",
+        "hint": "Toccate una carta per <b>scegliere la modalità</b>.",
+        "range": "da {min} a {max}",
+        "libre": {
+          "title": "Gioco libero",
+          "subtitle": "In locale o online",
+          "allAges": "Per tutti"
+        },
+        "picked": {
+          "soiree": "Modalità Serata scelta. Regolate il numero di giocatori qui sotto.",
+          "libre": "Gioco libero scelto. Scegliete su questo telefono o online qui sotto.",
+          "none": "Nessuna modalità scelta."
+        }
       },
-      "note": "Basta un telefono · gratis · senza registrazione.",
-      "health": "Bevi responsabilmente. Senza alcol, la lavagna conta le vittorie."
+      "libre": {
+        "title": "Un solo gioco, quello che volete",
+        "lead": "Giochi da festa e giochi da tavolo per tutti. Scegliete dove si gioca, poi il gioco.",
+        "whereLabel": "Dove si gioca la partita",
+        "local": "Su questo telefono",
+        "localCount": "{count, plural, one {# gioco} other {# giochi}} · ci si passa il telefono",
+        "onlineCount": "{count, plural, one {# gioco} other {# giochi}} · un telefono a testa",
+        "note": {
+          "local": "Un solo telefono che passa di mano in mano intorno al tavolo, senza account. Funziona anche offline.",
+          "online": "Connesso come <b>{name}</b>. Crea un tavolo e condividi il codice, oppure unisciti a quello di un amico.",
+          "visitor": "Per giocare online serve un account gratuito, oppure un nome da ospite. Te lo chiediamo al passaggio successivo."
+        },
+        "cta": {
+          "local": "{count, plural, one {Vedi il gioco} other {Vedi i # giochi}}",
+          "online": "{count, plural, one {Vedi il gioco online} other {Vedi i # giochi online}}",
+          "visitor": "Gioca online"
+        }
+      },
+      "footer": "Gratis · senza installazione · {count, plural, one {# gioco} other {# giochi}} da serata, su un solo telefono o uno a testa"
     },
     "units": {
       "drinks": "{count, plural, one {# sorso} other {# sorsi}}",
@@ -8989,7 +9104,6 @@
       "eyebrow": "Passo 3 di 3",
       "title": "Il vostro programma",
       "lead": "Cambiate un gioco, spostatelo su o giù: è la vostra serata.",
-      "heat": "Intensità {value} su 3",
       "curve": "Curva d’intensità della serata, dal riscaldamento alla finale",
       "warm": "RISCALDAMENTO",
       "final": "FINALE",
@@ -9163,9 +9277,7 @@
       "gameTopAll": "tutti per {name}"
     },
     "stats": {
-      "eyebrow": "Su questo telefono",
       "title": "Quale gioco fa bere di più?",
-      "lead": "Sorsi medi per giocatore e per partita, dalle partite giocate su questo telefono.",
       "empty": "Non ci sono ancora abbastanza partite su questo telefono per classificare i giochi. Iniziate una serata!",
       "rankingLabel": "Giochi dal più annaffiato al meno annaffiato",
       "perPlayUnit": "sorsi / giocatore",
@@ -9178,8 +9290,23 @@
       "soireesAverage": "{value} sorsi a serata in media.",
       "soireesRecord": "Record: {count} sorsi, il {date}.",
       "soireesFavorite": "Gioco più in programma: {game} ({count, plural, one {# manche} other {# manche}}).",
-      "note": "Le partite senza alcol contano zero sorsi. La Coppa del Re e Il Dito del Destino contano solo ciò che è stato inserito durante una serata.",
-      "cta": "Organizza una serata"
+      "cta": "Organizza una serata",
+      "pageEyebrow": "Classifica dei giochi",
+      "pageLead": "Sorsi medi per giocatore e per partita: su tutto il sito, poi da voi.",
+      "site": {
+        "title": "Su tutto Le Pillaveur",
+        "lead": "Tutte le partite degli ultimi {days} giorni, in locale e online, contate senza sapere chi gioca.",
+        "label": "Giochi di tutto il sito, dal più annaffiato al meno annaffiato",
+        "online": "{percent}% online",
+        "empty": "Non ci sono ancora abbastanza partite su tutto il sito per classificare i giochi: servono {minPlays} partecipazioni per gioco in {days} giorni, e il contatore è appena partito. Tornate dopo qualche serata!",
+        "error": "Impossibile caricare la classifica del sito. Controllate la connessione e riprovate."
+      },
+      "home": {
+        "title": "Da voi",
+        "lead": "Le partite giocate su questo telefono."
+      },
+      "footnoteSite": "«Su tutto Le Pillaveur» somma i sorsi e le partite di tutti i giocatori, in locale come online, senza account, nickname né dispositivo: solo un contatore per gioco e per giorno. Le partite analcoliche non vengono contate.",
+      "footnoteHome": "«Da voi» resta su questo telefono: giocatori, record e serate non lasciano il dispositivo. Le partite analcoliche contano zero sorsi; La Coppa del Re e Il Dito del Destino contano solo ciò che è stato inserito durante una serata."
     },
     "launching": "Apertura di {game}…",
     "intro": {

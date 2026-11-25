@@ -1,6 +1,15 @@
 import { prisma } from '@/lib/prisma'
 import { parisDayString } from '@/lib/paris-time'
-import { isLocalGameEvent, isMeasuredLocalGameId, type LocalGameReport } from '@/lib/local-game-beacon'
+import {
+  LOCAL_DRINKS_EVENT,
+  LOCAL_DRINKS_MAX_CORRECTION,
+  LOCAL_DRINKS_MAX_PER_PLAY,
+  LOCAL_DRINKS_MAX_PLAYS,
+  isLocalGameEvent,
+  isMeasuredLocalGameId,
+  type LocalDrinksReport,
+  type LocalGameReport,
+} from '@/lib/local-game-beacon'
 
 /**
  * Compteurs AGRÉGÉS des parties locales (LocalGameDaily) — côté serveur.
@@ -14,6 +23,9 @@ import { isLocalGameEvent, isMeasuredLocalGameId, type LocalGameReport } from '@
  * fausser des compteurs — d'où les quotas de la route.
  *
  * Lecture et agrégats pour la Supervision : supervision-overview-server.ts.
+ *
+ * Le relevé des gorgées (`event: 'drinks'`) arrive par la même route mais
+ * s'écrit ailleurs : GameDrinkDaily, mode 'local' (game-drinks-server.ts).
  */
 
 /**
@@ -27,6 +39,28 @@ export function parseLocalGameReport(body: unknown): LocalGameReport | null {
   const { gameId, event } = body as Record<string, unknown>
   if (!isMeasuredLocalGameId(gameId) || !isLocalGameEvent(event)) return null
   return { gameId, event }
+}
+
+/**
+ * Corps reçu → relevé des gorgées (`event: 'drinks'`), ou null. Même rigueur
+ * que parseLocalGameReport : jeu LOCAL du catalogue, puis l'une des deux
+ * formes du contrat (local-game-beacon.ts) :
+ * - une partie : participations entières de 1 à LOCAL_DRINKS_MAX_PLAYS,
+ *   gorgées entières de 0 à LOCAL_DRINKS_MAX_PER_PLAY par participation ;
+ * - une correction : 0 participation, gorgées entières de 1 à
+ *   LOCAL_DRINKS_MAX_CORRECTION.
+ * Hors bornes, refusé et non écrêté : le téléphone découpe et écrête déjà
+ * (local-drink-tally.ts), un relevé hors bornes ne vient donc pas de lui.
+ */
+export function parseLocalDrinksReport(body: unknown): LocalDrinksReport | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const { gameId, event, drinks, plays } = body as Record<string, unknown>
+  if (event !== LOCAL_DRINKS_EVENT || !isMeasuredLocalGameId(gameId)) return null
+  if (typeof plays !== 'number' || !Number.isInteger(plays) || plays < 0 || plays > LOCAL_DRINKS_MAX_PLAYS) return null
+  if (typeof drinks !== 'number' || !Number.isInteger(drinks)) return null
+  const [min, max] = plays === 0 ? [1, LOCAL_DRINKS_MAX_CORRECTION] : [0, LOCAL_DRINKS_MAX_PER_PLAY * plays]
+  if (drinks < min || drinks > max) return null
+  return { gameId, event, drinks, plays }
 }
 
 /** Violation d'unicité Prisma (P2002). */

@@ -2,11 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { GAMES } from '@/lib/games'
 import {
   EMPTY_GAME_CATALOG,
+  GAME_CATEGORY_LIMITS,
   POPULAR_LIMIT,
   STAFF_TOGGLEABLE_GAME_IDS,
+  categoryName,
+  cleanCategoryName,
+  gameDifficulty,
+  gameDrinkLevel,
+  isGameCategoryId,
+  isGameDrinkLevel,
   isGameListed,
   isPlayableIn,
+  normalizeCategoryNames,
+  parseDifficultyOverrides,
+  parseDrinkLevelOverrides,
   parseGameCatalogState,
+  parseGameCategories,
   parseHiddenGameIds,
   featuredGameIds,
   rankPopularGames,
@@ -14,6 +25,10 @@ import {
 } from './game-catalog'
 
 const retired = GAMES.find((g) => g.hidden)!
+const codeLevel = (id: string) => GAMES.find((g) => g.id === id)!.difficulty
+const otherLevel = (id: string): 1 | 2 | 3 => (codeLevel(id) === 3 ? 1 : ((codeLevel(id) + 1) as 2 | 3))
+const codeDrink = (id: string) => GAMES.find((g) => g.id === id)!.drinkLevel
+const otherDrink = (id: string): 1 | 2 | 3 => (codeDrink(id) === 3 ? 1 : ((codeDrink(id) + 1) as 2 | 3))
 const localOnly = GAMES.find((g) => !g.hidden && !g.onlineReady)!
 const onlineAndLocal = GAMES.filter((g) => !g.hidden && g.onlineReady && !g.onlineOnly)
 const onlineOnly = GAMES.find((g) => !g.hidden && g.onlineOnly)
@@ -149,7 +164,49 @@ describe('parseGameCatalogState', () => {
   it('relit une réponse valide en filtrant les ids inconnus', () => {
     expect(
       parseGameCatalogState({ hiddenIds: [b, 'nope'], popular: { local: [a, 'nope', 3], online: [b] } })
-    ).toEqual({ hiddenIds: [b], popular: { local: [a], online: [b] } })
+    ).toEqual({ hiddenIds: [b], difficulty: {}, drinkLevel: {}, categories: [], popular: { local: [a], online: [b] } })
+  })
+
+  it('le champ difficulty est facultatif : absent ou illisible, il vaut {} sans rendre null', () => {
+    const base = { hiddenIds: [], popular: { local: [], online: [] } }
+    expect(parseGameCatalogState(base)?.difficulty).toEqual({})
+    expect(parseGameCatalogState({ ...base, difficulty: 'dur' })?.difficulty).toEqual({})
+    expect(parseGameCatalogState({ ...base, difficulty: [a] })?.difficulty).toEqual({})
+  })
+
+  it('relit les difficultés réglées en écartant ce qui est invalide', () => {
+    const level = otherLevel(a)
+    const state = parseGameCatalogState({
+      hiddenIds: [],
+      difficulty: { [a]: level, nope: 3, [retired.id]: 3 },
+      popular: { local: [], online: [] },
+    })
+    expect(state?.difficulty).toEqual({ [a]: level })
+  })
+
+  it('drinkLevel et categories sont facultatifs : absents ou illisibles, ils valent {} et [] sans rendre null', () => {
+    const base = { hiddenIds: [], popular: { local: [], online: [] } }
+    const old = parseGameCatalogState(base)
+    expect(old?.drinkLevel).toEqual({})
+    expect(old?.categories).toEqual([])
+    const garbled = parseGameCatalogState({ ...base, drinkLevel: 'beaucoup', categories: 'rubriques' })
+    expect(garbled?.drinkLevel).toEqual({})
+    expect(garbled?.categories).toEqual([])
+  })
+
+  it('relit les niveaux « fait boire » et les catégories, en écartant ce qui est invalide', () => {
+    const level = otherDrink(a)
+    const state = parseGameCatalogState({
+      hiddenIds: [],
+      drinkLevel: { [a]: level, [b]: codeDrink(b), nope: 3 },
+      categories: [
+        { id: 'chaud', names: { fr: 'Chaud' }, gameIds: [b, 'nope', a] },
+        { id: 'MAUVAIS ID', names: { fr: 'x' }, gameIds: [] },
+      ],
+      popular: { local: [], online: [] },
+    })
+    expect(state?.drinkLevel).toEqual({ [a]: level })
+    expect(state?.categories).toEqual([{ id: 'chaud', names: { fr: 'Chaud' }, gameIds: [a, b] }])
   })
 
   it('rend null pour une forme illisible', () => {
@@ -161,5 +218,264 @@ describe('parseGameCatalogState', () => {
 
   it('EMPTY_GAME_CATALOG est lisible tel quel', () => {
     expect(parseGameCatalogState(EMPTY_GAME_CATALOG)).toEqual(EMPTY_GAME_CATALOG)
+  })
+})
+
+describe('parseDifficultyOverrides', () => {
+  const [a, b, c] = STAFF_TOGGLEABLE_GAME_IDS
+
+  it('relit un objet JSON (texte ou déjà lu), clés dans l’ordre du catalogue', () => {
+    const wanted = { [c]: otherLevel(c), [a]: otherLevel(a) }
+    for (const raw of [JSON.stringify(wanted), wanted]) {
+      const result = parseDifficultyOverrides(raw)
+      expect(result).toEqual({ [a]: otherLevel(a), [c]: otherLevel(c) })
+      expect(Object.keys(result)).toEqual([a, c])
+    }
+  })
+
+  it('écarte une valeur égale au niveau du code', () => {
+    expect(parseDifficultyOverrides({ [a]: codeLevel(a), [b]: otherLevel(b) })).toEqual({ [b]: otherLevel(b) })
+  })
+
+  it('écarte les ids inconnus ou retirés du code', () => {
+    expect(parseDifficultyOverrides({ nope: 3, [retired.id]: otherLevel(retired.id) })).toEqual({})
+  })
+
+  it('écarte les niveaux hors 1, 2, 3 (0, 4, 1.5, texte, null, objet)', () => {
+    const bad = [0, 4, 1.5, -1, '2', null, true, {}, [], NaN]
+    for (const level of bad) {
+      expect(parseDifficultyOverrides({ [a]: level }), JSON.stringify(level)).toEqual({})
+    }
+  })
+
+  it('illisible : {}', () => {
+    for (const raw of ['{pas du json', '', 'null', '[1,2]', '3', null, undefined, 7, [a]]) {
+      expect(parseDifficultyOverrides(raw), String(raw)).toEqual({})
+    }
+  })
+})
+
+describe('gameDifficulty', () => {
+  const [a] = STAFF_TOGGLEABLE_GAME_IDS
+
+  it('le réglage de l’équipe l’emporte', () => {
+    expect(gameDifficulty(a, { [a]: otherLevel(a) })).toBe(otherLevel(a))
+  })
+
+  it('sans réglage : le niveau du code', () => {
+    expect(gameDifficulty(a, {})).toBe(codeLevel(a))
+    expect(gameDifficulty(retired.id, {})).toBe(codeLevel(retired.id))
+  })
+
+  it('jeu inconnu : Moyen', () => {
+    expect(gameDifficulty('nope', {})).toBe(2)
+  })
+})
+
+describe('barème « fait boire » du code', () => {
+  it('chaque jeu, retirés compris, porte un niveau 1, 2 ou 3', () => {
+    for (const game of GAMES) {
+      expect(isGameDrinkLevel(game.drinkLevel), game.id).toBe(true)
+    }
+  })
+
+  it('les jeux du Mode Soirée gardent leur intensité d’origine', () => {
+    const heat: Record<string, 1 | 2 | 3> = {
+      'vue-de-nez': 1, 'pile-poil': 1, purple: 1, blackjack: 1,
+      'hi-lo': 2, 'chiffre-piege': 2, '1220': 2, plinko: 2, 'monsieur-3': 2, pmu: 2, 'front-colle': 2, 'doigt-du-destin': 2,
+      'patate-chaude': 3, 'cap-ou-pas-cap': 3, 'coupe-du-roi': 3, 'petit-buveur': 3,
+    }
+    for (const [id, level] of Object.entries(heat)) {
+      expect(codeDrink(id), id).toBe(level)
+    }
+  })
+
+  it('isGameDrinkLevel n’accepte que les entiers 1 à 3', () => {
+    expect([1, 2, 3].every(isGameDrinkLevel)).toBe(true)
+    for (const bad of [0, 4, 1.5, '2', null, undefined, NaN, {}]) expect(isGameDrinkLevel(bad)).toBe(false)
+  })
+})
+
+describe('parseDrinkLevelOverrides', () => {
+  const [a, b, c] = STAFF_TOGGLEABLE_GAME_IDS
+
+  it('relit un objet JSON (texte ou déjà lu), clés dans l’ordre du catalogue', () => {
+    const wanted = { [c]: otherDrink(c), [a]: otherDrink(a) }
+    for (const raw of [JSON.stringify(wanted), wanted]) {
+      const result = parseDrinkLevelOverrides(raw)
+      expect(result).toEqual({ [a]: otherDrink(a), [c]: otherDrink(c) })
+      expect(Object.keys(result)).toEqual([a, c])
+    }
+  })
+
+  it('écarte une valeur égale au niveau du code, les ids inconnus ou retirés, les niveaux invalides', () => {
+    expect(parseDrinkLevelOverrides({ [a]: codeDrink(a), [b]: otherDrink(b) })).toEqual({ [b]: otherDrink(b) })
+    expect(parseDrinkLevelOverrides({ nope: 3, [retired.id]: 3 })).toEqual({})
+    for (const level of [0, 4, 1.5, -1, '2', null, true, {}, [], NaN]) {
+      expect(parseDrinkLevelOverrides({ [a]: level }), JSON.stringify(level)).toEqual({})
+    }
+  })
+
+  it('illisible : {}', () => {
+    for (const raw of ['{pas du json', '', 'null', '[1,2]', '3', null, undefined, 7, [a]]) {
+      expect(parseDrinkLevelOverrides(raw), String(raw)).toEqual({})
+    }
+  })
+
+  it('ne se mélange pas avec la difficulté : chacun compare à SON niveau du code', () => {
+    const id = GAMES.find((g) => !g.hidden && g.difficulty !== g.drinkLevel)!.id
+    expect(parseDrinkLevelOverrides({ [id]: codeLevel(id) })).toEqual({ [id]: codeLevel(id) })
+    expect(parseDifficultyOverrides({ [id]: codeDrink(id) })).toEqual({ [id]: codeDrink(id) })
+    expect(parseDrinkLevelOverrides({ [id]: codeDrink(id) })).toEqual({})
+    expect(parseDifficultyOverrides({ [id]: codeLevel(id) })).toEqual({})
+  })
+})
+
+describe('gameDrinkLevel', () => {
+  const [a] = STAFF_TOGGLEABLE_GAME_IDS
+
+  it('le réglage de l’équipe l’emporte, sinon le niveau du code, sinon Moyen', () => {
+    expect(gameDrinkLevel(a, { [a]: otherDrink(a) })).toBe(otherDrink(a))
+    expect(gameDrinkLevel(a, {})).toBe(codeDrink(a))
+    expect(gameDrinkLevel(retired.id, {})).toBe(codeDrink(retired.id))
+    expect(gameDrinkLevel('nope', {})).toBe(2)
+  })
+})
+
+describe('noms de catégorie', () => {
+  const MAX = GAME_CATEGORY_LIMITS.maxNameLength
+
+  it('cleanCategoryName : espaces de bord retirés, espaces internes repliés, bornes 1 à 40', () => {
+    expect(cleanCategoryName('  Soirée \t  chaude \n')).toBe('Soirée chaude')
+    expect(cleanCategoryName('x'.repeat(MAX))).toHaveLength(MAX)
+    for (const bad of ['', '   ', 'x'.repeat(MAX + 1), 7, null, undefined, {}]) {
+      expect(cleanCategoryName(bad), String(bad)).toBeNull()
+    }
+  })
+
+  it('la limite se mesure après nettoyage : 40 lettres entourées d’espaces passent', () => {
+    expect(cleanCategoryName(` ${'x'.repeat(MAX)} `)).toBe('x'.repeat(MAX))
+  })
+
+  it('cleanCategoryName : invisibles retirés, au moins un caractère visible exigé', () => {
+    expect(cleanCategoryName('So\u200Bir\u200Fée\uFEFF \u2060chaude')).toBe('Soirée chaude')
+    expect(cleanCategoryName('\u202EChaud\u202C')).toBe('Chaud')
+    expect(cleanCategoryName('Chaud\u2066\u2069')).toBe('Chaud')
+    expect(cleanCategoryName('a\u0007b')).toBe('ab')
+    expect(cleanCategoryName('un\tdeux')).toBe('un deux')
+    expect(cleanCategoryName('🍻')).toBe('🍻')
+    expect(cleanCategoryName('18+')).toBe('18+')
+    const invisibles = ['\u200B', '\u200E\u200F', '\u2060', '\uFEFF', '\u2800', '\u2800 \u2800', '\u202A\u202E', '\u2066\u2069', '\u0007', '...', '---', ' - ']
+    for (const bad of invisibles) {
+      expect(cleanCategoryName(bad), JSON.stringify(bad)).toBeNull()
+    }
+    expect(cleanCategoryName('\u200B'.repeat(10) + 'x'.repeat(MAX))).toBe('x'.repeat(MAX))
+  })
+
+  it('normalizeCategoryNames : français obligatoire, autres langues omises si vides ou trop longues', () => {
+    expect(normalizeCategoryNames({ fr: ' Chaud ', en: ' Hot  stuff', es: '', it: 'x'.repeat(MAX + 1), de: 'Heiss' })).toEqual({
+      fr: 'Chaud',
+      en: 'Hot stuff',
+    })
+    for (const bad of [{}, { fr: '' }, { fr: 'x'.repeat(MAX + 1) }, { en: 'Hot' }, { fr: 3 }, 'Chaud', null, [], undefined]) {
+      expect(normalizeCategoryNames(bad), JSON.stringify(bad)).toBeNull()
+    }
+  })
+
+  it('isGameCategoryId : 1 à 40 caractères parmi a-z, 0-9 et -', () => {
+    for (const ok of ['a', 'cat-1a2b3c4d', 'x'.repeat(40)]) expect(isGameCategoryId(ok), ok).toBe(true)
+    for (const bad of ['', 'x'.repeat(41), 'Majuscule', 'sous_tiret', 'espace ici', 'é', 7, null]) {
+      expect(isGameCategoryId(bad), String(bad)).toBe(false)
+    }
+  })
+})
+
+describe('parseGameCategories', () => {
+  const [a, b, c] = STAFF_TOGGLEABLE_GAME_IDS
+  const cat = (id: string, fr = 'Nom', gameIds: unknown[] = []) => ({ id, names: { fr }, gameIds })
+
+  it('relit un texte JSON ou un tableau, dans l’ordre stocké', () => {
+    const stored = [cat('zeta', 'Zeta', [a]), cat('alpha', 'Alpha', [b])]
+    for (const raw of [JSON.stringify(stored), stored]) {
+      expect(parseGameCategories(raw).map((x) => x.id)).toEqual(['zeta', 'alpha'])
+    }
+  })
+
+  it('range les jeux dans l’ordre du catalogue, sans doublon, en écartant inconnus, retirés et mal typés', () => {
+    const [category] = parseGameCategories([cat('x', 'X', [c, a, a, b, 'nope', retired.id, 7, null])])
+    expect(category.gameIds).toEqual([a, b, c])
+  })
+
+  it('un jeu peut figurer dans plusieurs catégories', () => {
+    const result = parseGameCategories([cat('un', 'Un', [a]), cat('deux', 'Deux', [a])])
+    expect(result.map((x) => x.gameIds)).toEqual([[a], [a]])
+  })
+
+  it('écarte seulement l’entrée fautive : id invalide, id dupliqué, nom français absent, mal formée', () => {
+    const result = parseGameCategories([
+      cat('bon', 'Bon'),
+      cat('Mauvais Id', 'Autre'),
+      cat('bon', 'Doublon'),
+      { id: 'sans-nom', names: { en: 'No fr' }, gameIds: [] },
+      { id: 'nom-vide', names: { fr: '   ' }, gameIds: [] },
+      { id: 'nom-long', names: { fr: 'x'.repeat(41) }, gameIds: [] },
+      { id: 'sans-noms', gameIds: [] },
+      'texte',
+      null,
+      [],
+      cat('autre', 'Autre'),
+    ])
+    expect(result.map((x) => x.id)).toEqual(['bon', 'autre'])
+    expect(result[0].names.fr).toBe('Bon')
+  })
+
+  it('nettoie les noms (espaces) et omet une autre langue illisible', () => {
+    const [category] = parseGameCategories([
+      { id: 'x', names: { fr: '  Soirée   chaude ', en: '', es: 'x'.repeat(41), it: 'Calda' }, gameIds: [] },
+    ])
+    expect(category.names).toEqual({ fr: 'Soirée chaude', it: 'Calda' })
+  })
+
+  it('un gameIds absent ou illisible vaut []', () => {
+    const result = parseGameCategories([{ id: 'x', names: { fr: 'X' } }, { id: 'y', names: { fr: 'Y' }, gameIds: 'pmu' }])
+    expect(result.map((x) => x.gameIds)).toEqual([[], []])
+  })
+
+  it('s’arrête à la limite de catégories', () => {
+    const max = GAME_CATEGORY_LIMITS.maxCategories
+    const many = Array.from({ length: max + 6 }, (_, i) => cat(`c${i}`, `C${i}`))
+    const result = parseGameCategories(many)
+    expect(result).toHaveLength(max)
+    expect(result[0].id).toBe('c0')
+    expect(result.at(-1)!.id).toBe(`c${max - 1}`)
+  })
+
+  it('la limite compte les entrées VALIDES : une entrée fautive n’occupe pas de place', () => {
+    const max = GAME_CATEGORY_LIMITS.maxCategories
+    const many = [cat('Mauvais'), ...Array.from({ length: max }, (_, i) => cat(`c${i}`))]
+    expect(parseGameCategories(many)).toHaveLength(max)
+  })
+
+  it('illisible : []', () => {
+    for (const raw of ['{pas du json', '', 'null', '{"a":1}', '"texte"', '3', null, undefined, 7, {}]) {
+      expect(parseGameCategories(raw), String(raw)).toEqual([])
+    }
+  })
+})
+
+describe('categoryName', () => {
+  const category = { id: 'x', names: { fr: 'Chaud', en: 'Hot' }, gameIds: [] }
+
+  it('la langue demandée, sinon le français', () => {
+    expect(categoryName(category, 'en')).toBe('Hot')
+    expect(categoryName(category, 'fr')).toBe('Chaud')
+    expect(categoryName(category, 'es')).toBe('Chaud')
+    expect(categoryName(category, 'it')).toBe('Chaud')
+  })
+
+  it('une langue inconnue, ou une clé qui n’est pas une langue, retombe sur le français', () => {
+    for (const locale of ['de', '', 'EN', 'en-GB', '__proto__', 'constructor']) {
+      expect(categoryName(category, locale), locale).toBe('Chaud')
+    }
   })
 })

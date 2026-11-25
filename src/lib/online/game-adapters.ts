@@ -47,6 +47,7 @@ import {
 import {
   currentMenteurActorId,
   menteurHumanSeated,
+  menteurSipsTotal,
   toMenteurClientView,
   MENTEUR_MAX_PLAYERS,
   type MenteurState,
@@ -354,6 +355,7 @@ import {
 import { ONLINE_REPLACE_GRACE_MS } from '@/lib/online/replacement'
 import { phaseKey, type TimedPhaseState } from '@/lib/online/phase-clock'
 import { botTickDelayMs } from '@/lib/online/bot-personas'
+import { humanDrinkTally, type DrinkTally } from '@/lib/online/drink-tally'
 
 /**
  * REGISTRE des jeux serveur-autoritaires.
@@ -421,6 +423,15 @@ export type GameAdapter = {
    * à attendre. Optionnel : un jeu sans tick de service ne l'implémente pas.
    */
   serviceTick?(state: unknown, now: number, options?: ServiceTickOptions): ServiceTick | null
+  /**
+   * Relevé ANONYME de la partie pour « Quel jeu fait le plus boire ? », lu sur
+   * l'état FINAL du moteur par la fin de partie (room-actions.ts) : gorgées
+   * bues par les sièges humains et nombre de ces sièges (règles dans
+   * src/lib/online/drink-tally.ts). Null = rien à compter (partie arrêtée
+   * avant le premier coup, état lancé avant le compteur). Absent = le moteur
+   * ne compte pas de gorgées.
+   */
+  drinkTally?(state: unknown): DrinkTally | null
 }
 
 // ─── Ticks de service (filet serveur) ────────────────────────────────────────
@@ -553,6 +564,8 @@ const petitBuveurAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertPlayerToBot(state as EngineState, userId),
   isFinished: (state) => (state as EngineState).phase === 'finished',
+  // `drinks` : cumul bu par chacun, miroir et chaîne compris (addDrinks).
+  drinkTally: (state) => humanDrinkTally((state as EngineState).players, (p) => p.drinks),
   // Pendant l'étape pile ou face de la cible, c'est elle « au tour » (bots, AFK).
   currentActorId: (state) => currentDeciderId(state as EngineState),
   clientViewJson: (state) => JSON.stringify(toClientView(state as EngineState)),
@@ -615,6 +628,8 @@ const toucherCouleAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertTCPlayerToBot(state as TCState, userId),
   isFinished: (state) => (state as TCState).phase === 'finished',
+  // `drinks` : raté, navire touché ou coulé, flotte perdue — toujours bu par le joueur.
+  drinkTally: (state) => humanDrinkTally((state as TCState).players, (p) => p.drinks),
   currentActorId: (state) => currentTCPlayerId(state as TCState),
   clientViewJson: (state, viewerId) => tcClientViewJson(state as TCState, viewerId),
   spectatorViewJson: (state) => tcSpectatorViewJson(state as TCState),
@@ -693,6 +708,11 @@ const menteurAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertMenteurPlayerToBot(state as MenteurState, userId),
   isFinished: (state) => (state as MenteurState).phase === 'finished',
+  // L'addition grimpe d'un dé perdu à l'autre : le total bu se lit sur
+  // menteurSipsTotal, jamais sur lostCount (F35). Le cul sec de l'éliminé
+  // n'est pas un nombre de gorgées : il n'est pas compté.
+  drinkTally: (state) =>
+    humanDrinkTally((state as MenteurState).players, (p) => menteurSipsTotal(p.lostCount)),
   currentActorId: (state) => currentMenteurActorId(state as MenteurState),
   clientViewJson: (state, viewerId) => menteurClientViewJson(state as MenteurState, viewerId),
   spectatorViewJson: (state) => menteurSpectatorViewJson(state as MenteurState),
@@ -773,6 +793,14 @@ const imposteurAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertImposteurPlayerToBot(state as ImposteurState, userId),
   isFinished: (state) => (state as ImposteurState).phase === 'finished',
+  // Les gorgées de chaque révélation ne vivent que dans `lastReveal` : le
+  // cumul est tenu par le moteur dans `drunk`. Partie lancée avant ce champ :
+  // un compte partiel fausserait la moyenne, rien n'est relevé.
+  drinkTally(rawState) {
+    const state = rawState as ImposteurState
+    const drunk = state.drunk
+    return drunk ? humanDrinkTally(state.players, (p) => drunk[p.id]) : null
+  },
   currentActorId: (state) => currentImposteurActorId(state as ImposteurState),
   clientViewJson: (state, viewerId) => imposteurClientViewJson(state as ImposteurState, viewerId),
   spectatorViewJson: (state) => imposteurSpectatorViewJson(state as ImposteurState),
@@ -843,6 +871,7 @@ const quizAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertQuizPlayerToBot(state as QuizState, userId),
   isFinished: (state) => (state as QuizState).phase === 'finished',
+  drinkTally: (state) => humanDrinkTally((state as QuizState).players, (p) => p.sips),
   currentActorId: () => currentQuizActorId(),
   clientViewJson: (state, viewerId) => quizClientViewJson(state as QuizState, viewerId),
   spectatorViewJson: (state) => quizSpectatorViewJson(state as QuizState),
@@ -931,6 +960,7 @@ const loupGarouAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertLGPlayerToBot(state as LGState, userId),
   isFinished: (state) => (state as LGState).phase === 'finished',
+  drinkTally: (state) => humanDrinkTally((state as LGState).players, (p) => p.sips),
   currentActorId: (state) => currentLGActorId(state as LGState),
   clientViewJson: (state, viewerId) => lgClientViewJson(state as LGState, viewerId),
   spectatorViewJson: (state) => lgSpectatorViewJson(state as LGState),
@@ -999,6 +1029,15 @@ const game1220Adapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertGame1220PlayerToBot(state as Game1220State, userId),
   isFinished: (state) => (state as Game1220State).phase === 'finished',
+  // `history` ne garde que les derniers lancers : le cumul bu est tenu par
+  // le moteur dans `drunk`. « Terminer » avant le premier lancer n'est pas
+  // une partie ; une partie lancée avant le champ n'est pas relevée.
+  drinkTally(rawState) {
+    const state = rawState as Game1220State
+    const drunk = state.drunk
+    if (!drunk || state.history.length === 0) return null
+    return humanDrinkTally(state.players, (p) => drunk[p.id])
+  },
   currentActorId: (state) => currentGame1220ActorId(state as Game1220State),
   clientViewJson: (state) => game1220ClientViewJson(state as Game1220State),
   spectatorViewJson: (state) => game1220SpectatorViewJson(state as Game1220State),
@@ -1059,6 +1098,14 @@ const purpleAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertPurplePlayerToBot(state as PurpleState, userId),
   isFinished: (state) => (state as PurpleState).phase === 'finished',
+  // `gameResults` : cagnottes bues par chacun ; celle encore en jeu à la fin
+  // n'a été bue par personne. « Terminer » avant la première carte n'est pas
+  // une partie.
+  drinkTally(rawState) {
+    const state = rawState as PurpleState
+    if (state.totalCardsDrawn === 0) return null
+    return humanDrinkTally(state.players, (p) => state.gameResults[p.id])
+  },
   currentActorId: (state) => currentPurpleActorId(state as PurpleState),
   clientViewJson: (state) => purpleClientViewJson(state as PurpleState),
   spectatorViewJson: (state) => purpleSpectatorViewJson(state as PurpleState),
@@ -1103,6 +1150,13 @@ const blackjackAdapter: GameAdapter = {
   },
   convertToBot: (state, userId) => convertBjPlayerToBot(state as BjState, userId),
   isFinished: (state) => (state as BjState).phase === 'finished',
+  // Mises perdues (`drunk`) ; les gorgées distribuées (`given`) n'ont pas de
+  // destinataire. « Terminer » avant la première main jouée n'est pas une partie.
+  drinkTally(rawState) {
+    const state = rawState as BjState
+    if (!Object.values(state.totals).some((t) => t.hands > 0)) return null
+    return humanDrinkTally(state.players, (p) => state.totals[p.id]?.drunk)
+  },
   currentActorId: (state) => currentBjActorId(state as BjState),
   clientViewJson: (state) => bjViewJson(state as BjState),
   spectatorViewJson: (state) => bjViewJson(state as BjState),

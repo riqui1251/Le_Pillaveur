@@ -1,6 +1,6 @@
 # Informativa sulla privacy
 
-**Ultimo aggiornamento:** 20 novembre 2026
+**Ultimo aggiornamento:** 24 novembre 2026
 
 ## 1. Introduzione
 
@@ -69,7 +69,7 @@ Per attività si intende l'uso di una pagina visualizzata sullo schermo: un segn
 
 Negli strumenti di moderazione del sito, gli indirizzi IPv6 di una stessa rete (stesso prefisso /64, in genere uno stesso router o uno stesso luogo) vengono raggruppati in visualizzazione: questo raggruppamento è calcolato al momento della consultazione e non memorizza alcun dato aggiuntivo.
 
-**Partite giocate in modalità locale.** Indipendentemente da qualsiasi consenso, il sito conta le partite giocate su un solo telefono: quando la pagina di un gioco si apre in modalità locale con un tavolo di giocatori e poi quando la partita arriva alla schermata finale, il tuo browser invia soltanto il gioco interessato e l'evento (partita avviata o conclusa). Il server ne conserva solo due contatori per gioco e per giorno (ora di Parigi): il numero di partite avviate e il numero di partite concluse. Non viene registrato alcun account, nickname o identificativo di dispositivo o di browser, non viene letto alcun cookie e l'indirizzo IP non viene mai conservato: serve soltanto, in memoria e in modo temporaneo, a limitare il numero di invii per rete per prevenire gli abusi. Poiché nulla permette di collegare un contatore a una persona, questi contatori non sono dati personali e non dipendono dalla tua scelta sulle statistiche di visita; li citiamo per trasparenza. Sono consultabili dall'amministrazione del sito e conservati per 13 mesi (vedi 7).
+**Partite giocate in modalità locale.** Indipendentemente da qualsiasi consenso, il sito conta le partite giocate su un solo telefono: quando la pagina di un gioco si apre in modalità locale con un tavolo di giocatori e poi quando la partita arriva alla schermata finale, il tuo browser invia il gioco interessato e l'evento (partita avviata o conclusa). Alcuni minuti dopo la tua ultima partita, o alla chiusura della pagina, invia anche, per ogni gioco, il totale dei sorsi bevuti al tavolo e il numero di partecipazioni (una partita giocata da un giocatore), senza inviare nulla nell'atmosfera «Senza alcol»; non figurano né nome, né account, né dispositivo. Per le partite **online**, alla fine di una partita, il server aggiunge allo stesso modo il totale dei sorsi bevuti e il numero di partecipazioni dei giocatori umani, senza collegare questi numeri al tavolo né agli account; una partita in cui uno degli account del tavolo è in «Senza alcol» non viene conteggiata. Il server conserva solo contatori per gioco, per giorno (ora di Parigi) e per modalità (locale od online): il numero di partite avviate e concluse in locale, nonché il totale dei sorsi e delle partecipazioni, che servono per la classifica pubblica «Quale gioco fa bere di più?» (ultimi 90 giorni). Non viene registrato alcun account, nickname o identificativo di dispositivo o di browser, non viene letto alcun cookie e l'indirizzo IP non viene mai conservato: serve soltanto, in memoria e in modo temporaneo, a limitare il numero di invii per rete per prevenire gli abusi. Poiché nulla permette di collegare un contatore a una persona, questi contatori non sono dati personali e non dipendono dalla tua scelta sulle statistiche di visita; li citiamo per trasparenza. Sono consultabili dall'amministrazione del sito e conservati per 13 mesi (vedi 7).
 
 ### 3.4 Chat e partite online
 
@@ -186,7 +186,7 @@ L'editore resta il titolare dei trattamenti descritti nella presente informativa
 - **Registro delle partite avviate** (gioco, data, durata del tavolo, motivo di chiusura, partecipanti): **12 mesi**.
 - **Tracce di moderazione dei nickname**: **12 mesi**.
 - **Dati di misurazione dell'audience**: **13 mesi**.
-- **Contatori delle partite locali** (gioco, giorno, numero di partite avviate e concluse, senza alcun dato personale): **13 mesi**.
+- **Contatori delle partite locali e dei sorsi** (gioco, giorno, modalità, numero di partite avviate e concluse, totale dei sorsi e delle partecipazioni, senza alcun dato personale): **13 mesi**.
 - **Feedback**: conservazione fino a **24 mesi** o cancellazione su richiesta; l'email di contatto associata viene cancellata se elimini il tuo account.
 - **Cookie di età e consenso**: 1 anno, rinnovabili a ogni convalida.
 - **Backup del database** (copia di tutti i dati sopra indicati): **16 giorni al massimo** sul server, **31 giorni al massimo** per la copia esterna; un dato eliminato scompare dai backup alla loro scadenza.

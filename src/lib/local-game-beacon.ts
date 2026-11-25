@@ -8,12 +8,14 @@ import { stripLocalePrefix } from '@/i18n/routing'
 // est quitté avant la fin. Le journal des parties en ligne ne peut pas les
 // voir : pas de salle, pas de compte requis.
 //
-// Ce qui part : `{ gameId, event }`, rien d'autre. Ni compte, ni pseudo, ni
-// identifiant d'appareil, ni cookie (credentials 'omit' sur le repli fetch ;
-// un sendBeacon emporte les cookies du site, la route ne les lit pas). Le
-// serveur n'en garde que deux compteurs par jeu et par jour de Paris
-// (LocalGameDaily) — aucune donnée personnelle, donc pas de consentement à
-// demander : rien ne permet de rattacher un compteur à une personne.
+// Ce qui part : `{ gameId, event }`, rien d'autre — plus, pour le relevé des
+// gorgées, deux totaux de la table (`drinks`, `plays`). Ni compte, ni pseudo,
+// ni identifiant d'appareil, ni cookie (credentials 'omit' sur le repli
+// fetch ; un sendBeacon emporte les cookies du site, la route ne les lit
+// pas). Le serveur n'en garde que des compteurs par jeu et par jour de Paris
+// (LocalGameDaily, GameDrinkDaily) — aucune donnée personnelle, donc pas de
+// consentement à demander : rien ne permet de rattacher un compteur à une
+// personne.
 //
 // Module PUR à l'import (aucun accès à `window` hors des fonctions) : la
 // route l'importe pour partager le contrat — mêmes événements, même règle de
@@ -34,6 +36,39 @@ export type LocalGameEvent = (typeof LOCAL_GAME_EVENTS)[number]
 
 /** Le seul contenu d'un envoi. */
 export type LocalGameReport = { gameId: string; event: LocalGameEvent }
+
+/**
+ * Relevé des GORGÉES BUES d'un jeu local, pour « Quel jeu fait le plus
+ * boire ? » tous joueurs confondus (GameDrinkDaily, mode 'local') : la somme
+ * des gorgées de la table et le nombre de participations (une partie jouée
+ * par un joueur), sans dire qui a bu quoi. Cumulé sur le téléphone par
+ * local-drink-tally.ts, jamais en ambiance « Sans alcool ». Événement à part
+ * de 'start' / 'end' : il ne passe pas par le rapporteur des lancements.
+ *
+ * Deux formes :
+ * - une partie : `plays` de 1 à LOCAL_DRINKS_MAX_PLAYS, `drinks` de 0 à
+ *   LOCAL_DRINKS_MAX_PER_PLAY × `plays` ;
+ * - une CORRECTION (gorgées saisies après le départ de leur partie : entracte
+ *   du Mode Soirée, paiement des paris du PMU) : `plays` à 0, `drinks` de 1 à
+ *   LOCAL_DRINKS_MAX_CORRECTION. Zéro participation et zéro gorgée n'est pas
+ *   un relevé.
+ */
+export const LOCAL_DRINKS_EVENT = 'drinks'
+export type LocalDrinksReport = { gameId: string; event: typeof LOCAL_DRINKS_EVENT; drinks: number; plays: number }
+
+/**
+ * Participations d'un relevé : une table de 15 joueurs. Le téléphone découpe
+ * au-delà.
+ */
+export const LOCAL_DRINKS_MAX_PLAYS = 15
+/**
+ * Gorgées par participation, en moyenne sur le relevé : au-delà, ce n'est
+ * plus une partie mais un script ou un compteur détraqué, qui empoisonnerait
+ * le classement. Le téléphone écrête.
+ */
+export const LOCAL_DRINKS_MAX_PER_PLAY = 20
+/** Gorgées d'une correction sans participation : le plafond d'un relevé complet. Le téléphone écrête. */
+export const LOCAL_DRINKS_MAX_CORRECTION = LOCAL_DRINKS_MAX_PER_PLAY * LOCAL_DRINKS_MAX_PLAYS
 
 /**
  * Jeux locaux SANS écran de fin : une partie de la Roue des gorgées ne « se
@@ -150,8 +185,9 @@ export function createLocalGameReporter(
  * dans la foulée de l'écran de fin, et à la fermeture de l'onglet —, sinon
  * `fetch` en keepalive. Réponse jamais lue : rien ne doit remonter jusqu'au
  * joueur, ni erreur ni délai. Même forme que client-error-report.ts.
+ * Partagé avec le relevé des gorgées (local-drink-tally.ts).
  */
-function sendToServer(report: LocalGameReport): void {
+export function sendLocalGameBeacon(report: LocalGameReport | LocalDrinksReport): void {
   const body = JSON.stringify(report)
   if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
     try {
@@ -171,7 +207,7 @@ function sendToServer(report: LocalGameReport): void {
 }
 
 /** Le rapporteur de la page : une mémoire par chargement. */
-const pageReporter = createLocalGameReporter(sendToServer)
+const pageReporter = createLocalGameReporter(sendLocalGameBeacon)
 
 /**
  * Note un lancement ou une fin de partie LOCALE. Silencieux en toutes

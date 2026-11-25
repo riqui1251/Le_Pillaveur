@@ -12,6 +12,7 @@ function game(overrides: Partial<GameMeta> & { id: string }): GameMeta {
     gradient: '',
     fallbackColor: '#000',
     difficulty: 1,
+    drinkLevel: 2,
     ...overrides,
   }
 }

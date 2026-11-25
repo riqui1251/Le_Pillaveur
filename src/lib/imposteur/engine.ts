@@ -196,6 +196,13 @@ export type ImposteurState = TimedPhaseState & {
    * précédente). Optionnelle : absente des parties lancées avant le champ.
    */
   speech?: ImposteurSpeech[]
+  /**
+   * Gorgées bues par joueur depuis le lancement (public : chaque révélation
+   * les annonce) — `lastReveal` ne garde que la dernière. Relevé de fin de
+   * partie (drinkTally, game-adapters.ts). Optionnel : absent des parties
+   * lancées avant le champ, qui ne le prennent pas en route.
+   */
+  drunk?: Record<string, number>
   /** SECRET serveur. */
   rngState: number
 }
@@ -336,6 +343,7 @@ export function createImposteurState(
     imposteurCount: count,
     lang,
     speech: [],
+    drunk: {},
     rngState: rng.getState(),
   }
 }
@@ -417,6 +425,9 @@ function resolveVotes(state: ImposteurState, now: number): ImposteurState {
     ...state,
     players,
     pendingVotes: {},
+    ...(state.drunk && eliminatedId && sips > 0
+      ? { drunk: { ...state.drunk, [eliminatedId]: (state.drunk[eliminatedId] ?? 0) + sips } }
+      : {}),
     lastReveal: {
       round: state.round,
       tally,

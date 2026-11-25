@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { Player } from '@/lib/players'
+import type { LocalTallyOptions } from '@/lib/local-drink-tally'
 import { Check, RotateCcw } from 'lucide-react'
 import { GameShell } from '@/components/game/GameShell'
 import { ResumeGamePrompt } from '@/components/game/ResumeGamePrompt'
@@ -41,7 +42,12 @@ interface PlayingCard { value: CardValue; suit: CardSuit; color: 'red' | 'black'
 interface GameProps {
   players: Player[]
   onGameEnd: () => void
-  updatePlayerStats: (id: string, game: string, stats: { gamesPlayed: number; totalDrinks?: number; wins?: number }) => void
+  updatePlayerStats: (
+    id: string,
+    game: string,
+    stats: { gamesPlayed: number; totalDrinks?: number; wins?: number },
+    tally?: LocalTallyOptions
+  ) => void
   gameMode: GameMode
 }
 
@@ -293,7 +299,10 @@ export default function Game({ players, onGameEnd, updatePlayerStats }: GameProp
     // la navigation ne démonte l'écran — la partie ne doit compter qu'une fois.
     if (gameCountedRef.current) return
     gameCountedRef.current = true
-    players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }))
+    // Quittée avant la première carte : la partie reste dans les statistiques
+    // du téléphone, pas dans le classement de tout le site (comme en ligne).
+    const tally: LocalTallyOptions | undefined = totalCardsDrawn === 0 ? { tally: 'skip' } : undefined
+    players.forEach(p => updatePlayerStats(p.id, 'purple', { gamesPlayed: 1, totalDrinks: gameResults[p.id] || 0 }, tally))
   }
 
   const quitGame = () => {

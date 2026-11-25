@@ -13,6 +13,8 @@ import { resolveNextGamePath } from '@/lib/next-game-path'
 import { enterLocalPlay } from '@/lib/local-play-client'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
+import { useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { GameFixedActionBar, gameActionBarPadding } from '@/components/game/GameFixedActionBar'
 import { Button } from '@/components/ui/button'
 import { PlayerIcon } from '@/components/ui/PlayerIcon'
@@ -55,6 +57,8 @@ export function LocalGamePrelobby({
   const tCommon = useTranslations('common')
   const tPlayers = useTranslations('players')
   const game = useLocalizedGame(gameId)
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   const router = useRouter()
   const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
@@ -114,7 +118,12 @@ export function LocalGamePrelobby({
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-cream">{game?.title}</h1>
           <p className="mt-0.5 text-[13px] leading-snug text-cream/70">{description ?? game?.description}</p>
-          {game && <DifficultyBadge level={game.difficulty} tone="felt" className="mt-1.5" />}
+          {game && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <DifficultyBadge level={difficultyOf(game.id)} tone="felt" />
+              <DrinkLevelBadge level={drinkLevelOf(game.id)} tone="felt" />
+            </p>
+          )}
         </div>
       </header>
 

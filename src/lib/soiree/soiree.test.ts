@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getGameById } from '@/lib/games'
 import type { Player } from '@/lib/players'
 import { revancheOf } from './actions'
-import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeCap, soireeDifficulty, soireeHeat } from './catalog'
-import { SOIREE_LENGTH_ROUNDS, SOIREE_MAX_ROUNDS, addRound, buildProgram, moveRound, removeRound, replaceRound } from './program'
+import { SOIREE_GAME_IDS, playableSoireeGameIds, soireeCap, soireeHeat } from './catalog'
+import { SOIREE_LENGTH_ROUNDS, SOIREE_MAX_ROUNDS, addRound, buildProgram, moveRound, programHeat, removeRound, replaceRound } from './program'
 import {
   closeRound,
   createSoiree,
@@ -115,11 +115,6 @@ describe('catalogue de la soirée', () => {
     expect(ids).not.toContain('purple')
     expect(playableSoireeGameIds(4, [])).toEqual(playableSoireeGameIds(4))
   })
-
-  it('donne à chaque jeu une difficulté de 1 à 3, distincte de l’intensité', () => {
-    for (const id of SOIREE_GAME_IDS) expect([1, 2, 3]).toContain(soireeDifficulty(id))
-    expect(soireeDifficulty('inconnu')).toBe(2)
-  })
 })
 
 describe('tuto des jeux de la soirée', () => {
@@ -147,6 +142,21 @@ describe('programme', () => {
       const heats = program.map(soireeHeat)
       expect(heats).toEqual([...heats].sort((a, b) => a - b))
     }
+  })
+
+  it("prend l'intensité du niveau « Fait boire » du jeu", () => {
+    for (const id of SOIREE_GAME_IDS) expect(soireeHeat(id)).toBe(getGameById(id)?.drinkLevel)
+  })
+
+  it("suit le barème réglé par l'équipe, pour le tirage et la courbe", () => {
+    const heatOf = (id: string) => (id === 'purple' ? 3 : 1)
+    for (const seed of [1, 3, 7, 11]) {
+      const program = buildProgram({ rounds: 5, vibe: 'monte', playerCount: 4, rng: seeded(seed), heatOf })
+      const heats = programHeat(program, heatOf)
+      expect(heats).toEqual([...heats].sort((a, b) => a - b))
+      if (program.includes('purple')) expect(program[program.length - 1]).toBe('purple')
+    }
+    expect(programHeat(['purple', 'pmu'], heatOf)).toEqual([3, 1])
   })
 
   it('ne tire jamais un jeu caché, même sur toutes les ambiances', () => {

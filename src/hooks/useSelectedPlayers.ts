@@ -1,14 +1,27 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
-import { getSelectedPlayerIds, setSelectedPlayerIds, clearSelectedPlayerIds } from '@/lib/selectedPlayers';
+import { SELECTED_PLAYERS_EVENT, getSelectedPlayerIds, setSelectedPlayerIds, clearSelectedPlayerIds } from '@/lib/selectedPlayers';
+
+const sameIds = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
 
 export function useSelectedPlayers() {
 	const [selectedIds, setSelectedIds] = useState<string[]>(() => getSelectedPlayerIds());
 
 	// Effet de montage conservé pour la compatibilité HMR (Fast Refresh)
 	useEffect(() => {
-		// Ré-synchronise depuis le stockage au montage côté client
-		setSelectedIds(getSelectedPlayerIds());
+		// Ré-synchronise depuis le stockage au montage côté client, puis à chaque
+		// changement fait par un autre lecteur (même page ou autre onglet).
+		const sync = () => {
+			const next = getSelectedPlayerIds();
+			setSelectedIds((prev) => (sameIds(prev, next) ? prev : next));
+		};
+		sync();
+		window.addEventListener(SELECTED_PLAYERS_EVENT, sync);
+		window.addEventListener('storage', sync);
+		return () => {
+			window.removeEventListener(SELECTED_PLAYERS_EVENT, sync);
+			window.removeEventListener('storage', sync);
+		};
 	}, []);
 
 	useEffect(() => {

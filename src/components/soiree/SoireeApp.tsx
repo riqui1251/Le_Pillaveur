@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { usePlayers } from '@/hooks/usePlayers'
-import { useGameCatalog } from '@/hooks/useGameCatalog'
+import { useGameCatalog, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { getGameById } from '@/lib/games'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { enterLocalPlay } from '@/lib/local-play-client'
@@ -52,6 +52,8 @@ export function SoireeApp() {
   const { mode, setMode } = useAmbianceMode()
   const { updatePlayerStats } = usePlayers()
   const { hiddenIds } = useGameCatalog()
+  // Le tirage suit le barème « Fait boire » réglé par l'équipe, pas celui du code.
+  const heatOf = useGameDrinkLevel()
   useHiddenGamesPurge(soiree, save)
   const [step, setStep] = useState<'bande' | 'ambiance'>('bande')
   const [choice, setChoice] = useState<BandeChoice | null>(null)
@@ -135,7 +137,13 @@ export function SoireeApp() {
     const after = next.rounds[index]?.results[playerId]?.[metric] ?? 0
     if (after === before) return
     // Les gorgées dites à voix haute entrent aussi dans les stats du joueur (« quel jeu fait le plus boire »).
-    updatePlayerStats(playerId, round.gameId, metric === 'drinks' ? { totalDrinks: after - before } : { wins: after - before })
+    // Correction : la manche a souvent déjà été envoyée au classement de tout le site.
+    updatePlayerStats(
+      playerId,
+      round.gameId,
+      metric === 'drinks' ? { totalDrinks: after - before } : { wins: after - before },
+      { tally: 'correction' }
+    )
     save(next)
   }
 
@@ -144,7 +152,7 @@ export function SoireeApp() {
     const program =
       ambiance.length === 'carte'
         ? []
-        : buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[ambiance.length], vibe: ambiance.vibe, playerCount: choice.players.length, hiddenIds })
+        : buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[ambiance.length], vibe: ambiance.vibe, playerCount: choice.players.length, hiddenIds, heatOf })
     const created = createSoiree({
       id: newSoireeId(),
       now: Date.now(),
@@ -201,7 +209,7 @@ export function SoireeApp() {
           onReroll={
             soiree.length === 'carte'
               ? undefined
-              : () => save(replaceUpcoming(soiree, buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[soiree.length as keyof typeof SOIREE_LENGTH_ROUNDS], vibe: soiree.vibe, playerCount: soiree.playerIds.length, hiddenIds })))
+              : () => save(replaceUpcoming(soiree, buildProgram({ rounds: SOIREE_LENGTH_ROUNDS[soiree.length as keyof typeof SOIREE_LENGTH_ROUNDS], vibe: soiree.vibe, playerCount: soiree.playerIds.length, hiddenIds, heatOf })))
           }
         />
         <SoireeCta>
@@ -256,7 +264,7 @@ export function SoireeApp() {
           soiree={soiree}
           onKeepBande={(name) => save(keepBande(soiree, name, Date.now()))}
           onVote={(rating) => saveVote(soiree, (s) => setSoireeVote(s, rating))}
-          onRevanche={() => save(revancheOf(soiree, Date.now(), hiddenIds))}
+          onRevanche={() => save(revancheOf(soiree, Date.now(), hiddenIds, heatOf))}
           onNew={() => {
             save(null)
             setStep('bande')

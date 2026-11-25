@@ -8,9 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiErrorMessage } from '@/lib/api-response'
 import { useAuth } from '@/hooks/useAuth'
-import { validateAccountDisplayName, nameValidationI18nKey } from '@/lib/name-moderation'
-import { reportProfanityIfNeeded } from '@/lib/name-moderation-attempt-client'
-import { readLocalAmbianceMode } from '@/lib/ambiance-mode'
+import { createGuestSession, rejectGuestName } from '@/lib/guest-session-client'
 
 /**
  * Porte d'entrée après scan d'un QR de table (?join=CODE) pour un visiteur
@@ -36,47 +34,30 @@ export function JoinGate({ code, onDismiss }: { code: string; onDismiss: () => v
   const handleGuest = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    const trimmed = pseudo.trim()
-    const validation = validateAccountDisplayName(trimmed)
-    if (!validation.ok) {
-      void reportProfanityIfNeeded(trimmed, validation.reason, 'guest')
-      setError(tCommon(`nameValidation.${nameValidationI18nKey(validation.reason)}`))
+    const rejection = rejectGuestName(pseudo)
+    if (rejection) {
+      setError(tCommon(`nameValidation.${rejection}`))
       return
     }
     setLoading(true)
     try {
-      const res = await fetch('/api/auth/guest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        // Ambiance de l'appareil : dans l'app, un invité sans choix naît
-        // « Sans alcool » (politique Google Play) ; le compte prime ensuite.
-        body: JSON.stringify({ displayName: trimmed, locale, ambianceMode: readLocalAmbianceMode() }),
-      })
-      const data = await res.json().catch(() => null)
-      if (res.status === 403 && data?.code === 'age_gate_required') {
+      const result = await createGuestSession(pseudo, locale)
+      if (result.kind === 'age-gate') {
         // Âge jamais certifié sur ce navigateur : le hub n'est pas une page de
         // lecture, la porte 18+ s'y affiche (ou revient au rechargement).
         setError(t('ageGateRequired'))
         return
       }
-      if (data?.code === 'rate_limited') {
-        // Quota du réseau atteint (grosse tablée, CGNAT) : le délai vient de
-        // la route et se dit dans la langue du joueur — jamais le texte
-        // français brut de `error`.
-        const seconds = typeof data.retryAfterSec === 'number' ? data.retryAfterSec : 60
-        setError(t('rateLimited', { seconds }))
+      if (result.kind === 'rate-limited') {
+        setError(t('rateLimited', { seconds: result.retryAfterSec }))
         return
       }
-      if (!res.ok) {
-        // `error` PORTE désormais un code (« service_unavailable » sur le 503
-        // de la route, par exemple) : l'afficher brut montrait au visiteur un
-        // identifiant snake_case là où il lisait une phrase. `data.error` et
-        // pas `data.code` : les refus de pseudo y mettent une phrase DÉJÀ
-        // traduite par le serveur (elle dit ce qui cloche), qu'apiErrorMessage
-        // laisse passer telle quelle faute de code connu — alors que leur
-        // `code` (« profanity ») n'a, lui, pas de traduction.
-        setError(apiErrorMessage(data?.error, tApiErrors, t('error')))
+      if (result.kind === 'refused') {
+        setError(apiErrorMessage(result.error, tApiErrors, t('error')))
+        return
+      }
+      if (result.kind === 'network') {
+        setError(t('error'))
         return
       }
       // La session existe — invité tout juste créé, ou compte déjà connecté

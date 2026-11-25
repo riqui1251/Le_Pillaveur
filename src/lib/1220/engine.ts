@@ -61,6 +61,13 @@ export type Game1220State = TimedPhaseState & {
   configs: Config1220[] | null
   lastRoll: RollEntry1220 | null
   history: RollEntry1220[]
+  /**
+   * Gorgées bues par joueur depuis le lancement (`drinkSips` de chaque
+   * lancer) — `history` ne garde que les derniers. Relevé de fin de partie
+   * (drinkTally, game-adapters.ts). Optionnel : absent des parties lancées
+   * avant le champ, qui ne le prennent pas en route.
+   */
+  drunk?: Record<string, number>
   rematchVotes: string[]
 }
 
@@ -86,6 +93,23 @@ export function defaultChoices1220(): Choices1220 {
   return { parity: 'pair', band: '11-20', drinkNumber: 7, giveNumber: 13 }
 }
 
+/**
+ * Un joueur parti garde ses paris (et son verdict dans l'historique) le temps
+ * de revenir ou d'être remplacé, mais il n'est plus à table : il ne boit pas.
+ */
+function addDrunk1220(
+  drunk: Record<string, number>,
+  results: readonly RollResult1220[],
+  players: readonly Player1220[]
+): Record<string, number> {
+  const present = new Set(players.filter((p) => !p.leftAt).map((p) => p.id))
+  const next = { ...drunk }
+  for (const r of results) {
+    if (r.drinkSips > 0 && present.has(r.playerId)) next[r.playerId] = (next[r.playerId] ?? 0) + r.drinkSips
+  }
+  return next
+}
+
 export function createGame1220State(
   players: { id: string; name: string; isBot?: boolean }[],
   seed: string | number,
@@ -109,6 +133,7 @@ export function createGame1220State(
     configs: null,
     lastRoll: null,
     history: [],
+    drunk: {},
     rematchVotes: [],
   }
 }
@@ -280,6 +305,7 @@ export function reduceGame1220(state: Game1220State, action: Game1220Action): Ga
         rngState: rng.getState(),
         lastRoll: entry,
         history: [entry, ...state.history].slice(0, HISTORY_LIMIT),
+        ...(state.drunk ? { drunk: addDrunk1220(state.drunk, results, state.players) } : {}),
       }
     }
 

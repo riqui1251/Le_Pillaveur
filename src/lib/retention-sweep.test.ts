@@ -11,6 +11,7 @@ const { prismaMock, deleteUserAccountMock } = vi.hoisted(() => ({
     nameModerationAttempt: { deleteMany: vi.fn() },
     dailyVisitor: { deleteMany: vi.fn() },
     localGameDaily: { deleteMany: vi.fn() },
+    gameDrinkDaily: { deleteMany: vi.fn() },
     onlineGameSession: { deleteMany: vi.fn() },
     session: { deleteMany: vi.fn() },
     userFeedback: { deleteMany: vi.fn() },
@@ -90,6 +91,7 @@ describe('balayage de conservation', () => {
       prismaMock.nameModerationAttempt,
       prismaMock.dailyVisitor,
       prismaMock.localGameDaily,
+      prismaMock.gameDrinkDaily,
       prismaMock.onlineGameSession,
       prismaMock.session,
       prismaMock.userFeedback,
@@ -151,8 +153,10 @@ describe('balayage de conservation', () => {
     await runSweep()
     // 13 × 30 jours avant le 10/10/2026 à midi UTC : le 15/09/2025, jour de Paris.
     expect(prismaMock.localGameDaily.deleteMany).toHaveBeenCalledWith({ where: { day: { lt: '2025-09-15' } } })
+    expect(prismaMock.gameDrinkDaily.deleteMany).toHaveBeenCalledWith({ where: { day: { lt: '2025-09-15' } } })
     expect(prismaMock.dailyVisitor.deleteMany).toHaveBeenCalledWith({ where: { date: { lt: '2025-09-15' } } })
     expect(writtenLastRun().counts).toHaveProperty('LocalGameDaily', 0)
+    expect(writtenLastRun().counts).toHaveProperty('GameDrinkDaily', 0)
   })
 
   it("l'échec de la purge des visites n'empêche ni les autres purges ni les suppressions de comptes", async () => {
@@ -301,7 +305,7 @@ describe('balayage de conservation', () => {
         'User.staleGuests': 1,
       })
       // Un bloc par purge simple, plus les deux blocs de comptes.
-      expect(Object.keys(lastRun.counts)).toHaveLength(19)
+      expect(Object.keys(lastRun.counts)).toHaveLength(20)
       const stored = prismaMock.siteSetting.upsert.mock.calls[0][0].update.value as string
       for (const id of ['guest-a', 'guest-b', 'guest-old']) expect(stored).not.toContain(id)
     })

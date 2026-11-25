@@ -4,6 +4,9 @@ export type GameSuit = 'spade' | 'heart' | 'diamond' | 'club';
 /** Difficulté d'un jeu pour une table qui le découvre : 1 facile, 2 moyen, 3 difficile. */
 export type GameDifficulty = 1 | 2 | 3;
 
+/** Combien un jeu fait boire : 1 peu, 2 moyen, 3 beaucoup — réglable par l'équipe depuis la Supervision. */
+export type GameDrinkLevel = 1 | 2 | 3;
+
 export type GameMeta = {
   id: string;
   title: string;
@@ -105,6 +108,13 @@ export type GameMeta = {
    */
   difficulty: GameDifficulty;
   /**
+   * Niveau de départ du barème « fait boire » (DrinkLevelBadge), avant tout
+   * réglage de l'équipe. Jeux du Mode Soirée : leur intensité
+   * (SOIREE_GAME_META.heat, src/lib/soiree/catalog.ts) ; les autres : jugé
+   * d'après les gorgées que leurs règles distribuent par tour.
+   */
+  drinkLevel: GameDrinkLevel;
+  /**
    * Jeu publié en BÊTA : jouable et au catalogue, mais encore en rodage —
    * un petit badge « Bêta » le dit sur sa carte du hub et sur sa vitrine,
    * plutôt que de le laisser masqué jusqu'à la perfection.
@@ -135,6 +145,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
     difficulty: 2,
+    drinkLevel: 2,
     localMinPlayers: 2,
   },
   {
@@ -150,6 +161,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#6d28d9',
     fallbackColor: '#6366f1',
     difficulty: 1,
+    drinkLevel: 2,
     localMinPlayers: 2,
   },
   {
@@ -165,6 +177,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#2dd4bf',
     fallbackColor: '#10b981',
     difficulty: 1,
+    drinkLevel: 3,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 99,
@@ -184,6 +197,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#0ea5e9',
     difficulty: 2,
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 1,
     maxPlayers: 8,
@@ -203,6 +217,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#ef4444',
     fallbackColor: '#f97316',
     difficulty: 2,
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 2,
     botsFillable: true,
@@ -229,6 +244,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d946ef',
     fallbackColor: '#a855f7',
     difficulty: 2,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 3,
     botsFillable: true,
@@ -251,6 +267,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#3b82f6',
     difficulty: 1,
+    // Chaque mauvaise réponse se boit, la manche est courte.
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 2,
     botsFillable: true,
@@ -273,6 +291,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
     difficulty: 3,
+    // On boit surtout sur les lynchages : le jeu est un débat, pas une course aux gorgées.
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 4,
     botsFillable: true,
@@ -295,6 +315,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d946ef',
     fallbackColor: '#f97316',
     difficulty: 1,
+    drinkLevel: 2,
     localMinPlayers: 2,
   },
   {
@@ -310,6 +331,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#8b5cf6',
     fallbackColor: '#a855f7',
     difficulty: 1,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -329,6 +351,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f59e0b',
     fallbackColor: '#047857',
     difficulty: 2,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 1,
     maxPlayers: 7,
@@ -355,6 +378,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#facc15',
     fallbackColor: '#eab308',
     difficulty: 2,
+    // Les gorgées doublent à chaque étage de la pyramide.
+    drinkLevel: 3,
     localMinPlayers: 2,
   },
   {
@@ -370,6 +395,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#a3e635',
     fallbackColor: '#22c55e',
     difficulty: 1,
+    drinkLevel: 2,
     localMinPlayers: 2,
   },
   {
@@ -384,6 +410,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#fb7185',
     fallbackColor: '#ec4899',
     difficulty: 1,
+    drinkLevel: 2,
   },
   {
     id: 'ballon-surprise',
@@ -397,6 +424,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#38bdf8',
     difficulty: 1,
+    drinkLevel: 1,
   },
   {
     id: 'petits-points',
@@ -410,6 +438,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#2563eb',
     fallbackColor: '#3b82f6',
     difficulty: 1,
+    drinkLevel: 2,
   },
   {
     id: 'pendu',
@@ -423,6 +452,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#4f46e5',
     fallbackColor: '#6366f1',
     difficulty: 1,
+    drinkLevel: 2,
   },
   {
     id: 'trial-poursuite',
@@ -436,6 +466,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f97316',
     fallbackColor: '#ef4444',
     difficulty: 2,
+    drinkLevel: 1,
   },
   {
     id: '1220',
@@ -451,6 +482,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f59e0b',
     fallbackColor: '#a855f7',
     difficulty: 2,
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -471,6 +503,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f59e0b',
     fallbackColor: '#f43f5e',
     difficulty: 2,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -493,6 +526,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#0891b2',
     fallbackColor: '#0e7490',
     difficulty: 2,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -523,6 +557,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#14b8a6',
     fallbackColor: '#10b981',
     difficulty: 2,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 16,
@@ -548,6 +583,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f97316',
     fallbackColor: '#e11d48',
     difficulty: 1,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -571,6 +607,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d97706',
     fallbackColor: '#b45309',
     difficulty: 1,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 16,
@@ -596,6 +633,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#b91c1c',
     fallbackColor: '#b45309',
     difficulty: 3,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 16,
@@ -616,6 +654,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d97706',
     fallbackColor: '#be123c',
     difficulty: 1,
+    // La minorité boit à chaque question, mais une question dure quelques secondes.
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 16,
@@ -640,6 +680,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d97706',
     fallbackColor: '#0369a1',
     difficulty: 2,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -660,6 +701,8 @@ export const GAMES: GameMeta[] = [
     colorTo: '#d97706',
     fallbackColor: '#065f46',
     difficulty: 3,
+    // Le Trou et le Président se font boire à chaque manche, sans chiffre fixe.
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 4,
     maxPlayers: 8,
@@ -682,6 +725,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#6366f1',
     fallbackColor: '#14b8a6',
     difficulty: 1,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 3,
     maxPlayers: 8,
@@ -701,6 +745,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f59e0b',
     fallbackColor: '#ef4444',
     difficulty: 1,
+    drinkLevel: 2,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -721,6 +766,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f97316',
     fallbackColor: '#fb7185',
     difficulty: 1,
+    drinkLevel: 3,
     localMinPlayers: 2,
   },
   {
@@ -736,6 +782,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#22d3ee',
     fallbackColor: '#06b6d4',
     difficulty: 1,
+    drinkLevel: 1,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 16,
@@ -757,6 +804,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#fb923c',
     fallbackColor: '#f472b6',
     difficulty: 1,
+    drinkLevel: 2,
     localMinPlayers: 2,
   },
   {
@@ -773,6 +821,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#eab308',
     fallbackColor: '#dc2626',
     difficulty: 2,
+    drinkLevel: 3,
     localMinPlayers: 2,
   },
   {
@@ -788,6 +837,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#dc2626',
     fallbackColor: '#f97316',
     difficulty: 1,
+    drinkLevel: 3,
     onlineReady: true,
     minPlayers: 2,
     maxPlayers: 12,
@@ -806,6 +856,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f97316',
     fallbackColor: '#f59e0b',
     difficulty: 1,
+    drinkLevel: 1,
     localMinPlayers: 2,
   },
   {
@@ -821,6 +872,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#facc15',
     fallbackColor: '#f59e0b',
     difficulty: 1,
+    drinkLevel: 1,
     localMinPlayers: 2,
   },
   {
@@ -836,6 +888,7 @@ export const GAMES: GameMeta[] = [
     colorTo: '#f43f5e',
     fallbackColor: '#f59e0b',
     difficulty: 1,
+    drinkLevel: 2,
     localMinPlayers: 2,
   },
 ];

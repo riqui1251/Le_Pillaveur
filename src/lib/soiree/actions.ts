@@ -1,5 +1,6 @@
 import { getGameById } from '@/lib/games'
 import { setSelectedPlayerIds } from '@/lib/selectedPlayers'
+import type { SoireeHeat } from './catalog'
 import { buildProgram, SOIREE_LENGTH_ROUNDS } from './program'
 import { closeRound, createSoiree, finishSoiree, startRound, type Soiree } from './state'
 import { soireeSummary, toHistoryEntry, type SoireeHistoryEntry } from './summary'
@@ -75,15 +76,16 @@ export function nextNightNumber(bandeId: string | null, history: readonly Soiree
 
 /**
  * La revanche : même bande, même ambiance, nouveau programme. Les jeux cachés
- * par l'équipe n'y entrent pas (la carte recopiée les écarte, le tirage les évite).
+ * par l'équipe n'y entrent pas (la carte recopiée les écarte, le tirage les évite) ;
+ * `heatOf` : le barème « Fait boire » réglé par l'équipe, pour le tirage.
  */
-export function revancheOf(soiree: Soiree, now: number, hiddenIds: readonly string[] = []): Soiree {
+export function revancheOf(soiree: Soiree, now: number, hiddenIds: readonly string[] = [], heatOf?: (gameId: string) => SoireeHeat): Soiree {
   const kept = soiree.rounds.map((r) => r.gameId).filter((id) => !hiddenIds.includes(id))
   const rounds = soiree.length === 'carte' ? Math.max(1, soiree.rounds.length) : SOIREE_LENGTH_ROUNDS[soiree.length]
   const program =
     soiree.length === 'carte'
       ? kept
-      : buildProgram({ rounds, vibe: soiree.vibe, playerCount: soiree.playerIds.length, hiddenIds })
+      : buildProgram({ rounds, vibe: soiree.vibe, playerCount: soiree.playerIds.length, hiddenIds, heatOf })
   return createSoiree({
     id: newSoireeId(now),
     now,

@@ -49,8 +49,9 @@ import {
 import { BrandMark } from '@/components/brand/BrandLogo'
 import { GameIconById } from '@/components/hub/GameIconById'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
 import { isGameListed } from '@/lib/game-catalog'
-import { useGameCatalog } from '@/hooks/useGameCatalog'
+import { useGameCatalog, useGameDifficulty, useGameDrinkLevel } from '@/hooks/useGameCatalog'
 import { PlayingCard } from '@/components/ui/PlayingCard'
 import { useLocalizedGames, type LocalizedGameMeta } from '@/lib/games-i18n'
 import { cn } from '@/lib/utils'
@@ -128,6 +129,8 @@ function Label({ children, className }: { children: ReactNode; className?: strin
 
 function DemoCard({ game, online, anchor }: { game: LocalizedGameMeta; online: boolean; anchor?: string }) {
   const players = online ? playersRange(game) : null
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   return (
     <div data-tour={anchor} className="h-full">
       <PlayingCard suit={game.suit} rank={game.rank} className="h-full">
@@ -147,8 +150,9 @@ function DemoCard({ game, online, anchor }: { game: LocalizedGameMeta; online: b
                 {players}
               </span>
             )}
-            <DifficultyBadge level={game.difficulty} tone="card" variant={players ? 'bars' : 'label'} />
+            <DifficultyBadge level={difficultyOf(game.id)} tone="card" variant={players ? 'bars' : 'label'} />
           </span>
+          <DrinkLevelBadge level={drinkLevelOf(game.id)} tone="card" variant="icons" className="mt-0.5" />
         </div>
       </PlayingCard>
     </div>

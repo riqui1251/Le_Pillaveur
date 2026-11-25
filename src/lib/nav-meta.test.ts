@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GAMES } from '@/lib/games'
-import { gameSubtitleKey } from '@/lib/nav-meta'
+import { gameSubtitleKey, staticPageKey } from '@/lib/nav-meta'
 
 const byId = (id: string) => {
   const game = GAMES.find((g) => g.id === id)
@@ -35,5 +35,18 @@ describe('gameSubtitleKey', () => {
     const local = GAMES.find((g) => !g.onlineOnly && !g.onlineReady && !g.hidden)
     expect(local).toBeDefined()
     expect(gameSubtitleKey(local!, 'online')).toBe('game.local')
+  })
+})
+
+describe('staticPageKey', () => {
+  it('l’accueil reprend la devise de la maison, comme /decouvrir', () => {
+    expect(staticPageKey('/')).toBe('decouvrir')
+    expect(staticPageKey('/decouvrir')).toBe('decouvrir')
+  })
+
+  it('une sous-page garde le titre de sa section, un jeu n’en a pas', () => {
+    expect(staticPageKey('/soiree/stats')).toBe('soiree')
+    expect(staticPageKey('/regles/purple')).toBe('regles')
+    expect(staticPageKey('/games/purple')).toBeUndefined()
   })
 })

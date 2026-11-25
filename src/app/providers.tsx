@@ -12,6 +12,7 @@ import { AgeGate } from '@/components/legal/AgeGate'
 import { FirstGameDeviceInit } from '@/components/feedback/FirstGameDeviceInit'
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
 import { TourProvider } from '@/components/tour/TourProvider'
+import { AccountSheetsProvider } from '@/components/account/AccountSheets'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -38,7 +39,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <ServiceWorkerRegistration />
                 {/* Tuto des nouveaux joueurs : un booléen et une fonction ici,
                     le reste se télécharge à l'ouverture (TourLayer). */}
-                <TourProvider>{children}</TourProvider>
+                <TourProvider>
+                  {/* Connexion et « Mon compte » en feuilles, ouvertes depuis
+                      la barre ou l'accueil (src/components/account). */}
+                  <AccountSheetsProvider>{children}</AccountSheetsProvider>
+                </TourProvider>
               </ToastProvider>
             </PlayerEffectsProvider>
           </BrowserCapabilitiesProvider>

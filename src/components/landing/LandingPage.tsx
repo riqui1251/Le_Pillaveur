@@ -7,8 +7,9 @@ import { COLLECTION_SLUGS } from '@/lib/collections'
 import { FRIDAY_TABLE, formatClockTime, fridayTableStatus } from '@/lib/friday-table'
 import { GAMES, type GameSuit } from '@/lib/games'
 import { DifficultyBadge } from '@/components/game/DifficultyBadge'
+import { DrinkLevelBadge } from '@/components/game/DrinkLevelBadge'
 import { getGameCatalogState } from '@/lib/game-catalog-server'
-import { featuredGameIds, isGameListed } from '@/lib/game-catalog'
+import { featuredGameIds, gameDifficulty, gameDrinkLevel, isGameListed } from '@/lib/game-catalog'
 import { orderLandingGames } from '@/components/hub/popular-row'
 import { readLandingLaunchesStat } from '@/lib/landing-stats-server'
 import { RULES_GAME_IDS } from '@/lib/rules/rules-ids'
@@ -402,7 +403,8 @@ export async function LandingPage({ locale }: { locale: string }) {
                     {tCatalog(`${game.id}.description`)}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
-                    <DifficultyBadge level={game.difficulty} tone="card" className="mr-1" />
+                    <DifficultyBadge level={gameDifficulty(game.id, catalog.difficulty)} tone="card" className="mr-1" />
+                    <DrinkLevelBadge level={gameDrinkLevel(game.id, catalog.drinkLevel)} tone="card" variant="icons" className="mr-1" />
                     {game.onlineReady && (
                       <span className="rounded-full bg-emerald-700/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-emerald-800">
                         {t('catalog.online')}

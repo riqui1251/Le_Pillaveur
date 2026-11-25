@@ -6,6 +6,8 @@ import { getGameAdapter, type GameAdapter } from '@/lib/online/game-adapters'
 import { recordMatchResults } from '@/lib/online/match-results'
 import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
 import { armRoomTickerForState } from '@/lib/online/room-ticker'
+import { recordGameDrinks } from '@/lib/game-drinks-server'
+import { onlineUserIdFromPlayerId } from '@/lib/online-players'
 
 /**
  * CŒUR « appliquer une action à une salle » — SERVEUR-AUTORITAIRE, générique
@@ -100,6 +102,64 @@ export async function loadActionRoom(
     return { ok: false, result: { status: 403, body: onlineErrorBody('replaced_by_bot') } }
   }
   return { ok: true, loaded: { roomId, room, adapter } }
+}
+
+/**
+ * Comptes de la table : l'hôte, les membres et les sièges du moteur (un
+ * partant y garde le sien ; certains jeux préfixent l'id, `online-<userId>`).
+ * Un id de bot ne correspond à aucun compte.
+ */
+function tableAccountIds(state: unknown, hostUserId: string, memberIds: readonly string[]): string[] {
+  const ids = new Set<string>([hostUserId, ...memberIds])
+  const players = (state as { players?: unknown } | null)?.players
+  if (Array.isArray(players)) {
+    for (const player of players) {
+      const id = (player as { id?: unknown } | null)?.id
+      if (typeof id !== 'string') continue
+      ids.add(id)
+      const account = onlineUserIdFromPlayerId(id)
+      if (account) ids.add(account)
+    }
+  }
+  return [...ids]
+}
+
+/**
+ * Relevé ANONYME des gorgées d'une partie en ligne qui vient de finir, pour
+ * « Quel jeu fait le plus boire ? » (game-drinks-server.ts) : seuls le jeu,
+ * le mode et deux entiers partent — ni compte, ni salle, ni pseudo.
+ *
+ * Ambiance : une salle en ligne n'en a pas. Ni ses réglages ni les moteurs ne
+ * la portent ; chaque téléphone affiche gorgées ou gages selon le réglage de
+ * SON compte (`User.ambianceMode`, lu par useAmbianceMode), et Sans Filtre /
+ * Dilemmes tirent leur contenu sur celui de l'hôte. Un seul compte « Sans
+ * alcool » à la table suffit donc pour que des « gorgées » du moteur aient
+ * été des gages : la partie entière n'est pas comptée.
+ *
+ * Ne lève jamais : la fin de partie n'en dépend pas.
+ */
+export async function recordOnlineGameDrinks(args: {
+  gameId: string
+  adapter: GameAdapter
+  state: unknown
+  hostUserId: string
+  memberIds: readonly string[]
+}): Promise<void> {
+  try {
+    const tally = args.adapter.drinkTally?.(args.state) ?? null
+    if (!tally) return
+    const softAccounts = await prisma.user.count({
+      where: {
+        id: { in: tableAccountIds(args.state, args.hostUserId, args.memberIds) },
+        ambianceMode: 'soft',
+      },
+    })
+    if (softAccounts > 0) return
+    await recordGameDrinks({ gameId: args.gameId, mode: 'online', ...tally })
+  } catch (e) {
+    // RGPD : comme pour le classement, seul le nom de la classe d'erreur.
+    console.error('[game-drinks] relevé échoué', e instanceof Error ? e.name : typeof e)
+  }
 }
 
 /**
@@ -229,6 +289,16 @@ export async function applyActionToRoom(
       // conteneur — un message Prisma recopie la ligne fautive, donc un pseudo.
       console.error('[match-results] enregistrement échoué', e instanceof Error ? e.name : typeof e)
     }
+    // Après la transaction (connexion unique du pool) et SANS l'attendre : ni
+    // la réponse ni l'annonce de fin ne patientent pour une statistique. Même
+    // garde « une seule fois » que le classement.
+    void recordOnlineGameDrinks({
+      gameId: finishedGameId,
+      adapter,
+      state: next,
+      hostUserId: room.hostUserId,
+      memberIds: room.members.map((m) => m.userId),
+    })
   }
 
   publishRoomChanged(roomId, {

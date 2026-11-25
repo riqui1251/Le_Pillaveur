@@ -6,6 +6,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Beer, Globe, Leaf, Smartphone, UserRound, Users, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useSelectedPlayers } from '@/hooks/useSelectedPlayers'
+import { subscribePlayersUpdated } from '@/hooks/usePlayers'
 import { useAmbianceMode } from '@/components/providers/AmbianceAttribute'
 import { PlayModeToggle } from '@/components/auth/PlayModeToggle'
 import { AmbianceModeToggle } from '@/components/auth/AmbianceModeToggle'
@@ -15,14 +16,22 @@ import { getStoredPlayers } from '@/lib/players'
 
 type Segment = { id: string; Icon: ComponentType<{ className?: string }>; label: string }
 
-/** Ids des joueurs enregistrés sur l'appareil, relus au montage et quand un autre onglet les change. */
+/**
+ * Ids des joueurs enregistrés sur l'appareil, relus au montage, quand un autre
+ * onglet les change et quand un écran de la page en crée un (la feuille des
+ * joueurs : sans cela, le nouveau venu coché n'entrait pas dans le compte).
+ */
 function useKnownPlayerIds(): Set<string> | null {
   const [ids, setIds] = useState<Set<string> | null>(null)
   useEffect(() => {
     const read = () => setIds(new Set(getStoredPlayers().map((p) => p.id)))
     read()
     window.addEventListener('storage', read)
-    return () => window.removeEventListener('storage', read)
+    const unsubscribe = subscribePlayersUpdated(read)
+    return () => {
+      window.removeEventListener('storage', read)
+      unsubscribe()
+    }
   }, [])
   return ids
 }
@@ -59,8 +68,12 @@ export function PartyBar() {
   const { selectedIds } = useSelectedPlayers()
   const knownIds = useKnownPlayerIds()
   const [open, setOpen] = useState(false)
+  // Le segment touché : « n joueurs » ouvre la feuille sur les seuls joueurs,
+  // pour changer la table d'un geste ; les deux autres gardent la feuille entière.
+  const [focus, setFocus] = useState<string | null>(null)
 
   const isOnline = user?.playMode === 'online'
+  const playersOnly = focus === 'players' && !isOnline
   const soft = ambiance === 'soft'
   const accountName = user ? (isOnline ? (user.onlineDisplayName ?? user.displayName) : user.displayName) : null
   // Une sélection peut garder l'id d'un joueur supprimé depuis : seuls ceux
@@ -94,6 +107,7 @@ export function PartyBar() {
               <DialogPrimitive.Trigger asChild key={id}>
                 <button
                   type="button"
+                  onClick={() => setFocus(id)}
                   className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-2 text-[13px] font-semibold text-cream transition-colors hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold/70 active:bg-gold/20"
                 >
                   <Icon className="h-4 w-4 shrink-0 text-gold" aria-hidden />
@@ -111,7 +125,9 @@ export function PartyBar() {
         >
           <div aria-hidden className="mx-auto mb-1 h-1 w-10 rounded-full bg-cream/30" />
           <div className="flex items-center justify-between gap-3">
-            <DialogPrimitive.Title className="font-display text-lg font-bold text-gold">{t('title')}</DialogPrimitive.Title>
+            <DialogPrimitive.Title className="font-display text-lg font-bold text-gold">
+              {playersOnly ? t('playersTitle') : t('title')}
+            </DialogPrimitive.Title>
             <DialogPrimitive.Close
               aria-label={tCommon('close')}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-cream/70 transition-colors hover:bg-gold/10 hover:text-cream"
@@ -120,18 +136,22 @@ export function PartyBar() {
             </DialogPrimitive.Close>
           </div>
 
-          <SheetSection title={tPlayMode('label')}>
-            <PlayModeToggle className="max-w-none" />
-            {/* La bascule n'avait aucune explication, contrairement à celle
-                de l'ambiance : « Local » ne disait pas « un seul téléphone ». */}
-            <p className="px-2 text-xs leading-snug text-cream/70">
-              {t(isOnline ? 'modeHint.online' : 'modeHint.local')}
-            </p>
-          </SheetSection>
+          {!playersOnly && (
+            <>
+              <SheetSection title={tPlayMode('label')}>
+                <PlayModeToggle className="max-w-none" />
+                {/* La bascule n'avait aucune explication, contrairement à celle
+                    de l'ambiance : « Local » ne disait pas « un seul téléphone ». */}
+                <p className="px-2 text-xs leading-snug text-cream/70">
+                  {t(isOnline ? 'modeHint.online' : 'modeHint.local')}
+                </p>
+              </SheetSection>
 
-          <SheetSection title={tAmbiance('label')}>
-            <AmbianceModeToggle />
-          </SheetSection>
+              <SheetSection title={tAmbiance('label')}>
+                <AmbianceModeToggle />
+              </SheetSection>
+            </>
+          )}
 
           {isOnline ? (
             accountName && (

@@ -8,6 +8,8 @@ import { LocalizedGameMeta } from "@/lib/games-i18n"
 import { hasContentIn } from "@/lib/games"
 import { PlayingCard } from "@/components/ui/PlayingCard"
 import { DifficultyBadge } from "@/components/game/DifficultyBadge"
+import { DrinkLevelBadge } from "@/components/game/DrinkLevelBadge"
+import { useGameDifficulty, useGameDrinkLevel } from "@/hooks/useGameCatalog"
 import { cn } from "@/lib/utils"
 import { ReactNode, useEffect, useState, useTransition } from "react"
 import { useSelectedPlayers } from "@/hooks/useSelectedPlayers"
@@ -85,6 +87,8 @@ function OpeningVeil({ forced, label }: { forced: boolean; label: string }) {
 export function GameCard({ game, icon, groupHint = false, disabled = false, disabledLabel, disabledHint }: GameCardProps) {
   const t = useTranslations("hub.jeux")
   const locale = useLocale()
+  const difficultyOf = useGameDifficulty()
+  const drinkLevelOf = useGameDrinkLevel()
   const router = useRouter()
   const { user } = useAuth()
   const { selectedIds } = useSelectedPlayers()
@@ -238,8 +242,12 @@ export function GameCard({ game, icon, groupHint = false, disabled = false, disa
                   <span className="sr-only">{t("playersBadge", { range: players })}</span>
                 </span>
               )}
-              <DifficultyBadge level={game.difficulty} tone="card" variant={players ? "bars" : "label"} />
+              <DifficultyBadge level={difficultyOf(game.id)} tone="card" variant={players ? "bars" : "label"} />
             </span>
+            {/* Sur sa propre ligne : à 77 px utiles, la jauge et son mot ne
+                tiennent à côté de la difficulté. Masqué en « Sans alcool », la
+                ligne disparaît avec lui (l'écart vient du gap du parent). */}
+            <DrinkLevelBadge level={drinkLevelOf(game.id)} tone="card" variant="icons" />
           </span>
         </article>
         {/* Le voile lit le statut du <Link> parent : sans lien, pas de voile. */}

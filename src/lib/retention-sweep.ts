@@ -42,6 +42,8 @@ import {
  * - LocalGameDaily (compteurs agrégés des parties locales, sans aucune
  *   donnée personnelle) : 13 mois, même règle que DailyVisitor — la durée
  *   d'une comparaison d'une saison à la même saison de l'année suivante ;
+ * - GameDrinkDaily (gorgées par jeu, local et en ligne, sans aucune donnée
+ *   personnelle) : 13 mois, même règle ;
  * - UserFeedback (retours « Signaler / Suggérer » et avis de 1re partie :
  *   message, captures, page, navigateur) : 24 mois après leur envoi. La
  *   politique le promettait sans que rien ne l'applique ; l'avis de 1re
@@ -158,8 +160,9 @@ const TWENTY_FOUR_MONTHS_MS = 24 * MONTH_MS
  *
  * ⚠️ Doit rester aligné avec :
  * - GUEST_SESSION_DAYS dans src/lib/auth-server.ts (cette durée + 1 jour) ;
- * - GUEST_INACTIVITY_DAYS dans src/components/ui/AccountInfo.tsx (client :
- *   ce module importe Prisma, il ne peut pas y être importé) ;
+ * - GUEST_INACTIVITY_DAYS dans src/components/account/guest-retention.ts
+ *   (client : ce module importe Prisma, il ne peut pas y être importé ;
+ *   guest-retention.test.ts vérifie l'alignement) ;
  * - docs/legal/<langue>/confidentialite.md §7.
  */
 export const GUEST_INACTIVITY_DAYS = 90
@@ -329,6 +332,7 @@ export async function runRetentionSweep({ force = false }: RetentionSweepOptions
       // Compteurs des parties locales : même borne que DailyVisitor, sur le
       // même format de jour de Paris (AAAA-MM-JJ, comparable comme une chaîne).
       ['LocalGameDaily', prisma.localGameDaily.deleteMany({ where: { day: { lt: dailyVisitorCutoff } } })],
+      ['GameDrinkDaily', prisma.gameDrinkDaily.deleteMany({ where: { day: { lt: dailyVisitorCutoff } } })],
       // Retours et avis de 1re partie : 24 mois après l'envoi, quel que soit
       // leur statut — un retour « ouvert » depuis deux ans ne sera plus traité.
       ['UserFeedback', prisma.userFeedback.deleteMany({ where: { createdAt: { lt: twentyFourMonthsAgo } } })],

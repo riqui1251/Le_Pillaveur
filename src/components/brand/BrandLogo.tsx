@@ -64,10 +64,13 @@ export function BrandLogo({ className }: { className?: string }) {
       {/* cadre double filet */}
       <rect x="24" y="16" width="352" height="88" rx="10" stroke="var(--gold)" strokeWidth="1.6" />
       <rect x="30" y="22" width="340" height="76" rx="7" stroke="var(--gold)" strokeWidth="0.8" opacity="0.6" />
+      {/* Largeur bornée : en Playfair 34 px, le mot débordait sur le cœur et
+          le pique d'angle (x 52-68 et 336-344). */}
       <text
         x="200" y="60" textAnchor="middle"
         fontFamily="var(--font-display), Georgia, serif"
-        fontSize="34" fontWeight="700" letterSpacing="3"
+        fontSize="32" fontWeight="700" letterSpacing="3"
+        textLength="244" lengthAdjust="spacingAndGlyphs"
         fill="var(--cream)"
       >
         LE PILLAVEUR
