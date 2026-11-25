@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import robots from '@/app/robots'
@@ -130,6 +131,7 @@ describe('metadata lue dans le catalogue — titres et extraits, par langue', ()
         ['hub /jeux', at(catalogue, 'games.meta.hub.title'), at(catalogue, 'games.meta.hub.description')],
         ['/regles', at(catalogue, 'rules.meta.title') + suffix, at(catalogue, 'rules.meta.description')],
         ['/classement', at(catalogue, 'metadata.ranking.title') + suffix, at(catalogue, 'metadata.ranking.description')],
+        ['/decouvrir', at(catalogue, 'metadata.discover.title') + suffix, at(catalogue, 'metadata.discover.description')],
         ['/application', at(catalogue, 'metadata.mobileApp.title') + suffix, at(catalogue, 'metadata.mobileApp.description')],
         ...COLLECTION_SLUGS.map((slug): [string, string, string] => [
           `/jeux/${slug}`,
@@ -243,5 +245,30 @@ describe('layout de langue — JSON-LD Organization', () => {
     expect(match, 'logo absent du bloc publisher').not.toBeNull()
     expect(match?.[1]).toBe('/icons/icon-512x512.png')
     expect(existsSync(join(ROOT, 'public', match![1]))).toBe(true)
+  })
+})
+
+describe('/decouvrir — metadata distincte de celle de l’accueil', () => {
+  for (const locale of locales) {
+    it(locale, () => {
+      const c = CATALOGUES[locale] as unknown as { metadata: Record<string, Record<string, string>> }
+      expect(c.metadata.discover.title).not.toBe(c.metadata.titleFull)
+      expect(c.metadata.discover.description).not.toBe(c.metadata.description)
+      expect(c.metadata.discover.description).not.toBe(c.metadata.descriptionCount)
+    })
+  }
+})
+
+describe('next.config.js — redirections', () => {
+  it('renvoie www.lepillaveur.fr vers le domaine nu en 301 et garde /regles', async () => {
+    const config = createRequire(import.meta.url)(join(ROOT, 'next.config.js'))
+    const redirects = await (config.default ?? config).redirects()
+    expect(redirects).toContainEqual({
+      source: '/:path*',
+      has: [{ type: 'host', value: 'www.lepillaveur.fr' }],
+      destination: 'https://lepillaveur.fr/:path*',
+      statusCode: 301,
+    })
+    expect(redirects.some((r: { source: string }) => r.source === '/regles/:gameId')).toBe(true)
   })
 })

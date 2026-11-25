@@ -44,6 +44,10 @@
     "titleFull": "Le Pillaveur — Giochi di società gratis online con gli amici",
     "description": "Giochi di società gratis, senza installazione: Lupo Mannaro, quiz, disegno, bluff. Con gli amici, chat vocale e modalità TV — o da solo coi bot.",
     "descriptionCount": "{count} giochi di società gratis, senza installazione: Lupo Mannaro, quiz, disegno, bluff. Con gli amici, chat vocale e modalità TV — o da solo coi bot.",
+    "discover": {
+      "title": "Giochi da festa a distanza con chat vocale",
+      "description": "Lupo Mannaro, quiz, disegno, bluff: apri un tavolo online, invita la tua banda con link o QR e si gioca a distanza con la chat vocale, o sulla TV. Gratis."
+    },
     "ranking": {
       "title": "Classifica dei giocatori",
       "description": "La classifica delle partite online di Le Pillaveur: vittorie, sconfitte e percentuale di vittorie, in generale e gioco per gioco."
@@ -51,6 +55,21 @@
     "mobileApp": {
       "title": "App per cellulare",
       "description": "Le Pillaveur sul telefono: l’app Android e iOS sta arrivando. Nel frattempo tutti i giochi funzionano già nel browser, senza installare nulla."
+    }
+  },
+  "homeLinks": {
+    "title": "Giochi alcolici e giochi da festa, gratis",
+    "p1": "Le Pillaveur riunisce {count} giochi da festa gratuiti, senza app da installare: giochi alcolici tra amici come la Piramide, la Coppa del Re, il Purple o la Corsa PMU, e giochi da tavolo come il Lupo Mannaro, il Petit Bac o l’Impostore.",
+    "p2": "Si gioca su un solo telefono che gira intorno al tavolo, o ognuno sul proprio, online e a distanza con la chat vocale. Non beve tutto il tavolo? L’atmosfera «Senza alcol» trasforma i sorsi in penitenze. Riservato ai maggiori di 18 anni.",
+    "navLabel": "Esplora Le Pillaveur",
+    "links": {
+      "all": "Tutti i giochi da festa",
+      "noAlcohol": "Giochi da festa senza alcol",
+      "duo": "Giochi per 2 giocatori",
+      "bigGroup": "Giochi per grandi gruppi",
+      "solo": "Giocare da soli con i bot",
+      "remote": "Giochi da festa a distanza",
+      "rules": "Regole dei giochi"
     }
   },
   "nav": {
@@ -9086,7 +9105,7 @@
         "libre": {
           "title": "Gioco libero",
           "subtitle": "In locale o online",
-          "allAges": "Per tutti"
+          "alcoholOptional": "Con o senza alcol"
         },
         "picked": {
           "soiree": "Modalità Serata scelta. Regolate il numero di giocatori qui sotto.",
@@ -9096,7 +9115,7 @@
       },
       "libre": {
         "title": "Un solo gioco, quello che volete",
-        "lead": "Giochi da festa e giochi da tavolo per tutti. Scegliete dove si gioca, poi il gioco.",
+        "lead": "Giochi da festa e giochi da tavolo, con o senza alcol. Scegliete dove si gioca, poi il gioco.",
         "whereLabel": "Dove si gioca la partita",
         "local": "Su questo telefono",
         "localCount": "{count, plural, one {# gioco} other {# giochi}} · ci si passa il telefono",

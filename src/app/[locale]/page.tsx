@@ -5,6 +5,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { soireeSlice } from '@/i18n/messages-slices'
 import { ClientMessages } from '@/components/i18n/ClientMessages'
 import { HomeLanding } from '@/components/home/HomeLanding'
+import { HomeSiteLinks } from '@/components/home/HomeSiteLinks'
 import { SoireeShell } from '@/components/soiree/soiree-ui'
 import { GAMES } from '@/lib/games'
 import { buildAlternates, buildOpenGraphLocale, siteOgImage } from '@/lib/seo/alternates'
@@ -66,6 +67,7 @@ export default async function Home({
     <ClientMessages messages={soireeSlice(await getMessages({ locale }))}>
       <SoireeShell>
         <HomeLanding />
+        <HomeSiteLinks locale={locale} />
       </SoireeShell>
     </ClientMessages>
   )

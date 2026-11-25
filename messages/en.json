@@ -44,6 +44,10 @@
     "titleFull": "Le Pillaveur — Free online party games with friends",
     "description": "Free party games, no install: Werewolf, quiz, drawing, bluffing. With friends via voice chat and TV mode — or solo with bots.",
     "descriptionCount": "{count} free party games, no install: Werewolf, quiz, drawing, bluffing. With friends via voice chat and TV mode — or solo with bots.",
+    "discover": {
+      "title": "Remote party games with voice chat",
+      "description": "Werewolf, quiz, drawing, bluff: open an online table, invite your crew by link or QR and play remotely with voice chat, or on the TV. Free."
+    },
     "ranking": {
       "title": "Player leaderboard",
       "description": "Le Pillaveur's online leaderboard: wins, losses and win rate, overall and game by game."
@@ -51,6 +55,21 @@
     "mobileApp": {
       "title": "Mobile app",
       "description": "Le Pillaveur on your phone: the Android and iOS app is coming. Meanwhile every game already runs in the browser, no install needed."
+    }
+  },
+  "homeLinks": {
+    "title": "Free drinking games and party games",
+    "p1": "Le Pillaveur brings together {count} free party games, no app to install: drinking games with friends like Pyramid, King’s Cup, Purple or the PMU Race, and board games like Werewolf, Petit Bac or The Impostor.",
+    "p2": "Play on a single phone passed around the table, or each on your own, online and remotely with voice chat. Not everyone at the table drinks? The “Alcohol-free” mode turns sips into dares. 18 and over only.",
+    "navLabel": "Explore Le Pillaveur",
+    "links": {
+      "all": "All party games",
+      "noAlcohol": "Alcohol-free party games",
+      "duo": "2-player games",
+      "bigGroup": "Games for big groups",
+      "solo": "Play solo with bots",
+      "remote": "Remote party games",
+      "rules": "Game rules"
     }
   },
   "nav": {
@@ -9086,7 +9105,7 @@
         "libre": {
           "title": "Free play",
           "subtitle": "Local or online",
-          "allAges": "All ages"
+          "alcoholOptional": "With or without alcohol"
         },
         "picked": {
           "soiree": "Party Mode selected. Set the number of players below.",
@@ -9096,7 +9115,7 @@
       },
       "libre": {
         "title": "Just one game, your pick",
-        "lead": "Party games and board games for all ages. Choose where to play, then the game.",
+        "lead": "Party games and board games, with or without alcohol. Choose where to play, then the game.",
         "whereLabel": "Where the game is played",
         "local": "On this phone",
         "localCount": "{count, plural, one {# game} other {# games}} · pass it around",

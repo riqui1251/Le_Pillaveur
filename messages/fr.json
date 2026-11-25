@@ -44,6 +44,10 @@
     "titleFull": "Le Pillaveur — Jeux de soirée entre amis, en ligne, gratuits",
     "description": "Des jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots.",
     "descriptionCount": "{count} jeux de soirée gratuits, sans installation : Loup-Garou, quiz, dessin, bluff. Entre amis avec chat vocal et mode TV — ou en solo avec des bots.",
+    "discover": {
+      "title": "Jeux de soirée à distance, avec chat vocal",
+      "description": "Loup-Garou, quiz, dessin, bluff : ouvre une table en ligne, invite ta bande par lien ou QR et joue à distance avec le chat vocal, ou sur la télé. Gratuit."
+    },
     "ranking": {
       "title": "Classement des joueurs",
       "description": "Le classement des parties en ligne du Pillaveur : victoires, défaites et pourcentage de réussite, au général et jeu par jeu."
@@ -51,6 +55,21 @@
     "mobileApp": {
       "title": "Application mobile",
       "description": "Le Pillaveur sur téléphone : l'application Android et iOS arrive. En attendant, tous les jeux tournent déjà dans le navigateur, sans installation."
+    }
+  },
+  "homeLinks": {
+    "title": "Jeux à boire et jeux de soirée, gratuits",
+    "p1": "Le Pillaveur réunit {count} jeux de soirée gratuits, sans appli à installer : des jeux à boire entre potes comme la Pyramide, la Coupe du Roi, le Purple ou la Course PMU, et des jeux de société comme le Loup-Garou, le Petit Bac ou l’Imposteur.",
+    "p2": "On joue sur un seul téléphone qui tourne autour de la table, ou chacun sur le sien, en ligne et à distance avec le chat vocal. Toute la table ne boit pas ? L’ambiance « Sans alcool » transforme les gorgées en gages. Réservé aux 18 ans et plus.",
+    "navLabel": "Explorer Le Pillaveur",
+    "links": {
+      "all": "Tous les jeux de soirée",
+      "noAlcohol": "Jeux de soirée sans alcool",
+      "duo": "Jeux à 2 joueurs",
+      "bigGroup": "Jeux en grand groupe",
+      "solo": "Jouer seul avec des bots",
+      "remote": "Jeux de soirée à distance",
+      "rules": "Règles des jeux"
     }
   },
   "nav": {
@@ -9086,7 +9105,7 @@
         "libre": {
           "title": "Jeu libre",
           "subtitle": "En local ou en ligne",
-          "allAges": "Tout public"
+          "alcoholOptional": "Avec ou sans alcool"
         },
         "picked": {
           "soiree": "Mode Soirée choisi. Réglez le nombre de joueurs plus bas.",
@@ -9096,7 +9115,7 @@
       },
       "libre": {
         "title": "Un seul jeu, celui que vous voulez",
-        "lead": "Jeux de soirée et jeux de société tout public. Choisissez où ça se joue, puis le jeu.",
+        "lead": "Jeux de soirée et jeux de société, avec ou sans alcool. Choisissez où ça se joue, puis le jeu.",
         "whereLabel": "Où se joue la partie",
         "local": "Sur ce téléphone",
         "localCount": "{count, plural, one {# jeu} other {# jeux}} · on se le passe",

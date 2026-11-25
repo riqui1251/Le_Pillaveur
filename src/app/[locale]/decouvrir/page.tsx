@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { isAppLocale } from '@/lib/locale-utils'
 import { LandingPage } from '@/components/landing/LandingPage'
-import { GAMES } from '@/lib/games'
 import { buildAlternates, buildOpenGraphLocale, siteOgImage } from '@/lib/seo/alternates'
 
 // Aucune lecture de cookies ni d'en-têtes sur la chaîne : la page est prérendue.
@@ -13,17 +12,19 @@ export const revalidate = 300
 
 /**
  * L'ancien accueil (la vitrine : héros, jeux, règles, FAQ), déplacé ici le
- * 22/11/2026 quand le Mode Soirée est devenu l'accueil — toujours dans le
- * menu (« Découvrir Le Pillaveur »).
+ * 22/11/2026 quand le Mode Soirée est devenu l'accueil — liée depuis le bloc
+ * de liens sous l'accueil. Titre et extrait propres (un doublon de ceux de
+ * l'accueil fait choisir à Google l'une des deux pages).
  */
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
   if (!isAppLocale(locale)) notFound()
   const t = await getTranslations({ locale, namespace: 'metadata' })
-  const title = t('titleFull')
-  const description = t('descriptionCount', { count: GAMES.filter((g) => !g.hidden).length })
+  const title = t('discover.title')
+  const description = t('discover.description')
   const ogImage = siteOgImage(locale)
   return {
+    title,
     description,
     alternates: buildAlternates('/decouvrir', locale),
     openGraph: {

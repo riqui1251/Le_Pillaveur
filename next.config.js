@@ -62,6 +62,13 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        // Doublon d'hôte : www servait une copie du site en 200, Google l'indexait à côté du domaine nu.
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.lepillaveur.fr' }],
+        destination: 'https://lepillaveur.fr/:path*',
+        statusCode: 301,
+      },
+      {
         // Les règles n'existent qu'en français : redirection PERMANENTE des
         // URLs nues (indexées par Google à côté des /fr/ — signal divisé).
         // Les autres pages nues restent sur la détection de langue next-intl.

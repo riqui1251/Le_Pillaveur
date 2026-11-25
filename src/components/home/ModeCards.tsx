@@ -190,7 +190,7 @@ export function ModeCards({
           tags={
             <>
               <Tag>{tCommon('gameCount', { count: gameCount })}</Tag>
-              <Tag>{t('modes.libre.allAges')}</Tag>
+              <Tag>{t('modes.libre.alcoholOptional')}</Tag>
             </>
           }
           onPress={() => onPick('libre')}
