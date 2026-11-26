@@ -7,10 +7,12 @@ import { suitGlyph, suitIsRed } from '@/components/ui/PlayingCard'
 import { GAME_ICONS, GameIconById } from '@/components/hub/GameIconById'
 import { cn } from '@/lib/utils'
 import { usePlayers } from '@/hooks/usePlayers'
-import { soireeGameColors } from '@/lib/soiree/catalog'
 import type { Soiree, SoireeMetric } from '@/lib/soiree/state'
 import { useSiteBackdrop } from './site-backdrop'
 import { badgeBackground, badgeInkFor } from './badge-contrast'
+import { gameGradient } from './ranking-colors'
+
+export { MEDALS, gameGradient } from './ranking-colors'
 
 /**
  * Colonne largeur téléphone posée sur le feutre du site ; la barre d'action vit en bas (SoireeCta).
@@ -65,13 +67,6 @@ export function GameCorner({ gameId, className }: { gameId: string; className?: 
   )
 }
 
-/** Or, argent, bronze : le podium de l'ardoise. */
-export const MEDALS = [
-  'linear-gradient(135deg, #F1D27A, #D9A441)',
-  'linear-gradient(135deg, #EDEDED, #A9B0B8)',
-  'linear-gradient(135deg, #E3A86B, #B0703A)',
-] as const
-
 /** Les couleurs que la page Joueurs attribue (src/lib/players.ts) : les seules classes sûres d'exister. */
 const PLAYER_COLOR_CLASSES = new Set([
   'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500',
@@ -82,12 +77,6 @@ const PLAYER_COLOR_CLASSES = new Set([
 export function playerBarClass(player: { name: string; preferences?: { color?: string } }): string {
   const color = player.preferences?.color
   return color && PLAYER_COLOR_CLASSES.has(color) ? color : 'bg-gradient-to-r from-amber-600 to-amber-400'
-}
-
-/** Le dégradé du jeu (ses deux couleurs), pour un fond, une bande ou une barre. */
-export function gameGradient(gameId: string, angle = 135): string {
-  const { from, to } = soireeGameColors(gameId)
-  return `linear-gradient(${angle}deg, ${from}, ${to})`
 }
 
 /**

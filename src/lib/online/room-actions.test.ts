@@ -16,6 +16,7 @@ const {
   drinkTallyMock,
   userCountMock,
   recordGameDrinksMock,
+  recordDrinkResultsMock,
 } = vi.hoisted(() => ({
   roomRow: { current: null as Record<string, unknown> | null },
   findUniqueMock: vi.fn(),
@@ -29,6 +30,7 @@ const {
   drinkTallyMock: vi.fn(),
   userCountMock: vi.fn(),
   recordGameDrinksMock: vi.fn(),
+  recordDrinkResultsMock: vi.fn(),
 }))
 
 vi.mock('@/lib/prisma', () => ({
@@ -43,6 +45,7 @@ vi.mock('@/lib/online-room', () => ({ kickMember: kickMemberMock }))
 vi.mock('@/lib/online/match-results', () => ({ recordMatchResults: recordMatchResultsMock }))
 vi.mock('@/lib/online/room-ticker', () => ({ armRoomTickerForState: armForStateMock }))
 vi.mock('@/lib/game-drinks-server', () => ({ recordGameDrinks: recordGameDrinksMock }))
+vi.mock('@/lib/online/drink-results', () => ({ recordOnlineDrinkResults: recordDrinkResultsMock }))
 vi.mock('@/lib/online/game-adapters', () => ({
   getGameAdapter: (gameId: string | null) =>
     gameId === 'fake'
@@ -64,6 +67,7 @@ vi.mock('@/lib/online/game-adapters', () => ({
 
 import { SERVICE_ACTOR_ID, applyRoomAction, recordOnlineGameDrinks } from '@/lib/online/room-actions'
 import type { GameAdapter } from '@/lib/online/game-adapters'
+import { prisma } from '@/lib/prisma'
 
 const PLAYING = { turn: 'bot-1', players: [{ id: 'u1' }, { id: 'bot-1', isBot: true }] }
 
@@ -92,6 +96,7 @@ beforeEach(() => {
   drinkTallyMock.mockReturnValue(null)
   userCountMock.mockResolvedValue(0)
   recordGameDrinksMock.mockResolvedValue(undefined)
+  recordDrinkResultsMock.mockResolvedValue(0)
 })
 
 describe('applyRoomAction — tick de service (acteur null)', () => {
@@ -221,17 +226,21 @@ describe('applyRoomAction — joueur (contrat de la route inchangé)', () => {
   })
 })
 
-describe('fin de partie : relevé anonyme des gorgées', () => {
+describe('fin de partie : relevé des gorgées (compteurs anonymes et lignes par compte)', () => {
   /** La promesse du relevé n'est pas attendue par la fin de partie : on la laisse aboutir. */
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
   const FINISHED = {
     finished: true,
     players: [{ id: 'u1' }, { id: 'online-u3' }, { id: 'bot-1', isBot: true }],
   }
+  const SEATS = [
+    { playerId: 'u1', drinks: 5 },
+    { playerId: 'online-u3', drinks: 2 },
+  ]
 
   beforeEach(() => {
     applyActionMock.mockReturnValue({ ok: true, state: FINISHED })
-    drinkTallyMock.mockReturnValue({ drinks: 7, plays: 2 })
+    drinkTallyMock.mockReturnValue({ drinks: 7, plays: 2, seats: SEATS })
   })
 
   it('une partie qui se termine : un relevé « online » sur l’état final', async () => {
@@ -246,12 +255,19 @@ describe('fin de partie : relevé anonyme des gorgées', () => {
     expect(where.id.in).toEqual(expect.arrayContaining(['u1', 'u2', 'u3']))
   })
 
+  it('une partie qui se termine : les lignes par compte, avec la salle, le jeu et les sièges', async () => {
+    await applyRoomAction('r1', 'u1', { action: 'play' })
+    await vi.waitFor(() => expect(recordDrinkResultsMock).toHaveBeenCalledTimes(1))
+    expect(recordDrinkResultsMock).toHaveBeenCalledWith(prisma, { roomId: 'r1', gameId: 'fake', seats: SEATS })
+  })
+
   it('partie déjà finie (action tardive sur l’écran de fin) : rien de plus', async () => {
     setRoom({ gameStateJson: JSON.stringify(FINISHED) })
     await applyRoomAction('r1', 'u1', { action: 'play' })
     await settle()
     expect(drinkTallyMock).not.toHaveBeenCalled()
     expect(recordGameDrinksMock).not.toHaveBeenCalled()
+    expect(recordDrinkResultsMock).not.toHaveBeenCalled()
   })
 
   it('compare-and-swap perdu : l’autre écriture a fini la partie, pas celle-ci', async () => {
@@ -259,6 +275,7 @@ describe('fin de partie : relevé anonyme des gorgées', () => {
     await applyRoomAction('r1', 'u1', { action: 'play' })
     await settle()
     expect(recordGameDrinksMock).not.toHaveBeenCalled()
+    expect(recordDrinkResultsMock).not.toHaveBeenCalled()
   })
 
   it('un compte « Sans alcool » à la table : ses gorgées étaient des gages, rien n’est compté', async () => {
@@ -267,6 +284,8 @@ describe('fin de partie : relevé anonyme des gorgées', () => {
     await vi.waitFor(() => expect(userCountMock).toHaveBeenCalledTimes(1))
     await settle()
     expect(recordGameDrinksMock).not.toHaveBeenCalled()
+    // Ni pour les autres comptes de la table : leurs « gorgées » valaient aussi des gages.
+    expect(recordDrinkResultsMock).not.toHaveBeenCalled()
   })
 
   it('rien à relever (jeu sans compteur, partie vide) : pas même la lecture des comptes', async () => {
@@ -275,6 +294,7 @@ describe('fin de partie : relevé anonyme des gorgées', () => {
     await settle()
     expect(userCountMock).not.toHaveBeenCalled()
     expect(recordGameDrinksMock).not.toHaveBeenCalled()
+    expect(recordDrinkResultsMock).not.toHaveBeenCalled()
   })
 
   it('base en échec : erreur avalée et journalisée sans détail, la fin de partie répond quand même', async () => {
@@ -287,6 +307,38 @@ describe('fin de partie : relevé anonyme des gorgées', () => {
     errorSpy.mockRestore()
   })
 
+  it('compteurs en échec : les lignes par compte partent quand même', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    recordGameDrinksMock.mockRejectedValue(new Error('SQLITE_BUSY'))
+    await applyRoomAction('r1', 'u1', { action: 'play' })
+    await vi.waitFor(() => expect(recordDrinkResultsMock).toHaveBeenCalledTimes(1))
+    expect(errorSpy).toHaveBeenCalledWith('[game-drinks] relevé échoué', 'Error')
+    errorSpy.mockRestore()
+  })
+
+  it('lignes par compte en échec : les compteurs sont écrits, l’erreur journalisée sans détail', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    recordDrinkResultsMock.mockRejectedValue(new Error('Foreign key constraint violated : compte de Riri'))
+    const result = await applyRoomAction('r1', 'u1', { action: 'play' })
+    expect(result.status).toBe(200)
+    await vi.waitFor(() => expect(errorSpy).toHaveBeenCalledWith('[drink-results] enregistrement échoué', 'Error'))
+    expect(recordGameDrinksMock).toHaveBeenCalledWith({ gameId: 'fake', mode: 'online', drinks: 7, plays: 2 })
+    errorSpy.mockRestore()
+  })
+
+  it('recordOnlineGameDrinks ne lève jamais, même si les deux écritures échouent', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    recordGameDrinksMock.mockRejectedValue(new Error('SQLITE_BUSY'))
+    recordDrinkResultsMock.mockRejectedValue(new RangeError('SQLITE_FULL'))
+    const adapter = { drinkTally: drinkTallyMock } as unknown as GameAdapter
+    await expect(
+      recordOnlineGameDrinks({ roomId: 'r1', gameId: 'fake', adapter, state: FINISHED, hostUserId: 'u1', memberIds: [] })
+    ).resolves.toBeUndefined()
+    expect(errorSpy).toHaveBeenCalledWith('[game-drinks] relevé échoué', 'Error')
+    expect(errorSpy).toHaveBeenCalledWith('[drink-results] enregistrement échoué', 'RangeError')
+    errorSpy.mockRestore()
+  })
+
   it('recordOnlineGameDrinks ne lève jamais, même si le relevé du moteur plante', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const adapter = {
@@ -295,10 +347,11 @@ describe('fin de partie : relevé anonyme des gorgées', () => {
       },
     } as unknown as GameAdapter
     await expect(
-      recordOnlineGameDrinks({ gameId: 'fake', adapter, state: {}, hostUserId: 'u1', memberIds: [] })
+      recordOnlineGameDrinks({ roomId: 'r1', gameId: 'fake', adapter, state: {}, hostUserId: 'u1', memberIds: [] })
     ).resolves.toBeUndefined()
     expect(errorSpy).toHaveBeenCalledWith('[game-drinks] relevé échoué', 'TypeError')
     expect(recordGameDrinksMock).not.toHaveBeenCalled()
+    expect(recordDrinkResultsMock).not.toHaveBeenCalled()
     errorSpy.mockRestore()
   })
 })

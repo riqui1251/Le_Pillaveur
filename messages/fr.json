@@ -90,7 +90,7 @@
     "links": {
       "classement": {
         "label": "Classement",
-        "description": "Scores en ligne"
+        "description": "Scores en ligne et gorgées"
       },
       "compte": {
         "label": "Compte",
@@ -7181,6 +7181,21 @@
   },
   "ranking": {
     "title": "Classement",
+    "tabs": {
+      "label": "Choisir le classement",
+      "online": "En ligne",
+      "drinks": "Gorgées"
+    },
+    "drinks": {
+      "subtitle": "Quel jeu fait le plus boire ? Gorgées moyennes par joueur et par partie, sur tout le site puis chez vous.",
+      "playersTitle": "Les plus gros buveurs en ligne",
+      "playersLead": "Gorgées bues par chaque compte dans les parties en ligne, jeu par jeu.",
+      "accounts": "{count, plural, one {# compte} other {# comptes}}",
+      "loginForNames": "Connectez-vous pour voir les pseudos et votre position.",
+      "empty": "Aucune gorgée enregistrée en ligne pour l’instant : le classement se remplit avec les prochaines parties.",
+      "error": "Impossible de charger le classement des joueurs. Vérifiez la connexion et réessayez.",
+      "legend": "Colonnes : gorgées bues · parties jouées. Une partie avec un compte « Sans alcool » à la table ne compte pas."
+    },
     "online": {
       "you": "toi",
       "winsShort": "V",

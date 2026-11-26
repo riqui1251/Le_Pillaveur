@@ -90,7 +90,7 @@
     "links": {
       "classement": {
         "label": "Classifica",
-        "description": "Punteggi online"
+        "description": "Punteggi online e sorsi"
       },
       "compte": {
         "label": "Account",
@@ -7181,6 +7181,21 @@
   },
   "ranking": {
     "title": "Classifica",
+    "tabs": {
+      "label": "Scegli la classifica",
+      "online": "Online",
+      "drinks": "Sorsi"
+    },
+    "drinks": {
+      "subtitle": "Quale gioco fa bere di più? Sorsi medi per giocatore e per partita, su tutto il sito, poi da voi.",
+      "playersTitle": "Chi beve di più online",
+      "playersLead": "Sorsi bevuti da ogni account nelle partite online, gioco per gioco.",
+      "accounts": "{count, plural, one {# account} other {# account}}",
+      "loginForNames": "Accedi per vedere i nickname e la tua posizione.",
+      "empty": "Nessun sorso registrato online per ora: la classifica si riempirà con le prossime partite.",
+      "error": "Impossibile caricare la classifica dei giocatori. Controlla la connessione e riprova.",
+      "legend": "Colonne: sorsi bevuti · partite giocate. Una partita con un account «Senza alcol» al tavolo non conta."
+    },
     "online": {
       "you": "tu",
       "winsShort": "V",

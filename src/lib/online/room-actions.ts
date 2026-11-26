@@ -8,6 +8,8 @@ import { onlineErrorBody, resolveOnlineErrorCode } from '@/lib/online-errors'
 import { armRoomTickerForState } from '@/lib/online/room-ticker'
 import { recordGameDrinks } from '@/lib/game-drinks-server'
 import { onlineUserIdFromPlayerId } from '@/lib/online-players'
+import type { DrinkTally } from '@/lib/online/drink-tally'
+import { recordOnlineDrinkResults } from '@/lib/online/drink-results'
 
 /**
  * CŒUR « appliquer une action à une salle » — SERVEUR-AUTORITAIRE, générique
@@ -124,29 +126,39 @@ function tableAccountIds(state: unknown, hostUserId: string, memberIds: readonly
   return [...ids]
 }
 
+/** RGPD : comme pour le classement, seul le nom de la classe d'erreur. */
+const errorClass = (e: unknown) => (e instanceof Error ? e.name : typeof e)
+
 /**
- * Relevé ANONYME des gorgées d'une partie en ligne qui vient de finir, pour
- * « Quel jeu fait le plus boire ? » (game-drinks-server.ts) : seuls le jeu,
- * le mode et deux entiers partent — ni compte, ni salle, ni pseudo.
+ * Gorgées d'une partie en ligne qui vient de finir, écrites deux fois :
+ *  - compteurs ANONYMES de « Quel jeu fait le plus boire ? »
+ *    (game-drinks-server.ts) : seuls le jeu, le mode et deux entiers partent
+ *    — ni compte, ni salle, ni pseudo ;
+ *  - une ligne par COMPTE de la table pour le classement des comptes par jeu
+ *    (drink-results.ts) : salle, jeu, compte et gorgées bues.
+ * L'échec de l'une n'empêche pas l'autre.
  *
  * Ambiance : une salle en ligne n'en a pas. Ni ses réglages ni les moteurs ne
  * la portent ; chaque téléphone affiche gorgées ou gages selon le réglage de
  * SON compte (`User.ambianceMode`, lu par useAmbianceMode), et Sans Filtre /
  * Dilemmes tirent leur contenu sur celui de l'hôte. Un seul compte « Sans
  * alcool » à la table suffit donc pour que des « gorgées » du moteur aient
- * été des gages : la partie entière n'est pas comptée.
+ * été des gages : la partie entière n'est pas comptée, ni dans les compteurs
+ * ni pour aucun compte.
  *
  * Ne lève jamais : la fin de partie n'en dépend pas.
  */
 export async function recordOnlineGameDrinks(args: {
+  roomId: string
   gameId: string
   adapter: GameAdapter
   state: unknown
   hostUserId: string
   memberIds: readonly string[]
 }): Promise<void> {
+  let tally: DrinkTally | null
   try {
-    const tally = args.adapter.drinkTally?.(args.state) ?? null
+    tally = args.adapter.drinkTally?.(args.state) ?? null
     if (!tally) return
     const softAccounts = await prisma.user.count({
       where: {
@@ -155,10 +167,19 @@ export async function recordOnlineGameDrinks(args: {
       },
     })
     if (softAccounts > 0) return
-    await recordGameDrinks({ gameId: args.gameId, mode: 'online', ...tally })
   } catch (e) {
-    // RGPD : comme pour le classement, seul le nom de la classe d'erreur.
-    console.error('[game-drinks] relevé échoué', e instanceof Error ? e.name : typeof e)
+    console.error('[game-drinks] relevé échoué', errorClass(e))
+    return
+  }
+  try {
+    await recordGameDrinks({ gameId: args.gameId, mode: 'online', drinks: tally.drinks, plays: tally.plays })
+  } catch (e) {
+    console.error('[game-drinks] relevé échoué', errorClass(e))
+  }
+  try {
+    await recordOnlineDrinkResults(prisma, { roomId: args.roomId, gameId: args.gameId, seats: tally.seats })
+  } catch (e) {
+    console.error('[drink-results] enregistrement échoué', errorClass(e))
   }
 }
 
@@ -293,6 +314,7 @@ export async function applyActionToRoom(
     // la réponse ni l'annonce de fin ne patientent pour une statistique. Même
     // garde « une seule fois » que le classement.
     void recordOnlineGameDrinks({
+      roomId,
       gameId: finishedGameId,
       adapter,
       state: next,

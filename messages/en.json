@@ -90,7 +90,7 @@
     "links": {
       "classement": {
         "label": "Ranking",
-        "description": "Online scores"
+        "description": "Online scores and sips"
       },
       "compte": {
         "label": "Account",
@@ -7181,6 +7181,21 @@
   },
   "ranking": {
     "title": "Ranking",
+    "tabs": {
+      "label": "Choose a ranking",
+      "online": "Online",
+      "drinks": "Sips"
+    },
+    "drinks": {
+      "subtitle": "Which game makes you drink most? Average sips per player per game, across the whole site, then on your phone.",
+      "playersTitle": "The biggest drinkers online",
+      "playersLead": "Sips drunk by each account in online games, game by game.",
+      "accounts": "{count, plural, one {# account} other {# accounts}}",
+      "loginForNames": "Log in to see nicknames and your position.",
+      "empty": "No sips recorded online yet: the leaderboard fills up with the next games.",
+      "error": "Couldn’t load the players leaderboard. Check your connection and try again.",
+      "legend": "Columns: sips drunk · games played. A game with an “Alcohol-free” account at the table doesn’t count."
+    },
     "online": {
       "you": "you",
       "winsShort": "W",

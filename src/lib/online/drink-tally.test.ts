@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GAME_ADAPTERS } from './game-adapters'
-import { humanDrinkTally } from './drink-tally'
+import { humanDrinkTally, type DrinkTally } from './drink-tally'
 import { phaseKey } from './phase-clock'
 import { buildPetitBuveurEngineState } from '@/lib/petit-buveur/server-adapter'
 import type { EngineState } from '@/lib/petit-buveur/engine'
@@ -41,7 +41,24 @@ const roomMembers = (...ids: string[]) => ids.map((userId) => ({ userId, user: {
 /** Membres au format court (Petit Buveur, Toucher-Coulé). */
 const flatMembers = (...ids: string[]) => ids.map((userId) => ({ userId, displayName: userId }))
 
-const tallyOf = (gameId: string, state: unknown) => GAME_ADAPTERS[gameId].drinkTally!(state)
+/** Sièges attendus, dans l'ordre du moteur : `seats('u1', 5, 'u2', 2)`. */
+const seats = (...pairs: (string | number)[]) => {
+  const out: { playerId: string; drinks: number }[] = []
+  for (let i = 0; i < pairs.length; i += 2) out.push({ playerId: String(pairs[i]), drinks: Number(pairs[i + 1]) })
+  return out
+}
+
+/** Un siège par participation, gorgées = somme des sièges : vérifié pour chaque relevé. */
+function expectConsistent(tally: DrinkTally | null): DrinkTally | null {
+  if (tally) {
+    expect(tally.seats).toHaveLength(tally.plays)
+    expect(tally.seats.reduce((sum, seat) => sum + seat.drinks, 0)).toBe(tally.drinks)
+    for (const seat of tally.seats) expect(Number.isInteger(seat.drinks) && seat.drinks >= 0).toBe(true)
+  }
+  return tally
+}
+
+const tallyOf = (gameId: string, state: unknown) => expectConsistent(GAME_ADAPTERS[gameId].drinkTally!(state))
 
 describe('humanDrinkTally', () => {
   it('ne compte que les sièges humains, aux deux bouts de la moyenne', () => {
@@ -50,17 +67,21 @@ describe('humanDrinkTally', () => {
       { id: 'bot-1', isBot: true, n: 9 },
       { id: 'u2', n: 0 },
     ]
-    expect(humanDrinkTally(players, (p) => p.n)).toEqual({ drinks: 4, plays: 2 })
+    expect(humanDrinkTally(players, (p) => p.n)).toEqual({ drinks: 4, plays: 2, seats: seats('u1', 4, 'u2', 0) })
   })
 
-  it('ignore une valeur absente, négative ou non entière', () => {
+  it('ignore une valeur absente, négative ou non entière : 0 pour ce siège, qui compte quand même', () => {
     const players: { id: string; isBot?: boolean }[] = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }]
     const values: Record<string, number | undefined> = { a: 3, b: -2, c: 1.5 }
-    expect(humanDrinkTally(players, (p) => values[p.id])).toEqual({ drinks: 3, plays: 4 })
+    expect(humanDrinkTally(players, (p) => values[p.id])).toEqual({
+      drinks: 3,
+      plays: 4,
+      seats: seats('a', 3, 'b', 0, 'c', 0, 'd', 0),
+    })
   })
 
   it('aucun humain : rien à relever', () => {
-    expect(humanDrinkTally([{ isBot: true }], () => 5)).toBeNull()
+    expect(humanDrinkTally([{ id: 'bot-1', isBot: true }], () => 5)).toBeNull()
   })
 })
 
@@ -84,7 +105,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       players: built.players.map((p) => ({ ...p, drinks: drinks[p.id] })),
     }
     expect(state.players.find((p) => p.id === 'bot-1')?.isBot).toBe(true)
-    expect(tallyOf('petit-buveur', state)).toEqual({ drinks: 7, plays: 2 })
+    expect(tallyOf('petit-buveur', state)).toEqual({ drinks: 7, plays: 2, seats: seats('u1', 5, 'u2', 2) })
   })
 
   it('Toucher-Coulé : `drinks` des humains (2v2 complété par un bot)', () => {
@@ -96,7 +117,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       winner: 'A',
       players: built.players.map((p) => ({ ...p, drinks: drinks[p.id] })),
     }
-    expect(tallyOf('toucher-coule', state)).toEqual({ drinks: 11, plays: 3 })
+    expect(tallyOf('toucher-coule', state)).toEqual({ drinks: 11, plays: 3, seats: seats('u1', 4, 'u2', 6, 'u3', 1) })
   })
 
   it('Menteur : l’addition qui grimpe (n(n+1)/2), jamais lostCount', () => {
@@ -108,7 +129,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       players: built.players.map((p) => ({ ...p, lostCount: lost[p.id] })),
     }
     expect(menteurSipsTotal(3) + menteurSipsTotal(5)).toBe(6 + 15)
-    expect(tallyOf('menteur', state)).toEqual({ drinks: 21, plays: 2 })
+    expect(tallyOf('menteur', state)).toEqual({ drinks: 21, plays: 2, seats: seats('u1', 6, 'u2', 15) })
   })
 
   it('Quiz : `sips` cumulées des humains', () => {
@@ -119,7 +140,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       phase: 'finished',
       players: built.players.map((p) => ({ ...p, sips: sips[p.id] })),
     }
-    expect(tallyOf('quiz', state)).toEqual({ drinks: 4, plays: 2 })
+    expect(tallyOf('quiz', state)).toEqual({ drinks: 4, plays: 2, seats: seats('u1', 4, 'u2', 0) })
   })
 
   it('Loup-Garou : `sips` cumulées des humains', () => {
@@ -129,7 +150,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       phase: 'finished',
       players: built.players.map((p) => ({ ...p, sips: p.isBot ? 5 : 3 })),
     }
-    expect(tallyOf('loup-garou', state)).toEqual({ drinks: 9, plays: 3 })
+    expect(tallyOf('loup-garou', state)).toEqual({ drinks: 9, plays: 3, seats: seats('u1', 3, 'u2', 3, 'u3', 3) })
   })
 
   it('Purple : cagnottes bues ; celle encore en jeu ne compte pas', () => {
@@ -141,7 +162,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       drinkCounter: 6,
       gameResults: { u1: 5, u2: 3, 'bot-1': 4 },
     }
-    expect(tallyOf('purple', state)).toEqual({ drinks: 8, plays: 2 })
+    expect(tallyOf('purple', state)).toEqual({ drinks: 8, plays: 2, seats: seats('u1', 5, 'u2', 3) })
   })
 
   it('Purple : « Terminer » avant la première carte n’est pas une partie', () => {
@@ -157,7 +178,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       phase: 'finished',
       totals: { u1: tally(4, 6), u2: tally(2, 0), 'bot-1': tally(9, 1) },
     }
-    expect(tallyOf('blackjack', state)).toEqual({ drinks: 6, plays: 2 })
+    expect(tallyOf('blackjack', state)).toEqual({ drinks: 6, plays: 2, seats: seats('u1', 4, 'u2', 2) })
   })
 
   it('Black Jack : « Terminer » avant la première main jouée n’est pas une partie', () => {
@@ -173,7 +194,11 @@ describe('drinkTally par jeu, sur l’état final', () => {
       phase: 'finished',
       game: { ...built.game, phase: 'finished', tallies: { u1: tally(2, 1, 1), u2: tally(1, 3, 0), 'bot-1': tally(4, 0, 0) } },
     }
-    expect(tallyOf('vue-de-nez', state)).toEqual({ drinks: 3 * VDN_SIPS.farthest, plays: 2 })
+    expect(tallyOf('vue-de-nez', state)).toEqual({
+      drinks: 3 * VDN_SIPS.farthest,
+      plays: 2,
+      seats: seats('u1', 2 * VDN_SIPS.farthest, 'u2', VDN_SIPS.farthest),
+    })
   })
 
   it('Patate Chaude : explosions et pénalités au barème alcool ; un remplacé sort du relevé', () => {
@@ -187,6 +212,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
     expect(tallyOf('patate-chaude', state)).toEqual({
       drinks: 2 * PC_EXPLOSION_SIPS + 4 * PC_PENALTY_SIPS,
       plays: 2,
+      seats: seats('u1', 2 * PC_EXPLOSION_SIPS + PC_PENALTY_SIPS, 'u2', 3 * PC_PENALTY_SIPS),
     })
   })
 
@@ -203,7 +229,11 @@ describe('drinkTally par jeu, sur l’état final', () => {
       phase: 'finished',
       game: { ...built.game, penalties: { ...built.game.penalties, u2: 1 } },
     }
-    expect(tallyOf('patate-chaude', state)).toEqual({ drinks: PC_PENALTY_SIPS, plays: 2 })
+    expect(tallyOf('patate-chaude', state)).toEqual({
+      drinks: PC_PENALTY_SIPS,
+      plays: 2,
+      seats: seats('u1', 0, 'u2', PC_PENALTY_SIPS),
+    })
   })
 
   it('Chiffre Piégé : pénalités cumulées des humains', () => {
@@ -213,7 +243,7 @@ describe('drinkTally par jeu, sur l’état final', () => {
       phase: 'finished',
       game: { ...built.game, phase: 'finished', penalties: { u1: 6, u2: 1, 'bot-1': 9 } },
     }
-    expect(tallyOf('chiffre-piege', state)).toEqual({ drinks: 7, plays: 2 })
+    expect(tallyOf('chiffre-piege', state)).toEqual({ drinks: 7, plays: 2, seats: seats('u1', 6, 'u2', 1) })
   })
 })
 
@@ -237,16 +267,21 @@ describe('1220 : cumul tenu par le moteur (l’historique ne garde que 15 lancer
     let s = start()
     expect(s.phase).toBe('play')
     let expected = 0
+    const bySeat: Record<string, number> = { u1: 0, u2: 0 }
     let rolls = 0
     while ((rolls <= 15 || expected < 2) && rolls < 2000) {
       s = reduceGame1220(s, { type: 'ROLL', playerId: 'u1' })
       rolls += 1
-      expected += s.lastRoll!.results.filter((r) => HUMANS.has(r.playerId)).reduce((sum, r) => sum + r.drinkSips, 0)
+      for (const r of s.lastRoll!.results) {
+        if (!HUMANS.has(r.playerId)) continue
+        expected += r.drinkSips
+        bySeat[r.playerId] += r.drinkSips
+      }
     }
     s = reduceGame1220(s, { type: 'END', playerId: 'u2' })
     expect(s.history).toHaveLength(15)
     expect(expected).toBeGreaterThanOrEqual(2)
-    expect(tallyOf('1220', s)).toEqual({ drinks: expected, plays: 2 })
+    expect(tallyOf('1220', s)).toEqual({ drinks: expected, plays: 2, seats: seats('u1', bySeat.u1, 'u2', bySeat.u2) })
   })
 
   it('« Terminer » avant le premier lancer n’est pas une partie', () => {
@@ -326,7 +361,14 @@ describe('Imposteur : cumul tenu par le moteur (lastReveal ne garde que la derni
       [eliminatedCivil.id]: IMPOSTEUR_SIPS_CIVIL_OUT,
       [imposteur.id]: IMPOSTEUR_SIPS_PER_ALIVE * 3,
     })
-    expect(tallyOf('imposteur', done)).toEqual({ drinks: IMPOSTEUR_SIPS_CIVIL_OUT + IMPOSTEUR_SIPS_PER_ALIVE * 3, plays: 4 })
+    const sipsOf = (id: string) =>
+      id === eliminatedCivil.id ? IMPOSTEUR_SIPS_CIVIL_OUT : id === imposteur.id ? IMPOSTEUR_SIPS_PER_ALIVE * 3 : 0
+    expect(tallyOf('imposteur', done)).toEqual({
+      drinks: IMPOSTEUR_SIPS_CIVIL_OUT + IMPOSTEUR_SIPS_PER_ALIVE * 3,
+      plays: 4,
+      // Un siège par humain, dans l'ordre du moteur ; un civil jamais éliminé n'a rien bu.
+      seats: withBot.players.filter((p) => !p.isBot).map((p) => ({ playerId: p.id, drinks: sipsOf(p.id) })),
+    })
   })
 
   it('partie lancée avant le compteur : pas de compte partiel', () => {

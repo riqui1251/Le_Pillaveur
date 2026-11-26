@@ -1,14 +1,20 @@
 import type { Metadata } from 'next'
-import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { OnlineRankingBoard, type OverviewResponse } from '@/components/online/OnlineRankingBoard'
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server'
+import type { OverviewResponse } from '@/components/online/OnlineRankingBoard'
+import { ClientMessages } from '@/components/i18n/ClientMessages'
+import { rankingSlice } from '@/i18n/messages-slices'
 import { buildRankingsOverview, RANKING_MIN_GAMES, type RankingBoard } from '@/lib/online/rankings'
 import { prisma } from '@/lib/prisma'
 import { buildAlternates, pageOpenGraph, pageTwitter } from '@/lib/seo/alternates'
+import { RankingTabs } from './RankingTabs'
 
 /**
- * Page Classement — EN LIGNE uniquement : classement général + top 5 par jeu
- * (victoires/défaites/parties/%). Le classement des joueurs locaux a été
- * retiré volontairement : seules les parties en ligne comptent.
+ * Page Classement — deux onglets (RankingTabs) :
+ * - « En ligne », par défaut : classement général + top 5 par jeu
+ *   (victoires/défaites/parties/%). Le classement des joueurs locaux en a
+ *   été retiré volontairement : seules les parties en ligne y comptent.
+ * - « Gorgées » : le même classement que le Mode Soirée (/soiree/stats), tout
+ *   le site puis « Chez vous ».
  *
  * Composant SERVEUR (le tableau, lui, reste client) : c'est la seule façon
  * d'exporter `generateMetadata`. Sans elle la page héritait du titre et de la
@@ -113,15 +119,16 @@ export default async function ClassementPage({
       </div>
 
       <div className="relative container mx-auto max-w-3xl px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
-        <header className="mb-8 text-center">
+        <header className="mb-5 text-center">
           <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-gold/80">{tNav('brand')}</p>
           <h1 className="mt-1 bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text font-display text-3xl font-bold text-transparent sm:text-4xl">
             {t('title')}
           </h1>
-          <p className="mt-2 text-sm text-white/50">{t('online.subtitle')}</p>
         </header>
 
-        <OnlineRankingBoard initialOverview={initialOverview} />
+        <ClientMessages messages={rankingSlice(await getMessages({ locale }))}>
+          <RankingTabs initialOverview={initialOverview} />
+        </ClientMessages>
       </div>
     </main>
   )

@@ -219,6 +219,16 @@ export function soireeSlice(all: AbstractIntlMessages): AbstractIntlMessages {
   return isNode(all.soiree) ? { soiree: all.soiree } : {}
 }
 
+/**
+ * La tranche de la page Classement : `soiree.stats` seul, pour son onglet
+ * « Gorgées » (src/components/soiree/DrinkStatsSections.tsx) — 2 Ko, au lieu
+ * des 19 Ko de toute la tranche du Mode Soirée.
+ */
+export function rankingSlice(all: AbstractIntlMessages): AbstractIntlMessages {
+  const soiree = all.soiree
+  return isNode(soiree) && isNode(soiree.stats) ? { soiree: { stats: soiree.stats } } : {}
+}
+
 /** La tranche du tuto des nouveaux joueurs : `tour` seul, servie à la demande (ON_DEMAND_PATHS). */
 export function tourSlice(all: AbstractIntlMessages): AbstractIntlMessages {
   return isNode(all.tour) ? { tour: all.tour } : {}
@@ -247,6 +257,11 @@ export function supervisionMessages(all: AbstractIntlMessages): AbstractIntlMess
 /** Catalogue effectif de l'accueil et des pages /soiree : socle + Mode Soirée. */
 export function soireeMessages(all: AbstractIntlMessages): AbstractIntlMessages {
   return mergeMessages(coreMessages(all), soireeSlice(all))
+}
+
+/** Catalogue effectif de la page Classement : socle + classement des gorgées. */
+export function rankingMessages(all: AbstractIntlMessages): AbstractIntlMessages {
+  return mergeMessages(coreMessages(all), rankingSlice(all))
 }
 
 /** Catalogue effectif de l'écran TV : socle + tous les jeux. */

@@ -11,6 +11,8 @@ import {
   gameMessages,
   gameSlice,
   mergeMessages,
+  rankingMessages,
+  rankingSlice,
   serverOnlySlice,
   soireeSlice,
   tourSlice,
@@ -157,6 +159,25 @@ describe('supervisionSlice / tvSlice', () => {
     expect(games.catalog).toBeDefined()
     expect(games.purple).toBeDefined()
     expect(tvMessages(miniature()).supervision).toBeUndefined()
+  })
+})
+
+describe('rankingSlice', () => {
+  it('classement : soiree.stats seul, le nœud même du catalogue, puis socle + soiree.stats', () => {
+    const stats = { title: 'Quel jeu fait le plus boire ?' }
+    const all = { ...miniature(), soiree: { stats, units: { drinks: 'gorgées' } } }
+    const slice = rankingSlice(all)
+    expect(slice).toEqual({ soiree: { stats } })
+    expect((slice.soiree as AbstractIntlMessages).stats).toBe(stats)
+    const effective = rankingMessages(all)
+    expect((effective.soiree as AbstractIntlMessages).units).toBeUndefined()
+    expect(effective.supervision).toBeUndefined()
+    expect(effective.hub).toEqual(miniature().hub)
+  })
+
+  it('un catalogue sans soiree.stats donne une tranche vide', () => {
+    expect(rankingSlice(miniature())).toEqual({})
+    expect(rankingSlice({ ...miniature(), soiree: { units: {} } })).toEqual({})
   })
 })
 

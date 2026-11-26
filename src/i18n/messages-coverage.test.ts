@@ -3,7 +3,16 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import type { AbstractIntlMessages } from 'next-intl'
-import { GAME_IDS, ON_DEMAND_PATHS, coreMessages, gameMessages, soireeMessages, supervisionMessages, tvMessages } from './messages-slices'
+import {
+  GAME_IDS,
+  ON_DEMAND_PATHS,
+  coreMessages,
+  gameMessages,
+  rankingMessages,
+  soireeMessages,
+  supervisionMessages,
+  tvMessages,
+} from './messages-slices'
 
 /**
  * Couverture des tranches de messages, route par route.
@@ -79,7 +88,13 @@ const SPECIAL_FILES = ['layout.tsx', 'error.tsx', 'not-found.tsx', 'loading.tsx'
 // Tranche fournie par le layout le plus proche
 // ---------------------------------------------------------------------------
 
-type SliceRef = { kind: 'core' } | { kind: 'game'; gameId: string } | { kind: 'supervision' } | { kind: 'tv' } | { kind: 'soiree' }
+type SliceRef =
+  | { kind: 'core' }
+  | { kind: 'game'; gameId: string }
+  | { kind: 'supervision' }
+  | { kind: 'tv' }
+  | { kind: 'soiree' }
+  | { kind: 'ranking' }
 
 /** La tranche que déclare un layout (via ClientMessages ou un provider posé à la main), ou null. */
 function sliceDeclaredIn(layoutFile: string): SliceRef | null {
@@ -87,6 +102,7 @@ function sliceDeclaredIn(layoutFile: string): SliceRef | null {
   if (/\btv(?:Slice|Messages)\(/.test(source)) return { kind: 'tv' }
   if (/\bsupervision(?:Slice|Messages)\(/.test(source)) return { kind: 'supervision' }
   if (/\bsoiree(?:Slice|Messages)\(/.test(source)) return { kind: 'soiree' }
+  if (/\branking(?:Slice|Messages)\(/.test(source)) return { kind: 'ranking' }
   const game = source.match(/\bgame(?:Slice|Messages)\(\s*[^,()]+?(?:\([^)]*\))?\s*,\s*(?:'([^']+)'|"([^"]+)"|(\w+))\s*\)/)
   if (!game) return null
   const literal = game[1] ?? game[2]
@@ -132,6 +148,8 @@ function messagesOf(ref: SliceRef): AbstractIntlMessages {
       return tvMessages(CATALOGUE)
     case 'soiree':
       return soireeMessages(CATALOGUE)
+    case 'ranking':
+      return rankingMessages(CATALOGUE)
   }
 }
 
@@ -359,7 +377,7 @@ describe('couverture des tranches de messages', () => {
     expect(wrong).toEqual([])
   })
 
-  it('la supervision et la TV reçoivent leur tranche', () => {
+  it('la supervision, la TV et le classement reçoivent leur tranche', () => {
     const kinds = Object.fromEntries(entries.map((entry) => [entry.label, entry.slice.kind]))
     expect(kinds['/supervision']).toBe('supervision')
     expect(kinds['/supervision/comptes/[userId]']).toBe('supervision')
@@ -367,6 +385,7 @@ describe('couverture des tranches de messages', () => {
     expect(kinds['/tv/[code]']).toBe('tv')
     expect(kinds['/jeux']).toBe('core')
     expect(kinds['/regles/[gameId]']).toBe('core')
+    expect(kinds['/classement']).toBe('ranking')
   })
 
   it('un nœud partiel de la tranche est signalé, pas le sous-arbre partagé qu’il contient', () => {

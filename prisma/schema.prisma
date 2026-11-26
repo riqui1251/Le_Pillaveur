@@ -93,6 +93,7 @@ model User {
   featureBans           FeatureBan[]       @relation("FeatureBanTarget")
   featureBansIssued     FeatureBan[]       @relation("FeatureBanActor")
   onlineMatchResults    OnlineMatchResult[]
+  onlineDrinkResults    OnlineDrinkResult[]
   onlineGameHistory     OnlineGameHistory[]
   onlineGameSessions    OnlineGameSessionPlayer[] @relation("OnlineGameSessionPlayer")
   cosmeticGrants        CosmeticGrant[]    @relation("CosmeticGrantTarget")
@@ -228,6 +229,25 @@ model OnlineMatchResult {
   @@index([userId, finishedAt])
   // Classement hebdo : filtre `finishedAt >= lundi` sans scan complet.
   @@index([finishedAt])
+}
+
+// Gorgées BUES par un compte dans une partie EN LIGNE terminée : une ligne par
+// COMPTE humain, pour le classement des joueurs de l'onglet « Gorgées » de
+// /classement (top 5 par jeu + sa propre position). Historique brut agrégé à
+// la lecture, comme OnlineMatchResult ; 0 gorgée compris (la partie compte).
+// Une table avec un compte « Sans alcool » n'écrit rien. Pseudos montrés aux
+// seuls comptes connectés. Gardée tant que le compte existe (cascade).
+model OnlineDrinkResult {
+  id         String   @id @default(cuid())
+  roomId     String
+  gameId     String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drinks     Int
+  finishedAt DateTime @default(now())
+
+  @@index([gameId, userId])
+  @@index([userId, finishedAt])
 }
 
 // Derniers jeux joués en ligne : une ligne par couple (user, jeu), horodatée

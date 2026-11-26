@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useLocalizedGames } from '@/lib/games-i18n'
 import { parseSiteDrinkRanking, type SiteDrinkRanking as Ranking } from '@/lib/game-drinks'
 import { GameIconById } from '@/components/hub/GameIconById'
-import { MEDALS, gameGradient } from './soiree-ui'
+import { MEDALS, gameGradient } from './ranking-colors'
 
 type RankedGame = { gameId: string; perPlay: number }
 

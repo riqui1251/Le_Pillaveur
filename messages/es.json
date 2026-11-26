@@ -90,7 +90,7 @@
     "links": {
       "classement": {
         "label": "Clasificación",
-        "description": "Puntuaciones online"
+        "description": "Puntuaciones online y tragos"
       },
       "compte": {
         "label": "Cuenta",
@@ -7180,7 +7180,22 @@
     }
   },
   "ranking": {
-    "title": "Categoría",
+    "title": "Clasificación",
+    "tabs": {
+      "label": "Elegir la clasificación",
+      "online": "En línea",
+      "drinks": "Tragos"
+    },
+    "drinks": {
+      "subtitle": "¿Qué juego hace beber más? Tragos de media por jugador y por partida, en todo el sitio y luego en vuestro móvil.",
+      "playersTitle": "Los que más beben en línea",
+      "playersLead": "Tragos bebidos por cada cuenta en las partidas en línea, juego por juego.",
+      "accounts": "{count, plural, one {# cuenta} other {# cuentas}}",
+      "loginForNames": "Inicia sesión para ver los apodos y tu posición.",
+      "empty": "Aún no hay tragos registrados en línea: la clasificación se irá llenando con las próximas partidas.",
+      "error": "No se puede cargar la clasificación de los jugadores. Comprueba la conexión y vuelve a intentarlo.",
+      "legend": "Columnas: tragos bebidos · partidas jugadas. Una partida con una cuenta «Sin alcohol» en la mesa no cuenta."
+    },
     "online": {
       "you": "tú",
       "winsShort": "V",

@@ -424,9 +424,10 @@ export type GameAdapter = {
    */
   serviceTick?(state: unknown, now: number, options?: ServiceTickOptions): ServiceTick | null
   /**
-   * Relevé ANONYME de la partie pour « Quel jeu fait le plus boire ? », lu sur
-   * l'état FINAL du moteur par la fin de partie (room-actions.ts) : gorgées
-   * bues par les sièges humains et nombre de ces sièges (règles dans
+   * Relevé de la partie pour « Quel jeu fait le plus boire ? » et le
+   * classement des comptes par jeu, lu sur l'état FINAL du moteur par la fin
+   * de partie (room-actions.ts) : gorgées bues par les sièges humains, nombre
+   * de ces sièges et le détail siège par siège (règles dans
    * src/lib/online/drink-tally.ts). Null = rien à compter (partie arrêtée
    * avant le premier coup, état lancé avant le compteur). Absent = le moteur
    * ne compte pas de gorgées.
