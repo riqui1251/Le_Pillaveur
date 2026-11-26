@@ -2064,7 +2064,9 @@
         "nextBets": "Passer aux paris",
         "nextRace": "Démarrer la course",
         "removeFromHorse": "Retirer {name} du cheval",
-        "assignTo": "Mettre {name} sur {horse}"
+        "assignTo": "Mettre {name} sur {horse}",
+        "draw": "Répartir au hasard",
+        "drawnHint": "Tirage fait : touchez un joueur pour le changer de cheval"
       },
       "horses": {
         "tonnerre": "Tonnerre",

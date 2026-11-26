@@ -2064,7 +2064,9 @@
         "nextBets": "Go to bets",
         "nextRace": "Start the race",
         "removeFromHorse": "Take {name} off the horse",
-        "assignTo": "Put {name} on {horse}"
+        "assignTo": "Put {name} on {horse}",
+        "draw": "Assign at random",
+        "drawnHint": "Horses drawn: tap a player to move them to another horse"
       },
       "horses": {
         "tonnerre": "Thunder",

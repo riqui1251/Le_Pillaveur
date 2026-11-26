@@ -2064,7 +2064,9 @@
         "nextBets": "Ir a las apuestas",
         "nextRace": "Empezar la carrera",
         "removeFromHorse": "Bajar a {name} del caballo",
-        "assignTo": "Poner a {name} en {horse}"
+        "assignTo": "Poner a {name} en {horse}",
+        "draw": "Repartir al azar",
+        "drawnHint": "Sorteo hecho: toca a un jugador para cambiarlo de caballo"
       },
       "horses": {
         "tonnerre": "Trueno",

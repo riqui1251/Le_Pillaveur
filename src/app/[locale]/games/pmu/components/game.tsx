@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Check, Flag, LogOut, Minus, Plus, RotateCcw, Tv, UserMinus } from 'lucide-react'
+import { ArrowRight, Check, Flag, LogOut, Minus, Plus, RotateCcw, Shuffle, Tv, UserMinus } from 'lucide-react'
 import { Player as BasePlayer } from '@/lib/players'
 import type { LocalTallyOptions } from '@/lib/local-drink-tally'
 import { usePlayers } from '@/hooks/usePlayers'
@@ -22,7 +22,7 @@ import { PlayerName } from '@/components/ui/PlayerName'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { MedalDot } from '@/components/online/MedalDot'
-import { firstMissingPick, needsPayout, payoutTargets, rankHorses } from './race'
+import { drawRiders, firstMissingPick, needsPayout, payoutTargets, rankHorses } from './race'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ interface GameProps {
 
 function SetupPhase({
   horses, allPlayers, totalAssigned, next, t, headerRight, castInfo,
-  assignToHorse, unassignPlayer, onBack, onNext,
+  assignToHorse, unassignPlayer, onDraw, onBack, onNext,
 }: {
   horses: Horse[]
   allPlayers: BasePlayer[]
@@ -169,10 +169,12 @@ function SetupPhase({
   castInfo: ReactNode
   assignToHorse: (p: BasePlayer, idx: number) => void
   unassignPlayer: (p: BasePlayer) => void
+  onDraw: () => void
   onBack: () => void
   onNext: () => void
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState<BasePlayer | null>(null)
+  const [drawn, setDrawn] = useState(false)
 
   const assignedIds = new Set(horses.flatMap(h => h.players.map(p => p.id)))
   const unassigned = allPlayers.filter(p => !assignedIds.has(p.id))
@@ -188,12 +190,20 @@ function SetupPhase({
     if (!selectedPlayer) return
     assignToHorse(selectedPlayer, horseIdx)
     setSelectedPlayer(null)
+    setDrawn(false)
   }
 
   const unassignSelected = () => {
     if (!selectedPlayer) return
     unassignPlayer(selectedPlayer)
     setSelectedPlayer(null)
+    setDrawn(false)
+  }
+
+  const draw = () => {
+    onDraw()
+    setSelectedPlayer(null)
+    setDrawn(true)
   }
 
   return (
@@ -210,10 +220,14 @@ function SetupPhase({
     >
       {castInfo}
       <div className="space-y-4 text-cream">
+        <Button variant="quiet" size="game" className="w-full" onClick={draw}>
+          <Shuffle aria-hidden className="mr-2 h-4 w-4" />
+          {t('setup.draw')}
+        </Button>
         <p role="status" aria-live="polite" className="text-center text-sm text-cream/80">
           {selectedPlayer
             ? t('setup.selectedHint', { name: selectedPlayer.name })
-            : t('setup.defaultHint')}
+            : t(drawn ? 'setup.drawnHint' : 'setup.defaultHint')}
         </p>
 
         {/* Joueurs sans cheval — et, pour un joueur déjà monté, le geste qui le fait descendre */}
@@ -505,6 +519,11 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
     setHorses(prev => prev.map(h => ({ ...h, players: h.players.filter(x => x.id !== player.id) })))
   }
 
+  const drawAtRandom = () => {
+    const lanes = drawRiders(allPlayers, horses.map(h => h.players))
+    setHorses(horses.map((h, i) => ({ ...h, players: lanes[i] })))
+  }
+
   // ── Course ───────────────────────────────────────────────────────────────
 
   const startRace = () => {
@@ -640,6 +659,7 @@ export default function Game({ players: initialPlayers, onGameEnd }: GameProps) 
         castInfo={castInfo}
         assignToHorse={assignToHorse}
         unassignPlayer={unassignPlayer}
+        onDraw={drawAtRandom}
         onBack={() => setPhase('mode-select')}
         onNext={() => mode === 'paris' ? setPhase('betting') : startRace()}
       />
